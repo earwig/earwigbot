@@ -98,7 +98,7 @@ def do_checkout():
     try:
         branch = args[1]
     except IndexError: # no branch name provided
-        actions.say(chan, "\x02%s\x0F: switch to which branch?" % data.nick)
+        actions.say(data.chan, "\x02%s\x0F: switch to which branch?" % data.nick)
         return
 
     try:
