@@ -79,8 +79,8 @@ def cmd_git(nick, host, chan, msg): # commands to interface with the bot's git r
     elif args[0] == "pull": # pull from remote repository
         branch = subprocess.check_output(['git', 'name-rev', '--name-only', 'HEAD'], stderr=subprocess.STDOUT) # git name-rev --name-only HEAD
         branch = branch[:-1] # strip newline
-        say(chan, "%s: pulling branch '%s' from remote..." % (nick, branch))
-        result = subprocess.check_output(['git', 'pull', 'origin', branch]) # pull from remote
+        say(chan, "%s: pulling from remote (currently on '%s')..." % (nick, branch))
+        result = subprocess.check_output(['git', 'pull']) # pull from remote
         if "Already up-to-date." in result:
             say(chan, "%s: done; no new changes." % nick)
         else:
