@@ -16,7 +16,7 @@ IDENT = "earwigbot"
 REALNAME = "[[w:en:User:EarwigBot]]"
 
 # channel to join on startup
-CHAN = "##earwigbot"
+CHANS = ["##earwigbot"]
 
 # sleep this number of seconds in between API calls and messages sent to IRC
 THROTTLE = 1

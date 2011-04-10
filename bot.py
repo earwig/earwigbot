@@ -63,7 +63,8 @@ def main():
             if line2[1] == "376":
                 if NS_AUTH:
                     say("NickServ", "IDENTIFY %s %s" % (NS_USER, NS_PASS))
-                join(CHAN)
+                for this_chan in CHANS: # join all of our startup channels
+                    join(this_chan)
 
 if __name__ == "__main__":
     s = socket.socket()
