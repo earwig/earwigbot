@@ -1,7 +1,7 @@
 # -*- coding: utf-8  -*-
 
 import string, re, subprocess
-from config import *
+from config.irc_config import *
 
 s, send, say, action, notice, join = None, None, None, None, None, None
 

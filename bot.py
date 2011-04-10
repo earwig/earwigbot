@@ -3,8 +3,8 @@
 ## Imports
 import socket, string, re
 from actions import *
-from config import *
-from secure_config import *
+from config.irc_config import *
+from config.secure_config import *
 
 def send(msg): # send a message 'msg' to the server
     s.send(msg + "\r\n")

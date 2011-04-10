@@ -1,5 +1,8 @@
 # -*- coding: utf-8  -*-
 
+# EarwigBot Configuration File
+# This file contains information that the bot uses to connect to IRC.
+
 # our server's hostname
 HOST = "irc.freenode.net"
 
@@ -17,9 +20,6 @@ REALNAME = "[[w:en:User:EarwigBot]]"
 
 # channel to join on startup
 CHANS = ["##earwigbot"]
-
-# sleep this number of seconds in between API calls and messages sent to IRC
-THROTTLE = 1
 
 # hostnames of users who can update/restart the bot with !update
 ADMINS = ["wikipedia/The-Earwig"]
