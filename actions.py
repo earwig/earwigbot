@@ -31,7 +31,7 @@ def get_args(msg): # get command arguments
     return args[1:] # remove the command itself
 
 def cmd_test(nick, chan): # bot test
-    say(chan, "'sup %s?" % nick)
+    say(chan, "Hey %s!" % nick)
 
 def cmd_git(nick, host, chan, msg): # commands to interface with the bot's git repository
     if host not in ADMINS:
