@@ -15,7 +15,7 @@ def call(a, d):
     if not check_user_is_admin():
         return
 
-    args = get_args()
+    get_args()
     
     if not check_has_args():
         return
@@ -40,10 +40,11 @@ def call(a, d):
 
 def get_args():
     """get command arguments"""
+    global args
     args = data.msg.strip().split(' ') # strip out extra whitespace and split the message into a list
     while '' in args: # remove any empty arguments
         args.remove('')
-    return args[1:] # remove the command itself
+    args = args[1:] # remove the command itself
 
 def check_user_is_admin():
     """check if the user is a bot admin (and can use this command, as a result)"""
