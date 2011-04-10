@@ -44,7 +44,8 @@ def cmd_git(nick, host, chan, msg): # commands to interface with the bot's git r
         return
 
     if args[0] == "help": # display all commands
-        cmds = ["branch (show current branch)", "branches (show all branches)", "checkout (switch branches)", "pull (update current branch)"]
+        cmds = ["\x0303branch\x0301 (show current branch)", "\x0303branches\x0301 (show all branches)",
+        "\x0303checkout\x0301 (switch branches)", "\x0303pull\x0301 (update current branch)"]
         cmds = ', '.join(cmds)
         say(chan, "\x02%s\x0F: sub-commands are: %s" % (nick, cmds))
 
