@@ -31,27 +31,27 @@ def get_args(msg): # get command arguments
     return args[1:] # remove the command itself
 
 def cmd_test(nick, chan): # bot test
-    say(chan, "Hey %s!" % nick)
+    say(chan, "Hey \x02%s\x0F!" % nick)
 
 def cmd_git(nick, host, chan, msg): # commands to interface with the bot's git repository
     if host not in ADMINS:
-        say(chan, "%s: you must be a bot admin to use this command." % nick)
+        say(chan, "\x02%s\x0F: you must be a bot admin to use this command." % nick)
         return
 
     args = get_args(msg)
     if not args:
-        say(chan, "%s: no arguments provided." % nick)
+        say(chan, "\x02%s\x0F: no arguments provided." % nick)
         return
 
     if args[0] == "help": # display all commands
         cmds = ["branch (show current branch)", "branches (show all branches)", "checkout (switch branches)", "pull (update current branch)"]
         cmds = ', '.join(cmds)
-        say(chan, "%s: sub-commands are: %s" % (nick, cmds))
+        say(chan, "\x02%s\x0F: sub-commands are: %s" % (nick, cmds))
 
     elif args[0] == "branch": # get our current branch
         branch = subprocess.check_output(['git', 'name-rev', '--name-only', 'HEAD'], stderr=subprocess.STDOUT) # git name-rev --name-only HEAD
         branch = branch[:-1] # strip newline
-        say(chan, "%s: currently on branch '%s'." % (nick, branch))
+        say(chan, "\x02%s\x0F: currently on branch '\x0302%s\x0301'." % (nick, branch))
 
     elif args[0] == "branches": # get list of branches
         branches = subprocess.check_output(['git', 'branch'], stderr=subprocess.STDOUT) # git branch
@@ -60,31 +60,32 @@ def cmd_git(nick, host, chan, msg): # commands to interface with the bot's git r
         branches = branches.replace('* ', ' ')
         branches = branches.replace('\n  ', ', ')
         branches = branches.strip()
-        say(chan, "%s: branches: %s." % (nick, branches))
+        say(chan, "\x02%s\x0F: branches: \x0302%s\x0301." % (nick, branches))
 
     elif args[0] == "checkout": # switch branches
         try:
             branch = args[1]
         except IndexError: # no branch name provided
-            say(chan, "%s: switch to which branch?" % nick)
+            say(chan, "\x02%s\x0F: switch to which branch?" % nick)
             return
         try:
             result = subprocess.check_output(['git', 'checkout', branch], stderr=subprocess.STDOUT) # git checkout our_branch
-            result = result[:-1] # strip newline
-            result = string.lower(result[0] + result[1:]) # lowercase first word
-            say(chan, "%s: %s." % (nick, result))
+            if "Already on" in result:
+                say(chan, "\x02%s\x0F: already on '\x0302%s\x0301'!" % (nick, branch))
+            else:
+                say(chan, "\x02%s\x0F: switched to branch '\x0302%s\x0301'." % (nick, branch))
         except subprocess.CalledProcessError: # git couldn't switch branches
-            say(chan, "%s: branch '%s' does not exist!" % (nick, branch))
+            say(chan, "\x02%s\x0F: branch '\x0302%s\x0301' does not exist!" % (nick, branch))
 
     elif args[0] == "pull": # pull from remote repository
         branch = subprocess.check_output(['git', 'name-rev', '--name-only', 'HEAD'], stderr=subprocess.STDOUT) # git name-rev --name-only HEAD
         branch = branch[:-1] # strip newline
-        say(chan, "%s: pulling from remote (currently on '%s')..." % (nick, branch))
+        say(chan, "\x02%s\x0F: pulling from remote (currently on '\x0302%s\x0301')..." % (nick, branch))
         result = subprocess.check_output(['git', 'pull']) # pull from remote
         if "Already up-to-date." in result:
-            say(chan, "%s: done; no new changes." % nick)
+            say(chan, "\x02%s\x0F: done; no new changes." % nick)
         else:
-            say(chan, "%s: done; new changes merged." % nick)
+            say(chan, "\x02%s\x0F: done; new changes merged." % nick)
 
     else:
-        say(chan, "%s: unknown argument: '%s'." % (nick, arg[0]))
+        say(chan, "\x02%s\x0F: unknown argument: '\x0302%s\x0301'." % (nick, arg[0]))
