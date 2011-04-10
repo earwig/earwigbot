@@ -88,4 +88,4 @@ def cmd_git(nick, host, chan, msg): # commands to interface with the bot's git r
             say(chan, "\x02%s\x0F: done; new changes merged." % nick)
 
     else:
-        say(chan, "\x02%s\x0F: unknown argument: '\x0302%s\x0301'." % (nick, arg[0]))
+        say(chan, "\x02%s\x0F: unknown argument: '\x0303%s\x0301'." % (nick, args[0]))
