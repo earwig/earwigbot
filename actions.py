@@ -52,7 +52,7 @@ def cmd_git(nick, host, chan, msg): # commands to interface with the bot's git r
     elif args[0] == "branch": # get our current branch
         branch = subprocess.check_output(['git', 'name-rev', '--name-only', 'HEAD'], stderr=subprocess.STDOUT) # git name-rev --name-only HEAD
         branch = branch[:-1] # strip newline
-        say(chan, "\x02%s\x0F: currently on branch '\x0302%s\x0301'." % (nick, branch))
+        say(chan, "\x02%s\x0F: currently on branch \x0302%s\x0301." % (nick, branch))
 
     elif args[0] == "branches": # get list of branches
         branches = subprocess.check_output(['git', 'branch'], stderr=subprocess.STDOUT) # git branch
@@ -72,16 +72,16 @@ def cmd_git(nick, host, chan, msg): # commands to interface with the bot's git r
         try:
             result = subprocess.check_output(['git', 'checkout', branch], stderr=subprocess.STDOUT) # git checkout our_branch
             if "Already on" in result:
-                say(chan, "\x02%s\x0F: already on '\x0302%s\x0301'!" % (nick, branch))
+                say(chan, "\x02%s\x0F: already on \x0302%s\x0301!" % (nick, branch))
             else:
-                say(chan, "\x02%s\x0F: switched to branch '\x0302%s\x0301'." % (nick, branch))
+                say(chan, "\x02%s\x0F: switched to branch \x0302%s\x0301." % (nick, branch))
         except subprocess.CalledProcessError: # git couldn't switch branches
-            say(chan, "\x02%s\x0F: branch '\x0302%s\x0301' does not exist!" % (nick, branch))
+            say(chan, "\x02%s\x0F: branch \x0302%s\x0301 does not exist!" % (nick, branch))
 
     elif args[0] == "pull": # pull from remote repository
         branch = subprocess.check_output(['git', 'name-rev', '--name-only', 'HEAD'], stderr=subprocess.STDOUT) # git name-rev --name-only HEAD
         branch = branch[:-1] # strip newline
-        say(chan, "\x02%s\x0F: pulling from remote (currently on '\x0302%s\x0301')..." % (nick, branch))
+        say(chan, "\x02%s\x0F: pulling from remote (currently on \x0302%s\x0301)..." % (nick, branch))
         result = subprocess.check_output(['git', 'pull']) # pull from remote
         if "Already up-to-date." in result:
             say(chan, "\x02%s\x0F: done; no new changes." % nick)
@@ -89,4 +89,4 @@ def cmd_git(nick, host, chan, msg): # commands to interface with the bot's git r
             say(chan, "\x02%s\x0F: done; new changes merged." % nick)
 
     else:
-        say(chan, "\x02%s\x0F: unknown argument: '\x0303%s\x0301'." % (nick, args[0]))
+        say(chan, "\x02%s\x0F: unknown argument: \x0303%s\x0301." % (nick, args[0]))
