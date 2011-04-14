@@ -2,8 +2,6 @@
 
 # Actions/commands to interface with IRC.
 
-import string
-
 class Actions:
     def __init__(self, sock):
         """actions/commands to interface with IRC"""
