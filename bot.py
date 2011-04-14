@@ -17,6 +17,7 @@ def main():
         try:        
             read_buffer = read_buffer + actions.get()
         except RuntimeError: # socket broke
+            print "socket has broken, sleeping for a minute and restarting..."
             time.sleep(60) # sleep for sixty seconds
             return # then exit our loop and restart the bot
 
