@@ -1,7 +1,7 @@
 # -*- coding: utf-8  -*-
 
 ## Imports
-import socket, string, re
+import socket, string, re, time
 
 from config.irc_config import *
 from config.secure_config import *
@@ -14,11 +14,16 @@ def main():
     read_buffer = str()
 
     while 1:
-        read_buffer = read_buffer + actions.sock.recv(1024)
-        temp = string.split(read_buffer, "\n")
-        read_buffer = temp.pop()
+        try:        
+            read_buffer = read_buffer + actions.get()
+        except RuntimeError: # socket broke
+            time.sleep(60) # sleep for sixty seconds
+            return # then exit our loop and restart the bot
 
-        for line in temp:
+        lines = string.split(read_buffer, "\n")
+        read_buffer = lines.pop()
+
+        for line in lines:
             line = string.split(string.rstrip(line))
             data = Data()
 

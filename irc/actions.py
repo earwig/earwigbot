@@ -2,10 +2,19 @@
 
 # Actions/commands to interface with IRC.
 
+import string
+
 class Actions:
     def __init__(self, sock):
         """actions/commands to interface with IRC"""
         self.sock = sock
+
+    def get(self, size = 4096):
+        """receive (get) data from the server"""
+        data = self.sock.recv(4096)
+        if not data:
+            raise RuntimeError("socket is dead")
+        return data
 
     def send(self, msg):
         """send data to the server"""
