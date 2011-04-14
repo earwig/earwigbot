@@ -10,7 +10,7 @@ HOST = "irc.freenode.net"
 PORT = 6667
 
 # our nick
-NICK = "EarwigBot|2"
+NICK = "EarwigBot"
 
 # our ident
 IDENT = "earwigbot"
@@ -19,7 +19,7 @@ IDENT = "earwigbot"
 REALNAME = "[[w:en:User:EarwigBot]]"
 
 # channel to join on startup
-CHANS = ["##earwigbot"]
+CHANS = ["##earwigbot", "##earwig", "#wikipedia-en-afc"]
 
 # hostnames of users who can update/restart the bot with !update
 ADMINS = ["wikipedia/The-Earwig"]
