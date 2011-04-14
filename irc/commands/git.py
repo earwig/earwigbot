@@ -1,64 +1,41 @@
 # -*- coding: utf-8  -*-
 
-# Commands to interface with the bot's git repository.
+"""Commands to interface with the bot's git repository; use '!git help' for sub-command list."""
 
 import shlex, subprocess
 from config.irc_config import *
 
 actions, data = None, None
-args = None
 
 def call(a, d):
     global actions, data
     actions, data = a, d
 
-    if not check_user_is_admin():
-        return
-
-    get_args()
-    
-    if not check_has_args():
-        return
-
-    if args[0] == "help":
-        do_help()
-
-    elif args[0] == "branch":
-        do_branch()
-
-    elif args[0] == "branches":
-        do_branches()
-
-    elif args[0] == "checkout":
-        do_checkout()
-
-    elif args[0] == "pull":
-        do_pull()
-
-    else:
-        unknown_arg() # they asked us to do something we don't know
-
-def get_args():
-    """get command arguments"""
-    global args
-    args = data.msg.strip().split(' ') # strip out extra whitespace and split the message into a list
-    while '' in args: # remove any empty arguments
-        args.remove('')
-    args = args[1:] # remove the command itself
-
-def check_user_is_admin():
-    """check if the user is a bot admin (and can use this command, as a result)"""
     if data.host not in ADMINS:
         actions.say(data.chan, "\x02%s\x0F: you must be a bot admin to use this command." % data.nick)
-        return False
-    return True
-
-def check_has_args():
-    """check if they provided arguments along with the !git command"""
-    if not args:
+        return
+    
+    if not data.args:
         actions.say(data.chan, "\x02%s\x0F: no arguments provided." % data.nick)
-        return False
-    return True
+        return
+
+    if data.args[0] == "help":
+        do_help()
+
+    elif data.args[0] == "branch":
+        do_branch()
+
+    elif data.args[0] == "branches":
+        do_branches()
+
+    elif data.args[0] == "checkout":
+        do_checkout()
+
+    elif data.args[0] == "pull":
+        do_pull()
+
+    else: # they asked us to do something we don't know
+        actions.say(data.chan, "\x02%s\x0F: unknown argument: \x0303%s\x0301." % (data.nick, data.args[0]))
 
 def exec_shell(command):
     """execute a shell command and get the output"""
@@ -96,7 +73,7 @@ def do_branches():
 def do_checkout():
     """switch branches"""
     try:
-        branch = args[1]
+        branch = data.args[1]
     except IndexError: # no branch name provided
         actions.say(data.chan, "\x02%s\x0F: switch to which branch?" % data.nick)
         return
@@ -123,6 +100,3 @@ def do_pull():
         actions.say(data.chan, "\x02%s\x0F: done; no new changes." % data.nick)
     else:
         actions.say(data.chan, "\x02%s\x0F: done; new changes merged." % data.nick)
-
-def unknown_arg():
-    actions.say(data.chan, "\x02%s\x0F: unknown argument: \x0303%s\x0301." % (data.nick, args[0]))

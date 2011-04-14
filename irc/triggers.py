@@ -2,9 +2,11 @@
 
 # Check what events on IRC we can respond to.
 
-from irc.commands import test, git
+from irc.commands import test, help, git
 
 def check(actions, data, hook):
+    data.parse_args() # parse command arguments into data.command and data.args
+    
     if hook == "join":
         pass
 
@@ -15,7 +17,11 @@ def check(actions, data, hook):
         pass
 
     if hook == "msg":
-        if data.msg == "!test":
+        if data.command == "!test":
             test.call(actions, data)
-        if data.msg.startswith("!git"):
+            
+        elif data.command == "!help":
+            help.call(actions, data)
+            
+        elif data.command == "!git":
             git.call(actions, data)

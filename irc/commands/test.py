@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 
-# A simple command to test the bot.
+"""Test the bot!"""
 
 import random
 
