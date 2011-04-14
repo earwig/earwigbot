@@ -1,7 +1,7 @@
 # -*- coding: utf-8  -*-
 
 ## Imports
-import socket, string, re, time
+import socket, re, time
 
 from config.irc_config import *
 from config.secure_config import *
@@ -21,11 +21,11 @@ def main():
             time.sleep(60) # sleep for sixty seconds
             return # then exit our loop and restart the bot
 
-        lines = string.split(read_buffer, "\n")
+        lines = read_buffer.split("\n")
         read_buffer = lines.pop()
 
         for line in lines:
-            line = string.split(string.rstrip(line))
+            line = line.strip().split("\n")
             data = Data()
 
             if line[1] == "JOIN":
