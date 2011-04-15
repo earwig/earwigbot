@@ -25,7 +25,7 @@ def main():
         read_buffer = lines.pop()
 
         for line in lines:
-            line = line.strip().split("\n")
+            line = line.strip().split()
             data = Data()
 
             if line[1] == "JOIN":
