@@ -144,6 +144,7 @@ def do_pull():
 
 def do_status():
     """check whether we have anything to pull"""
+    actions.reply(data.chan, data.nick, "checking remote for updates...")
     result = exec_shell("git fetch --dry-run")
     if not result:
         actions.reply(data.chan, data.nick, "local copy is up-to-date with remote.")
