@@ -59,7 +59,7 @@ def do_help():
         "checkout": "switch branches",
         "delete": "delete an old branch",
         "pull": "update everything from the remote server",
-        "status": "check if we are out of date"
+        "status": "check if we are up-to-date",
     }
 
     keys = help_dict.keys()
