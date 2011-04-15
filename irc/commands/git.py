@@ -2,7 +2,7 @@
 
 """Commands to interface with the bot's git repository; use '!git help' for sub-command list."""
 
-import shlex, subprocess
+import shlex, subprocess, re
 from config.irc_config import *
 
 actions, data = None, None
@@ -51,6 +51,8 @@ def exec_shell(command):
 
 def do_help():
     """display all commands"""
+    help = ""
+
     help_dict = {
         "branch": "get current branch",
         "branches": "get all branches",
@@ -59,10 +61,12 @@ def do_help():
         "pull": "update everything from the remote server",
         "status": "check if we are out of date"
     }
-    help = ""
-    for key in help_dict.keys():
-        help += "\x0303%s\x0301: (%s)," % (key, help_dict[key])
-    help = help[:-1] # trim last comma
+
+    keys = help_dict.keys()
+    keys.sort()
+    for key in keys:
+        help += "\x0303%s\x0301 (%s), " % (key, help_dict[key])
+    help = help[:-2] # trim last comma
 
     actions.reply(data.chan, data.nick, "sub-commands are: %s." % help)
 
@@ -101,7 +105,7 @@ def do_checkout():
             actions.reply(data.chan, data.nick, "switched to branch \x0302%s\x0301." % branch)
 
     except subprocess.CalledProcessError: # git couldn't switch branches
-        actions.reply(data.chan, data.nick, "branch \x0302%s\x0301 does not exist!" % branch)
+        actions.reply(data.chan, data.nick, "branch \x0302%s\x0301 doesn't exist!" % branch)
 
 def do_delete():
     """delete a branch, while making sure that we are not on it"""
@@ -118,9 +122,11 @@ def do_delete():
         actions.reply(data.chan, data.nick, "you're currently on this branch; please checkout to a different branch before deleting.")
         return
 
-    exec_shell("git branch -d %s" % delete_branch)
-
-    actions.reply(data.chan, data.nick, "branch \x0302%s\x0301 has been deleted locally." % delete_branch)
+    try:
+        exec_shell("git branch -d %s" % delete_branch)
+        actions.reply(data.chan, data.nick, "branch \x0302%s\x0301 has been deleted locally." % delete_branch)
+    except subprocess.CalledProcessError: # git couldn't delete
+        actions.reply(data.chan, data.nick, "branch \x0302%s\x0301 doesn't exist!" % delete_branch)
 
 def do_pull():
     """pull from remote repository"""
@@ -133,7 +139,8 @@ def do_pull():
     if "Already up-to-date." in result:
         actions.reply(data.chan, data.nick, "done; no new changes.")
     else:
-        actions.reply(data.chan, data.nick, "done; new changes merged.")
+        changes = re.findall("\s*((.*?)\sfile(.*?)tions?\(-\))", result)[0][0] # find the changes
+        actions.reply(data.chan, data.nick, "done; %s." % changes)
 
 def do_status():
     """check whether we have anything to pull"""

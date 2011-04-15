@@ -29,6 +29,6 @@ def do_command_help():
     info = this_command.__doc__
 
     if info:
-        actions.reply(data.chan, data.nick, "info for command \"\x0303%s\x0301: %s\"" % (command, info))
+        actions.reply(data.chan, data.nick, "info for command \x0303%s\x0301: \"%s\"" % (command, info))
     else:
         actions.reply(data.chan, data.nick, "sorry, no information for \x0303%s\x0301." % command)
