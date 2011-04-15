@@ -31,8 +31,14 @@ def call(a, d):
     elif data.args[0] == "checkout":
         do_checkout()
 
+    elif data.args[0] == "delete":
+        do_delete()
+
     elif data.args[0] == "pull":
         do_pull()
+
+    elif data.args[0] == "status":
+        do_status()
 
     else: # they asked us to do something we don't know
         actions.say(data.chan, "\x02%s\x0F: unknown argument: \x0303%s\x0301." % (data.nick, data.args[0]))
@@ -45,11 +51,20 @@ def exec_shell(command):
 
 def do_help():
     """display all commands"""
-    help = ["\x0303branch\x0301 (show current branch)", "\x0303branches\x0301 (show all branches)",
-    "\x0303checkout\x0301 (switch branches)", "\x0303pull\x0301 (update current branch)"]
-    help = ', '.join(help)
+    help_dict = {
+        "branch": "get current branch",
+        "branches": "get all branches",
+        "checkout": "switch branches",
+        "delete": "delete an old branch",
+        "pull": "update everything from the remote server",
+        "status": "check if we are out of date"
+    }
+    help = ""
+    for key in help_dict.keys():
+        help += "\x0303%s\x0301: (%s)," % (key, help_dict[key])
+    help = help[:-1] # trim last comma
 
-    actions.say(data.chan, "\x02%s\x0F: sub-commands are: %s" % (data.nick, help))
+    actions.say(data.chan, "\x02%s\x0F: sub-commands are: %s." % (data.nick, help))
 
 def do_branch():
     """get our current branch"""
@@ -88,6 +103,25 @@ def do_checkout():
     except subprocess.CalledProcessError: # git couldn't switch branches
         actions.say(data.chan, "\x02%s\x0F: branch \x0302%s\x0301 does not exist!" % (data.nick, branch))
 
+def do_delete():
+    """delete a branch, while making sure that we are not on it"""
+    try:
+        delete_branch = data.args[1]
+    except IndexError: # no branch name provided
+        actions.say(data.chan, "\x02%s\x0F: delete which branch?" % data.nick)
+        return
+
+    current_branch = exec_shell("git name-rev --name-only HEAD")
+    current_branch = current_branch[:-1] # strip newline
+
+    if current_branch == delete_branch:
+        actions.say(data.chan, "\x02%s\x0F: you're currently on this branch; please checkout to a different branch before deleting." % data.nick)
+        return
+
+    exec_shell("git branch -d %s" % delete_branch)
+
+    actions.say(data.chan, "\x02%s\x0F: branch \x0302%s\x0301 has been deleted locally." % (data.nick, delete_branch))
+
 def do_pull():
     """pull from remote repository"""
     branch = exec_shell("git name-rev --name-only HEAD")
@@ -100,3 +134,11 @@ def do_pull():
         actions.say(data.chan, "\x02%s\x0F: done; no new changes." % data.nick)
     else:
         actions.say(data.chan, "\x02%s\x0F: done; new changes merged." % data.nick)
+
+def do_status():
+    """check whether we have anything to pull"""
+    result = exec_shell("git fetch --dry-run")
+    if not result:
+        actions.say(data.chan, "\x02%s\x0F: local copy is up-to-date with remote." % data.nick)
+    else:
+        actions.say(data.chan, "\x02%s\x0F: remote is ahead of local copy." % (data.nick))

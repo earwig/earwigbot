@@ -23,6 +23,10 @@ class Actions:
         """send a message"""
         self.send("PRIVMSG %s :%s" % (target, msg))
 
+    def reply(self, target, nick, msg):
+        """send a message as a reply"""
+        self.say(target, "%s%s%s: %s" % (chr(2), nick, chr(0x0f), msg))
+
     def action(self, target, msg):
         """send a message as an action"""
         self.say(target,"%sACTION %s%s" % (chr(1), msg, chr(1)))

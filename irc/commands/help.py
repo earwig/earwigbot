@@ -19,7 +19,7 @@ def do_general_help():
 
 def do_command_help():
     command = data.args[0]
-    
+
     try:
         exec "from irc.commands import %s as this_command" % command
     except ImportError:
@@ -29,6 +29,6 @@ def do_command_help():
     info = this_command.__doc__
 
     if info:
-        actions.say(data.chan, "\x02%s\x0F: Info for command \x0303%s\x0301: %s" % (data.nick, command, info))
+        actions.say(data.chan, "\x02%s\x0F: Info for command \"\x0303%s\x0301: %s\"" % (data.nick, command, info))
     else:
         actions.say(data.chan, "\x02%s\x0F: Sorry, no information for \x0303%s\x0301." % (data.nick, command))
