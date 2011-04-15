@@ -24,6 +24,7 @@ def do_command_help():
         exec "from irc.commands import %s as this_command" % command
     except ImportError:
         actions.say(data.chan, "\x02%s\x0F: command \x0303%s\x0301 not found!" % (data.nick, command))
+        return
 
     info = this_command.__doc__
 
