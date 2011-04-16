@@ -4,17 +4,17 @@
 
 import random
 
-actions, data = None, None
+connection, data = None, None
 
-def call(a, d):
-    global actions, data
-    actions, data = a, d
+def call(c, d):
+    global connection, data
+    connection, data = c, d
 
     choices = ("say_hi()", "say_sup()")
     exec random.choice(choices)
 
 def say_hi():
-    actions.say(data.chan, "Hey \x02%s\x0F!" % data.nick)
+    connection.say(data.chan, "Hey \x02%s\x0F!" % data.nick)
 
 def say_sup():
-    actions.say(data.chan, "'sup \x02%s\x0F?" % data.nick)
+    connection.say(data.chan, "'sup \x02%s\x0F?" % data.nick)

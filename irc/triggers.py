@@ -4,7 +4,7 @@
 
 from irc.commands import test, help, git
 
-def check(actions, data, hook):
+def check(connection, data, hook):
     data.parse_args() # parse command arguments into data.command and data.args
     
     if hook == "join":
@@ -18,10 +18,10 @@ def check(actions, data, hook):
 
     if hook == "msg":
         if data.command == "!test":
-            test.call(actions, data)
+            test.call(connection, data)
             
         elif data.command == "!help":
-            help.call(actions, data)
+            help.call(connection, data)
             
         elif data.command == "!git":
-            git.call(actions, data)
+            git.call(connection, data)

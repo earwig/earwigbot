@@ -2,11 +2,11 @@
 
 """Generates help information."""
 
-actions, data = None, None
+connection, data = None, None
 
-def call(a, d):
-    global actions, data
-    actions, data = a, d
+def call(c, d):
+    global connection, data
+    connection, data = c, d
 
     if not data.args:
         do_general_help()
@@ -15,7 +15,7 @@ def call(a, d):
         do_command_help()
 
 def do_general_help():
-    actions.reply(data.chan, data.nick, "I am a bot! You can get help for any command by typing '!help <command>'.")
+    connection.reply(data.chan, data.nick, "I am a bot! You can get help for any command by typing '!help <command>'.")
 
 def do_command_help():
     command = data.args[0]
@@ -23,12 +23,12 @@ def do_command_help():
     try:
         exec "from irc.commands import %s as this_command" % command
     except ImportError:
-        actions.reply(data.chan, data.nick, "command \x0303%s\x0301 not found!" % command)
+        connection.reply(data.chan, data.nick, "command \x0303%s\x0301 not found!" % command)
         return
 
     info = this_command.__doc__
 
     if info:
-        actions.reply(data.chan, data.nick, "info for command \x0303%s\x0301: \"%s\"" % (command, info))
+        connection.reply(data.chan, data.nick, "info for command \x0303%s\x0301: \"%s\"" % (command, info))
     else:
-        actions.reply(data.chan, data.nick, "sorry, no information for \x0303%s\x0301." % command)
+        connection.reply(data.chan, data.nick, "sorry, no information for \x0303%s\x0301." % command)

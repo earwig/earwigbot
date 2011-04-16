@@ -22,7 +22,4 @@ class Data:
         except IndexError:
             self.command = None
 
-        try:
-            self.args = args[1:] # the command arguments
-        except IndexError:
-            self.args = None
+        self.args = args[1:] # the command arguments

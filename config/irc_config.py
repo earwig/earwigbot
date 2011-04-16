@@ -3,23 +3,24 @@
 # EarwigBot Configuration File
 # This file contains information that the bot uses to connect to IRC.
 
-# our server's hostname
+# our main (front-end) server's hostname and port
 HOST = "irc.freenode.net"
-
-# our server's port
 PORT = 6667
 
-# our nick
+# our watcher server's hostname, port, and RC channel
+WATCHER_HOST = "irc.wikimedia.org"
+WATCHER_PORT = 6667
+WATCHER_CHAN = "#en.wikipedia"
+
+# our nick, ident, and real name, used on both servers
 NICK = "EarwigBot"
-
-# our ident
 IDENT = "earwigbot"
-
-# our real name
 REALNAME = "[[w:en:User:EarwigBot]]"
 
-# channel to join on startup
+# channels to join on main server's startup
 CHANS = ["##earwigbot", "##earwig", "#wikipedia-en-afc"]
+AFC_CHANS = ["#wikipedia-en-afc"] # report recent AFC changes
+BOT_CHANS = ["##earwigbot", "#wikipedia-en-afc"] # report edits containing "!earwigbot"
 
-# hostnames of users who can update/restart the bot with !update
+# hardcoded hostnames of users who can use !restart and !git
 ADMINS = ["wikipedia/The-Earwig"]
