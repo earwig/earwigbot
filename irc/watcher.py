@@ -21,10 +21,9 @@ def main(connection, f_conn):
     read_buffer = str()
 
     while 1:
-        try:        
+        try:
             read_buffer = read_buffer + connection.get()
         except RuntimeError: # socket broke
-            print "socket has broken on watcher, restarting component..."
             return
 
         lines = read_buffer.split("\n")

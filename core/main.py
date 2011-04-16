@@ -30,7 +30,7 @@ def irc_watcher(f_conn):
         except:
             traceback.print_exc()
         time.sleep(5) # sleep a bit before restarting watcher
-        print "restarting watcher component..."
+        print "watcher has stopped; restarting component..."
 
 def run():
     global f_conn
@@ -42,9 +42,8 @@ def run():
 
     frontend.main(f_conn)
 
+    w_conn.close()
+    f_conn.close()
+
 if __name__ == "__main__":
-    try:
-        run()
-    finally:
-        f_conn.close()
-        w_conn.close()
+    run()
