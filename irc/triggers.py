@@ -4,16 +4,6 @@
 
 from irc.commands import test, help, git, link, chanops
 
-def get_alias(key):
-    """used by help.py, e.g. so we know !voice corresponds to chanops.py"""
-    aliases = {
-        "voice": chanops,
-        "devoice": chanops,
-        "op": chanops,
-        "deop": chanops,
-    }
-    return aliases[key]
-
 def check(connection, data, hook):
     data.parse_args() # parse command arguments into data.command and data.args
 

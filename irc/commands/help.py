@@ -2,9 +2,17 @@
 
 """Generates help information."""
 
-from irc import triggers
-
 connection, data = None, None
+
+def get_alias(key):
+    """connect command aliases with their file, e.g. so we know !voice corresponds to chanops.py"""
+    aliases = {
+        "voice": "chanops",
+        "devoice": "chanops",
+        "op": "chanops",
+        "deop": "chanops",
+    }
+    return aliases[key]
 
 def call(c, d):
     global connection, data
@@ -26,10 +34,11 @@ def do_command_help():
         exec "from irc.commands import %s as this_command" % command
     except ImportError: # if we can't find it directly, this could be an alias for another command
         try:
-            this_command = triggers.get_alias(command)
+            cmd = get_alias(command)
         except KeyError:
             connection.reply(data.chan, data.nick, "command \x0303%s\x0301 not found!" % command)
             return
+        exec "from irc.commands import %s as this_command" % cmd
 
     info = this_command.__doc__
 
