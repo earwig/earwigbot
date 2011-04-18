@@ -11,8 +11,8 @@ def call(c, d):
     global connection, data
     connection, data = c, d
 
-    if data.host not in ADMINS:
-        connection.reply(data.chan, data.nick, "you must be a bot admin to use this command.")
+    if data.host not in OWNERS:
+        connection.reply(data.chan, data.nick, "you must be a bot owner to use this command.")
         return
     
     if not data.args:

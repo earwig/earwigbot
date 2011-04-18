@@ -54,7 +54,7 @@ def report(msg, chans):
         frontend_conn.say(chan, msg)
 
 def check(rc):
-    """check to see if """
+    """check if we're supposed to report this message anywhere"""
     page_name = rc.page.lower()
     pretty_msg = rc.pretty()
 

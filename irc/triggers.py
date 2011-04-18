@@ -2,7 +2,7 @@
 
 # Check what events on IRC we can respond to.
 
-from irc.commands import test, help, git, link
+from irc.commands import test, help, git, link, chanops
 
 def check(connection, data, hook):
     data.parse_args() # parse command arguments into data.command and data.args
@@ -30,3 +30,7 @@ def check(connection, data, hook):
         ("[[" in data.msg and "]]" in data.msg) or
         ("{{" in data.msg and "}}" in data.msg)):
             link.call(connection, data)
+
+        elif (data.command == "!voice" or data.command == "!devoice" or
+        data.command == "!op" or data.command == "!deop"):
+            chanops.call(connection, data)

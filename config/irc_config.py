@@ -22,5 +22,6 @@ CHANS = ["##earwigbot", "##earwig", "#wikipedia-en-afc"]
 AFC_CHANS = ["#wikipedia-en-afc"] # report recent AFC changes
 BOT_CHANS = ["##earwigbot", "#wikipedia-en-afc"] # report edits containing "!earwigbot"
 
-# hardcoded hostnames of users who can use !restart and !git
-ADMINS = ["wikipedia/The-Earwig"]
+# hardcoded hostnames of users with certain permissions
+OWNERS = ["wikipedia/The-Earwig"] # can use owner-only commands (!restart and !git)
+ADMINS = ["wikipedia/The-Earwig", "wikipedia/LeonardBloom"] # can use high-risk commands, e.g. !op

@@ -52,8 +52,8 @@ def main(connection):
                 triggers.check(connection, data, "msg") # check for general messages
 
                 if data.msg.startswith("!restart"): # hardcode the !restart command (we can't restart from within an ordinary command)
-                    if data.host in ADMINS:
-                        print "restarting bot per admin request..."
+                    if data.host in OWNERS:
+                        print "restarting bot per owner request..."
                         return
 
             if line[0] == "PING": # If we are pinged, pong back to the server
