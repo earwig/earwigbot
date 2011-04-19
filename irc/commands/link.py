@@ -7,8 +7,8 @@ import re
 from irc.base_command import BaseCommand
 
 class Link(BaseCommand):
-    def get_hook(self):
-        return "msg"
+    def get_hooks(self):
+        return ["msg"]
 
     def get_help(self, command):
         return "Convert a Wikipedia page name into a URL."

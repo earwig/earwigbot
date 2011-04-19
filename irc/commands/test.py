@@ -7,8 +7,8 @@ import random
 from irc.base_command import BaseCommand
 
 class Test(BaseCommand):
-    def get_hook(self):
-        return "msg"
+    def get_hooks(self):
+        return ["msg"]
 
     def get_help(self, command):
         return "Test the bot!"

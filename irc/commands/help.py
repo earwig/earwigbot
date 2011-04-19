@@ -7,8 +7,8 @@ from irc.data import Data
 from irc import command_handler
 
 class Help(BaseCommand):
-    def get_hook(self):
-        return "msg"
+    def get_hooks(self):
+        return ["msg"]
 
     def get_help(self, command):
         return "Generates help information."

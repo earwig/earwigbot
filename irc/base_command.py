@@ -7,10 +7,10 @@ class BaseCommand(object):
         """A base class for commands on IRC."""
         self.connection = connection
 
-    def get_hook(self):
+    def get_hooks(self):
         """Hooks are: 'msg', 'msg_private', 'msg_public', and 'join'. Return
-        the hook you want this command to be called on."""
-        return None
+        the hooks you want this command to be called on."""
+        return []
 
     def get_help(self, command):
         """Return help information for the command, used by !help. return None

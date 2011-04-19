@@ -6,8 +6,8 @@ from irc.base_command import BaseCommand
 from config.irc_config import *
 
 class ChanOps(BaseCommand):
-    def get_hook(self):
-        return "msg"
+    def get_hooks(self):
+        return ["msg"]
 
     def get_help(self, command):
         action = command.capitalize()

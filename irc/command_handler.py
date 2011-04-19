@@ -59,7 +59,7 @@ def check(hook, data):
     data.parse_args() # parse command arguments into data.command and data.args
 
     for command in commands:
-        if command.get_hook() == hook:
+        if hook in command.get_hooks():
             if command.check(data):
                 command.process(data)
                 break

@@ -8,8 +8,8 @@ from config.irc_config import *
 from irc.base_command import BaseCommand
 
 class Git(BaseCommand):
-    def get_hook(self):
-        return "msg"
+    def get_hooks(self):
+        return ["msg"]
 
     def get_help(self, command):
         return "Commands to interface with the bot's git repository; use '!git help' for sub-command list."
