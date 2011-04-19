@@ -4,7 +4,7 @@
 
 from irc.base_command import BaseCommand
 from irc.data import Data
-from irc import triggers
+from irc import command_handler
 
 class Help(BaseCommand):
     def get_hook(self):
@@ -29,7 +29,7 @@ class Help(BaseCommand):
 
     def do_command_help(self, data):
         command = data.args[0]
-        commands = triggers.get_commands()
+        commands = command_handler.get_commands()
 
         dummy = Data() # dummy message to test which command classes pick up this command
         dummy.command = command

@@ -6,7 +6,7 @@ import re
 from config.irc_config import *
 from config.secure_config import *
 
-from irc import triggers
+from irc import command_handler
 from irc.connection import Connection
 from irc.data import Data
 
@@ -19,7 +19,7 @@ def get_connection():
 def startup(conn):
     global connection
     connection = conn
-    triggers.init_commands(connection)
+    command_handler.init_commands(connection)
     connection.connect()
 
 def main():
@@ -43,7 +43,7 @@ def main():
                 data.nick, data.ident, data.host = re.findall(":(.*?)!(.*?)@(.*?)\Z", line[0])[0]
                 data.chan = line[2][1:]
 
-                triggers.check("join", data) # check if there's anything we can respond to, and if so, respond
+                command_handler.check("join", data) # check if there's anything we can respond to, and if so, respond
 
             if line[1] == "PRIVMSG":
                 data.nick, data.ident, data.host = re.findall(":(.*?)!(.*?)@(.*?)\Z", line[0])[0]
@@ -52,11 +52,11 @@ def main():
 
                 if data.chan == NICK: # this is a privmsg to us, so set 'chan' as the nick of the sender
                     data.chan = data.nick
-                    triggers.check("msg_private", data) # only respond if it's a private message
+                    command_handler.check("msg_private", data) # only respond if it's a private message
                 else:
-                    triggers.check("msg_public", data) # only respond if it's a public (channel) message
+                    command_handler.check("msg_public", data) # only respond if it's a public (channel) message
 
-                triggers.check("msg", data) # check for general messages
+                command_handler.check("msg", data) # check for general messages
 
                 if data.msg.startswith("!restart"): # hardcode the !restart command (we can't restart from within an ordinary command)
                     if data.host in OWNERS:
