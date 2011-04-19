@@ -1,48 +1,46 @@
 # -*- coding: utf-8  -*-
 
-"""Generates help information."""
+# Generates help information.
 
-connection, data = None, None
+from irc.base_command import BaseCommand
+from irc.data import Data
+from irc import triggers
 
-def get_alias(key):
-    """connect command aliases with their file, e.g. so we know !voice corresponds to chanops.py"""
-    aliases = {
-        "voice": "chanops",
-        "devoice": "chanops",
-        "op": "chanops",
-        "deop": "chanops",
-    }
-    return aliases[key]
+class Help(BaseCommand):
+    def get_hook(self):
+        return "msg"
 
-def call(c, d):
-    global connection, data
-    connection, data = c, d
+    def get_help(self, command):
+        return "Generates help information."
 
-    if not data.args:
-        do_general_help()
+    def check(self, data):
+        if data.is_command and data.command == "help":
+            return True
+        return False
 
-    else:
-        do_command_help()
+    def process(self, data):
+        if not data.args:
+            self.do_general_help(data)
+        else:
+            self.do_command_help(data)
 
-def do_general_help():
-    connection.reply(data.chan, data.nick, "I am a bot! You can get help for any command by typing '!help <command>'.")
+    def do_general_help(self, data):
+        self.connection.reply(data, "I am a bot! You can get help for any command by typing '!help <command>'.")
 
-def do_command_help():
-    command = data.args[0]
+    def do_command_help(self, data):
+        command = data.args[0]
+        commands = triggers.get_commands()
 
-    try:
-        exec "from irc.commands import %s as this_command" % command
-    except ImportError: # if we can't find it directly, this could be an alias for another command
+        dummy = Data() # dummy message to test which command classes pick up this command
+        dummy.command = command
+        dummy.is_command = True
+
+        for cmnd in commands:
+            if cmnd.check(dummy):
+                help = cmnd.get_help(command)
+                break
+
         try:
-            cmd = get_alias(command)
-        except KeyError:
-            connection.reply(data.chan, data.nick, "command \x0303%s\x0301 not found!" % command)
-            return
-        exec "from irc.commands import %s as this_command" % cmd
-
-    info = this_command.__doc__
-
-    if info:
-        connection.reply(data.chan, data.nick, "info for command \x0303%s\x0301: \"%s\"" % (command, info))
-    else:
-        connection.reply(data.chan, data.nick, "sorry, no information for \x0303%s\x0301." % command)
+            self.connection.reply(data, "info for command \x0303%s\x0301: \"%s\"" % (command, help))
+        except UnboundLocalError:
+            self.connection.reply(data, "sorry, no help for \x0303%s\x0301." % command)

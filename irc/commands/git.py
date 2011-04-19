@@ -1,152 +1,154 @@
 # -*- coding: utf-8  -*-
 
-"""Commands to interface with the bot's git repository; use '!git help' for sub-command list."""
+# Commands to interface with the bot's git repository; use '!git help' for sub-command list.
 
 import shlex, subprocess, re
+
 from config.irc_config import *
+from irc.base_command import BaseCommand
 
-connection, data = None, None
+class Git(BaseCommand):
+    def get_hook(self):
+        return "msg"
 
-def call(c, d):
-    global connection, data
-    connection, data = c, d
+    def get_help(self, command):
+        return "Commands to interface with the bot's git repository; use '!git help' for sub-command list."
 
-    if data.host not in OWNERS:
-        connection.reply(data.chan, data.nick, "you must be a bot owner to use this command.")
-        return
-    
-    if not data.args:
-        connection.reply(data.chan, data.nick, "no arguments provided.")
-        return
+    def check(self, data):
+        if data.is_command and data.command == "git":
+            return True
+        return False
 
-    if data.args[0] == "help":
-        do_help()
+    def process(self, data):
+        self.data = data
+        if data.host not in OWNERS:
+            self.connection.reply(data, "you must be a bot owner to use this command.")
+            return
 
-    elif data.args[0] == "branch":
-        do_branch()
+        if not data.args:
+            self.connection.reply(data, "no arguments provided. Maybe you wanted '!git help'?")
+            return
 
-    elif data.args[0] == "branches":
-        do_branches()
+        if data.args[0] == "help":
+            self.do_help()
 
-    elif data.args[0] == "checkout":
-        do_checkout()
+        elif data.args[0] == "branch":
+            self.do_branch()
 
-    elif data.args[0] == "delete":
-        do_delete()
+        elif data.args[0] == "branches":
+            self.do_branches()
 
-    elif data.args[0] == "pull":
-        do_pull()
+        elif data.args[0] == "checkout":
+            self.do_checkout()
 
-    elif data.args[0] == "status":
-        do_status()
+        elif data.args[0] == "delete":
+            self.do_delete()
 
-    else: # they asked us to do something we don't know
-        connection.reply(data.chan, data.nick, "unknown argument: \x0303%s\x0301." % data.args[0])
+        elif data.args[0] == "pull":
+            self.do_pull()
 
-def exec_shell(command):
-    """execute a shell command and get the output"""
-    command = shlex.split(command)
-    result = subprocess.check_output(command, stderr=subprocess.STDOUT)
-    return result
+        elif data.args[0] == "status":
+            self.do_status()
 
-def do_help():
-    """display all commands"""
-    help = ""
+        else: # they asked us to do something we don't know
+            self.connection.reply(data, "unknown argument: \x0303%s\x0301." % data.args[0])
 
-    help_dict = {
-        "branch": "get current branch",
-        "branches": "get all branches",
-        "checkout": "switch branches",
-        "delete": "delete an old branch",
-        "pull": "update everything from the remote server",
-        "status": "check if we are up-to-date",
-    }
+    def exec_shell(self, command):
+        """execute a shell command and get the output"""
+        command = shlex.split(command)
+        result = subprocess.check_output(command, stderr=subprocess.STDOUT)
+        if result:
+            result = result[:-1] # strip newline
+        return result
 
-    keys = help_dict.keys()
-    keys.sort()
-    for key in keys:
-        help += "\x0303%s\x0301 (%s), " % (key, help_dict[key])
-    help = help[:-2] # trim last comma
+    def do_help(self):
+        """display all commands"""
+        help_dict = {
+            "branch": "get current branch",
+            "branches": "get all branches",
+            "checkout": "switch branches",
+            "delete": "delete an old branch",
+            "pull": "update everything from the remote server",
+            "status": "check if we are up-to-date",
+        }
+        keys = help_dict.keys()
+        keys.sort()
+        help = ""
+        for key in keys:
+            help += "\x0303%s\x0301 (%s), " % (key, help_dict[key])
+        help = help[:-2] # trim last comma and space
+        self.connection.reply(self.data, "sub-commands are: %s." % help)
 
-    connection.reply(data.chan, data.nick, "sub-commands are: %s." % help)
+    def do_branch(self):
+        """get our current branch"""
+        branch = self.exec_shell("git name-rev --name-only HEAD")
+        self.connection.reply(self.data, "currently on branch \x0302%s\x0301." % branch)
 
-def do_branch():
-    """get our current branch"""
-    branch = exec_shell("git name-rev --name-only HEAD")
-    branch = branch[:-1] # strip newline
+    def do_branches(self):
+        """get list of branches"""
+        branches = self.exec_shell("git branch")
+        branches = branches.replace('\n* ', ', ') # cleanup extraneous characters
+        branches = branches.replace('* ', ' ')
+        branches = branches.replace('\n  ', ', ')
+        branches = branches.strip()
+        self.connection.reply(self.data, "branches: \x0302%s\x0301." % branches)
 
-    connection.reply(data.chan, data.nick, "currently on branch \x0302%s\x0301." % branch)
+    def do_checkout(self):
+        """switch branches"""
+        try:
+            branch = self.data.args[1]
+        except IndexError: # no branch name provided
+            self.connection.reply(self.data, "switch to which branch?")
+            return
 
-def do_branches():
-    """get list of branches"""
-    branches = exec_shell("git branch")
+        try:
+            result = self.exec_shell("git checkout %s" % branch)
+            if "Already on" in result:
+                self.connection.reply(self.data, "already on \x0302%s\x0301!" % branch)
+            else:
+                self.connection.reply(self.data, "switched to branch \x0302%s\x0301." % branch)
 
-    branches = branches[:-1] # strip newline
-    branches = branches.replace('\n* ', ', ') # cleanup extraneous characters
-    branches = branches.replace('* ', ' ')
-    branches = branches.replace('\n  ', ', ')
-    branches = branches.strip()
+        except subprocess.CalledProcessError: # git couldn't switch branches
+            self.connection.reply(self.data, "branch \x0302%s\x0301 doesn't exist!" % branch)
 
-    connection.reply(data.chan, data.nick, "branches: \x0302%s\x0301." % branches)
+    def do_delete(self):
+        """delete a branch, while making sure that we are not on it"""
+        try:
+            delete_branch = self.data.args[1]
+        except IndexError: # no branch name provided
+            self.connection.reply(self.data, "delete which branch?")
+            return
 
-def do_checkout():
-    """switch branches"""
-    try:
-        branch = data.args[1]
-    except IndexError: # no branch name provided
-        connection.reply(data.chan, data.nick, "switch to which branch?")
-        return
+        current_branch = self.exec_shell("git name-rev --name-only HEAD")
 
-    try:
-        result = exec_shell("git checkout %s" % branch)
-        if "Already on" in result:
-            connection.reply(data.chan, data.nick, "already on \x0302%s\x0301!" % branch)
+        if current_branch == delete_branch:
+            self.connection.reply(self.data, "you're currently on this branch; please checkout to a different branch before deleting.")
+            return
+
+        try:
+            self.exec_shell("git branch -d %s" % delete_branch)
+            self.connection.reply(self.data, "branch \x0302%s\x0301 has been deleted locally." % delete_branch)
+        except subprocess.CalledProcessError: # git couldn't delete
+            self.connection.reply(self.data, "branch \x0302%s\x0301 doesn't exist!" % delete_branch)
+
+    def do_pull(self):
+        """pull from remote repository"""
+        branch = self.exec_shell("git name-rev --name-only HEAD")
+        self.connection.reply(self.data, "pulling from remote (currently on \x0302%s\x0301)..." % branch)
+
+        result = self.exec_shell("git pull")
+
+        if "Already up-to-date." in result:
+            self.connection.reply(self.data, "done; no new changes.")
         else:
-            connection.reply(data.chan, data.nick, "switched to branch \x0302%s\x0301." % branch)
+            changes = re.findall("\s*((.*?)\sfile(.*?)tions?\(-\))", result)[0][0] # find the changes
+            self.connection.reply(self.data, "done; %s." % changes)
 
-    except subprocess.CalledProcessError: # git couldn't switch branches
-        connection.reply(data.chan, data.nick, "branch \x0302%s\x0301 doesn't exist!" % branch)
-
-def do_delete():
-    """delete a branch, while making sure that we are not on it"""
-    try:
-        delete_branch = data.args[1]
-    except IndexError: # no branch name provided
-        connection.reply(data.chan, data.nick, "delete which branch?")
-        return
-
-    current_branch = exec_shell("git name-rev --name-only HEAD")
-    current_branch = current_branch[:-1] # strip newline
-
-    if current_branch == delete_branch:
-        connection.reply(data.chan, data.nick, "you're currently on this branch; please checkout to a different branch before deleting.")
-        return
-
-    try:
-        exec_shell("git branch -d %s" % delete_branch)
-        connection.reply(data.chan, data.nick, "branch \x0302%s\x0301 has been deleted locally." % delete_branch)
-    except subprocess.CalledProcessError: # git couldn't delete
-        connection.reply(data.chan, data.nick, "branch \x0302%s\x0301 doesn't exist!" % delete_branch)
-
-def do_pull():
-    """pull from remote repository"""
-    branch = exec_shell("git name-rev --name-only HEAD")
-    branch = branch[:-1] # strip newline
-    connection.reply(data.chan, data.nick, "pulling from remote (currently on \x0302%s\x0301)..." % branch)
-
-    result = exec_shell("git pull")
-
-    if "Already up-to-date." in result:
-        connection.reply(data.chan, data.nick, "done; no new changes.")
-    else:
-        changes = re.findall("\s*((.*?)\sfile(.*?)tions?\(-\))", result)[0][0] # find the changes
-        connection.reply(data.chan, data.nick, "done; %s." % changes)
-
-def do_status():
-    """check whether we have anything to pull"""
-    connection.reply(data.chan, data.nick, "checking remote for updates...")
-    result = exec_shell("git fetch --dry-run")
-    if not result:
-        connection.reply(data.chan, data.nick, "local copy is up-to-date with remote.")
-    else:
-        connection.reply(data.chan, data.nick, "remote is ahead of local copy.")
+    def do_status(self):
+        """check whether we have anything to pull"""
+        self.connection.reply(self.data, "checking remote for updates...")
+        result = self.exec_shell("git fetch --dry-run")
+        if not result:
+            self.connection.reply(self.data, "local copy is up-to-date with remote.")
+        else:
+            self.connection.reply(self.data, "remote is ahead of local copy.")

@@ -1,24 +1,32 @@
 # -*- coding: utf-8  -*-
 
-"""Voice/devoice/op/deop users in the channel."""
+# Voice/devoice/op/deop users in the channel.
 
+from irc.base_command import BaseCommand
 from config.irc_config import *
 
-connection, data = None, None
+class ChanOps(BaseCommand):
+    def get_hook(self):
+        return "msg"
 
-def call(c, d):
-    global connection, data
-    connection, data = c, d
+    def get_help(self, command):
+        action = command.capitalize()
+        return "%s users in the channel." % action
 
-    if data.host not in ADMINS:
-        connection.reply(data.chan, data.nick, "you must be a bot admin to use this command.")
-        return
+    def check(self, data):
+        if data.is_command and (data.command == "voice" or data.command == "devoice"
+        or data.command == "op" or data.command == "deop"):
+            return True
+        return False
 
-    if not data.args: # if it is just !op/!devoice/whatever without arguments, assume they want to do this to themselves
-        target = data.nick
-    else:
-        target = data.args[0]
+    def process(self, data):
+        if data.host not in ADMINS:
+            self.connection.reply(data, "you must be a bot admin to use this command.")
+            return
 
-    action = data.command[1:] # strip ! at the beginning of the command
+        if not data.args: # if it is just !op/!devoice/whatever without arguments, assume they want to do this to themselves
+            target = data.nick
+        else:
+            target = data.args[0]
 
-    connection.say("ChanServ", "%s %s %s" % (action, data.chan, target))
+        self.connection.say("ChanServ", "%s %s %s" % (data.command, data.chan, target))

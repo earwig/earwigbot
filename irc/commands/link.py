@@ -1,54 +1,65 @@
 # -*- coding: utf-8  -*-
 
-"""Convert a Wikipedia page name into a URL."""
+# Convert a Wikipedia page name into a URL.
 
 import re
 
-connection, data = None, None
+from irc.base_command import BaseCommand
 
-def call(c, d):
-    global connection, data
-    connection, data = c, d
+class Link(BaseCommand):
+    def get_hook(self):
+        return "msg"
 
-    msg = data.msg
+    def get_help(self, command):
+        return "Convert a Wikipedia page name into a URL."
 
-    if re.search("(\[\[(.*?)\]\])|(\{\{(.*?)\}\})", msg):
-        links = parse_line(msg)
-        links = " , ".join(links)
-        connection.reply(data.chan, data.nick, links)
+    def check(self, data):
+        if ((data.is_command and data.command == "link") or
+        (("[[" in data.msg and "]]" in data.msg) or
+        ("{{" in data.msg and "}}" in data.msg))):
+            return True
+        return False
 
-    elif data.command == "!link":
-        if not data.args:
-            connection.reply(data.chan, data.nick, "what do you want me to link to?")
-            return
-        pagename = ' '.join(data.args)
-        link = parse_link(pagename)
-        connection.reply(data.chan, data.nick, link)
+    def process(self, data):
+        msg = data.msg
 
-def parse_line(line):
-    results = list()
+        if re.search("(\[\[(.*?)\]\])|(\{\{(.*?)\}\})", msg):
+            links = self.parse_line(msg)
+            links = " , ".join(links)
+            self.connection.reply(data, links)
 
-    line = re.sub("\{\{\{(.*?)\}\}\}", "", line) # destroy {{{template parameters}}}
+        elif data.command == "link":
+            if not data.args:
+                self.connection.reply(data, "what do you want me to link to?")
+                return
+            pagename = ' '.join(data.args)
+            link = self.parse_link(pagename)
+            self.connection.reply(data, link)
 
-    links = re.findall("(\[\[(.*?)(\||\]\]))", line) # find all [[links]]
-    if links:
-        links = map(lambda x: x[1], links) # re.findall() returns a list of tuples, but we only want the 2nd item in each tuple
-        results.extend(map(parse_link, links))
+    def parse_line(self, line):
+        results = list()
 
-    templates = re.findall("(\{\{(.*?)(\||\}\}))", line) # find all {{templates}}
-    if templates:
-        templates = map(lambda x: x[1], templates)
-        results.extend(map(parse_template, templates))
+        line = re.sub("\{\{\{(.*?)\}\}\}", "", line) # destroy {{{template parameters}}}
 
-    return results
+        links = re.findall("(\[\[(.*?)(\||\]\]))", line) # find all [[links]]
+        if links:
+            links = map(lambda x: x[1], links) # re.findall() returns a list of tuples, but we only want the 2nd item in each tuple
+            results.extend(map(self.parse_link, links))
 
-def parse_link(pagename):
-    pagename = pagename.strip()
-    link = "http://en.wikipedia.org/wiki/" + pagename
-    link = link.replace(" ", "_")
-    return link
+        templates = re.findall("(\{\{(.*?)(\||\}\}))", line) # find all {{templates}}
+        if templates:
+            templates = map(lambda x: x[1], templates)
+            results.extend(map(self.parse_template, templates))
 
-def parse_template(pagename):
-    pagename = "Template:%s" % pagename # TODO: implement an actual namespace check
-    link = parse_link(pagename)
-    return link
+        return results
+
+    def parse_link(self, pagename):
+        pagename = pagename.strip()
+        link = "http://en.wikipedia.org/wiki/" + pagename
+        link = link.replace(" ", "_")
+        return link
+
+    def parse_template(self, pagename):
+        pagename = "Template:%s" % pagename # TODO: implement an actual namespace check
+        link = self.parse_link(pagename)
+        return link
