@@ -1,10 +1,10 @@
+# -*- coding: utf-8  -*-
 ###### 
 ###### NOTE:
 ###### This is an old commands file from the previous version of EarwigBot.
 ###### It is not used by the new EarwigBot and is simply here for reference
 ###### when developing new commands.
 ###### 
-# -*- coding: utf-8  -*-
 ### EarwigBot
 
 ## Import basics.
