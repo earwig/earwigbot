@@ -41,7 +41,7 @@ class Help(BaseCommand):
         commands = command_handler.get_commands()
 
         dummy = Data() # dummy message to test which command classes pick up this command
-        dummy.command = command
+        dummy.command = command.lower() # lowercase command name
         dummy.is_command = True
 
         for cmnd in commands:

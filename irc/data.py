@@ -29,5 +29,6 @@ class Data(object):
             if self.command.startswith('!') or self.command.startswith('.'):
                 self.is_command = True
                 self.command = self.command[1:] # strip '!' or '.'
+                self.command = self.command.lower() # lowercase command name
         except AttributeError:
             pass
