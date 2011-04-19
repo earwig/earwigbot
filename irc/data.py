@@ -2,7 +2,7 @@
 
 # A class to store data from an individual line received on IRC.
 
-class Data:
+class Data(object):
     def __init__(self):
         """store data from an individual line received on IRC"""
         self.chan = str()
@@ -17,9 +17,17 @@ class Data:
         while '' in args: # remove any empty arguments
             args.remove('')
 
+        self.args = args[1:] # the command arguments
+        self.is_command = False # whether this is a real command or not
+
         try:
             self.command = args[0] # the command itself
         except IndexError:
             self.command = None
 
-        self.args = args[1:] # the command arguments
+        try:
+            if self.command.startswith('!') or self.command.startswith('.'):
+                self.is_command = True
+                self.command = self.command[1:] # strip '!' or '.'
+        except AttributeError:
+            pass

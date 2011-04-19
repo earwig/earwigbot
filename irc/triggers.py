@@ -1,36 +1,67 @@
 # -*- coding: utf-8  -*-
 
-# Check what events on IRC we can respond to.
+# A module to manage IRC commands.
 
-from irc.commands import test, help, git, link, chanops
+import os
+import traceback
 
-def check(connection, data, hook):
+commands = []
+
+def init_commands(connection, silent=False):
+    """load all valid command classes from irc/commmands/ into the commands variable"""
+    files = os.listdir(os.path.join("irc", "commands")) # get all files in irc/commands/
+
+    for f in files:
+        if f.startswith("_") or not f.endswith(".py"): # ignore non-python files or files beginning with "_"
+            continue
+
+        module = f[:-3] # strip .py from end
+
+        try:
+            exec "from irc.commands import %s" % module
+        except: # importing the file failed for some reason...
+            if not silent:
+                print "Couldn't load file %s:" % f
+                traceback.print_exc()
+            continue
+
+        m = eval(module) # 'module' is a string, so get the actual object for processing
+        process_module(connection, m)
+
+    if not silent:
+        pretty_cmnds = map(lambda c: c.__class__.__name__, commands)
+        print "Found %s command classes: %s." % (len(commands), ', '.join(pretty_cmnds))
+
+def process_module(connection, module):
+    """go through all objects in a module and add valid command classes to the commands variable"""
+    global commands
+    objects = dir(module)
+
+    for this_obj in objects: # go through everything in the file
+        obj = eval("module.%s" % this_obj) # this_obj is a string, so get the actual object corresponding to that string
+
+        try:
+            bases = obj.__bases__
+        except AttributeError: # object isn't a valid class, so ignore it
+            continue
+
+        for base in bases:
+            if base.__name__ == "BaseCommand": # this inherits BaseCommand, so it must be a command class
+                command = obj(connection) # initialize a new command object
+                commands.append(command)
+                print "Added command class %s from %s..." % (this_obj, module.__name__)
+                continue
+
+def get_commands():
+    """get our commands"""
+    return commands
+
+def check(hook, data):
+    """given an event on IRC, check if there's anything we can respond to by calling each command class"""
     data.parse_args() # parse command arguments into data.command and data.args
 
-    if hook == "join":
-        pass
-
-    if hook == "msg_private":
-        pass
-
-    if hook == "msg_public":
-        pass
-
-    if hook == "msg":
-        if data.command == "!test":
-            test.call(connection, data)
-
-        elif data.command == "!help":
-            help.call(connection, data)
-
-        elif data.command == "!git":
-            git.call(connection, data)
-
-        elif (data.command == "!link" or
-        ("[[" in data.msg and "]]" in data.msg) or
-        ("{{" in data.msg and "}}" in data.msg)):
-            link.call(connection, data)
-
-        elif (data.command == "!voice" or data.command == "!devoice" or
-        data.command == "!op" or data.command == "!deop"):
-            chanops.call(connection, data)
+    for command in commands:
+        if command.get_hook() == hook:
+            if command.check(data):
+                command.process(data)
+                break

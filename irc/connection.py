@@ -5,8 +5,8 @@
 import socket
 import threading
 
-class Connection:
-    def __init__(self, host, port, nick, ident, realname):
+class Connection(object):
+    def __init__(self, host=None, port=None, nick=None, ident=None, realname=None):
         """a class to interface with IRC"""
         self.host = host
         self.port = port
@@ -50,9 +50,9 @@ class Connection:
         """send a message"""
         self.send("PRIVMSG %s :%s" % (target, msg))
 
-    def reply(self, target, nick, msg):
+    def reply(self, data, msg):
         """send a message as a reply"""
-        self.say(target, "%s%s%s: %s" % (chr(2), nick, chr(0x0f), msg))
+        self.say(data.chan, "%s%s%s: %s" % (chr(2), data.nick, chr(0x0f), msg))
 
     def action(self, target, msg):
         """send a message as an action"""

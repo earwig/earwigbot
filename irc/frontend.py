@@ -10,12 +10,19 @@ from irc import triggers
 from irc.connection import Connection
 from irc.data import Data
 
+connection = None
+
 def get_connection():
     connection = Connection(HOST, PORT, NICK, IDENT, REALNAME)
     return connection
 
-def main(connection):
+def startup(conn):
+    global connection
+    connection = conn
+    triggers.init_commands(connection)
     connection.connect()
+
+def main():
     read_buffer = str()
 
     while 1:
@@ -36,7 +43,7 @@ def main(connection):
                 data.nick, data.ident, data.host = re.findall(":(.*?)!(.*?)@(.*?)\Z", line[0])[0]
                 data.chan = line[2][1:]
 
-                triggers.check(connection, data, "join") # check if there's anything we can respond to, and if so, respond
+                triggers.check("join", data) # check if there's anything we can respond to, and if so, respond
 
             if line[1] == "PRIVMSG":
                 data.nick, data.ident, data.host = re.findall(":(.*?)!(.*?)@(.*?)\Z", line[0])[0]
@@ -45,11 +52,11 @@ def main(connection):
 
                 if data.chan == NICK: # this is a privmsg to us, so set 'chan' as the nick of the sender
                     data.chan = data.nick
-                    triggers.check(connection, data, "msg_private") # only respond if it's a private message
+                    triggers.check("msg_private", data) # only respond if it's a private message
                 else:
-                    triggers.check(connection, data, "msg_public") # only respond if it's a public (channel) message
+                    triggers.check("msg_public", data) # only respond if it's a public (channel) message
 
-                triggers.check(connection, data, "msg") # check for general messages
+                triggers.check("msg", data) # check for general messages
 
                 if data.msg.startswith("!restart"): # hardcode the !restart command (we can't restart from within an ordinary command)
                     if data.host in OWNERS:

@@ -35,12 +35,13 @@ def irc_watcher(f_conn):
 def run():
     global f_conn
     f_conn = frontend.get_connection()
+    frontend.startup(f_conn)
     
     t_watcher = threading.Thread(target=irc_watcher, args=(f_conn,))
     t_watcher.daemon = True
     t_watcher.start()
 
-    frontend.main(f_conn)
+    frontend.main()
 
     w_conn.close()
     f_conn.close()
