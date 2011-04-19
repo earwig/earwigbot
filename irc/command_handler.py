@@ -10,6 +10,7 @@ commands = []
 def init_commands(connection):
     """load all valid command classes from irc/commmands/ into the commands variable"""
     files = os.listdir(os.path.join("irc", "commands")) # get all files in irc/commands/
+    files.sort() # alphabetically sort list of files
 
     for f in files:
         if f.startswith("_") or not f.endswith(".py"): # ignore non-python files or files beginning with "_"
