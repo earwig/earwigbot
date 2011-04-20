@@ -21,8 +21,11 @@ class AFCStatus(BaseCommand):
         data.command == "count" or data.command == "num" or
         data.command == "number" or data.command == "afc_status"):
             return True
-        if data.line[1] == "JOIN" and data.chan in AFC_CHANS:
-            return True
+        try:
+            if data.line[1] == "JOIN" and data.chan in AFC_CHANS:
+                return True
+        except IndexError:
+            pass
         return False
 
     def process(self, data):
