@@ -46,10 +46,13 @@ class AFCStatus(BaseCommand):
 
             elif data.args[0].startswith("agg") or data.args[0] == "a":
                 try:
-                    agg_num = data.args[1]
+                    agg_num = int(data.args[1])
                 except IndexError:
                     agg_data = (self.count_submissions(), self.count_redirects(), self.count_files())
                     agg_num = self.get_aggregate_number(agg_data)
+                except ValueError:
+                    self.connection.reply(data, "%s isn't a number!" % data.args[1])
+                    return
                 aggregate = self.get_aggregate(agg_num)
                 self.connection.reply(data, "aggregate is currently %s (AfC %s)." % (agg_num, aggregate))
 
