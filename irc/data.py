@@ -5,6 +5,7 @@
 class Data(object):
     def __init__(self):
         """store data from an individual line received on IRC"""
+        self.line = str()
         self.chan = str()
         self.nick = str()
         self.ident = str()

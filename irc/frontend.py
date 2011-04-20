@@ -38,6 +38,7 @@ def main():
         for line in lines:
             line = line.strip().split()
             data = Data()
+            data.line = line
 
             if line[1] == "JOIN":
                 data.nick, data.ident, data.host = re.findall(":(.*?)!(.*?)@(.*?)\Z", line[0])[0]
