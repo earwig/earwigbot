@@ -51,7 +51,7 @@ class AFCStatus(BaseCommand):
                     agg_data = (self.count_submissions(), self.count_redirects(), self.count_files())
                     agg_num = self.get_aggregate_number(agg_data)
                 except ValueError:
-                    self.connection.reply(data, "%s isn't a number!" % data.args[1])
+                    self.connection.reply(data, "\x0303%s\x0301 isn't a number!" % data.args[1])
                     return
                 aggregate = self.get_aggregate(agg_num)
                 self.connection.reply(data, "aggregate is currently %s (AfC %s)." % (agg_num, aggregate))
