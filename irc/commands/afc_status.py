@@ -47,7 +47,7 @@ class AFCStatus(BaseCommand):
             elif data.args[0].startswith("agg") or data.args[0] == "a":
                 try:
                     agg_num = data.args[1]
-                except KeyError:
+                except IndexError:
                     agg_data = (self.count_submissions(), self.count_redirects(), self.count_files())
                     agg_num = self.get_aggregate_number(agg_data)
                 aggregate = self.get_aggregate(agg_num)
