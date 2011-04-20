@@ -27,13 +27,8 @@ class AFCStatus(BaseCommand):
 
     def process(self, data):
         if data.line[1] == "JOIN":
-            subs = self.count_submissions()
-            redirs = self.count_redirects()
-            files = self.count_files()
-            agg_num = self.get_aggregate_number((subs, redirs, files))
-            aggregate = self.get_aggregate(agg_num)
-            self.connection.notice(data.nick, "\x02Current status:\x0F Articles for Creation %s (\x0302AFC\x0301: \x0305%s\x0301; \x0302AFC/R\x0301: \x0305%s\x0301; \x0302FFU\x0301: \x0305%s\x0301)"
-                    % (aggregate, subs, redirs, files))
+            notice = self.get_join_notice()
+            self.connection.notice(data.nick, notice)
             return
 
         if data.args:
@@ -50,13 +45,20 @@ class AFCStatus(BaseCommand):
                 self.connection.reply(data, "there are currently %s open file upload requests." % files)
 
             elif data.args[0].startswith("agg") or data.args[0] == "a":
-                agg_data = (self.count_submissions(), self.count_redirects(), self.count_files())
-                agg_num = self.get_aggregate_number(agg_data)
+                try:
+                    agg_num = data.args[1]
+                except KeyError:
+                    agg_data = (self.count_submissions(), self.count_redirects(), self.count_files())
+                    agg_num = self.get_aggregate_number(agg_data)
                 aggregate = self.get_aggregate(agg_num)
                 self.connection.reply(data, "aggregate is currently %s (AfC %s)." % (agg_num, aggregate))
 
+            elif data.args[0].startswith("join") or data.args[0] == "j":
+                notice = self.get_join_notice()
+                self.connection.reply(data, notice)
+
             else:
-                self.connection.reply(data, "unknown argument: \x0303%s\x0301. Valid args are 'subs', 'redirs', and 'files'." % data.args[0])
+                self.connection.reply(data, "unknown argument: \x0303%s\x0301. Valid args are 'subs', 'redirs', 'files', 'agg', and 'join'." % data.args[0])
 
         else:
             subs = self.count_submissions()
@@ -64,6 +66,15 @@ class AFCStatus(BaseCommand):
             files = self.count_files()
             self.connection.reply(data, "there are currently %s pending submissions, %s open redirect requests, and %s open file upload requests."
                     % (subs, redirs, files))
+
+    def get_join_notice(self):
+        subs = self.count_submissions()
+        redirs = self.count_redirects()
+        files = self.count_files()
+        agg_num = self.get_aggregate_number((subs, redirs, files))
+        aggregate = self.get_aggregate(agg_num)
+        return ("\x02Current status:\x0F Articles for Creation %s (\x0302AFC\x0301: \x0305%s\x0301; \x0302AFC/R\x0301: \x0305%s\x0301; \x0302FFU\x0301: \x0305%s\x0301)"
+                % (aggregate, subs, redirs, files))
 
     def count_submissions(self):
         params = {'action': 'query', 'list': 'categorymembers', 'cmlimit':'500', 'format': 'json'}
