@@ -94,7 +94,7 @@ class AFCStatus(BaseCommand):
 
     def count_redirects(self):
         content = self.get_page("Wikipedia:Articles_for_creation/Redirects")
-        total = len(re.findall("==\s*(Redirect|Category) request: \[\[(.*?)\]\]\s*==", content))
+        total = len(re.findall("^\s*==(.*?)==\s*$", content, re.MULTILINE))
         closed = content.lower().count("{{afc-c|b}}")
         redirs = total - closed
         return redirs
