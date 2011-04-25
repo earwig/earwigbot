@@ -106,7 +106,8 @@ class Git(BaseCommand):
             if "Already on" in result:
                 self.connection.reply(self.data, "already on \x0302%s\x0301!" % branch)
             else:
-                self.connection.reply(self.data, "switched to branch \x0302%s\x0301." % branch)
+                current_branch = self.exec_shell("git name-rev --name-only HEAD")
+                self.connection.reply(self.data, "switched from branch \x0302%s\x0301 to \x0302%s\x0301." % (current_branch, branch))
 
         except subprocess.CalledProcessError: # git couldn't switch branches
             self.connection.reply(self.data, "branch \x0302%s\x0301 doesn't exist!" % branch)
