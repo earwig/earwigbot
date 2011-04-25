@@ -1,2 +1,10 @@
+# Ignore python bytecode:
 *.pyc
+
+# Ignore secure config files:
 config/secure.py
+
+# Ignore pydev's nonsense:
+.project
+.pydevproject
+.settings/
