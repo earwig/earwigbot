@@ -6,7 +6,7 @@ import json
 import re
 import urllib
 
-from config.irc_config import *
+from config.irc import *
 from irc.base_command import BaseCommand
 
 class AFCStatus(BaseCommand):

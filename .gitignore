@@ -1,2 +1,2 @@
 *.pyc
-secure_config.py
+config/secure.py

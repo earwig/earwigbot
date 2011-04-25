@@ -3,7 +3,7 @@
 # Voice/devoice/op/deop users in the channel.
 
 from irc.base_command import BaseCommand
-from config.irc_config import *
+from config.irc import *
 
 class ChanOps(BaseCommand):
     def get_hooks(self):

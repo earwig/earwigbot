@@ -3,8 +3,8 @@
 ## Imports
 import re
 
-from config.irc_config import *
-from config.secure_config import *
+from config.irc import *
+from config.secure import *
 
 from irc import command_handler
 from irc.connection import Connection

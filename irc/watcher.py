@@ -3,7 +3,7 @@
 ## Imports
 import re
 
-from config.irc_config import *
+from config.irc import *
 
 from irc.connection import Connection
 from irc.rc import RC

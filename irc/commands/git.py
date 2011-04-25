@@ -4,7 +4,7 @@
 
 import shlex, subprocess, re
 
-from config.irc_config import *
+from config.irc import *
 from irc.base_command import BaseCommand
 
 class Git(BaseCommand):
