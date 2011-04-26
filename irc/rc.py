@@ -30,7 +30,8 @@ class RC(object):
         self.page, self.flags, self.url, self.user, self.comment = page, flags, url, user, comment
 
     def get_pretty(self):
-        """make a nice, colorful message from self.msg to send to the front-end"""        
+        """make a nice, colorful message from self.msg to send to the front-end"""
+        flags = self.flags
         event_type = flags # "New <event>:" if we don't know exactly what happened
         if "N" in flags:
             event_type = "page" # "New page:"
@@ -48,8 +49,8 @@ class RC(object):
                 event_type = "minor {}".format(event_type) # "New minor edit:" OR "New minor bot edit:"
         
         if self.is_edit:
-            pretty = "\x02New {0}\x0F: \x0314[[\x0307{1}\x0314]]\x0306 *\x0303 {2}\x0306 *\x0302 {3}\x0306 *\x0310 {4}".format(event_type, page, user, url, comment)
+            pretty = "\x02New {0}\x0F: \x0314[[\x0307{1}\x0314]]\x0306 *\x0303 {2}\x0306 *\x0302 {3}\x0306 *\x0310 {4}".format(event_type, self.page, self.user, self.url, self.comment)
         else:
-            pretty = "\x02New {0}\x0F: \x0303{1}\x0306 *\x0302 {2}\x0306 *\x0310 {3}".format(event_type, user, url, comment)
+            pretty = "\x02New {0}\x0F: \x0303{1}\x0306 *\x0302 {2}\x0306 *\x0310 {3}".format(event_type, self.user, self.url, self.comment)
         
         return pretty
