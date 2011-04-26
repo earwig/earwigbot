@@ -5,6 +5,7 @@
 
 import re
 
+# Define different report channels on our front-end server. They /must/ be in CHANS in config/irc.py or the bot will not be able to send messages to them (unless they have -n set).
 AFC_CHANS = ["#wikipedia-en-afc"] # report recent AfC changes/give AfC status messages upon join
 BOT_CHANS = ["##earwigbot", "#wikipedia-en-afc"] # report edits containing "!earwigbot"
 
