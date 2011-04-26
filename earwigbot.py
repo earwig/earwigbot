@@ -4,7 +4,7 @@ import time
 from subprocess import *
 
 try:
-    from config import irc_config, secure_config
+    from config import irc, secure, watcher
 except ImportError:
     print """Missing a config file! Make sure you have configured the bot. All *.py.default files in config/
 should have their .default extension removed, and the info inside should be corrected."""
