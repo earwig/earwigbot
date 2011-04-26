@@ -27,7 +27,7 @@ class RC:
         
         self.page, self.flags, self.url, self.user, self.comment = page, flags, url, user, comment
 
-    def pretty(self):
+    def get_pretty(self):
         """make a nice, colorful message from self.msg to send to the front-end"""
         pretty = self.msg
         return pretty

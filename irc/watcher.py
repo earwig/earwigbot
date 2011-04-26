@@ -1,9 +1,8 @@
 # -*- coding: utf-8  -*-
 
 ## Imports
-import re
-
 from config.irc import *
+from config.watcher import *
 
 from irc.connection import Connection
 from irc.rc import RC
@@ -48,23 +47,11 @@ def main(connection, f_conn):
             if line[1] == "376": # Join the recent changes channel when we've finished starting up
                 connection.join(WATCHER_CHAN)
 
-def report(msg, chans):
-    """send a message to a list of report channels on our front-end server"""
-    for chan in chans:
-        frontend_conn.say(chan, msg)
-
 def check(rc):
     """check if we're supposed to report this message anywhere"""
-    page_name = rc.page.lower()
-    pretty_msg = rc.pretty()
-
-    if "!earwigbot" in rc.msg.lower():
-        report(pretty_msg, chans=BOT_CHANS)
-    if re.match("wikipedia( talk)?:(wikiproject )?articles for creation", page_name):
-        report(pretty_msg, chans=AFC_CHANS)
-    elif re.match("wikipedia( talk)?:files for upload", page_name):
-        report(pretty_msg, chans=AFC_CHANS)
-    elif page_name.startswith("template:afc submission"):
-        report(pretty_msg, chans=AFC_CHANS)
-    if rc.flags == "delete" and re.match("deleted \"\[\[wikipedia( talk)?:(wikiproject )?articles for creation", rc.comment.lower()):
-        report(pretty_msg, chans=AFC_CHANS)
+    results = process(rc) # process the message in config/watcher.py, and get a list of channels to send it to
+    if not results:
+        return
+    pretty = rc.get_pretty()
+    for chan in results:
+        frontend_conn.say(chan, pretty)

@@ -19,8 +19,6 @@ REALNAME = "[[w:en:User:EarwigBot]]"
 
 # channels to join on main server's startup
 CHANS = ["##earwigbot", "##earwig", "#wikipedia-en-afc"]
-AFC_CHANS = ["#wikipedia-en-afc"] # report recent AfC changes/give AfC status messages upon join
-BOT_CHANS = ["##earwigbot", "#wikipedia-en-afc"] # report edits containing "!earwigbot"
 
 # hardcoded hostnames of users with certain permissions
 OWNERS = ["wikipedia/The-Earwig"] # can use owner-only commands (!restart and !git)
