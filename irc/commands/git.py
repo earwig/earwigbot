@@ -143,11 +143,17 @@ class Git(BaseCommand):
             self.connection.reply(self.data, "done; no new changes.")
         else:
             changes = re.findall("\s*((.*?)\sfile(.*?)tions?\(-\))", result)[0][0] # find the changes
-            self.connection.reply(self.data, "done; %s." % changes)
+            try:
+                remote = self.exec_shell("git config --get branch.%s.remote" % branch)
+                url = self.exec_shell("git config --get remote.%s.url" % remote)
+                self.connection.reply(self.data, "done; %s. [from %s]" % (changes, url))
+            except subprocess.CalledProcessError: # something in .git/config is not specified correctly, so we cannot get the remote's url
+                self.connection.reply(self.data, "done; %s." % changes)
 
     def do_status(self):
         """check whether we have anything to pull"""
-        self.connection.reply(self.data, "checking remote for updates...")
+        last = self.exec_shell("git log -n 1 --pretty=\"%ar\"")
+        self.connection.reply(self.data, "last commit was %s. Checking remote for updates..." % last)
         result = self.exec_shell("git fetch --dry-run")
         if not result:
             self.connection.reply(self.data, "local copy is up-to-date with remote.")

@@ -17,8 +17,7 @@ class RC(object):
         self.msg = msg
         self.is_edit = True
 
-        # page name of the modified page
-        # 'M' for minor edit, 'B' for bot edit, 'create' for a user creation log entry...
+        # flags: 'M' for minor edit, 'B' for bot edit, 'create' for a user creation log entry...
         try:
             page, flags, url, user, comment = re.findall("\A\[\[(.*?)\]\]\s(.*?)\s(http://.*?)\s\*\s(.*?)\s\*\s(.*?)\Z", msg)[0] 
         except IndexError: # we're probably missing the http:// part, because it's a log entry, which lacks a url
