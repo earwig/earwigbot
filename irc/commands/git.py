@@ -153,9 +153,8 @@ class Git(BaseCommand):
     def do_status(self):
         """check whether we have anything to pull"""
         last = self.exec_shell("git log -n 1 --pretty=\"%ar\"")
-        self.connection.reply(self.data, "last commit was %s. Checking remote for updates..." % last)
         result = self.exec_shell("git fetch --dry-run")
-        if not result:
-            self.connection.reply(self.data, "local copy is up-to-date with remote.")
+        if not result: # nothing was fetched, so remote and local are equal
+            self.connection.reply(self.data, "last commit was %s. Local copy is \x02up-to-date\x0F with remote." % last)
         else:
-            self.connection.reply(self.data, "remote is ahead of local copy.")
+            self.connection.reply(self.data, "last local commit was %s. Remote is \x02ahead\x0F of local copy." % last)
