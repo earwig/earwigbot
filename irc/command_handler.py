@@ -7,7 +7,7 @@ import traceback
 
 commands = []
 
-def init_commands(connection):
+def load_commands(connection):
     """load all valid command classes from irc/commmands/ into the commands variable"""
     files = os.listdir(os.path.join("irc", "commands")) # get all files in irc/commands/
     files.sort() # alphabetically sort list of files
@@ -15,18 +15,14 @@ def init_commands(connection):
     for f in files:
         if f.startswith("_") or not f.endswith(".py"): # ignore non-python files or files beginning with "_"
             continue
-
         module = f[:-3] # strip .py from end
-
         try:
             exec "from irc.commands import %s" % module
         except: # importing the file failed for some reason...
             print "Couldn't load file %s:" % f
             traceback.print_exc()
             continue
-
-        m = eval(module) # 'module' is a string, so get the actual object for processing
-        process_module(connection, m)
+        process_module(connection, eval(module)) # 'module' is a string, so get the actual object for processing by eval-ing it
 
     pretty_cmnds = map(lambda c: c.__class__.__name__, commands)
     print "Found %s command classes: %s." % (len(commands), ', '.join(pretty_cmnds))

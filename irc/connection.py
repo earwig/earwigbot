@@ -5,6 +5,10 @@
 import socket
 import threading
 
+class BrokenSocketException(Exception):
+    """A socket has broken, because it is not sending data."""
+    pass
+
 class Connection(object):
     def __init__(self, host=None, port=None, nick=None, ident=None, realname=None):
         """a class to interface with IRC"""
@@ -33,7 +37,7 @@ class Connection(object):
         """receive (get) data from the server"""
         data = self.sock.recv(4096)
         if not data: # socket giving us no data, so it is dead/broken
-            raise RuntimeError("socket is dead")
+            raise BrokenSocketException()
         return data
 
     def send(self, msg):

@@ -2,9 +2,10 @@
 
 ## Imports
 from config.irc import *
+from config.main import *
 from config.watcher import *
 
-from irc.connection import Connection
+from irc.connection import *
 from irc.rc import RC
 
 global frontend_conn
@@ -16,13 +17,12 @@ def get_connection():
 def main(connection, f_conn):
     global frontend_conn
     frontend_conn = f_conn
-    connection.connect()
     read_buffer = str()
 
     while 1:
         try:
             read_buffer = read_buffer + connection.get()
-        except RuntimeError: # socket broke
+        except BrokenSocketException:
             return
 
         lines = read_buffer.split("\n")
@@ -53,5 +53,6 @@ def check(rc):
     if not results:
         return
     pretty = rc.get_pretty()
-    for chan in results:
-        frontend_conn.say(chan, pretty)
+    if enable_irc_frontend:
+        for chan in results:
+            frontend_conn.say(chan, pretty)

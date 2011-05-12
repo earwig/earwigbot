@@ -146,7 +146,7 @@ class Git(BaseCommand):
             try:
                 remote = self.exec_shell("git config --get branch.%s.remote" % branch)
                 url = self.exec_shell("git config --get remote.%s.url" % remote)
-                self.connection.reply(self.data, "done; %s. [from %s]" % (changes, url))
+                self.connection.reply(self.data, "done; %s [from %s]." % (changes, url))
             except subprocess.CalledProcessError: # something in .git/config is not specified correctly, so we cannot get the remote's url
                 self.connection.reply(self.data, "done; %s." % changes)
 

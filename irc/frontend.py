@@ -7,7 +7,7 @@ from config.irc import *
 from config.secure import *
 
 from irc import command_handler
-from irc.connection import Connection
+from irc.connection import *
 from irc.data import Data
 
 connection = None
@@ -19,7 +19,7 @@ def get_connection():
 def startup(conn):
     global connection
     connection = conn
-    command_handler.init_commands(connection)
+    command_handler.load_commands(connection)
     connection.connect()
 
 def main():
@@ -28,8 +28,8 @@ def main():
     while 1:
         try:        
             read_buffer = read_buffer + connection.get()
-        except RuntimeError: # socket broke
-            print "socket has broken on front-end; restarting bot..."
+        except BrokenSocketException:
+            print "Socket has broken on front-end; restarting bot..."
             return
 
         lines = read_buffer.split("\n")
@@ -61,7 +61,7 @@ def main():
 
                 if data.msg.startswith("!restart"): # hardcode the !restart command (we can't restart from within an ordinary command)
                     if data.host in OWNERS:
-                        print "restarting bot per owner request..."
+                        print "Restarting bot per owner request..."
                         return
 
             if line[0] == "PING": # If we are pinged, pong back to the server
