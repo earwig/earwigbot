@@ -8,7 +8,7 @@ from irc.base_command import BaseCommand
 from wiki import task_manager
 from config.irc import *
 
-class ChanOps(BaseCommand):
+class Tasks(BaseCommand):
     def get_hooks(self):
         return ["msg"]
 
