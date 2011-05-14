@@ -61,7 +61,7 @@ class Tasks(BaseCommand):
             elif tname in ["irc-frontend", "irc-watcher", "wiki-scheduler"]:
                 normal_threads.append("\x0302{}\x0301 (id {})".format(tname, thread.ident))
             else:
-                tname, start_time = re.findall("^(.*?) \((.*?)\)$")[0]
+                tname, start_time = re.findall("^(.*?) \((.*?)\)$", tname)[0]
                 task_threads.append("\x0302{}\x0301 (id {}, spawned at {})".format(tname, thread.ident, start_time))
         
         if task_threads:
@@ -79,15 +79,14 @@ class Tasks(BaseCommand):
         tasks.sort()
 
         for task in tasks:
-            if task in threads:
-                threads_running_task = [t for t in threads if t.name.startswith(task)]
-                ids = map(lambda t: t.ident, threads_running_task)
-                if len(ids) == 1:
-                    tasklist.append("\x0302{}\x0301 (\x02active\x0F as id {})".format(task, ids[0]))
-                else:
-                    tasklist.append("\x0302{}\x0301 (\x02active\x0F as ids {})".format(task, ' ,'.join(ids)))
-            else:
+            threads_running_task = [t for t in threads if t.name.startswith(task)]
+            ids = map(lambda t: t.ident, threads_running_task)
+            if not ids:
                 tasklist.append("\x0302{}\x0301 (idle)".format(task))
+            elif len(ids) == 1:
+                tasklist.append("\x0302{}\x0301 (\x02active\x0F as id {})".format(task, ids[0]))
+            else:
+                tasklist.append("\x0302{}\x0301 (\x02active\x0F as ids {})".format(task, ' ,'.join(ids)))
         
         tasklist = ", ".join(tasklist)
         
