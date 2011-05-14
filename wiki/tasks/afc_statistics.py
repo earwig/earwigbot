@@ -2,6 +2,8 @@
 
 # A task to generate statistics for [[WP:AFC]] and save them to [[Template:AFC_statistics]].
 
+import time
+
 from wiki.base_task import BaseTask
 
 class Task(BaseTask):
@@ -9,4 +11,5 @@ class Task(BaseTask):
         self.task_name = "afc_statistics"
     
     def run(self, **kwargs):
-        pass
+        time.sleep(10)
+        print "kwargs: {}".format(kwargs)
