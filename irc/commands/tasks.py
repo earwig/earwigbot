@@ -57,12 +57,12 @@ class Tasks(BaseCommand):
             tname = thread.name
             if tname == "MainThread":
                 tname = self.get_main_thread_name()
-                normal_threads.append("\x0302{}\x0301 (as main thread, {})".format(tname, thread.ident))
+                normal_threads.append("\x0302{}\x0301 (as main thread, id {})".format(tname, thread.ident))
             elif tname in ["irc-frontend", "irc-watcher", "wiki-scheduler"]:
-                normal_threads.append("\x0302{}\x0301 ({})".format(tname, thread.ident))
+                normal_threads.append("\x0302{}\x0301 (id {})".format(tname, thread.ident))
             else:
                 task_thread_num += 1
-                task_threads.append("\x0302{}\x0301 ({})".format(tname, thread.ident))
+                task_threads.append("\x0302{}\x0301 (id {})".format(tname, thread.ident))
         
         if task_threads:
             msg = "\x02{}\x0F threads active: {}, and \x02{}\x0F task threads: {}.".format(len(threads), ', '.join(normal_threads), task_thread_num, ', '.join(task_threads))
