@@ -27,7 +27,7 @@ class Tasks(BaseCommand):
             return
 
         if not data.args:
-            if data.command == "!tasklist":
+            if data.command == "tasklist":
                 self.do_list()
             else:
                 self.connection.reply(data, "no arguments provided. Maybe you wanted '!{cmnd} list', '!{cmnd} start', or '!{cmnd} listall'?".format(cmnd=data.command))
@@ -48,17 +48,17 @@ class Tasks(BaseCommand):
     def do_list(self):
         threads = threading.enumerate()
         for thread in threads:
-            self.connection.reply(data, thread.name)
+            self.connection.reply(self.data, thread.name)
     
     def do_listall(self):
         tasks = task_manager.task_list.keys()
-        self.connection.reply(data, ', '.join(tasks))
+        self.connection.reply(self.data, ', '.join(tasks))
     
     def do_start(self):
         kwargs = {}
         try:
-            task_manager.start_task(data.args[1], **kwargs)
+            task_manager.start_task(self.data.args[1], **kwargs)
         except IndexError: # no task name given
-            self.connection.reply(data, "what task do you want me to start?")
+            self.connection.reply(self.data, "what task do you want me to start?")
         else:
-            self.connection.reply(data, "task '{}' started.".format(data.args[1]))
+            self.connection.reply(self.data, "task '{}' started.".format(self.data.args[1]))
