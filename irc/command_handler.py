@@ -58,5 +58,9 @@ def check(hook, data):
     for command in commands:
         if hook in command.get_hooks():
             if command.check(data):
-                command.process(data)
+                try:
+                    command.process(data)
+                except:
+                    print "Error executing command:"
+                    traceback.print_exc() # catch exceptions and print them
                 break
