@@ -85,7 +85,7 @@ class Tasks(BaseCommand):
             elif len(ids) == 1:
                 tasklist.append("\x0302{}\x0301 (\x02active\x0F as id {})".format(task, ids[0]))
             else:
-                tasklist.append("\x0302{}\x0301 (\x02active\x0F as ids {})".format(task, ' ,'.join(ids)))
+                tasklist.append("\x0302{}\x0301 (\x02active\x0F as ids {})".format(task, ', '.join(ids)))
         
         tasklist = ", ".join(tasklist)
         

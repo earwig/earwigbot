@@ -61,6 +61,6 @@ def check(hook, data):
                 try:
                     command.process(data)
                 except:
-                    print "Error executing command {}:".format(data.command)
+                    print "Error executing command '{}':".format(data.command)
                     traceback.print_exc() # catch exceptions and print them
                 break
