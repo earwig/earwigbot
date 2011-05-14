@@ -14,8 +14,7 @@ class ChanOps(BaseCommand):
         return "%s users in the channel." % action
 
     def check(self, data):
-        if data.is_command and (data.command == "voice" or data.command == "devoice"
-        or data.command == "op" or data.command == "deop"):
+        if data.is_command and data.command in ["voice", "devoice", "op", "deop"]:
             return True
         return False
 
