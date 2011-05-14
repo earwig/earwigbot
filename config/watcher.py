@@ -8,8 +8,7 @@ import re
 from wiki import task_manager
 
 # Define different report channels on our front-end server. They /must/ be in CHANS in config/irc.py or the bot will not be able to send messages to them (unless they have -n set).
-#AFC_CHANS = ["#wikipedia-en-afc"] # report recent AfC changes/give AfC status messages upon join
-AFC_CHANS = ["##earwigbot"] # report recent AfC changes/give AfC status messages upon join
+AFC_CHANS = ["#wikipedia-en-afc"] # report recent AfC changes/give AfC status messages upon join
 BOT_CHANS = ["##earwigbot", "#wikipedia-en-afc"] # report edits containing "!earwigbot"
 
 # Define some commonly used strings.
@@ -58,7 +57,7 @@ def process(rc):
         task_manager.start_task("afc_copyvios", action="process_delete", page=p)
         chans.update(AFC_CHANS)
     
-    elif rc.flags == "delete" and r_restore.match(comment):
+    elif rc.flags == "restore" and r_restore.match(comment):
         p = r_restored_page.findall(rc.comment)[0][0]
         task_manager.start_task("afc_statistics", action="process_restore", page=p)
         task_manager.start_task("afc_copyvios", action="process_restore", page=p)
