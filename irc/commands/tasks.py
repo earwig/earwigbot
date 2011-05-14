@@ -6,6 +6,7 @@ import threading
 
 from irc.base_command import BaseCommand
 from wiki import task_manager
+from config.main import *
 from config.irc import *
 
 class Tasks(BaseCommand):
@@ -47,8 +48,27 @@ class Tasks(BaseCommand):
 
     def do_list(self):
         threads = threading.enumerate()
+        
+        normal_threads = []
+        task_threads = []
+        task_thread_num = 0
+        
         for thread in threads:
-            self.connection.reply(self.data, thread.name)
+            tname = thread.name
+            if tname == "MainThread":
+                tname = self.get_main_thread_name()
+                normal_threads.append("{} (running as main thread)".format(tname))
+            elif tname in ["irc-frontend", "irc-watcher", "wiki-scheduler"]:
+                normal_threads.append(tname)
+            else:
+                task_thread_num += 1
+                task_threads.append(tname)
+        
+        if task_threads:
+            msg = "\x0302{}\x0301 threads active: {} and \x0302{}\x0301 tasks: {}.".format(len(threads), ', '.join(normal_threads), task_thread_num, ', '.join(task_threads))
+        else:
+            msg = "\x0302{}\x0301 threads active: {} and \x03020\x0301 tasks.".format(len(threads), ', '.join(normal_threads))
+        self.connection.reply(self.data, msg)
     
     def do_listall(self):
         tasks = task_manager.task_list.keys()
@@ -62,3 +82,12 @@ class Tasks(BaseCommand):
             self.connection.reply(self.data, "what task do you want me to start?")
         else:
             self.connection.reply(self.data, "task '{}' started.".format(self.data.args[1]))
+
+    def get_main_thread_name(self):
+        """Return the "proper" name of the MainThread; e.g. "irc-frontend" or "irc-watcher"."""
+        if enable_irc_frontend:
+            return "irc-frontend"
+        elif enable_wiki_schedule:
+            return "wiki-scheduler"
+        else:
+            return "irc-watcher"
