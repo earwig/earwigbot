@@ -79,7 +79,7 @@ class Tasks(BaseCommand):
 
         for task in tasks:
             threads_running_task = [t for t in threads if t.name.startswith(task)]
-            ids = map(lambda t: t.ident, threads_running_task)
+            ids = map(lambda t: str(t.ident), threads_running_task)
             if not ids:
                 tasklist.append("\x0302{}\x0301 (idle)".format(task))
             elif len(ids) == 1:
