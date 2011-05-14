@@ -2,6 +2,14 @@
 
 # A class to store data from an individual line received on IRC.
 
+import re
+
+class KwargParseException(Exception):
+    """Couldn't parse a certain keyword argument in self.args, probably because
+    it was given incorrectly: e.g., no value (abc), just a value (=xyz), just
+    an equal sign (=), instead of the correct (abc=xyz)."""
+    pass
+
 class Data(object):
     def __init__(self):
         """store data from an individual line received on IRC"""
@@ -33,3 +41,15 @@ class Data(object):
                 self.command = self.command.lower() # lowercase command name
         except AttributeError:
             pass
+
+    def parse_kwargs(self):
+        """parse command arguments from self.args, given as !command key1=value1 key2=value2..., into a dict self.kwargs: {'key1': 'value2', 'key2': 'value2'...}"""
+        self.kwargs = {}
+        for arg in self.args[2:]:
+            try:
+                key, value = re.findall("^(.*?)\=(.*?)$", arg)[0]
+            except IndexError:
+                raise KwargParseException(arg)
+            if not key or not value:
+                raise KwargParseException(arg)
+            self.kwargs[key] = value
