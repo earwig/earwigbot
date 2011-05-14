@@ -40,7 +40,7 @@ class RC(object):
             event_type = "protection" # "New protection:"
         elif flags == "create":
             event_type = "user" # "New user:"
-        if page = "Special:Log/move":
+        if page == "Special:Log/move":
             event_type = "move" # New move:
         else:
             event_type = "edit" # "New edit:"
