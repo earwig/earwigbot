@@ -62,7 +62,7 @@ class Tasks(BaseCommand):
                 normal_threads.append("\x0302{}\x0301 (id {})".format(tname, thread.ident))
             else:
                 tname, start_time = re.findall("^(.*?) \((.*?)\)$", tname)[0]
-                task_threads.append("\x0302{}\x0301 (id {}, spawned at {})".format(tname, thread.ident, start_time))
+                task_threads.append("\x0302{}\x0301 (id {}, since {})".format(tname, thread.ident, start_time))
         
         if task_threads:
             msg = "\x02{}\x0F threads active: {}, and \x02{}\x0F task threads: {}.".format(len(threads), ', '.join(normal_threads), len(task_threads), ', '.join(task_threads))
@@ -72,8 +72,7 @@ class Tasks(BaseCommand):
     
     def do_listall(self):
         tasks = task_manager.task_list.keys()
-        threadlist = threading.enumerate()
-        threads = map(lambda t: t.name, threadlist)
+        threads = threading.enumerate()
         tasklist = []
         
         tasks.sort()
@@ -112,12 +111,8 @@ class Tasks(BaseCommand):
             self.connection.reply(data, "task could not be found; either wiki/tasks/{}.py doesn't exist, or it wasn't loaded correctly.".format(task_name))
             return
         
-        if data.kwargs:
-            task_manager.start_task(task_name, **data.kwargs)
-            self.connection.reply(data, "task \x0302{}\x0301 started with arguments: {}.".format(task_name, data.kwargs))
-        else:
-            task_manager.start_task(task_name)
-            self.connection.reply(data, "task \x0302{}\x0301 started.".format(task_name))
+        task_manager.start_task(task_name, **data.kwargs)
+        self.connection.reply(data, "task \x0302{}\x0301 started.".format(task_name))
 
     def get_main_thread_name(self):
         """Return the "proper" name of the MainThread; e.g. "irc-frontend" or "irc-watcher"."""

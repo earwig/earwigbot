@@ -64,7 +64,7 @@ def start_task(task_name, **kwargs):
         return
     
     task_thread = threading.Thread(target=lambda: task_wrapper(task, **kwargs)) # Normally we'd do task_wrapper(task, **kwargs), but because of threading we'd have to do Thread(target=task_wrapper, args=(task, **kwargs)), which doesn't work because the **kwargs is inside a tuple, not inside function params. Use lambda to get around the args=tuple nonsense
-    task_thread.name = "{} ({} UTC)".format(task_name, time.asctime())
+    task_thread.name = "{} ({})".format(task_name, time.strftime("%b %d %H:%M:%S"))
     task_thread.daemon = True # stop bot task threads automagically if the main bot stops
     task_thread.start()
 
