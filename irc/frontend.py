@@ -1,7 +1,7 @@
 # -*- coding: utf-8  -*-
 
 ## Imports
-import re
+import re, time
 
 from config.irc import *
 from config.secure import *
@@ -70,5 +70,6 @@ def main():
             if line[1] == "376":
                 if NS_AUTH: # if we're supposed to auth to nickserv, do that
                     connection.say("NickServ", "IDENTIFY %s %s" % (NS_USER, NS_PASS))
+                time.sleep(3) # sleep for a bit so we don't join channels un-authed
                 for chan in CHANS: # join all of our startup channels
                     connection.join(chan)

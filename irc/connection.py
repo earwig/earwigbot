@@ -69,3 +69,7 @@ class Connection(object):
     def join(self, chan):
         """join a channel"""
         self.send("JOIN %s" % chan)
+
+    def mode(self, chan, level, msg):
+        """send a mode message"""
+        self.send("MODE %s %s %s" % (chan, level, msg))
