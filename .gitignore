@@ -2,7 +2,7 @@
 *.pyc
 
 # Ignore secure config files:
-config/secure.py
+config/secure.cfg
 
 # Ignore pydev's nonsense:
 .project
