@@ -101,12 +101,13 @@ class Git(BaseCommand):
             self.connection.reply(self.data, "switch to which branch?")
             return
 
+        current_branch = self.exec_shell("git name-rev --name-only HEAD")
+
         try:
             result = self.exec_shell("git checkout %s" % branch)
             if "Already on" in result:
                 self.connection.reply(self.data, "already on \x0302%s\x0301!" % branch)
             else:
-                current_branch = self.exec_shell("git name-rev --name-only HEAD")
                 self.connection.reply(self.data, "switched from branch \x0302%s\x0301 to \x0302%s\x0301." % (current_branch, branch))
 
         except subprocess.CalledProcessError: # git couldn't switch branches
