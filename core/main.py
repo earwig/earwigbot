@@ -28,7 +28,7 @@ import os
 parent_dir = os.path.split(sys.path[0])[0]
 sys.path.append(parent_dir) # make sure we look in the parent directory for modules
 
-from config.main import *
+from core import config
 from irc import frontend, watcher
 from wiki import task_manager
 
@@ -96,10 +96,13 @@ def irc_frontend():
     f_conn.close()
     
 def run():
-    if enable_irc_frontend: # make the frontend run on our primary thread if enabled, and enable additional components through that function
+    config.load()
+    components = config.config["main"]
+    
+    if components["enable_irc_frontend"]: # make the frontend run on our primary thread if enabled, and enable additional components through that function
         irc_frontend()
     
-    elif enable_wiki_schedule: # the scheduler is enabled - run it on the main thread, but also run the IRC watcher on another thread if it is enabled
+    elif components["enable_wiki_schedule"]: # the scheduler is enabled - run it on the main thread, but also run the IRC watcher on another thread if it is enabled
         print "\nStarting wiki scheduler..."
         task_manager.load_tasks()
         if enable_irc_watcher:
@@ -109,7 +112,7 @@ def run():
             t_watcher.start()
         wiki_scheduler()
     
-    elif enable_irc_watcher: # the IRC watcher is our only enabled component, so run its function only and don't worry about anything else
+    elif components["enable_irc_watcher"]: # the IRC watcher is our only enabled component, so run its function only and don't worry about anything else
         irc_watcher()
         
     else: # nothing is enabled!
