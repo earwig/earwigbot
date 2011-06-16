@@ -67,20 +67,21 @@ def make_new_config():
 def are_passwords_encrypted():
     """Determine if the passwords in our config file are encrypted, returning
     either True or False."""
-    data = _config.getElementsByTagName("config")[0]
-    element = data.getElementsByTagName("encrypt-passwords")[0]
-    return attribute_to_bool(element, "enabled")
+    element = _config.getElementsByTagName("config")[0]
+    return attribute_to_bool(element, "encrypt-passwords", default=False)
 
-def attribute_to_bool(element, attribute):
+def attribute_to_bool(element, attribute, default=None):
     """Return True if the value of element's attribute is 'true', '1', or 'on';
     return False if it is 'false', '0', or 'off' (regardless of
-    capitalization); raise TypeMismatchException if it does match any of
-    those."""
+    capitalization); return default if it is empty; raise TypeMismatchException
+    if it does match any of those."""
     value = element.getAttribute(attribute).lower()
     if value in ["true", "1", "on"]:
         return True
     elif value in ["false", "0", "off"]:
         return False
+    elif value == '':
+        return default
     else:
         e = ("Expected a bool in attribute '{0}' of element '{1}', but " +
         "got '{2}'.").format(attribute, element.tagName, value)
