@@ -118,7 +118,7 @@ def attribute_to_bool(element, attribute, default=None):
 
 def get_first_element(parent, tag_name):
     """Return the first child of the parent element with the given tag name, or
-    return None."""
+    return None if no child of that name exists."""
     try:
         return parent.getElementsByTagName(tag_name)[0]
     except IndexError:
@@ -129,8 +129,8 @@ def get_required_element(parent, tag_name):
     raise MissingElementException() if no child of that name exists."""
     element = get_first_element(parent, tag_name)
     if not element:
-        e = "<{0}> is missing a required <{1}> tag.".format(parent.tagName,
-                tag_name)
+        e = "A <{0}> tag is missing a required <{1}> child tag.".format(
+                parent.tagName, tag_name)
         raise MissingElementException(e)
     return element
 
@@ -145,6 +145,16 @@ def get_required_attribute(element, attr_name):
     return attribute
 
 def parse_config(key):
+    """A thin wrapper for the actual config parser in _parse_config(): catch
+    parsing exceptions and report them to the user cleanly."""
+    try:
+        _parse_config(key)
+    except ConfigParseException as e:
+        print "\nError parsing config file:"
+        print e
+        exit(1)
+
+def _parse_config(key):
     """Parse config data from a DOM object into the 'config' global variable.
     The key is used to unencrypt passwords stored in the XML config file."""
     _load_config()  # we might be re-loading unnecessarily here, but no harm in
