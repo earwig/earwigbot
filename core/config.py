@@ -81,6 +81,18 @@ def make_new_config():
         
     return is_encrypted
 
+def encrypt_password(password, key):
+    """If passwords are supposed to be encrypted, use this function to do that
+    using a user-provided key."""
+    # TODO: stub
+    return password
+
+def decrypt_password(password, key):
+    """If passwords are encrypted, use this function to decrypt them using a
+    user-provided key."""
+    # TODO: stub
+    return password
+
 def are_passwords_encrypted():
     """Determine if the passwords in our config file are encrypted, returning
     either True or False."""
@@ -103,6 +115,34 @@ def attribute_to_bool(element, attribute, default=None):
         e = ("Expected a bool in attribute '{0}' of element '{1}', but " +
         "got '{2}'.").format(attribute, element.tagName, value)
         raise TypeMismatchException(e)
+
+def get_first_element(parent, tag_name):
+    """Return the first child of the parent element with the given tag name, or
+    return None."""
+    try:
+        return parent.getElementsByTagName(tag_name)[0]
+    except IndexError:
+        return None
+
+def get_required_element(parent, tag_name):
+    """Return the first child of the parent element with the given tag name, or
+    raise MissingElementException() if no child of that name exists."""
+    element = get_first_element(parent, tag_name)
+    if not element:
+        e = "<{0}> is missing a required <{1}> tag.".format(parent.tagName,
+                tag_name)
+        raise MissingElementException(e)
+    return element
+
+def get_required_attribute(element, attr_name):
+    """Return the value of the attribute 'attr_name' in 'element'. If
+    undefined, raise MissingAttributeException()."""
+    attribute = element.getAttribute(attr_name)
+    if not attribute:
+        e = "A <{0}> tag is missing the required attribute '{1}'.".format(
+                element.tagName, attr_name)
+        raise MissingAttributeException(e)
+    return attribute
 
 def parse_config(key):
     """Parse config data from a DOM object into the 'config' global variable.
@@ -128,32 +168,84 @@ def parse_components(data):
     if it is disabled."""
     components = defaultdict(lambda: False)  # all components are disabled by
                                              # default
-    element = data.getElementsByTagName("components")
-    if not element:
-        e = "<config> is missing a required <components> tag."
-        raise MissingElementException(e)
-    element = element[0]  # select the first <components> tag out of our list
-                          # of tags, even though we should only have one
+    element = get_required_element(data, "components")
 
-    component_tags = element.getElementsByTagName("component")
-    for component in component_tags:
-        name = component.getAttribute("name")
-        if not name:
-            e = "A <component> tag is missing the required attribute 'name'."
-            raise MissingAttributeException(e)
-        is_enabled = attribute_to_bool(component, "enabled", False)
-        components[name] = is_enabled
+    for component in element.getElementsByTagName("component"):
+        name = get_required_attribute(component, "name")
+        components[name] = True
 
     return components
 
 def parse_wiki(data, key):
+    """Parse everything within the <wiki> tag of our XML config file."""
     pass
+
+def parse_irc_server(data, key):
+    """Parse everything within a <server> tag."""
+    server = Container()
     
+    connection = get_required_element(data, "connection")
+    server.host = get_required_attribute(connection, "host")
+    server.port = get_required_attribute(connection, "port")
+    server.nick = get_required_attribute(connection, "nick")
+    server.ident = get_required_attribute(connection, "ident")
+    server.realname = get_required_attribute(connection, "realname")
+
+    nickserv = get_first_element(data, "nickserv")
+    if nickserv:
+        server.nickserv = Container()
+        server.nickserv.username = get_required_attribute(nickserv, "username")
+        password = get_required_attribute(nickserv, "password")
+        if are_passwords_encrypted():
+            server.nickserv.password = decrypt_password(password, key)
+        else:
+            server.nickserv.password = password
+
+    channels = get_first_element(data, "channels")
+    if channels:
+        server.channels = list()
+        for channel in channels.getElementsByTagName("channel"):
+            name = get_required_attribute(channel, "name")
+            server.channels.append(name)
+
+    return server
+
 def parse_irc(data, key):
-    pass
+    """Parse everything within the <irc> tag of our XML config file."""
+    irc = Container()
+
+    element = get_first_element(data, "irc")
+    if not element:
+        return irc
+
+    servers = get_first_element(element, "servers")
+    if servers:
+        for server in servers.getElementsByTagName("server"):
+            server_name = get_required_attribute(server, "name")
+            if server_name == "frontend":
+                irc.frontend = parse_irc_server(server, key)
+            elif server_name == "watcher":
+                irc.watcher = parse_irc_server(server, key)
+            else:
+                print ("Warning: config file specifies a <server> with " +
+                "unknown name '{0}'. Ignoring.").format(server_name)
+
+    permissions = get_first_element(element, "permissions")
+    if permissions:
+        irc.permissions = dict()
+        for group in permissions.getElementsByTagName("group"):
+            group_name = get_required_attribute(group, "name")
+            irc.permissions[group_name] = list()
+            for user in group.getElementsByTagName("user"):
+                hostname = get_required_attribute(user, "host")
+                irc.permissions[group_name].append(hostname)
+
+    return irc  
     
 def parse_schedule(data):
+    """Parse everything within the <schedule> tag of our XML config file."""
     pass
     
 def parse_watcher(data):
+    """Parse everything within the <watcher> tag of our XML config file."""
     pass

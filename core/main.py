@@ -136,7 +136,7 @@ def run():
         print "Starting IRC watcher..."  # component, so run its function only
         irc_watcher()                    # and don't worry about anything else
 
-    else: # nothing is enabled!
+    else:  # nothing is enabled!
         print "No bot parts are enabled; stopping..."
         exit(1)
 
