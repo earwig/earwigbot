@@ -6,8 +6,12 @@ EarwigBot's XML Config File Parser
 This handles all tasks involving reading and writing to our config file,
 including encrypting and decrypting passwords and making a new config file from
 scratch at the inital bot run.
+
+Usually you'll just want to do "from core.config import config" and access
+config data from within that object.
 """
 
+from collections import defaultdict
 from os import makedirs, path
 from xml.dom import minidom
 from xml.parsers.expat import ExpatError
@@ -16,14 +20,24 @@ script_dir = path.dirname(path.abspath(__file__))
 root_dir = path.split(script_dir)[0]
 config_path = path.join(root_dir, "config.xml")
 
-_config = None
+_config = None  # holds the parsed DOM object for our config file
+config = None  # holds an instance of Container() with our config data
 
 class ConfigParseException(Exception):
     """Base exception for when we could not parse the config file."""
 
 class TypeMismatchException(ConfigParseException):
-    """A field does not fit to its expected type; e.g., an aribrary string
+    """A field does not fit to its expected type; e.g., an arbitrary string
     where we expected a boolean or integer."""
+
+class MissingElementException(ConfigParseException):
+    """An element in the config file is missing a required sub-element."""
+
+class MissingAttributeException(ConfigParseException):
+    """An element is missing a required attribute to be parsed correctly."""
+
+class Container(object):
+    """A class to hold information in a nice, accessable manner."""
 
 def _load_config():
     """Load data from our XML config file (config.xml) into a DOM object."""
@@ -42,6 +56,9 @@ def verify_config():
                     error)
             exit()
         else:
+            if not _config.getElementsByTagName("config"):
+                e = "Config file is missing a <config> tag."
+                raise MissingElementException(e)
             return are_passwords_encrypted()
     else:
         print "You haven't configured the bot yet!"
@@ -88,8 +105,55 @@ def attribute_to_bool(element, attribute, default=None):
         raise TypeMismatchException(e)
 
 def parse_config(key):
-    """Parse config data from a DOM object. The key is used to unencrypt
-    passwords stored in the config file."""
+    """Parse config data from a DOM object into the 'config' global variable.
+    The key is used to unencrypt passwords stored in the XML config file."""
     _load_config()  # we might be re-loading unnecessarily here, but no harm in
                     # that!
     data = _config.getElementsByTagName("config")[0]
+
+    cfg = Container()
+    cfg.components = parse_components(data)
+    cfg.wiki = parse_wiki(data, key)
+    cfg.irc = parse_irc(data, key)
+    cfg.schedule = parse_schedule(data)
+    cfg.watcher = parse_watcher(data)
+
+    global config
+    config = cfg
+
+def parse_components(data):
+    """Parse everything within the <components> XML tag of our config file.
+    The components object here will exist as config.components, and is a dict
+    of our enabled components: components[name] = True if it is enabled, False
+    if it is disabled."""
+    components = defaultdict(lambda: False)  # all components are disabled by
+                                             # default
+    element = data.getElementsByTagName("components")
+    if not element:
+        e = "<config> is missing a required <components> tag."
+        raise MissingElementException(e)
+    element = element[0]  # select the first <components> tag out of our list
+                          # of tags, even though we should only have one
+
+    component_tags = element.getElementsByTagName("component")
+    for component in component_tags:
+        name = component.getAttribute("name")
+        if not name:
+            e = "A <component> tag is missing the required attribute 'name'."
+            raise MissingAttributeException(e)
+        is_enabled = attribute_to_bool(component, "enabled", False)
+        components[name] = is_enabled
+
+    return components
+
+def parse_wiki(data, key):
+    pass
+    
+def parse_irc(data, key):
+    pass
+    
+def parse_schedule(data):
+    pass
+    
+def parse_watcher(data):
+    pass

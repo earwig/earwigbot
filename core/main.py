@@ -48,7 +48,7 @@ from core import config
 f_conn = None
 w_conn = None
 
-def irc_watcher(f_conn):
+def irc_watcher(f_conn=None):
     """Function to handle the IRC watcher as another thread (if frontend and/or
     scheduler is enabled), otherwise run as the main thread."""
     global w_conn
@@ -115,7 +115,7 @@ def run():
         key = None
     config.parse_config(key)  # load data from the config file and parse it
                               # using the unlock key
-    components = None
+    components = config.config.components
 
     if components["irc_frontend"]:  # make the frontend run on our primary
         irc_frontend(components)    # thread if enabled, and enable additional
@@ -138,6 +138,7 @@ def run():
 
     else: # nothing is enabled!
         print "No bot parts are enabled; stopping..."
+        exit(1)
 
 if __name__ == "__main__":
     try:
