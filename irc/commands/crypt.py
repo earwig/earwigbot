@@ -1,6 +1,8 @@
 # -*- coding: utf-8  -*-
 
-# Cryptography functions (hashing and cyphers).
+"""
+Cryptography functions (hashing and cyphers) for EarwigBot IRC.
+"""
 
 import hashlib
 
@@ -19,11 +21,11 @@ class Cryptography(BaseCommand):
         elif command == "encrypt":
             return ("Encrypt any string with a given key using an " + 
                     "implementation of Blowfish, e.g. '!encrypt some_key " + 
-                    "Hello world!'.")
+                    "Hello!'.")
         else:
-            return ("Decrypt a string with a given key using a given " +
-                    "algorithm, e.g. '!decrypt blowfish some_key Hello " +
-                    "world!'.")
+            return ("Decrypt any string with a given key using an " + 
+                    "implementation of Blowfish, e.g. '!decrypt some_key " + 
+                    "762cee8a5239548af18275d6c1184f16'.")
 
     def check(self, data):
         if data.is_command and data.command in ["hash", "encrypt", "decrypt"]:
@@ -53,11 +55,24 @@ class Cryptography(BaseCommand):
         else:
             key = data.args[0]
             text = ' '.join(data.args[1:])
+
             if not text:
-                self.connection.reply(data, "that's a key, yes, but what do " +
-                        " you want me to {0}?".format(data.command))
+                self.connection.reply(data, ("a key was provided, but text " +
+                "to {0} was not.").format(data.command))
                 return
-            if data.command == "encrypt":
-                self.connection.reply(data, blowfish.encrypt(key, text))
+
+            try:
+                if data.command == "encrypt":
+                    result = blowfish.encrypt(key, text)
+                else:
+                    result = blowfish.decrypt(key, text)
+            except blowfish.KeyTooShortError:
+                self.connection.reply(data, "key is too short.")
+            except blowfish.KeyTooLongError:
+                self.connection.reply(data, "key is too long.")
+            except blowfish.IncorrectKeyError:
+                self.connection.reply(data, "key is incorrect!")
+            except blowfish.BadCyphertextError as e:
+                self.connection.reply(data, "bad cyphertext: {0}.".format(e))
             else:
-                self.connection.reply(data, blowfish.decrypt(key, text))
+                self.connection.reply(data, result)
