@@ -6,7 +6,7 @@ import hashlib
 
 from irc.base_command import BaseCommand
 
-class Calc(BaseCommand):
+class Cryptography(BaseCommand):
     def get_hooks(self):
         return ["msg"]
 
