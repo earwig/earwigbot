@@ -16,6 +16,8 @@ from os import makedirs, path
 from xml.dom import minidom
 from xml.parsers.expat import ExpatError
 
+from lib import blowfish
+
 script_dir = path.dirname(path.abspath(__file__))
 root_dir = path.split(script_dir)[0]
 config_path = path.join(root_dir, "config.xml")
@@ -23,17 +25,17 @@ config_path = path.join(root_dir, "config.xml")
 _config = None  # holds the parsed DOM object for our config file
 config = None  # holds an instance of Container() with our config data
 
-class ConfigParseException(Exception):
+class ConfigParseError(Exception):
     """Base exception for when we could not parse the config file."""
 
-class TypeMismatchException(ConfigParseException):
+class TypeMismatchError(ConfigParseError):
     """A field does not fit to its expected type; e.g., an arbitrary string
     where we expected a boolean or integer."""
 
-class MissingElementException(ConfigParseException):
+class MissingElementError(ConfigParseError):
     """An element in the config file is missing a required sub-element."""
 
-class MissingAttributeException(ConfigParseException):
+class MissingAttributeError(ConfigParseError):
     """An element is missing a required attribute to be parsed correctly."""
 
 class Container(object):
@@ -58,7 +60,7 @@ def verify_config():
         else:
             if not _config.getElementsByTagName("config"):
                 e = "Config file is missing a <config> tag."
-                raise MissingElementException(e)
+                raise MissingElementError(e)
             return are_passwords_encrypted()
     else:
         print "You haven't configured the bot yet!"
@@ -81,18 +83,6 @@ def make_new_config():
         
     return is_encrypted
 
-def encrypt_password(password, key):
-    """If passwords are supposed to be encrypted, use this function to do that
-    using a user-provided key."""
-    # TODO: stub
-    return password
-
-def decrypt_password(password, key):
-    """If passwords are encrypted, use this function to decrypt them using a
-    user-provided key."""
-    # TODO: stub
-    return password
-
 def are_passwords_encrypted():
     """Determine if the passwords in our config file are encrypted, returning
     either True or False."""
@@ -102,8 +92,8 @@ def are_passwords_encrypted():
 def attribute_to_bool(element, attribute, default=None):
     """Return True if the value of element's attribute is 'true', '1', or 'on';
     return False if it is 'false', '0', or 'off' (regardless of
-    capitalization); return default if it is empty; raise TypeMismatchException
-    if it does match any of those."""
+    capitalization); return default if it is empty; raise TypeMismatchError if
+    it does match any of those."""
     value = element.getAttribute(attribute).lower()
     if value in ["true", "1", "on"]:
         return True
@@ -114,7 +104,7 @@ def attribute_to_bool(element, attribute, default=None):
     else:
         e = ("Expected a bool in attribute '{0}' of element '{1}', but " +
         "got '{2}'.").format(attribute, element.tagName, value)
-        raise TypeMismatchException(e)
+        raise TypeMismatchError(e)
 
 def get_first_element(parent, tag_name):
     """Return the first child of the parent element with the given tag name, or
@@ -126,22 +116,22 @@ def get_first_element(parent, tag_name):
 
 def get_required_element(parent, tag_name):
     """Return the first child of the parent element with the given tag name, or
-    raise MissingElementException() if no child of that name exists."""
+    raise MissingElementError() if no child of that name exists."""
     element = get_first_element(parent, tag_name)
     if not element:
         e = "A <{0}> tag is missing a required <{1}> child tag.".format(
                 parent.tagName, tag_name)
-        raise MissingElementException(e)
+        raise MissingElementError(e)
     return element
 
 def get_required_attribute(element, attr_name):
     """Return the value of the attribute 'attr_name' in 'element'. If
-    undefined, raise MissingAttributeException()."""
+    undefined, raise MissingAttributeError()."""
     attribute = element.getAttribute(attr_name)
     if not attribute:
         e = "A <{0}> tag is missing the required attribute '{1}'.".format(
                 element.tagName, attr_name)
-        raise MissingAttributeException(e)
+        raise MissingAttributeError(e)
     return attribute
 
 def parse_config(key):
@@ -149,9 +139,13 @@ def parse_config(key):
     parsing exceptions and report them to the user cleanly."""
     try:
         _parse_config(key)
-    except ConfigParseException as e:
+    except ConfigParseError as error:
         print "\nError parsing config file:"
-        print e
+        print error
+        exit(1)
+    except blowfish.BlowfishError as error:
+        print "\nError decrypting passwords:"
+        print error
         exit(1)
 
 def _parse_config(key):
@@ -207,7 +201,7 @@ def parse_irc_server(data, key):
         server.nickserv.username = get_required_attribute(nickserv, "username")
         password = get_required_attribute(nickserv, "password")
         if are_passwords_encrypted():
-            server.nickserv.password = decrypt_password(password, key)
+            server.nickserv.password = blowfish.decrypt(key, password)
         else:
             server.nickserv.password = password
 

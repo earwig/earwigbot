@@ -41,7 +41,7 @@ def main():
 
     while 1:
         bot = Popen([executable, bot_script], stdin=PIPE)
-        bot.communicate(key)  # give the key to core.config.load()
+        bot.communicate(key)  # give the key to core.config.load_config()
         return_code = bot.wait()
         if return_code == 1:
             exit()  # let critical exceptions in the subprocess cause us to
