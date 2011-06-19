@@ -63,16 +63,9 @@ class Cryptography(BaseCommand):
 
             try:
                 if data.command == "encrypt":
-                    result = blowfish.encrypt(key, text)
+                    self.connection.reply(data, blowfish.encrypt(key, text))
                 else:
-                    result = blowfish.decrypt(key, text)
-            except blowfish.KeyTooShortError:
-                self.connection.reply(data, "key is too short.")
-            except blowfish.KeyTooLongError:
-                self.connection.reply(data, "key is too long.")
-            except blowfish.IncorrectKeyError:
-                self.connection.reply(data, "key is incorrect!")
-            except blowfish.BadCyphertextError as e:
-                self.connection.reply(data, "bad cyphertext: {0}.".format(e))
-            else:
-                self.connection.reply(data, result)
+                    self.connection.reply(data, blowfish.decrypt(key, text))
+            except blowfish.BlowfishError as error:
+                self.connection.reply(data, "{0}: {1}.".format(
+                        error.__class__.__name__, error))
