@@ -33,16 +33,6 @@ The entire Blowfish() class (excluding verify_key()) is by Michael Gilfix
 
 Blowfish.verify_key(), exception classes, encrypt() and decrypt() wrappers, and
 interactive mode are by Ben Kurtovic <ben.kurtovic@verizon.net>.
-
-Map of exceptions:
-  * BlowfishError
-      * BlockSizeError
-      * KeyLengthError
-          * KeyTooShortError
-          * KeyTooLongError
-      * DecryptionError
-          * IncorrectKeyError
-          * BadCyphertextError
 """
 
 class BlowfishError(Exception):
@@ -53,22 +43,12 @@ class BlockSizeError(BlowfishError):
     """Attempted to handle a block not 8 bytes in length."""
 
 class KeyLengthError(BlowfishError):
-    """Base class for invalid key length exceptions."""
-
-class KeyTooShortError(KeyLengthError):
-    """The given key is too short: it is less than 8 bytes (64 bits)."""
-
-class KeyTooLongError(KeyLengthError):
-    """The given key is too long: it is more than 56 bytes (448 bits."""
+    """Attempted to use a key that is either less than 8 bytes or more than 56
+    bytes in length."""
 
 class DecryptionError(BlowfishError):
-    """Base class for exceptions that occur during decryption only."""
-
-class IncorrectKeyError(DecryptionError):
-    """Attempted to decrypt something with the wrong key."""
-
-class BadCyphertextError(DecryptionError):
-    """The given cyphertext is malformed and cannot be decrypted."""
+    """Attempted to decrypt malformed cyphertext (e.g., not evenly divisible
+    into 8-byte blocks) or attempted to decrypt using a bad key."""
 
 class Blowfish(object):
     """Blowfish encryption Scheme
@@ -462,7 +442,8 @@ class Blowfish(object):
 
     def encrypt(self, data):
         if not len(data) == 8:
-            raise BlockSizeError("{0} != 8".format(len(data)))
+            raise BlockSizeError("blocks must be 8 bytes long, but tried to " +
+                    "encrypt one {0} bytes long".format(len(data)))
 
         # Use big endianess since that's what everyone else uses
         xl = ord (data[3]) | (ord (data[2]) << 8) | (ord (data[1]) << 16) | (ord (data[0]) << 24)
@@ -477,7 +458,8 @@ class Blowfish(object):
 
     def decrypt(self, data):
         if not len(data) == 8:
-            raise BlockSizeError("{0} != 8".format(len(data)))
+            raise BlockSizeError("blocks must be 8 bytes long, but tried to " +
+                    "decrypt one {0} bytes long".format(len(data)))
 
         # Use big endianess since that's what everyone else uses
         cl = ord (data[3]) | (ord (data[2]) << 8) | (ord (data[1]) << 16) | (ord (data[0]) << 24)
@@ -503,11 +485,13 @@ class Blowfish(object):
         """Make sure our key is not too short or too long; if there's a
         problem, raise KeyTooShortError() or KeyTooLongError()."""
         if not key:
-            raise KeyTooShortError("no key given")
+            raise KeyLengthError("no key given")
         if len(key) < 8:
-            raise KeyTooShortError("{0} < 8".format(len(key)))
+            raise KeyLengthError(("key is {0} bytes long, but it must be at " +
+                    "least 8").format(len(key)))
         if len(key) > 56:
-            raise KeyTooLongError("{0} > 56".format(len(key)))
+            raise KeyLengthError(("key is {0} bytes long, but it must be " +
+                    "less than 56").format(len(key)))
 
 def encrypt(key, plaintext):
     """Encrypt any length of plaintext using a given key that must be between
@@ -534,18 +518,20 @@ def decrypt(key, cyphertext):
 
     try:
         cyphertext = cyphertext.decode("hex")
-    except TypeError as e:
-        raise BadCyphertextError(e)
+    except TypeError as error:
+        e = error.message
+        raise DecryptionError("cyphertext could not be decoded: " + e.lower())
 
     if len(cyphertext) % 8 > 0:
-        raise BadCyphertextError("cyphertext cannot be broken into " +
-        "8-byte blocks evenly")
+        raise DecryptionError("cyphertext cannot be broken into " +
+                "8-byte blocks evenly")
 
     blocks = [cyphertext[f:f+8] for f in range(0, len(cyphertext), 8)]
     msg = ''.join(map(cypher.decrypt, blocks))
 
     if not msg.startswith("TRUE"):  # sanity check to ensure valid decryption
-        raise IncorrectKeyError()
+        raise DecryptionError("the given key is incorrect, or part of the " +
+                "cyphertext is malformed")
 
     size, msg = msg[4:].split("|", 1)
     while len(msg) > int(size):
