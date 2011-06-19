@@ -145,7 +145,7 @@ def parse_config(key):
         exit(1)
     except blowfish.BlowfishError as error:
         print "\nError decrypting passwords:"
-        print error
+        print "{0}: {1}.".format(error.__class__.__name__, error)
         exit(1)
 
 def _parse_config(key):
