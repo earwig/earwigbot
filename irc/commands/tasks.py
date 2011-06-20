@@ -2,13 +2,13 @@
 
 # Manage wiki tasks from IRC, and check on thread status.
 
-import threading, re
+import threading
+import re
 
 from irc.base_command import BaseCommand
 from irc.data import *
 from wiki import task_manager
-from config.main import *
-from config.irc import *
+from core import config
 
 class Tasks(BaseCommand):
     def get_hooks(self):
@@ -24,7 +24,7 @@ class Tasks(BaseCommand):
 
     def process(self, data):
         self.data = data
-        if data.host not in OWNERS:
+        if data.host not in config.irc.permissions["owners"]:
             self.connection.reply(data, "at this time, you must be a bot owner to use this command.")
             return
 
@@ -116,9 +116,9 @@ class Tasks(BaseCommand):
 
     def get_main_thread_name(self):
         """Return the "proper" name of the MainThread; e.g. "irc-frontend" or "irc-watcher"."""
-        if enable_irc_frontend:
+        if config.components["irc_frontend"]:
             return "irc-frontend"
-        elif enable_wiki_schedule:
+        elif config.components["wiki_schedule"]:
             return "wiki-scheduler"
         else:
             return "irc-watcher"

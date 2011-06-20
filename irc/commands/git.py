@@ -4,8 +4,8 @@
 
 import shlex, subprocess, re
 
-from config.irc import *
 from irc.base_command import BaseCommand
+from core import config
 
 class Git(BaseCommand):
     def get_hooks(self):
@@ -21,7 +21,7 @@ class Git(BaseCommand):
 
     def process(self, data):
         self.data = data
-        if data.host not in OWNERS:
+        if data.host not in config.irc.permissions["owners"]:
             self.connection.reply(data, "you must be a bot owner to use this command.")
             return
 

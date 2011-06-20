@@ -6,7 +6,6 @@ import json
 import re
 import urllib
 
-from config.watcher import *
 from irc.base_command import BaseCommand
 
 class AFCStatus(BaseCommand):
@@ -22,7 +21,7 @@ class AFCStatus(BaseCommand):
         data.command == "number" or data.command == "afc_status"):
             return True
         try:
-            if data.line[1] == "JOIN" and data.chan in AFC_CHANS:
+            if data.line[1] == "JOIN" and data.chan == "#wikipedia-en-afc":
                 return True
         except IndexError:
             pass
