@@ -42,7 +42,7 @@ root_dir = os.path.split(script_dir)[0]  # the bot's "root" directory relative
 sys.path.append(root_dir)  # make sure we look in the root dir for modules
 
 from core import config
-#from irc import frontend, watcher
+from irc import frontend#, watcher
 #from wiki import task_manager
 
 f_conn = None
@@ -87,7 +87,7 @@ def irc_frontend(components):
     f_conn = frontend.get_connection()
     frontend.startup(f_conn)
 
-    if enable_wiki_schedule:
+    if config.components["wiki_schedule"]:
         print "\nStarting wiki scheduler..."
         task_manager.load_tasks()
         t_scheduler = threading.Thread(target=wiki_scheduler)
@@ -95,7 +95,7 @@ def irc_frontend(components):
         t_scheduler.daemon = True
         t_scheduler.start()
 
-    if enable_irc_watcher:
+    if config.components["irc_watcher"]:
         print "\nStarting IRC watcher..."
         t_watcher = threading.Thread(target=irc_watcher, args=(f_conn,))
         t_watcher.name = "irc-watcher"
@@ -104,7 +104,7 @@ def irc_frontend(components):
 
     frontend.main()
 
-    if enable_irc_watcher:
+    if config.components["irc_watcher"]:
         w_conn.close()
     f_conn.close()
 
@@ -115,7 +115,7 @@ def run():
         key = None
     config.parse_config(key)  # load data from the config file and parse it
                               # using the unlock key
-    components = config.config.components
+    components = config.components
 
     if components["irc_frontend"]:  # make the frontend run on our primary
         irc_frontend(components)    # thread if enabled, and enable additional
@@ -124,7 +124,7 @@ def run():
     elif components["wiki_schedule"]:       # run the scheduler on the main
         print "Starting wiki scheduler..."  # thread, but also run the IRC
         task_manager.load_tasks()           # watcher on another thread iff it
-        if enable_irc_watcher:              # is enabled
+        if components["irc_watcher"]:       # is enabled
             print "\nStarting IRC watcher..."
             t_watcher = threading.Thread(target=irc_watcher, args=(f_conn,))
             t_watcher.name = "irc-watcher"

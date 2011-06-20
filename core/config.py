@@ -7,8 +7,14 @@ This handles all tasks involving reading and writing to our config file,
 including encrypting and decrypting passwords and making a new config file from
 scratch at the inital bot run.
 
-Usually you'll just want to do "from core.config import config" and access
-config data from within that object.
+Usually you'll just want to do "from core import config" and access config data
+from within config's five global variables:
+
+* config.components
+* config.wiki
+* config.irc
+* config.schedule
+* config.watcher
 """
 
 from collections import defaultdict
@@ -23,7 +29,9 @@ root_dir = path.split(script_dir)[0]
 config_path = path.join(root_dir, "config.xml")
 
 _config = None  # holds the parsed DOM object for our config file
-config = None  # holds an instance of Container() with our config data
+
+# initialize our five global variables to store config data
+components, wiki, irc, schedule, watcher = (None, None, None, None, None)
 
 class ConfigParseError(Exception):
     """Base exception for when we could not parse the config file."""
@@ -84,27 +92,14 @@ def make_new_config():
     return is_encrypted
 
 def are_passwords_encrypted():
-    """Determine if the passwords in our config file are encrypted, returning
-    either True or False."""
+    """Determine if the passwords in our config file are encrypted; return
+    either True or False, or raise an exception if there was a problem reading
+    the config file."""
     element = _config.getElementsByTagName("config")[0]
-    return attribute_to_bool(element, "encrypt-passwords", default=False)
-
-def attribute_to_bool(element, attribute, default=None):
-    """Return True if the value of element's attribute is 'true', '1', or 'on';
-    return False if it is 'false', '0', or 'off' (regardless of
-    capitalization); return default if it is empty; raise TypeMismatchError if
-    it does match any of those."""
-    value = element.getAttribute(attribute).lower()
-    if value in ["true", "1", "on"]:
-        return True
-    elif value in ["false", "0", "off"]:
+    attribute = element.getAttribute("encrypt-passwords")
+    if not attribute:
         return False
-    elif value == '':
-        return default
-    else:
-        e = ("Expected a bool in attribute '{0}' of element '{1}', but " +
-        "got '{2}'.").format(attribute, element.tagName, value)
-        raise TypeMismatchError(e)
+    return attribute_to_bool(attribute, element, "encrypt-passwords")
 
 def get_first_element(parent, tag_name):
     """Return the first child of the parent element with the given tag name, or
@@ -134,6 +129,32 @@ def get_required_attribute(element, attr_name):
         raise MissingAttributeError(e)
     return attribute
 
+def attribute_to_bool(value, element, attr_name):
+    """Return True if 'value' is 'true', '1', or 'on', return False if it is
+    'false', '0', or 'off' (regardless of capitalization), or raise
+    TypeMismatchError() if it does match any of those. 'element' and
+    'attr_name' are only used to generate the error message."""
+    lcase = value.lower()
+    if lcase in ["true", "1", "on"]:
+        return True
+    elif lcase in ["false", "0", "off"]:
+        return False
+    else:
+        e = ("Expected a bool in attribute '{0}' of tag '{1}', but got '{2}'."
+                ).format(attr_name, element.tagName, value)
+        raise TypeMismatchError(e)
+
+def attribute_to_int(value, element, attr_name):
+    """Return 'value' after it is converted to an integer. If it could not be
+    converted, raise TypeMismatchError() using 'element' and 'attr_name' only
+    to give the user information about what happened."""
+    try:
+        return int(value)
+    except ValueError:
+        e = ("Expected an integer in attribute '{0}' of tag '{1}', but got " +
+                "'{2}'.").format(attr_name, element.tagName, value)
+        raise TypeMismatchError(e)
+
 def parse_config(key):
     """A thin wrapper for the actual config parser in _parse_config(): catch
     parsing exceptions and report them to the user cleanly."""
@@ -149,21 +170,20 @@ def parse_config(key):
         exit(1)
 
 def _parse_config(key):
-    """Parse config data from a DOM object into the 'config' global variable.
-    The key is used to unencrypt passwords stored in the XML config file."""
+    """Parse config data from a DOM object into the five global variables that
+    store our config info. The key is used to unencrypt passwords stored in the
+    XML config file."""
+    global components, wiki, irc, schedule, watcher
+
     _load_config()  # we might be re-loading unnecessarily here, but no harm in
                     # that!
     data = _config.getElementsByTagName("config")[0]
 
-    cfg = Container()
-    cfg.components = parse_components(data)
-    cfg.wiki = parse_wiki(data, key)
-    cfg.irc = parse_irc(data, key)
-    cfg.schedule = parse_schedule(data)
-    cfg.watcher = parse_watcher(data)
-
-    global config
-    config = cfg
+    components = parse_components(data)
+    wiki = parse_wiki(data, key)
+    irc = parse_irc(data, key)
+    schedule = parse_schedule(data)
+    watcher = parse_watcher(data)
 
 def parse_components(data):
     """Parse everything within the <components> XML tag of our config file.
@@ -187,13 +207,16 @@ def parse_wiki(data, key):
 def parse_irc_server(data, key):
     """Parse everything within a <server> tag."""
     server = Container()
-    
     connection = get_required_element(data, "connection")
+
     server.host = get_required_attribute(connection, "host")
     server.port = get_required_attribute(connection, "port")
     server.nick = get_required_attribute(connection, "nick")
     server.ident = get_required_attribute(connection, "ident")
     server.realname = get_required_attribute(connection, "realname")
+
+    # convert the port from a string to an int
+    server.port = attribute_to_int(server.port, connection, "port")
 
     nickserv = get_first_element(data, "nickserv")
     if nickserv:
@@ -204,10 +227,12 @@ def parse_irc_server(data, key):
             server.nickserv.password = blowfish.decrypt(key, password)
         else:
             server.nickserv.password = password
+    else:
+        server.nickserv = None
 
+    server.channels = list()
     channels = get_first_element(data, "channels")
     if channels:
-        server.channels = list()
         for channel in channels.getElementsByTagName("channel"):
             name = get_required_attribute(channel, "name")
             server.channels.append(name)
