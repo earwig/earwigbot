@@ -11,8 +11,7 @@ channels in the IRC frontend.
 """
 
 from core import config
-from irc.connection import *
-from irc.rc import RC
+from irc.classes import Connection, RC, BrokenSocketException
 from irc import watcher_logic
 
 frontend_conn = None

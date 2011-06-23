@@ -2,7 +2,7 @@
 
 # Voice/devoice/op/deop users in the channel.
 
-from irc.base_command import BaseCommand
+from irc.classes import BaseCommand
 from core import config
 
 class ChanOps(BaseCommand):

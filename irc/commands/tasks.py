@@ -5,8 +5,7 @@
 import threading
 import re
 
-from irc.base_command import BaseCommand
-from irc.data import *
+from irc.classes import BaseCommand, Data, KwargParseException
 from wiki import task_manager
 from core import config
 

@@ -4,7 +4,7 @@
 
 import re
 
-from irc.base_command import BaseCommand
+from irc.classes import BaseCommand
 
 class Link(BaseCommand):
     def get_hooks(self):

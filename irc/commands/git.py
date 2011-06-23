@@ -2,9 +2,11 @@
 
 # Commands to interface with the bot's git repository; use '!git help' for sub-command list.
 
-import shlex, subprocess, re
+import shlex
+import subprocess
+import re
 
-from irc.base_command import BaseCommand
+from irc.classes import BaseCommand
 from core import config
 
 class Git(BaseCommand):

@@ -13,8 +13,7 @@ from re import findall
 
 from core import config
 from irc import command_handler
-from irc.connection import *
-from irc.data import Data
+from irc.classes import Connection, Data, BrokenSocketException
 
 connection = None
 
