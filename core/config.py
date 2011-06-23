@@ -8,13 +8,12 @@ including encrypting and decrypting passwords and making a new config file from
 scratch at the inital bot run.
 
 Usually you'll just want to do "from core import config" and access config data
-from within config's five global variables:
+from within config's four global variables:
 
 * config.components
 * config.wiki
 * config.irc
 * config.schedule
-* config.watcher
 """
 
 from collections import defaultdict
@@ -170,10 +169,10 @@ def parse_config(key):
         exit(1)
 
 def _parse_config(key):
-    """Parse config data from a DOM object into the five global variables that
+    """Parse config data from a DOM object into the four global variables that
     store our config info. The key is used to unencrypt passwords stored in the
     XML config file."""
-    global components, wiki, irc, schedule, watcher
+    global components, wiki, irc, schedule
 
     _load_config()  # we might be re-loading unnecessarily here, but no harm in
                     # that!
@@ -183,7 +182,6 @@ def _parse_config(key):
     wiki = parse_wiki(data, key)
     irc = parse_irc(data, key)
     schedule = parse_schedule(data)
-    watcher = parse_watcher(data)
 
 def parse_components(data):
     """Parse everything within the <components> XML tag of our config file.
@@ -270,11 +268,44 @@ def parse_irc(data, key):
                 irc.permissions[group_name].append(hostname)
 
     return irc  
-    
+
 def parse_schedule(data):
-    """Parse everything within the <schedule> tag of our XML config file."""
-    pass
+    """Store the <schedule> element in schedule.data and the _schedule()
+    function as schedule.check()."""
+    schedule = Container()
+    schedule.check = _schedule
+    schedule.data = get_first_element(data, "schedule")
+    return schedule
     
-def parse_watcher(data):
-    """Parse everything within the <watcher> tag of our XML config file."""
-    pass
+def _schedule(minute, hour, month_day, month, week_day):
+    """Return a list of tasks that are scheduled to run at the time specified
+    by the function args. The schedule data comes from our config file's
+    <schedule> tag, which is stored as schedule.data. Call this function with
+    config.schedule.check(args)."""
+    tasks = []  # tasks to run this turn, each as a tuple of (task_name,
+    # kwargs), or just task_name
+
+    now = {"minute": minute, "hour": hour, "month_day": month_day,
+            "month": month, "week_day": week_day}
+
+    for when in schedule.data.getElementsByTagName("when"):
+        do = True
+        for key, value in now.items():
+            if when.hasAttribute(key):
+                req = when.getAttribute(key)
+                if attribute_to_int(req, when, key) != value:
+                    do = False
+                    break
+        if do:
+            for task in when.getElementsByTagName("task"):
+                name = get_required_attribute(task, "name")
+                args = dict()
+                for key in task.attributes.keys():
+                    args[key] = task.getAttribute(key)
+                del args["name"]
+                if args:
+                    tasks.append((name, args))
+                else:
+                    tasks.append(name)
+
+    return tasks

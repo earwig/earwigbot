@@ -42,8 +42,8 @@ root_dir = os.path.split(script_dir)[0]  # the bot's "root" directory relative
 sys.path.append(root_dir)  # make sure we look in the root dir for modules
 
 from core import config
-from irc import frontend#, watcher
-#from wiki import task_manager
+from irc import frontend, watcher
+from wiki import task_manager
 
 f_conn = None
 w_conn = None
@@ -126,7 +126,7 @@ def run():
         task_manager.load_tasks()           # watcher on another thread iff it
         if components["irc_watcher"]:       # is enabled
             print "\nStarting IRC watcher..."
-            t_watcher = threading.Thread(target=irc_watcher, args=(f_conn,))
+            t_watcher = threading.Thread(target=irc_watcher, args=())
             t_watcher.name = "irc-watcher"
             t_watcher.daemon = True
             t_watcher.start()

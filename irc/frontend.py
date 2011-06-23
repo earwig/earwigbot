@@ -1,7 +1,7 @@
 # -*- coding: utf-8  -*-
 
 """
-EarwigBot's Front-end IRC Component
+EarwigBot's IRC Front-end Component
 
 The IRC frontend runs on a normal IRC server and expects users to interact with
 it and give it commands. Commands are stored as "command classes", subclasses
