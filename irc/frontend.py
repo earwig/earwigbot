@@ -20,8 +20,9 @@ connection = None
 def get_connection():
     """Return a new Connection() instance with information about our server
     connection, but don't actually connect yet."""
-    cf = config.irc.frontend
-    connection = Connection(cf.host, cf.port, cf.nick, cf.nick, cf.realname)
+    cf = config.irc["frontend"]
+    connection = Connection(cf["host"], cf["port"], cf["nick"], cf["ident"],
+            cf["realname"])
     return connection
 
 def startup(conn):
@@ -66,7 +67,7 @@ def main():
                 data.msg = ' '.join(line[3:])[1:]
                 data.chan = line[2]
 
-                if data.chan == config.irc.frontend.nick:
+                if data.chan == config.irc["frontend"]["nick"]:
                     # this is a privmsg to us, so set 'chan' as the nick of the
                     # sender, then check for private-only command hooks
                     data.chan = data.nick
@@ -81,7 +82,7 @@ def main():
                 # hardcode the !restart command (we can't restart from within
                 # an ordinary command)
                 if data.msg in ["!restart", ".restart"]:
-                    if data.host in config.irc.permissions["owners"]:
+                    if data.host in config.irc["permissions"]["owners"]:
                         print "Restarting bot per owner request..."
                         return
 
@@ -89,11 +90,15 @@ def main():
                 connection.send("PONG %s" % line[1])
 
             if line[1] == "376":  # we've successfully connected to the network
-                ns = config.irc.frontend.nickserv
-                if ns:  # if we're supposed to auth to nickserv, do that
-                    connection.say("NickServ", "IDENTIFY %s %s" % (ns.username,
-                            ns.password))
+                try:  # if we're supposed to auth to nickserv, do that
+                    ns_username = config.irc["frontend"]["nickservUsername"]
+                    ns_password = config.irc["frontend"]["nickservPassword"]
+                except KeyError:
+                    pass
+                else:
+                    connection.say("NickServ", "IDENTIFY {0} {1}".format(
+                            ns_username, ns_password))
                 
                 # join all of our startup channels
-                for chan in config.irc.frontend.channels:
+                for chan in config.irc["frontend"]["channels"]:
                     connection.join(chan)

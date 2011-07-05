@@ -23,7 +23,7 @@ class Tasks(BaseCommand):
 
     def process(self, data):
         self.data = data
-        if data.host not in config.irc.permissions["owners"]:
+        if data.host not in config.irc["permissions"]["owners"]:
             self.connection.reply(data, "at this time, you must be a bot owner to use this command.")
             return
 
@@ -115,9 +115,9 @@ class Tasks(BaseCommand):
 
     def get_main_thread_name(self):
         """Return the "proper" name of the MainThread; e.g. "irc-frontend" or "irc-watcher"."""
-        if config.components["irc_frontend"]:
+        if "irc_frontend" in config.components:
             return "irc-frontend"
-        elif config.components["wiki_schedule"]:
+        elif "wiki_schedule" in config.components:
             return "wiki-scheduler"
         else:
             return "irc-watcher"

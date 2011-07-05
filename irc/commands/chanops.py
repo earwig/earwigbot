@@ -19,7 +19,7 @@ class ChanOps(BaseCommand):
         return False
 
     def process(self, data):
-        if data.host not in config.irc.permissions["admins"]:
+        if data.host not in config.irc["permissions"]["admins"]:
             self.connection.reply(data, "you must be a bot admin to use this command.")
             return
 

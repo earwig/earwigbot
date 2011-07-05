@@ -19,8 +19,9 @@ frontend_conn = None
 def get_connection():
     """Return a new Connection() instance with information about our server
     connection, but don't actually connect yet."""
-    cf = config.irc.watcher
-    connection = Connection(cf.host, cf.port, cf.nick, cf.nick, cf.realname)
+    cf = config.irc["watcher"]
+    connection = Connection(cf["host"], cf["port"], cf["nick"], cf["ident"],
+            cf["realname"])
     return connection
 
 def main(connection, f_conn=None):
@@ -49,7 +50,7 @@ def main(connection, f_conn=None):
 
                 # ignore messages originating from channels not in our list, to
                 # prevent someone PMing us false data
-                if chan not in config.irc.watcher.channels:
+                if chan not in config.irc["watcher"]["channels"]:
                     continue
 
                 msg = ' '.join(line[3:])[1:]
@@ -62,7 +63,7 @@ def main(connection, f_conn=None):
 
             # when we've finished starting up, join all watcher channels
             if line[1] == "376":
-                for chan in config.irc.watcher.channels:
+                for chan in config.irc["watcher"]["channels"]:
                     connection.join(chan)
 
 def process(rc):

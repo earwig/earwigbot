@@ -2,7 +2,7 @@
 *.pyc
 
 # Ignore bot-specific config file:
-config.xml
+config.json
 
 # Ignore pydev's nonsense:
 .project
