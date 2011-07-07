@@ -1,5 +1,7 @@
 [EarwigBot](http://toolserver.org/~earwig/earwigbot/) is a
-[Python](http://python.org/) robot that edits Wikipedia.
+[Python](http://python.org/) robot that edits
+[Wikipedia](http://en.wikipedia.org/) and interacts with people over
+[IRC](http://en.wikipedia.org/wiki/Internet_Relay_Chat).
 
 # History
 
