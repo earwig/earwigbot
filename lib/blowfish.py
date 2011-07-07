@@ -550,4 +550,4 @@ if __name__ == '__main__':
         cyphertext = raw_input("Enter a message to decrypt: ")
         print "\n" + decrypt(key, cyphertext)
     else:
-        print "Unknown action: '{0}'.".format(op)
+        print "Unknown action: '{0}'".format(action)
