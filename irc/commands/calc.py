@@ -5,7 +5,7 @@
 import re
 import urllib
 
-from irc.base_command import BaseCommand
+from irc.classes import BaseCommand
 
 class Calc(BaseCommand):
     def get_hooks(self):

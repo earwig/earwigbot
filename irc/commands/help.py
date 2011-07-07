@@ -2,8 +2,7 @@
 
 # Generates help information.
 
-from irc.base_command import BaseCommand
-from irc.data import Data
+from irc.classes import BaseCommand, Data
 from irc import command_handler
 
 class Help(BaseCommand):

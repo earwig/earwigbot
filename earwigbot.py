@@ -1,22 +1,57 @@
+#! /usr/bin/python
 # -*- coding: utf-8  -*-
 
-import time
-from subprocess import *
+"""
+EarwigBot
 
-try:
-    from config import irc, main, schedule, secure, watcher
-except ImportError:
-    print """Missing a config file! Make sure you have configured the bot. All *.py.default files in config/
-should have their .default extension removed, and the info inside should be corrected."""
-    exit()
+A thin wrapper for EarwigBot's main bot code, specified by bot_script. This
+wrapper will automatically restart the bot when it shuts down (from !restart,
+for example). It requests the bot's password at startup and reuses it every
+time the bot restarts internally, so you do not need to re-enter the password
+after using !restart.
+
+For information about the bot as a whole, see the attached README.md file (in
+markdown format!) and the LICENSE for licensing information.
+"""
+
+from getpass import getpass
+from subprocess import Popen, PIPE
+from os import path
+from sys import executable
+from time import sleep
+
+from core.config import verify_config
+
+__author__ = "Ben Kurtovic"
+__copyright__ = "Copyright (c) 2009-2011 by Ben Kurtovic"
+__license__ = "MIT License"
+__version__ = "0.1dev"
+__email__ = "ben.kurtovic@verizon.net"
+
+bot_script = path.join(path.dirname(path.abspath(__file__)), "core", "main.py")
 
 def main():
+    print "EarwigBot v{0}\n".format(__version__)
+
+    is_encrypted = verify_config()
+    if is_encrypted:  # passwords in the config file are encrypted
+        key = getpass("Enter key to unencrypt bot passwords: ")
+    else:
+        key = None
+
     while 1:
-        call(['python', 'core/main.py'])
-        time.sleep(5) # sleep for five seconds between bot runs
+        bot = Popen([executable, bot_script], stdin=PIPE)
+        bot.communicate(key)  # give the key to core.config.load_config()
+        return_code = bot.wait()
+        if return_code == 1:
+            exit()  # let critical exceptions in the subprocess cause us to
+                    # exit as well
+        else:
+            sleep(5)  # sleep between bot runs following a non-critical
+                      # subprocess exit
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        exit("\nKeyboardInterrupt: stopping bot wrapper.")
+        print "\nKeyboardInterrupt: stopping bot wrapper."

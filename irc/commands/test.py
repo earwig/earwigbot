@@ -4,7 +4,7 @@
 
 import random
 
-from irc.base_command import BaseCommand
+from irc.classes import BaseCommand
 
 class Test(BaseCommand):
     def get_hooks(self):

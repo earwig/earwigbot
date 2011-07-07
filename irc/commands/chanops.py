@@ -2,8 +2,8 @@
 
 # Voice/devoice/op/deop users in the channel.
 
-from irc.base_command import BaseCommand
-from config.irc import *
+from irc.classes import BaseCommand
+from core import config
 
 class ChanOps(BaseCommand):
     def get_hooks(self):
@@ -19,7 +19,7 @@ class ChanOps(BaseCommand):
         return False
 
     def process(self, data):
-        if data.host not in ADMINS:
+        if data.host not in config.irc["permissions"]["admins"]:
             self.connection.reply(data, "you must be a bot admin to use this command.")
             return
 

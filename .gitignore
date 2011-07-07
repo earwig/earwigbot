@@ -1,8 +1,8 @@
 # Ignore python bytecode:
 *.pyc
 
-# Ignore secure config files:
-config/secure.py
+# Ignore bot-specific config file:
+config.json
 
 # Ignore pydev's nonsense:
 .project
