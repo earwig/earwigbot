@@ -31,8 +31,8 @@ class Remind(BaseCommand):
         except ValueError:
             self.connection.reply(data, "the time must be given as an integer, in seconds.")
             return
-        content = ' '.join(data.args[1:])
-        if not content:
+        message = ' '.join(data.args[1:])
+        if not message:
             self.connection.reply(data, "what message do you want me to give you when time is up?")
             return
 
