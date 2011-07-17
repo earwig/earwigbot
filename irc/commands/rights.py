@@ -26,12 +26,12 @@ class Rights(BaseCommand):
             self.connection.reply(data, "what user do you want me to look up?")
             return
 
-        username = ''.join(data.args)
+        username = ' '.join(data.args)
         rights = self.get_rights(username)
         if rights:
             self.connection.reply(data, "the rights for user \x0302{0}\x0301 are {1}.".format(username, ', '.join(rights)))
         else:
-            self.connection.reply(data, "the user x0302{0}\x0301 has no rights, or does not exist.".format(username))
+            self.connection.reply(data, "the user \x0302{0}\x0301 has no rights, or does not exist.".format(username))
 
     def get_rights(self, username):
         params = {'action': 'query', 'format': 'json', 'list': 'users', 'usprop': 'groups'}
