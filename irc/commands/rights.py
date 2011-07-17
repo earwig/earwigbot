@@ -29,7 +29,7 @@ class Rights(BaseCommand):
         username = ' '.join(data.args)
         rights = self.get_rights(username)
         if rights:
-            self.connection.reply(data, "the rights for user \x0302{0}\x0301 are {1}.".format(username, ', '.join(rights)))
+            self.connection.reply(data, "the rights for \x0302{0}\x0301 are {1}.".format(username, ', '.join(rights)))
         else:
             self.connection.reply(data, "the user \x0302{0}\x0301 has no rights, or does not exist.".format(username))
 
