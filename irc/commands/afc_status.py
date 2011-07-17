@@ -16,9 +16,7 @@ class AFCStatus(BaseCommand):
         return "Get the number of pending AfC submissions, open redirect requests, and open file upload requests."
 
     def check(self, data):
-        if data.is_command and (data.command == "status" or
-        data.command == "count" or data.command == "num" or
-        data.command == "number" or data.command == "afc_status"):
+        if data.is_command and data.command in ["status", "count", "num", "number", "afc_status"]:
             return True
         try:
             if data.line[1] == "JOIN" and data.chan == "#wikipedia-en-afc":
