@@ -55,7 +55,7 @@ class Link(BaseCommand):
 
     def parse_link(self, pagename):
         pagename = pagename.strip()
-        link = "http://en.wikipedia.org/wiki/" + pagename
+        link = "http://enwp.org/" + pagename
         link = link.replace(" ", "_")
         return link
 
