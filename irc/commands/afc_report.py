@@ -32,13 +32,13 @@ class AFCReport(BaseCommand):
         pagename = pagename.replace("http://en.wikipedia.org/wiki/", "").replace("http://enwp.org/", "").replace("_", " ")
         pagename = pagename.strip()
 
-        if page_exists(pagename):  # given '!report Foo', first try [[Foo]]
+        if self.page_exists(pagename):  # given '!report Foo', first try [[Foo]]
             self.report(pagename)
         else:  # if that doesn't work, try [[Wikipedia:Articles for creation/Foo]]
-            if page_exists("Wikipedia:Articles for creation/" + pagename):
+            if self.page_exists("Wikipedia:Articles for creation/" + pagename):
                 self.report("Wikipedia:Articles for creation/" + pagename)
             else:  # if that doesn't work, try [[Wikipedia talk:Articles for creation/Foo]]
-                if page_exists("Wikipedia talk:Articles for creation/" + pagename):
+                if self.page_exists("Wikipedia talk:Articles for creation/" + pagename):
                     self.report("Wikipedia talk:Articles for creation/" + pagename)
                 else:
                     self.connection.reply(data, "submission \x0302{0}\x0301 not found.".format(pagename))
