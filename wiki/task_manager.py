@@ -33,7 +33,7 @@ def load_tasks():
 def load_class_from_file(f):
     """Look in a given file for the task class."""
     global task_list
-    
+
     module = f[:-3]  # strip .py from end
     try:
         exec "from wiki.tasks import %s as m" % module
@@ -42,13 +42,13 @@ def load_class_from_file(f):
         traceback.print_exc()
         return
     try:
-        task_class = m.Task()
+        task_class = m.Task
     except:
         print "Couldn't find or get task class in file %s:" % f
         traceback.print_exc()
         return
     task_name = task_class.task_name
-    task_list[task_name] = task_class
+    task_list[task_name] = task_class()
     print "Added task %s from wiki/tasks/%s..." % (task_name, f)
 
 def start_tasks(now=time.gmtime()):
@@ -70,13 +70,11 @@ def start_task(task_name, **kwargs):
     try:
         task = task_list[task_name]
     except KeyError:
-        print ("Couldn't find task '{0}': wiki/tasks/{1}.py does not " + 
-        "exist.").format(task_name, task_name)
+        print ("Couldn't find task '{0}': wiki/tasks/{0}.py does not exist.").format(task_name)
         return
 
-    task_thread = threading.Thread(target=lambda: task_wrapper(task, **kwargs))  
-    task_thread.name = "{0} ({1})".format(task_name, time.strftime(
-            "%b %d %H:%M:%S"))
+    task_thread = threading.Thread(target=lambda: task_wrapper(task, **kwargs))
+    task_thread.name = "{0} ({1})".format(task_name, time.strftime("%b %d %H:%M:%S"))
 
     # stop bot task threads automagically if the main bot stops
     task_thread.daemon = True
@@ -88,8 +86,7 @@ def task_wrapper(task, **kwargs):
     try:
         task.run(**kwargs)
     except:
-        print "Task '{0}' raised an exception and had to stop:".format(
-                task.task_name)
+        print "Task '{0}' raised an exception and had to stop:".format(task.task_name)
         traceback.print_exc()
     else:
         print "Task '{0}' finished without error.".format(task.task_name)
