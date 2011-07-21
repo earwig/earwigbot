@@ -32,19 +32,20 @@ class AFCStatus(BaseCommand):
             return
 
         if data.args:
-            if data.args[0].startswith("sub") or data.args[0] == "s":
+            action = data.args[0].lower()
+            if action.startswith("sub") or action == "s":
                 subs = self.count_submissions()
                 self.connection.reply(data, "there are currently %s pending AfC submissions." % subs)
 
-            elif data.args[0].startswith("redir") or data.args[0] == "r":
+            elif action.startswith("redir") or action == "r":
                 redirs = self.count_redirects()
                 self.connection.reply(data, "there are currently %s open redirect requests." % redirs)
 
-            elif data.args[0].startswith("file") or data.args[0] == "f":
+            elif action.startswith("file") or action == "f":
                 files = self.count_redirects()
                 self.connection.reply(data, "there are currently %s open file upload requests." % files)
 
-            elif data.args[0].startswith("agg") or data.args[0] == "a":
+            elif action.startswith("agg") or action == "a":
                 try:
                     agg_num = int(data.args[1])
                 except IndexError:
@@ -56,7 +57,7 @@ class AFCStatus(BaseCommand):
                 aggregate = self.get_aggregate(agg_num)
                 self.connection.reply(data, "aggregate is currently %s (AfC %s)." % (agg_num, aggregate))
 
-            elif data.args[0].startswith("join") or data.args[0] == "j":
+            elif action.startswith("join") or action == "j":
                 notice = self.get_join_notice()
                 self.connection.reply(data, notice)
 
@@ -80,6 +81,7 @@ class AFCStatus(BaseCommand):
                 % (aggregate, subs, redirs, files))
 
     def count_submissions(self):
+        """Returns the number of open AFC submissions (count of CAT:PEND)."""
         params = {'action': 'query', 'list': 'categorymembers', 'cmlimit':'500', 'format': 'json'}
         params['cmtitle'] = "Category:Pending_AfC_submissions"
         data = urllib.urlencode(params)
@@ -90,6 +92,8 @@ class AFCStatus(BaseCommand):
         return subs
 
     def count_redirects(self):
+        """Returns the number of open redirect submissions. Calculated as the
+        total number of submissions minus the closed ones."""
         content = self.get_page("Wikipedia:Articles_for_creation/Redirects")
         total = len(re.findall("^\s*==(.*?)==\s*$", content, re.MULTILINE))
         closed = content.lower().count("{{afc-c|b}}")
@@ -97,6 +101,8 @@ class AFCStatus(BaseCommand):
         return redirs
 
     def count_files(self):
+        """Returns the number of open WP:FFU (Files For Upload) requests.
+        Calculated as the total number of requests minus the closed ones."""
         content = self.get_page("Wikipedia:Files_for_upload")
         total = len(re.findall("^\s*==(.*?)==\s*$", content, re.MULTILINE))
         closed = content.lower().count("{{ifu-c|b}}")
@@ -104,6 +110,8 @@ class AFCStatus(BaseCommand):
         return files
 
     def get_page(self, pagename):
+        """Simple method to return the content of the page 'pagename'. Will be
+        a part of wiki/tools/ when I finish that."""
         params = {'action': 'query', 'prop': 'revisions', 'rvprop':'content', 'rvlimit':'1', 'format': 'json'}
         params['titles'] = pagename
         data = urllib.urlencode(params)
@@ -114,22 +122,32 @@ class AFCStatus(BaseCommand):
         return content
 
     def get_aggregate(self, num):
+        """Returns a human-readable AFC status based on the number of pending
+        AFC submissions, open redirect requests, and open FFU requests. This
+        does not match {{AFC status}} directly because my algorithm factors in
+        WP:AFC/R and WP:FFU while the template only looks at the main
+        submissions. My reasoning is that AFC/R and FFU are still part of
+        the project, so even if there are no pending submissions, a backlog at
+        FFU (for example) indicates that our work is *not* done and the
+        project-wide backlog is most certainly *not* clear."""
         if num == 0:
-            agg = "is \x02\x0303clear\x0301\x0F"
-        elif num < 60:
-            agg = "is \x0303almost clear\x0301"
-        elif num < 125:
-            agg = "has a \x0312small backlog\x0301"
-        elif num < 175:
-            agg = "has an \x0307average backlog\x0301"
-        elif num < 250:
-            agg = "is \x0304backlogged\x0301"
-        elif num < 300:
-            agg = "is \x02\x0304heavily backlogged\x0301\x0F"
-        else:
-            agg = "is \x02\x1F\x0304severely backlogged\x0301\x0F"
-        return agg
+            return "is \x02\x0303clear\x0301\x0F"
+        elif num < 125:  # < 25 subs
+            return "is \x0303almost clear\x0301"
+        elif num < 200:  # < 40 subs
+            return "is \x0312normal\x0301"
+        elif num < 275:  # < 55 subs
+            return "is \x0307lightly backlogged\x0301"
+        elif num < 350:  # < 70 subs
+            return "is \x0304backlogged\x0301"
+        elif num < 500:  # < 100 subs
+            return "is \x02\x0304heavily backlogged\x0301\x0F"
+        else:  # >= 100 subs
+            return "is \x02\x1F\x0304severely backlogged\x0301\x0F"
 
     def get_aggregate_number(self, (subs, redirs, files)):
+        """Returns an 'aggregate number' based on the real number of pending
+        submissions in CAT:PEND (subs), open redirect submissions in WP:AFC/R
+        (redirs), and open files-for-upload requests in WP:FFU (files)."""
         num = (subs * 5) + (redirs * 2) + (files * 2)
         return num
