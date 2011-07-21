@@ -1,12 +1,13 @@
 # -*- coding: utf-8  -*-
 
-# A task to clear [[Category:Undated AfC submissions]].
-
 from wiki.base_task import BaseTask
 
 class Task(BaseTask):
+    """A task to clear [[Category:Undated AfC submissions]]."""
+    task_name = "afc_undated"
+
     def __init__(self):
-        self.task_name = "afc_undated"
-    
+        pass
+
     def run(self, **kwargs):
         pass

@@ -1,12 +1,13 @@
 # -*- coding: utf-8  -*-
 
-# A task to create daily categories for [[WP:FEED]].
-
 from wiki.base_task import BaseTask
 
 class Task(BaseTask):
+    """A task to create daily categories for [[WP:FEED]]."""
+    task_name = "feed_dailycats"
+
     def __init__(self):
-        self.task_name = "feed_dailycats"
-    
+        pass
+
     def run(self, **kwargs):
         pass
