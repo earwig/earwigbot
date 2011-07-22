@@ -57,7 +57,7 @@ def start_tasks(now=time.gmtime()):
             now.tm_wday)  # get list of tasks to run this turn
 
     for task in tasks:
-        if isinstance(task, tuple):         # they've specified kwargs
+        if isinstance(task, list):          # they've specified kwargs
             start_task(task[0], **task[1])  # so pass those to start_task
         else:  # otherwise, just pass task_name
             start_task(task)
