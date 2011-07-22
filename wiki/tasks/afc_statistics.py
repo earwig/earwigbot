@@ -11,4 +11,4 @@ class Task(BaseTask):
         pass
 
     def run(self, **kwargs):
-        pass
+        print kwargs

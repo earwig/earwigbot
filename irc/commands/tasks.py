@@ -17,7 +17,7 @@ class Tasks(BaseCommand):
         return "Manage wiki tasks from IRC, and check on thread status."
 
     def check(self, data):
-        if data.is_command and data.command in ["tasks", "threads", "tasklist"]:
+        if data.is_command and data.command in ["tasks", "task", "threads", "tasklist"]:
             return True
         return False
 
@@ -47,6 +47,9 @@ class Tasks(BaseCommand):
             self.connection.reply(data, "unknown argument: \x0303{0}\x0301.".format(data.args[0]))
 
     def do_list(self):
+        """With !tasks list (or abbreviation !tasklist), list all running
+        threads. This includes the main threads, like the irc frontend and the
+        watcher, and task threads."""
         threads = threading.enumerate()
 
         normal_threads = []
@@ -72,6 +75,8 @@ class Tasks(BaseCommand):
         self.connection.reply(self.data, msg)
 
     def do_listall(self):
+        """With !tasks listall or !tasks all, list all loaded tasks, and report
+        whether they are currently running or idle."""
         tasks = task_manager.task_list.keys()
         threads = threading.enumerate()
         tasklist = []
@@ -94,6 +99,8 @@ class Tasks(BaseCommand):
         self.connection.reply(self.data, msg)
 
     def do_start(self):
+        """With !tasks start, start any loaded task by name with or without
+        kwargs."""
         data = self.data
 
         try:
@@ -116,7 +123,8 @@ class Tasks(BaseCommand):
         self.connection.reply(data, "task \x0302{0}\x0301 started.".format(task_name))
 
     def get_main_thread_name(self):
-        """Return the "proper" name of the MainThread; e.g. "irc-frontend" or "irc-watcher"."""
+        """Return the "proper" name of the MainThread; e.g. "irc-frontend" or
+        "irc-watcher"."""
         if "irc_frontend" in config.components:
             return "irc-frontend"
         elif "wiki_schedule" in config.components:
