@@ -1,11 +1,13 @@
 # -*- coding: utf-8  -*-
 
-# Report the status of AFC submissions, either as an automatic message on join or a request via !status.
+"""Report the status of AFC submissions, either as an automatic message on join
+or a request via !status."""
 
 import json
 import re
 import urllib
 
+from core import config
 from irc.classes import BaseCommand
 
 class AFCStatus(BaseCommand):
@@ -20,7 +22,8 @@ class AFCStatus(BaseCommand):
             return True
         try:
             if data.line[1] == "JOIN" and data.chan == "#wikipedia-en-afc":
-                return True
+                if data.nick != config.irc["frontend"]["nick"]:
+                    return True
         except IndexError:
             pass
         return False
