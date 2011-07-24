@@ -16,6 +16,25 @@ from wiki.tools.site import Site
 
 __all__ = ["get_site"]
 
+def _get_site_object_from_dict(name, d):
+    """Return a Site object based on the contents of a dict, probably acquired
+    through our config file, and a separate name."""
+    project = d["project"]
+    lang = d["lang"]
+    try:
+        api = d["apiURL"]
+    except KeyError:
+        api = None
+    try:
+        sql_server = d["sqlServer"]
+    except KeyError:
+        sql_server = None
+    try:
+        sql_db = d["sqlDB"]
+    except KeyError:
+        sql_db = None
+    return Site(name, project, lang, api, (sql_server, sql_db))
+
 def get_site(name=None, project=None, lang=None):
     """Returns a Site instance based on information from our config file.
 
@@ -50,26 +69,29 @@ def get_site(name=None, project=None, lang=None):
             e = "Default site is not specified in config."
             raise SiteNotFoundError(e)
         try:
-            return config.wiki["sites"][default]
+            site = config.wiki["sites"][default]
         except KeyError:
             e = "Default site specified by config is not in the config's sites list."
             raise SiteNotFoundError(e)
+        return _get_site_object_from_dict(default, site)
 
     if name is not None:  # name arg given, but don't look at others yet
         try:
-            return config.wiki["sites"][name]
+            site = config.wiki["sites"][name]
         except KeyError:
             if project is None:  # implies lang is None, i.e., only name was given
                 e = "Site '{0}' not found in config.".format(name)
                 raise SiteNotFoundError(e)
-            for site in config.wiki["sites"].values():
+            for sitename, site in config.wiki["sites"].items():
                 if site["project"] == project and site["lang"] == lang:
-                    return site
+                    return _get_site_object_from_dict(sitename, site)
             e = "Neither site '{0}' nor site '{1}:{2}' found in config.".format(name, project, lang)
             raise SiteNotFoundError(e)
+        else:
+            return _get_site_object_from_dict(name, site)
 
-    for site in config.wiki["sites"].values():  # implied lang and proj are not None
+    for sitename, site in config.wiki["sites"].items():  # implied lang and proj are not None
         if site["project"] == project and site["lang"] == lang:
-            return site
+            return _get_site_object_from_dict(sitename, site)
     e = "Site '{0}:{1}' not found in config.".format(project, lang)
     raise SiteNotFoundError(e)
