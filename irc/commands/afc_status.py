@@ -3,12 +3,11 @@
 """Report the status of AFC submissions, either as an automatic message on join
 or a request via !status."""
 
-import json
 import re
-import urllib
 
 from core import config
 from irc.classes import BaseCommand
+from wiki import tools
 
 class AFCStatus(BaseCommand):
     def get_hooks(self):
@@ -29,6 +28,8 @@ class AFCStatus(BaseCommand):
         return False
 
     def process(self, data):
+        self.site = tools.get_site()
+
         if data.line[1] == "JOIN":
             notice = self.get_join_notice()
             self.connection.notice(data.nick, notice)
@@ -85,19 +86,15 @@ class AFCStatus(BaseCommand):
 
     def count_submissions(self):
         """Returns the number of open AFC submissions (count of CAT:PEND)."""
-        params = {'action': 'query', 'list': 'categorymembers', 'cmlimit':'500', 'format': 'json'}
-        params['cmtitle'] = "Category:Pending_AfC_submissions"
-        data = urllib.urlencode(params)
-        raw = urllib.urlopen("http://en.wikipedia.org/w/api.php", data).read()
-        res = json.loads(raw)
-        subs = len(res['query']['categorymembers'])
+        cat = self.site.get_category("Pending AfC submissions")
+        subs = cat.get_members(limit=500)
         subs -= 2 # remove [[Wikipedia:Articles for creation/Redirects]] and [[Wikipedia:Files for upload]], which aren't real submissions
         return subs
 
     def count_redirects(self):
         """Returns the number of open redirect submissions. Calculated as the
         total number of submissions minus the closed ones."""
-        content = self.get_page("Wikipedia:Articles_for_creation/Redirects")
+        content = self.site.get_page("Wikipedia:Articles for creation/Redirects").get()
         total = len(re.findall("^\s*==(.*?)==\s*$", content, re.MULTILINE))
         closed = content.lower().count("{{afc-c|b}}")
         redirs = total - closed
@@ -106,23 +103,11 @@ class AFCStatus(BaseCommand):
     def count_files(self):
         """Returns the number of open WP:FFU (Files For Upload) requests.
         Calculated as the total number of requests minus the closed ones."""
-        content = self.get_page("Wikipedia:Files_for_upload")
+        content = self.site.get_page("Wikipedia:Files for upload").get()
         total = len(re.findall("^\s*==(.*?)==\s*$", content, re.MULTILINE))
         closed = content.lower().count("{{ifu-c|b}}")
         files = total - closed
         return files
-
-    def get_page(self, pagename):
-        """Simple method to return the content of the page 'pagename'. Will be
-        a part of wiki/tools/ when I finish that."""
-        params = {'action': 'query', 'prop': 'revisions', 'rvprop':'content', 'rvlimit':'1', 'format': 'json'}
-        params['titles'] = pagename
-        data = urllib.urlencode(params)
-        raw = urllib.urlopen("http://en.wikipedia.org/w/api.php", data).read()
-        res = json.loads(raw)
-        pageid = res['query']['pages'].keys()[0]
-        content = res['query']['pages'][pageid]['revisions'][0]['*']
-        return content
 
     def get_aggregate(self, num):
         """Returns a human-readable AFC status based on the number of pending
