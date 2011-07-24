@@ -20,8 +20,8 @@ class Site(object):
         self.name = name
         self.project = project
         self.lang = lang
-        self.__api = api
-        self.__sql = sql
+        self._api = api
+        self._sql = sql
 
     def api_query(self, params):
         """
@@ -29,7 +29,7 @@ class Site(object):
         """
         params["format"] = "json"
         data = urlencode(params)
-        result = urlopen(self.__api, data).read()
+        result = urlopen(self._api, data).read()
         return loads(result)
 
     def get_page(self, pagename):
