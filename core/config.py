@@ -44,7 +44,8 @@ def load_config():
 def verify_config():
     """Check to see if we have a valid config file, and if not, notify the
     user. If there is no config file at all, offer to make one; otherwise,
-    exit."""
+    exit. If everything goes well, return True if stored passwords are
+    encrypted in the file, or False if they are not."""
     if path.exists(config_path):
         load_config()
         try:
@@ -141,12 +142,12 @@ def schedule(minute, hour, month_day, month, week_day):
 def make_new_config():
     """Make a new config file based on the user's input."""
     makedirs(config_dir)
-    
+
     encrypt = raw_input("Would you like to encrypt passwords stored in " +
             "config.json? [y/n] ")
     if encrypt.lower().startswith("y"):
         is_encrypted = True
     else:
         is_encrypted = False
-        
+
     return is_encrypted
