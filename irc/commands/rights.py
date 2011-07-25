@@ -27,7 +27,7 @@ class Rights(BaseCommand):
         username = ' '.join(data.args)
         site = tools.get_site()
         user = site.get_user(username)
-        rights = user.get_rights()
+        rights = user.get_groups()
         if rights:
             try:
                 rights.remove("*")  # remove the implicit '*' group given to everyone

@@ -16,3 +16,10 @@ class ConfigError(WikiToolsetError):
 class SiteNotFoundError(WikiToolsetError):
     """A site matching the args given to get_site() could not be found in the
     config file."""
+
+class UserNotFoundError(WikiToolsetError):
+    """Attempting to get information about a user that does not exist."""
+    def __init__(self, name):
+        self.name = name
+    def __str__(self):
+        return "User '{0}' does not exist.".format(self.name)
