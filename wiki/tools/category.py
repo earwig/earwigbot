@@ -7,7 +7,7 @@ class Category(Page):
     EarwigBot's Wiki Toolset: Category Class
     """
 
-    def get_members(self, limit=50):
+    def members(self, limit=50):
         """
         Docstring needed
         """

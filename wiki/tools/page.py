@@ -23,7 +23,7 @@ class Page(object):
         """
         Docstring needed
         """
-        if content is None or force_reload:
+        if self._content is None or force_reload:
             params = {"action": "query", "prop": "revisions",
                 "rvprop": "content", "rvlimit": 1, "titles": self.title}
             result = self.site.api_query(params)

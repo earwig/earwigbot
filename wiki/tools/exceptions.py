@@ -13,5 +13,8 @@ class SiteNotFoundError(WikiToolsetError):
     """A site matching the args given to get_site() could not be found in the
     config file."""
 
+class NamespaceNotFoundError(WikiToolsetError):
+    """A requested namespace name or namespace ID does not exist."""
+
 class UserNotFoundError(WikiToolsetError):
     """Attempting to get information about a user that does not exist."""

@@ -10,6 +10,7 @@ written by Mr.Z-man, other than a similar purpose. We share no code.
 Import the toolset with `from wiki import tools`.
 """
 
+from wiki.tools.constants import *
 from wiki.tools.exceptions import *
 from wiki.tools.functions import *
 

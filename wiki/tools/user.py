@@ -1,5 +1,6 @@
 # -*- coding: utf-8  -*-
 
+from wiki.tools.constants import *
 from wiki.tools.exceptions import UserNotFoundError
 from wiki.tools.page import Page
 
@@ -12,9 +13,11 @@ class User(object):
         """
         Docstring needed
         """
-        # Public attributes
-        self.site = site  # Site instance, for doing API queries, etc
-        self.name = name  # our username
+        # Site instance, for doing API queries, etc
+        self.site = site
+
+        # Username
+        self._name = name
 
         # Attributes filled in by an API query
         self._exists = None
@@ -34,19 +37,20 @@ class User(object):
         if self._exists is None or force:
             self._load_attributes_from_api()
         if self._exists is False:
-            raise UserNotFoundError("User '{0}' does not exist.".format(self.name))
+            e = "User '{0}' does not exist.".format(self._name)
+            raise UserNotFoundError(e)
         return getattr(self, attr)
 
     def _load_attributes_from_api(self):
         """
         Docstring needed
         """
-        params = {"action": "query", "list": "users", "ususers": self.name,
+        params = {"action": "query", "list": "users", "ususers": self._name,
         "usprop": "blockinfo|groups|rights|editcount|registration|emailable|gender"}
         result = self.site.api_query(params)
 
         # normalize our username in case it was entered oddly
-        self.name = result["query"]["users"][0]["name"]
+        self._name = result["query"]["users"][0]["name"]
 
         try:
             self._userid = result["query"]["users"][0]["userid"]
@@ -76,68 +80,78 @@ class User(object):
         except KeyError:
             self._blockinfo = False
 
+    def name(self, force=False):
+        """
+        Docstring needed
+        """
+        return self._get_attribute_from_api("_name", force)
+
     def exists(self, force=False):
         """
         Docstring needed
         """
         return self._get_attribute_from_api("_exists", force)
 
-    def get_userid(self, force=False):
+    def userid(self, force=False):
         """
         Docstring needed
         """
         return self._get_attribute_from_api("_userid", force)
 
-    def get_blockinfo(self, force=False):
+    def blockinfo(self, force=False):
         """
         Docstring needed
         """
         return self._get_attribute_from_api("_blockinfo", force)
 
-    def get_groups(self, force=False):
+    def groups(self, force=False):
         """
         Docstring needed
         """
         return self._get_attribute_from_api("_groups", force)
 
-    def get_rights(self, force=False):
+    def rights(self, force=False):
         """
         Docstring needed
         """
         return self._get_attribute_from_api("_rights", force)
 
-    def get_editcount(self, force=False):
+    def editcount(self, force=False):
         """
         Docstring needed
         """
         return self._get_attribute_from_api("_editcount", force)
 
-    def get_registration(self, force=False):
+    def registration(self, force=False):
         """
         Docstring needed
         """
         return self._get_attribute_from_api("_registration", force)
 
-    def get_emailable(self, force=False):
+    def is_emailable(self, force=False):
         """
         Docstring needed
         """
         return self._get_attribute_from_api("_emailable", force)
 
-    def get_gender(self, force=False):
+    def gender(self, force=False):
         """
         Docstring needed
         """
         return self._get_attribute_from_api("_gender", force)
 
-    def get_userpage(self):
+    def userpage(self):
         """
         Docstring needed
         """
-        return Page(self.site, "User:" + self.name)  # Namespace checking!
+        prefix = self.site.namespace_id_to_name(NS_USER)
+        pagename = "{0}:{1}".format(prefix, self._name)
+        return Page(self.site, pagename)
 
-    def get_talkpage(self):
+    def talkpage(self):
         """
         Docstring needed
         """
-        return Page(self.site, "User talk:" + self.name)  # Namespace checking!
+        prefix = self.site.namespace_id_to_name(NS_USER_TALK)
+        pagename = "{0}:{1}".format(prefix, self._name)
+        return Page(self.site, pagename)
