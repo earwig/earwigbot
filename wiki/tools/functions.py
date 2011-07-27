@@ -10,15 +10,31 @@ There's no need to import this module explicitly. All functions here are
 automatically available from wiki.tools.
 """
 
+from getpass import getpass
+
 from core import config
-from wiki.tools.exceptions import ConfigError, SiteNotFoundError
+from wiki.tools.exceptions import SiteNotFoundError
 from wiki.tools.site import Site
 
 __all__ = ["get_site"]
 
+def _load_config():
+    """Called by a config-requiring function, such as get_site(), when config
+    has not been loaded. This will usually happen only if we're running code
+    directly from Python's interpreter and not the bot itself, because
+    earwigbot.py or core/main.py will already call these functions.
+    """
+    is_encrypted = config.verify_config()
+    if is_encrypted:  # passwords in the config file are encrypted
+        key = getpass("Enter key to unencrypt bot passwords: ")
+        config.parse_config(key)
+    else:
+        config.parse_config(None)
+
 def _get_site_object_from_dict(name, d):
     """Return a Site object based on the contents of a dict, probably acquired
-    through our config file, and a separate name."""
+    through our config file, and a separate name.
+    """
     project = d["project"]
     lang = d["lang"]
     try:
@@ -54,15 +70,18 @@ def get_site(name=None, project=None, lang=None):
     then `project` and `lang`. If, with any number of args, a site cannot be
     found in the config, SiteNotFoundError is raised.
     """
-    if config._config is None:
-        e = "Config file has not been loaded: use config.verify_config() and then config.parse_config() to do so."
-        raise ConfigError(e)
+    # check if config has been loaded, and load it if it hasn't
+    if not config.is_config_loaded():
+        _load_config()
 
+    # someone specified a project without a lang (or a lang without a project)!
     if (project is None and lang is not None) or (project is not None and lang is None):
         e = "Keyword arguments 'lang' and 'project' must be specified together."
         raise TypeError(e)
 
-    if name is None and project is None:  # no args given (project is None implies lang is None)
+    # no args given, so return our default site (project is None implies lang
+    # is None, so we don't need to add that in)
+    if name is None and project is None:
         try:  # ...so use the default site
             default = config.wiki["defaultSite"]
         except KeyError:
@@ -75,7 +94,8 @@ def get_site(name=None, project=None, lang=None):
             raise SiteNotFoundError(e)
         return _get_site_object_from_dict(default, site)
 
-    if name is not None:  # name arg given, but don't look at others yet
+    # name arg given, but don't look at others unless `name` isn't found
+    if name is not None:
         try:
             site = config.wiki["sites"][name]
         except KeyError:
@@ -90,7 +110,8 @@ def get_site(name=None, project=None, lang=None):
         else:
             return _get_site_object_from_dict(name, site)
 
-    for sitename, site in config.wiki["sites"].items():  # implied lang and proj are not None
+    # if we end up here, then project and lang are both not None
+    for sitename, site in config.wiki["sites"].items():
         if site["project"] == project and site["lang"] == lang:
             return _get_site_object_from_dict(sitename, site)
     e = "Site '{0}:{1}' not found in config.".format(project, lang)

@@ -34,7 +34,7 @@ class User(object):
         if self._exists is None or force:
             self._load_attributes_from_api()
         if self._exists is False:
-            raise UserNotFoundError(self.name)
+            raise UserNotFoundError("User '{0}' does not exist.".format(self.name))
         return getattr(self, attr)
 
     def _load_attributes_from_api(self):
