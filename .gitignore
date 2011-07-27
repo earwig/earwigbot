@@ -4,6 +4,9 @@
 # Ignore bot-specific config file:
 config.json
 
+# Ignore OS X's crud:
+*.DS_Store
+
 # Ignore pydev's nonsense:
 .project
 .pydevproject
