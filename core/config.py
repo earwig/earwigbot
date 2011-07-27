@@ -13,7 +13,8 @@ from within config's three global variables and one function:
 * config.components       - a list of enabled components
 * config.wiki             - a dict of config information for wiki-editing
 * config.irc              - a dict of config information for IRC
-* config.schedule()       - returns a list of tasks scheduled to run now
+* config.schedule()       - returns a list of tasks scheduled to run at a given
+                            time
 """
 
 import json
@@ -29,6 +30,13 @@ _config = None  # holds data loaded from our config file
 
 # set our three easy-config-access global variables to None
 components, wiki, irc = (None, None, None)
+
+def is_config_loaded():
+    """Return True if our config file has already been loaded, and False if it
+    hasn't."""
+    if _config is not None:
+        return True
+    return False
 
 def load_config():
     """Load data from our JSON config file (config.json) into _config."""
@@ -58,7 +66,7 @@ def verify_config():
         if choice.lower().startswith("y"):
             return make_new_config()
         else:
-            exit()
+            exit(1)
 
 def parse_config(key):
     """Store data from our config file in three global variables for easy
@@ -120,7 +128,7 @@ def schedule(minute, hour, month_day, month, week_day):
     try:
         data = _config["schedule"]
     except KeyError:
-        data = []
+        return []  # nothing is in our schedule
     for event in data:
         do = True
         for key, value in now.items():
