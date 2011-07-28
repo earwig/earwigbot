@@ -87,7 +87,7 @@ class AFCStatus(BaseCommand):
     def count_submissions(self):
         """Returns the number of open AFC submissions (count of CAT:PEND)."""
         cat = self.site.get_category("Pending AfC submissions")
-        subs = cat.get_members(limit=500)
+        subs = cat.members(limit=500)
         subs -= 2 # remove [[Wikipedia:Articles for creation/Redirects]] and [[Wikipedia:Files for upload]], which aren't real submissions
         return subs
 
