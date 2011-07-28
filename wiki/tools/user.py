@@ -30,18 +30,18 @@ class User(object):
         self._emailable = None
         self._gender = None
 
-    def _get_attribute_from_api(self, attr, force):
+    def _get_attribute(self, attr, force):
         """
         Docstring needed
         """
         if self._exists is None or force:
-            self._load_attributes_from_api()
+            self._load_attributes()
         if self._exists is False:
             e = "User '{0}' does not exist.".format(self._name)
             raise UserNotFoundError(e)
         return getattr(self, attr)
 
-    def _load_attributes_from_api(self):
+    def _load_attributes(self):
         """
         Docstring needed
         """
@@ -84,61 +84,61 @@ class User(object):
         """
         Docstring needed
         """
-        return self._get_attribute_from_api("_name", force)
+        return self._get_attribute("_name", force)
 
     def exists(self, force=False):
         """
         Docstring needed
         """
-        return self._get_attribute_from_api("_exists", force)
+        return self._get_attribute("_exists", force)
 
     def userid(self, force=False):
         """
         Docstring needed
         """
-        return self._get_attribute_from_api("_userid", force)
+        return self._get_attribute("_userid", force)
 
     def blockinfo(self, force=False):
         """
         Docstring needed
         """
-        return self._get_attribute_from_api("_blockinfo", force)
+        return self._get_attribute("_blockinfo", force)
 
     def groups(self, force=False):
         """
         Docstring needed
         """
-        return self._get_attribute_from_api("_groups", force)
+        return self._get_attribute("_groups", force)
 
     def rights(self, force=False):
         """
         Docstring needed
         """
-        return self._get_attribute_from_api("_rights", force)
+        return self._get_attribute("_rights", force)
 
     def editcount(self, force=False):
         """
         Docstring needed
         """
-        return self._get_attribute_from_api("_editcount", force)
+        return self._get_attribute("_editcount", force)
 
     def registration(self, force=False):
         """
         Docstring needed
         """
-        return self._get_attribute_from_api("_registration", force)
+        return self._get_attribute("_registration", force)
 
     def is_emailable(self, force=False):
         """
         Docstring needed
         """
-        return self._get_attribute_from_api("_emailable", force)
+        return self._get_attribute("_emailable", force)
 
     def gender(self, force=False):
         """
         Docstring needed
         """
-        return self._get_attribute_from_api("_gender", force)
+        return self._get_attribute("_gender", force)
 
     def userpage(self):
         """

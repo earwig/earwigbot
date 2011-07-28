@@ -35,12 +35,26 @@ def _get_site_object_from_dict(name, d):
     """Return a Site object based on the contents of a dict, probably acquired
     through our config file, and a separate name.
     """
-    project = d["project"]
-    lang = d["lang"]
     try:
-        api = d["apiURL"]
+        project = d["project"]
     except KeyError:
-        api = None
+        project = None
+    try:
+        lang = d["lang"]
+    except KeyError:
+        lang = None
+    try:
+        base_url = d["baseURL"]
+    except KeyError:
+        base_url = None
+    try:
+        article_path = d["articlePath"]
+    except KeyError:
+        article_path = None
+    try:
+        script_path = d["scriptPath"]
+    except KeyError:
+        script_path = None
     try:
         sql_server = d["sqlServer"]
     except KeyError:
@@ -49,7 +63,14 @@ def _get_site_object_from_dict(name, d):
         sql_db = d["sqlDB"]
     except KeyError:
         sql_db = None
-    return Site(name, project, lang, api, (sql_server, sql_db))
+    try:
+        namespaces = d["namespaces"]
+    except KeyError:
+        namespaces = None
+
+    return Site(name=name, project=project, lang=lang, base_url=base_url,
+        article_path=article_path, script_path=script_path,
+        sql=(sql_server, sql_db), namespaces=namespaces)
 
 def get_site(name=None, project=None, lang=None):
     """Returns a Site instance based on information from our config file.
