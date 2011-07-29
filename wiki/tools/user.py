@@ -30,13 +30,13 @@ class User(object):
         self._emailable = None
         self._gender = None
 
-    def _get_attribute(self, attr, force, raise_exception=True):
+    def _get_attribute(self, attr, force):
         """
         Docstring needed
         """
         if self._exists is None or force:
             self._load_attributes()
-        if self._exists is False and raise_exception:
+        if self._exists is False:
             e = "User '{0}' does not exist.".format(self._name)
             raise UserNotFoundError(e)
         return getattr(self, attr)
@@ -84,13 +84,17 @@ class User(object):
         """
         Docstring needed
         """
-        return self._get_attribute("_name", force, raise_exception=False)
+        if force:
+            self._load_attributes()
+        return self._name
 
     def exists(self, force=False):
         """
         Docstring needed
         """
-        return self._get_attribute("_exists", force, raise_exception=False)
+        if self._exists is None or force:
+            self._load_attributes()
+        return self._exists
 
     def userid(self, force=False):
         """
@@ -145,7 +149,7 @@ class User(object):
         Docstring needed
         """
         prefix = self.site.namespace_id_to_name(NS_USER)
-        pagename = "{0}:{1}".format(prefix, self._name)
+        pagename = ''.join((prefix, ":", self._name))
         return Page(self.site, pagename)
 
     def talkpage(self):
@@ -153,5 +157,5 @@ class User(object):
         Docstring needed
         """
         prefix = self.site.namespace_id_to_name(NS_USER_TALK)
-        pagename = "{0}:{1}".format(prefix, self._name)
+        pagename = ''.join((prefix, ":", self._name))
         return Page(self.site, pagename)

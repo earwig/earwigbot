@@ -2,8 +2,9 @@
 
 from cookielib import CookieJar
 from json import loads
-from urllib import urlencode
+from urllib import unquote_plus, urlencode
 from urllib2 import build_opener, HTTPCookieProcessor, URLError
+from urlparse import urlparse
 
 from wiki.tools.category import Category
 from wiki.tools.constants import *
@@ -34,7 +35,7 @@ class Site(object):
         self._namespaces = namespaces
 
         # set up cookiejar and URL opener for making API queries
-        self._cookiejar = CookieJar(cookie_file)
+        self._cookiejar = CookieJar()
         self._opener = build_opener(HTTPCookieProcessor(self._cookiejar))
         self._opener.addheaders = [('User-agent', USER_AGENT)]
 
@@ -71,6 +72,24 @@ class Site(object):
             else:
                 e = "Couldn't login; server says '{0}'.".format(res)
             raise LoginError(e)
+
+    def _get_logged_in_user(self):
+        """
+        Docstring needed
+        """
+        # first try to get username from the cookie jar to avoid an
+        # unnecessary API query
+        cookie_name = ''.join((self._name, "UserName"))
+        cookie_domain = urlparse(self._base_url).netloc
+        for cookie in self._cookiejar:
+            if cookie.name == cookie_name and cookie.domain == cookie_domain:
+                return unquote_plus(cookie.value)
+        
+        # if we end up here, we're probably an anon and thus an API query
+        # will be required to get our username
+        params = {"action": "query", "meta": "userinfo"}
+        result = self.api_query(params)
+        return result["query"]["userinfo"]["name"]
 
     def _load_attributes(self, force=False):
         """
@@ -253,8 +272,5 @@ class Site(object):
         Docstring needed
         """
         if username is None:
-            params = {"action": "query", "meta": "userinfo"}
-            result = self.api_query(params)
-            username = result["query"]["userinfo"]["name"]
-
+            username = self._get_logged_in_user()
         return User(self, username)
