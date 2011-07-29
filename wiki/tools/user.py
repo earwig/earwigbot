@@ -30,13 +30,13 @@ class User(object):
         self._emailable = None
         self._gender = None
 
-    def _get_attribute(self, attr, force):
+    def _get_attribute(self, attr, force, raise_exception=True):
         """
         Docstring needed
         """
         if self._exists is None or force:
             self._load_attributes()
-        if self._exists is False:
+        if self._exists is False and raise_exception:
             e = "User '{0}' does not exist.".format(self._name)
             raise UserNotFoundError(e)
         return getattr(self, attr)
@@ -84,13 +84,13 @@ class User(object):
         """
         Docstring needed
         """
-        return self._get_attribute("_name", force)
+        return self._get_attribute("_name", force, raise_exception=False)
 
     def exists(self, force=False):
         """
         Docstring needed
         """
-        return self._get_attribute("_exists", force)
+        return self._get_attribute("_exists", force, raise_exception=False)
 
     def userid(self, force=False):
         """
