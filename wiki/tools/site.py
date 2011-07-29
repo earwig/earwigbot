@@ -1,12 +1,13 @@
 # -*- coding: utf-8  -*-
 
+from cookielib import CookieJar
 from json import loads
 from urllib import urlencode
-from urllib2 import urlopen
+from urllib2 import build_opener, HTTPCookieProcessor, URLError
 
 from wiki.tools.category import Category
 from wiki.tools.constants import *
-from wiki.tools.exceptions import NamespaceNotFoundError
+from wiki.tools.exceptions import *
 from wiki.tools.page import Page
 from wiki.tools.user import User
 
@@ -17,10 +18,12 @@ class Site(object):
 
     def __init__(self, name=None, project=None, lang=None, base_url=None,
             article_path=None, script_path=None, sql=(None, None),
-            namespaces=None):
+            namespaces=None, login=(None, None)):
         """
         Docstring needed
         """
+        # attributes referring to site information, filled in by an API query
+        # if they are missing (and an API url is available)
         self._name = name
         self._project = project
         self._lang = lang
@@ -30,8 +33,44 @@ class Site(object):
         self._sql = sql
         self._namespaces = namespaces
 
-        # get all of the above attributes that were not specified by the user
+        # set up cookiejar and URL opener for making API queries
+        self._cookiejar = CookieJar(cookie_file)
+        self._opener = build_opener(HTTPCookieProcessor(self._cookiejar))
+        self._opener.addheaders = [('User-agent', USER_AGENT)]
+
+        # use a username and password to login if they were provided
+        if login[0] is not None and login[1] is not None:
+            self._login(login[0], login[1])
+
+        # get all of the above attributes that were not specified as arguments
         self._load_attributes()
+
+    def _login(self, name, password, token="", attempt=0):
+        """
+        Docstring needed
+        """
+        params = {"action": "login", "lgname": name, "lgpassword": password,
+                  "lgtoken": token}
+        result = self.api_query(params)
+        res = result["login"]["result"]
+
+        if res == "Success":
+            return
+        elif res == "NeedToken" and attempt == 0:
+            token = result["login"]["token"]
+            return self._login(name, password, token, attempt=1)
+        else:
+            if res == "Illegal":
+                e = "The provided username is illegal."
+            elif res == "NotExists":
+                e = "The provided username does not exist."
+            elif res == "EmptyPass":
+                e = "No password was given."
+            elif res == "WrongPass" or res == "WrongPluginPass":
+                e = "The given password is incorrect."
+            else:
+                e = "Couldn't login; server says '{0}'.".format(res)
+            raise LoginError(e)
 
     def _load_attributes(self, force=False):
         """
@@ -103,10 +142,24 @@ class Site(object):
         Docstring needed
         """
         url = ''.join((self._base_url, self._script_path, "/api.php"))
-        params["format"] = "json"
+        params["format"] = "json"  # this is the only format we understand
         data = urlencode(params)
-        result = urlopen(url, data).read()
-        return loads(result)
+
+        try:
+            response = self._opener.open(url, data)
+        except URLError as error:
+            if hasattr(error, "reason"):
+                e = "API query at {0} failed because {1}.".format(error.geturl,
+                                                                  error.reason)
+            elif hasattr(error, "code"):
+                e = "API query at {0} failed; got an error code of {1}."
+                e = e.format(error.geturl, error.code)
+            else:
+                e = "API query failed."
+            raise SiteAPIError(e)
+        else:
+            result = response.read()
+            return loads(result)  # parse as a JSON object
 
     def name(self):
         """
@@ -195,8 +248,13 @@ class Site(object):
         pagename = "{0}:{1}".format(prefix, catname)
         return Category(self, pagename)
 
-    def get_user(self, username):
+    def get_user(self, username=None):
         """
         Docstring needed
         """
+        if username is None:
+            params = {"action": "query", "meta": "userinfo"}
+            result = self.api_query(params)
+            username = result["query"]["userinfo"]["name"]
+
         return User(self, username)

@@ -13,6 +13,14 @@ class SiteNotFoundError(WikiToolsetError):
     """A site matching the args given to get_site() could not be found in the
     config file."""
 
+class SiteAPIError(WikiToolsetError):
+    """We couldn't connect to a site's API, perhaps because the server doesn't
+    exist, our URL is wrong, or they're having temporary problems."""
+
+class LoginError(WikiToolsetError):
+    """An error occured while trying to login. Perhaps the username/password is
+    incorrect."""
+
 class NamespaceNotFoundError(WikiToolsetError):
     """A requested namespace name or namespace ID does not exist."""
 

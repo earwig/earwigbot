@@ -67,10 +67,14 @@ def _get_site_object_from_dict(name, d):
         namespaces = d["namespaces"]
     except KeyError:
         namespaces = None
+    try:
+        login = (config.wiki["username"], config.wiki["password"])
+    except KeyError:
+        login = (None, None)
 
     return Site(name=name, project=project, lang=lang, base_url=base_url,
         article_path=article_path, script_path=script_path,
-        sql=(sql_server, sql_db), namespaces=namespaces)
+        sql=(sql_server, sql_db), namespaces=namespaces, login=login)
 
 def get_site(name=None, project=None, lang=None):
     """Returns a Site instance based on information from our config file.
@@ -86,6 +90,10 @@ def get_site(name=None, project=None, lang=None):
     member of config.wiki["sites"], `s`, for which s["project"] == project and
     s["lang"] == lang.
 
+    We will attempt to login to the site automatically
+    using config.wiki["username"] and config.wiki["password"] if both are
+    defined.
+
     Specifying a project without a lang or a lang without a project will raise
     TypeError. If all three args are specified, `name` will be first tried,
     then `project` and `lang`. If, with any number of args, a site cannot be
@@ -96,7 +104,8 @@ def get_site(name=None, project=None, lang=None):
         _load_config()
 
     # someone specified a project without a lang (or a lang without a project)!
-    if (project is None and lang is not None) or (project is not None and lang is None):
+    if (project is None and lang is not None) or (project is not None and
+                                                  lang is None):
         e = "Keyword arguments 'lang' and 'project' must be specified together."
         raise TypeError(e)
 
@@ -120,13 +129,14 @@ def get_site(name=None, project=None, lang=None):
         try:
             site = config.wiki["sites"][name]
         except KeyError:
-            if project is None:  # implies lang is None, i.e., only name was given
+            if project is None:  # implies lang is None, so only name was given
                 e = "Site '{0}' not found in config.".format(name)
                 raise SiteNotFoundError(e)
             for sitename, site in config.wiki["sites"].items():
                 if site["project"] == project and site["lang"] == lang:
                     return _get_site_object_from_dict(sitename, site)
-            e = "Neither site '{0}' nor site '{1}:{2}' found in config.".format(name, project, lang)
+            e = "Neither site '{0}' nor site '{1}:{2}' found in config."
+            e.format(name, project, lang)
             raise SiteNotFoundError(e)
         else:
             return _get_site_object_from_dict(name, site)
