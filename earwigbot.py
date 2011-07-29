@@ -23,9 +23,9 @@ from time import sleep
 from core.config import verify_config
 
 __author__ = "Ben Kurtovic"
-__copyright__ = "Copyright (c) 2009-2011 by Ben Kurtovic"
+__copyright__ = "Copyright (C) 2009, 2010, 2011 by Ben Kurtovic"
 __license__ = "MIT License"
-__version__ = "0.1dev"
+__version__ = "0.1-dev"
 __email__ = "ben.kurtovic@verizon.net"
 
 bot_script = path.join(path.dirname(path.abspath(__file__)), "core", "main.py")
