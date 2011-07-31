@@ -132,7 +132,7 @@ class User(object):
         """
         return self._get_attribute("_registration", force)
 
-    def is_emailable(self, force=False):
+    def emailable(self, force=False):
         """
         Docstring needed
         """
@@ -144,7 +144,7 @@ class User(object):
         """
         return self._get_attribute("_gender", force)
 
-    def userpage(self):
+    def get_userpage(self):
         """
         Docstring needed
         """
@@ -152,7 +152,7 @@ class User(object):
         pagename = ''.join((prefix, ":", self._name))
         return Page(self.site, pagename)
 
-    def talkpage(self):
+    def get_talkpage(self):
         """
         Docstring needed
         """

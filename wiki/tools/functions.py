@@ -10,13 +10,19 @@ There's no need to import this module explicitly. All functions here are
 automatically available from wiki.tools.
 """
 
+from cookielib import LWPCookieJar, LoadError
+import errno
 from getpass import getpass
+from os import chmod, path
+import stat
 
 from core import config
 from wiki.tools.exceptions import SiteNotFoundError
 from wiki.tools.site import Site
 
 __all__ = ["get_site"]
+
+_cookiejar = None
 
 def _load_config():
     """Called by a config-requiring function, such as get_site(), when config
@@ -31,50 +37,60 @@ def _load_config():
     else:
         config.parse_config(None)
 
+def _get_cookiejar():
+    """Returns a LWPCookieJar object loaded from our .cookies file. The same
+    one is returned every time.
+
+    The .cookies file is located in the project root, same directory as
+    config.json and earwigbot.py. If it doesn't exist, we will create the file
+    and set it to be readable and writeable only by us. If it exists but the
+    information inside is bogus, we will ignore it.
+
+    This is normally called by _get_site_object_from_dict() (in turn called by
+    get_site()), and the cookiejar is passed to our Site's constructor, used
+    when it makes API queries. This way, we can easily preserve cookies between
+    sites (e.g., for CentralAuth), making logins easier.
+    """
+    global _cookiejar
+    if _cookiejar is not None:
+        return _cookiejar
+
+    cookie_file = path.join(config.root_dir, ".cookies")
+    _cookiejar = LWPCookieJar(cookie_file)
+
+    try:
+        _cookiejar.load()
+    except LoadError:
+        # file contains bad data, so ignore it completely
+        pass
+    except IOError as e:
+        if e.errno == errno.ENOENT:  # "No such file or directory"
+            # create the file and restrict reading/writing only to the owner,
+            # so others can't peak at our cookies
+            open(cookie_file, "w").close()
+            chmod(cookie_file, stat.S_IRUSR|stat.S_IWUSR)
+        else:
+            raise
+
+    return _cookiejar
+
 def _get_site_object_from_dict(name, d):
     """Return a Site object based on the contents of a dict, probably acquired
     through our config file, and a separate name.
     """
-    try:
-        project = d["project"]
-    except KeyError:
-        project = None
-    try:
-        lang = d["lang"]
-    except KeyError:
-        lang = None
-    try:
-        base_url = d["baseURL"]
-    except KeyError:
-        base_url = None
-    try:
-        article_path = d["articlePath"]
-    except KeyError:
-        article_path = None
-    try:
-        script_path = d["scriptPath"]
-    except KeyError:
-        script_path = None
-    try:
-        sql_server = d["sqlServer"]
-    except KeyError:
-        sql_server = None
-    try:
-        sql_db = d["sqlDB"]
-    except KeyError:
-        sql_db = None
-    try:
-        namespaces = d["namespaces"]
-    except KeyError:
-        namespaces = None
-    try:
-        login = (config.wiki["username"], config.wiki["password"])
-    except KeyError:
-        login = (None, None)
+    project = d.get("project")
+    lang = d.get("lang")
+    base_url = d.get("baseURL")
+    article_path = d.get("articlePath")
+    script_path = d.get("scriptPath")
+    sql = (d.get("sqlServer"), d.get("sqlDB"))
+    namespaces = d.get("namespaces")
+    login = (config.wiki.get("username"), config.wiki.get("password"))
+    cookiejar = _get_cookiejar()
 
     return Site(name=name, project=project, lang=lang, base_url=base_url,
-        article_path=article_path, script_path=script_path,
-        sql=(sql_server, sql_db), namespaces=namespaces, login=login)
+        article_path=article_path, script_path=script_path, sql=sql,
+        namespaces=namespaces, login=login, cookiejar=cookiejar)
 
 def get_site(name=None, project=None, lang=None):
     """Returns a Site instance based on information from our config file.
@@ -112,7 +128,7 @@ def get_site(name=None, project=None, lang=None):
     # no args given, so return our default site (project is None implies lang
     # is None, so we don't need to add that in)
     if name is None and project is None:
-        try:  # ...so use the default site
+        try:
             default = config.wiki["defaultSite"]
         except KeyError:
             e = "Default site is not specified in config."
