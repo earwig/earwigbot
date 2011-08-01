@@ -1,8 +1,10 @@
 # -*- coding: utf-8  -*-
 
 from cookielib import CookieJar
+from gzip import GzipFile
 from json import loads
 from re import escape as re_escape, match as re_match
+from StringIO import StringIO
 from urllib import unquote_plus, urlencode
 from urllib2 import build_opener, HTTPCookieProcessor, URLError
 from urlparse import urlparse
@@ -41,7 +43,8 @@ class Site(object):
         else:
             self._cookiejar = CookieJar()
         self._opener = build_opener(HTTPCookieProcessor(self._cookiejar))
-        self._opener.addheaders = [('User-agent', USER_AGENT)]
+        self._opener.addheaders = [("User-Agent", USER_AGENT),
+                                   ("Accept-Encoding", "gzip")]
 
         # get all of the above attributes that were not specified as arguments
         self._load_attributes()
@@ -270,6 +273,10 @@ class Site(object):
             raise SiteAPIError(e)
         else:
             result = response.read()
+            if response.headers.get("Content-Encoding") == "gzip":
+                stream = StringIO(result)
+                gzipper = GzipFile(fileobj=stream)      
+                result = gzipper.read()
             return loads(result)  # parse as a JSON object
 
     def name(self):
