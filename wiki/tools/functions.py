@@ -165,9 +165,17 @@ def get_site(name=None, project=None, lang=None):
     raise SiteNotFoundError(e)
 
 def add_site():
-    """STUB: config editing is required first"""
+    """STUB: config editing is required first.
+
+    Returns True if the site was added successfully or False if the site was
+    already in our config. Raises ConfigError if saving the updated file failed
+    for some reason."""
     pass
 
-def del_site():
-    """STUB: config editing is required first"""
+def del_site(name):
+    """STUB: config editing is required first.
+
+    Returns True if the site was removed successfully or False if the site was
+    not in our config originally. Raises ConfigError if saving the updated file
+    failed for some reason."""
     pass
