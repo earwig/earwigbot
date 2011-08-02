@@ -18,13 +18,32 @@ from wiki.tools.user import User
 class Site(object):
     """
     EarwigBot's Wiki Toolset: Site Class
+
+    Represents a Site, with support for API queries and returning Pages, Users,
+    and Categories. The constructor takes a bunch of arguments and you probably
+    won't need to call it directly, rather tools.get_site() for returning Site
+    instances, tools.add_site() for adding new ones to config, and
+    tools.del_site() for removing old ones from config, should suffice.
     """
 
     def __init__(self, name=None, project=None, lang=None, base_url=None,
-            article_path=None, script_path=None, sql=(None, None),
-            namespaces=None, login=(None, None), cookiejar=None):
-        """
-        Docstring needed
+                 article_path=None, script_path=None, sql=(None, None),
+                 namespaces=None, login=(None, None), cookiejar=None):
+        """Constructor for new Site instances.
+
+        This probably isn't necessary to call yourself unless you're building a
+        Site that's not in your config and you don't want to add it - normally
+        all you need is tools.get_site(name), which creates the Site for you
+        based on your config file. We accept a bunch of kwargs, but the only
+        ones you really "need" are `base_url` and `script_path` - this is
+        enough to figure out an API url. `login`, a tuple of
+        (username, password), is highly recommended. `cookiejar` will be used
+        to store cookies, and we'll use a normal CookieJar if none is given.
+
+        First, we'll store the given arguments as attributes, then set up our
+        URL opener. We'll load any of the attributes that weren't given from
+        the API, and then log in if a username/pass was given and we aren't
+        already logged in.
         """
         # attributes referring to site information, filled in by an API query
         # if they are missing (and an API url can be determined)
@@ -57,8 +76,14 @@ class Site(object):
                 self._login(login)
 
     def _load_attributes(self, force=False):
-        """
-        Docstring needed
+        """Load data about our Site from the API.
+
+        This function is called by __init__() when one of the site attributes
+        was not given as a keyword argument. We'll do an API query to get the
+        missing data, but only if there actually *is* missing data.
+
+        Additionally, you can call this with `force=True` to forcibly reload
+        all attributes.
         """
         # all attributes to be loaded, except _namespaces, which is a special
         # case because it requires additional params in the API query
@@ -86,8 +111,10 @@ class Site(object):
         self._script_path = res["scriptpath"]
 
     def _load_namespaces(self, result):
-        """
-        Docstring needed
+        """Fill self._namespaces with a dict of namespace IDs and names.
+
+        Called by _load_attributes() with API data as `result` when
+        self._namespaces was not given as an kwarg to __init__().
         """
         self._namespaces = {}
 
@@ -110,15 +137,12 @@ class Site(object):
             self._namespaces[ns_id].append(alias)
 
     def _get_cookie(self, name, domain):
-        """Return the cookie `name` in `domain`, unless it is expired. Return
-        None if no cookie was found.
-        """
+        """Return the named cookie unless it is expired or doesn't exist."""
         for cookie in self._cookiejar:
             if cookie.name == name and cookie.domain == domain:
                 if cookie.is_expired():
                     break
                 return cookie
-        return None
 
     def _get_username_from_cookies(self):
         """Try to return our username based solely on cookies.
@@ -161,14 +185,12 @@ class Site(object):
                 if user_name is not None:
                     return user_name.value
 
-        return None
-
     def _get_username_from_api(self):
         """Do a simple API query to get our username and return it.
         
         This is a reliable way to make sure we are actually logged in, because
         it doesn't deal with annoying cookie logic, but it results in an API
-        query that is unnecessary in many cases.
+        query that is unnecessary in some cases.
         
         Called by _get_username() (in turn called by get_user() with no
         username argument) when cookie lookup fails, probably indicating that
@@ -208,8 +230,24 @@ class Site(object):
             pass
 
     def _login(self, login, token=None, attempt=0):
-        """
-        Docstring needed
+        """Safely login through the API.
+
+        Normally, this is called by __init__() if a username and password have
+        been provided and no valid login cookies were found. The only other
+        time it needs to be called is when those cookies expire, which is done
+        automatically by api_query() if a query fails.
+
+        Recent versions of MediaWiki's API have fixed a CSRF vulnerability,
+        requiring login to be done in two separate requests. If the response
+        from from our initial request is "NeedToken", we'll do another one with
+        the token. If login is successful, we'll try to save our cookiejar.
+
+        Raises LoginError on login errors (duh), like bad passwords and
+        nonexistent usernames.
+
+        `login` is a (username, password) tuple. `token` is the token returned
+        from our first request, and `attempt` is to prevent getting stuck in a
+        loop if MediaWiki isn't acting right.
         """
         name, password = login
         params = {"action": "login", "lgname": name, "lgpassword": password}
@@ -237,8 +275,11 @@ class Site(object):
             raise LoginError(e)
 
     def _logout(self):
-        """
-        Docstring needed
+        """Safely logout through the API.
+
+        We'll do a simple API request (api.php?action=logout), clear our
+        cookiejar (which probably contains now-invalidated cookies) and try to
+        save it, if it supports that sort of thing.
         """
         params = {"action": "logout"}
         self.api_query(params)
@@ -246,8 +287,23 @@ class Site(object):
         self._save_cookiejar()
 
     def api_query(self, params):
-        """
-        Docstring needed
+        """Do an API query with `params` as a dict of parameters.
+
+        This will first attempt to construct an API url from self._base_url and
+        self._script_path. We need both of these, or else we'll raise
+        SiteAPIError.
+
+        We'll encode the given params, adding format=json along the way, and
+        make the request through self._opener, which has built-in cookie
+        support via self._cookiejar, a User-Agent
+        (wiki.tools.constants.USER_AGENT), and Accept-Encoding set to "gzip".
+        Assuming everything went well, we'll gunzip the data (if compressed),
+        load it as a JSON object, and return it.
+
+        If our request failed, we'll raise SiteAPIError with details.
+
+        There's helpful MediaWiki API documentation at
+        <http://www.mediawiki.org/wiki/API>.
         """
         if self._base_url is None or self._script_path is None:
             e = "Tried to do an API query, but no API URL is known."
@@ -280,32 +336,32 @@ class Site(object):
             return loads(result)  # parse as a JSON object
 
     def name(self):
-        """
-        Docstring needed
-        """
+        """Returns the Site's name (or "wikiid" in the API), like "enwiki"."""
         return self._name
 
     def project(self):
-        """
-        Docstring needed
-        """
+        """Returns the Site's project name in lowercase, like "wikipedia"."""
         return self._project
 
     def lang(self):
-        """
-        Docstring needed
-        """
+        """Returns the Site's language, like "en" or "es"."""
         return self._lang
 
     def domain(self):
-        """
-        Docstring needed
-        """
+        """Returns the Site's web domain, like "en.wikipedia.org"."""
         return urlparse(self._base_url).netloc
 
     def namespace_id_to_name(self, ns_id, all=False):
-        """
-        Docstring needed
+        """Given a namespace ID, returns associated namespace names.
+
+        If all is False (default), we'll return the first name in the list,
+        which is usually the localized version. Otherwise, we'll return the
+        entire list, which includes the canonical name.
+
+        For example, returns u"Wikipedia" if ns_id=4 and all=False on enwiki;
+        returns [u"Wikipedia", u"Project"] if ns_id=4 and all=True.
+
+        Raises NamespaceNotFoundError if the ID is not found.
         """
         try:
             if all:
@@ -317,8 +373,12 @@ class Site(object):
             raise NamespaceNotFoundError(e)
 
     def namespace_name_to_id(self, name):
-        """
-        Docstring needed
+        """Given a namespace name, returns the associated ID.
+
+        Like namespace_id_to_name(), but reversed. Case is ignored, because
+        namespaces are assumed to be case-insensitive.
+
+        Raises NamespaceNotFoundError if the name is not found.
         """
         lname = name.lower()
         for ns_id, names in self._namespaces.items():
@@ -330,8 +390,14 @@ class Site(object):
         raise NamespaceNotFoundError(e)
 
     def get_page(self, pagename):
-        """
-        Docstring needed
+        """Returns a Page object for the given pagename.
+
+        Will return a Category object instead if the given pagename is in the
+        category namespace. As Category is a subclass of Page, this should not
+        cause problems.
+
+        Note that this doesn't do any checks for existence or
+        redirect-following - Page's methods provide that.
         """
         prefixes = self.namespace_id_to_name(NS_CATEGORY, all=True)
         prefix = pagename.split(":", 1)[0]
@@ -341,16 +407,20 @@ class Site(object):
         return Page(self, pagename)
 
     def get_category(self, catname):
-        """
-        Docstring needed
+        """Returns a Category object for the given category name.
+
+        `catname` should be given *without* a namespace prefix. This method is
+        really just shorthand for get_page("Category:" + catname).
         """
         prefix = self.namespace_id_to_name(NS_CATEGORY)
         pagename = "{0}:{1}".format(prefix, catname)
         return Category(self, pagename)
 
     def get_user(self, username=None):
-        """
-        Docstring needed
+        """Returns a User object for the given username.
+
+        If `username` is left as None, then a User object representing the
+        currently logged-in (or anonymous!) user is returned.
         """
         if username is None:
             username = self._get_username()

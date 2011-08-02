@@ -89,8 +89,8 @@ def _get_site_object_from_dict(name, d):
     cookiejar = _get_cookiejar()
 
     return Site(name=name, project=project, lang=lang, base_url=base_url,
-        article_path=article_path, script_path=script_path, sql=sql,
-        namespaces=namespaces, login=login, cookiejar=cookiejar)
+                article_path=article_path, script_path=script_path, sql=sql,
+                namespaces=namespaces, login=login, cookiejar=cookiejar)
 
 def get_site(name=None, project=None, lang=None):
     """Returns a Site instance based on information from our config file.
@@ -163,3 +163,11 @@ def get_site(name=None, project=None, lang=None):
             return _get_site_object_from_dict(sitename, site)
     e = "Site '{0}:{1}' not found in config.".format(project, lang)
     raise SiteNotFoundError(e)
+
+def add_site():
+    """STUB: config editing is required first"""
+    pass
+
+def del_site():
+    """STUB: config editing is required first"""
+    pass
