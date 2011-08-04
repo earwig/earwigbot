@@ -69,8 +69,8 @@ class User(object):
         is not defined. This defines it.
         """
         params = {"action": "query", "list": "users", "ususers": self._name,
-        "usprop": "blockinfo|groups|rights|editcount|registration|emailable|gender"}
-        result = self._site.api_query(params)
+                  "usprop": "blockinfo|groups|rights|editcount|registration|emailable|gender"}
+        result = self._site._api_query(params)
         res = result["query"]["users"][0]
 
         # normalize our username in case it was entered oddly
@@ -130,7 +130,7 @@ class User(object):
         Makes an API query if `force` is True or if we haven't made one
         already.
         """
-        if self._exists is None or force:
+        if not hasattr(self, "_exists") or force:
             self._load_attributes()
         return self._exists
 
@@ -212,7 +212,7 @@ class User(object):
         conventions are followed.
         """
         prefix = self._site.namespace_id_to_name(NS_USER)
-        pagename = ''.join((prefix, ":", self._name))
+        pagename = ':'.join((prefix, self._name))
         return Page(self._site, pagename)
 
     def get_talkpage(self):
@@ -222,5 +222,5 @@ class User(object):
         conventions are followed.
         """
         prefix = self._site.namespace_id_to_name(NS_USER_TALK)
-        pagename = ''.join((prefix, ":", self._name))
+        pagename = ':'.join((prefix, self._name))
         return Page(self._site, pagename)

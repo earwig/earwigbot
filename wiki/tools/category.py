@@ -13,6 +13,6 @@ class Category(Page):
         """
         params = {"action": "query", "list": "categorymembers",
             "cmlimit": limit, "cmtitle": self.title}
-        result = self.site.api_query(params)
+        result = self._site._api_query(params)
         members = result['query']['categorymembers']
         return [member["title"] for member in members]

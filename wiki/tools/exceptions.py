@@ -30,5 +30,14 @@ class PermissionsError(WikiToolsetError):
 class NamespaceNotFoundError(WikiToolsetError):
     """A requested namespace name or namespace ID does not exist."""
 
+class PageNotFoundError(WikiToolsetError):
+    """Attempting to get certain information about a page that does not
+    exist."""
+
+class InvalidPageError(WikiToolsetError):
+    """Attempting to get certain information about a page whose title is
+    invalid."""
+
 class UserNotFoundError(WikiToolsetError):
-    """Attempting to get information about a user that does not exist."""
+    """Attempting to get certain information about a user that does not
+    exist."""
