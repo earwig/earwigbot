@@ -38,6 +38,10 @@ class InvalidPageError(WikiToolsetError):
     """Attempting to get certain information about a page whose title is
     invalid."""
 
+class RedirectError(WikiToolsetError):
+    """Page's get_redirect_target() method failed because the page is either
+    not a redirect, or it is malformed."""
+
 class UserNotFoundError(WikiToolsetError):
     """Attempting to get certain information about a user that does not
     exist."""
