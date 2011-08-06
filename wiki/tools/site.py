@@ -24,6 +24,18 @@ class Site(object):
     won't need to call it directly, rather tools.get_site() for returning Site
     instances, tools.add_site() for adding new ones to config, and
     tools.del_site() for removing old ones from config, should suffice.
+
+    Public methods:
+    name                 -- returns our name (or "wikiid"), like "enwiki"
+    project              -- returns our project name, like "wikipedia"
+    lang                 -- returns our language code, like "en"
+    domain               -- returns our web domain, like "en.wikipedia.org"
+    api_query            -- does an API query with the given kwargs as params
+    namespace_id_to_name -- given a namespace ID, returns associated name(s)
+    namespace_name_to_id -- given a namespace name, returns associated id
+    get_page             -- returns a Page object for the given title
+    get_category         -- returns a Category object for the given title
+    get_user             -- returns a User object for the given username
     """
 
     def __init__(self, name=None, project=None, lang=None, base_url=None,
@@ -351,7 +363,7 @@ class Site(object):
         return self._project
 
     def lang(self):
-        """Returns the Site's language, like "en" or "es"."""
+        """Returns the Site's language code, like "en" or "es"."""
         return self._lang
 
     def domain(self):
