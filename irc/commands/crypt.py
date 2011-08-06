@@ -6,7 +6,7 @@ Cryptography functions (hashing and cyphers) for EarwigBot IRC.
 
 import hashlib
 
-from irc.base_command import BaseCommand
+from irc.classes import BaseCommand
 from lib import blowfish
 
 class Cryptography(BaseCommand):
