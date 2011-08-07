@@ -4,15 +4,15 @@
 EarwigBot's IRC Watcher Component
 
 The IRC watcher runs on a wiki recent-changes server and listens for edits.
-Users cannot interact with this part of the bot. When an event occurs, run it
-through irc/watcher_logic.py's process() function, which can result in either
-wiki bot tasks being started (listed in wiki/tasks/) or messages being sent to
-channels in the IRC frontend.
+Users cannot interact with this part of the bot. When an event occurs, we run
+it through rules.py's process() function, which can result in wiki bot tasks
+being started (located in tasks/) or messages being sent to channels on the IRC
+frontend.
 """
 
 import config
 from classes import Connection, RC, BrokenSocketException
-import watcher_logic as logic
+import rules
 
 frontend_conn = None
 
@@ -81,10 +81,10 @@ def process_rc(rc):
     """Process a recent change event from IRC (or, an RC object).
 
     The actual processing is configurable, so we don't have that hard-coded
-    here. We simply call watcher_logic's process() function and expect a list
-    of channels back, which we report the event data to.
+    here. We simply call rules's process() function and expect a list of
+    channels back, which we report the event data to.
     """
-    chans = watcher_logic.process(rc)
+    chans = rules.process(rc)
     if chans and frontend_conn:
         pretty = rc.get_pretty()
         for chan in chans:
