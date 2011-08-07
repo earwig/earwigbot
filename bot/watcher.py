@@ -86,6 +86,6 @@ def process_rc(rc):
     """
     chans = rules.process(rc)
     if chans and frontend_conn:
-        pretty = rc.get_pretty()
+        pretty = rc.prettify()
         for chan in chans:
             frontend_conn.say(chan, pretty)
