@@ -1,10 +1,9 @@
 # -*- coding: utf-8  -*-
 
-# A base class for commands on IRC.
-
 class BaseCommand(object):
+    """A base class for commands on IRC."""
+
     def __init__(self, connection):
-        """A base class for commands on IRC."""
         self.connection = connection
 
     def get_hooks(self):
