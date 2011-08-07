@@ -1,22 +1,12 @@
 # -*- coding: utf-8  -*-
 
-# A very simple command to test the bot.
-
 import random
 
-from irc.classes import BaseCommand
+from classes import BaseCommand
 
-class Test(BaseCommand):
-    def get_hooks(self):
-        return ["msg"]
-
-    def get_help(self, command):
-        return "Test the bot!"
-
-    def check(self, data):
-        if data.is_command and data.command == "test":
-            return True
-        return False
+class Command(BaseCommand):
+    """Test the bot!"""
+    name = "test"
 
     def process(self, data):
         hey = random.randint(0, 1)

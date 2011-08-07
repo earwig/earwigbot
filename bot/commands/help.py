@@ -1,54 +1,44 @@
 # -*- coding: utf-8  -*-
 
-# Generates help information.
+from classes import BaseCommand, Data
+import commands
 
-from irc.classes import BaseCommand, Data
-from irc import command_handler
-
-class Help(BaseCommand):
-    def get_hooks(self):
-        return ["msg"]
-
-    def get_help(self, command):
-        return "Generates help information."
-
-    def check(self, data):
-        if data.is_command and data.command == "help":
-            return True
-        return False
+class Command(BaseCommand):
+    """Generates help information."""
+    name = "help"
 
     def process(self, data):
+        self.cmnds = commands.get_all().keys()
         if not data.args:
-            self.do_general_help(data)
+            self.do_main_help(data)
         else:
-            if data.args[0] == "list":
-                self.do_list_help(data)
-            else:
-                self.do_command_help(data)
+            self.do_command_help(data)
 
-    def do_general_help(self, data):
-        self.connection.reply(data, "I am a bot! You can get help for any command with '!help <command>', or a list of all loaded modules with '!help list'.")
-
-    def do_list_help(self, data):
-        commands = command_handler.get_commands()
-        cmnds = map(lambda c: c.__class__.__name__, commands)
-        pretty_cmnds = ', '.join(cmnds)
-        self.connection.reply(data, "%s command classes loaded: %s." % (len(cmnds), pretty_cmnds))
+    def do_main_help(self, data):
+        """Give the user a general help message with a list of all commands."""
+        msg = "I am a bot! I have {0} commands loaded: {1}. You can get help for any command with '!help <command>'."
+        msg.format(len(self.cmnds), ', '.join(self.cmnds))
+        self.connection.reply(data, msg)
 
     def do_command_help(self, data):
+        """Give the user help for a specific command."""
         command = data.args[0]
-        commands = command_handler.get_commands()
 
-        dummy = Data() # dummy message to test which command classes pick up this command
-        dummy.command = command.lower() # lowercase command name
+        # Create a dummy message to test which commands pick up the user's
+        # input:
+        dummy = Data()
+        dummy.command = command.lower()
         dummy.is_command = True
 
-        for cmnd in commands:
+        for cmnd in self.cmnds:
             if cmnd.check(dummy):
-                help = cmnd.get_help(command)
+                doc = cmnd.__doc__
+                if doc:
+                    msg = "info for command \x0303{0}\x0301: \"{1}\""
+                    msg.format(command, doc)
+                    self.connection.reply(data, msg)
+                    return
                 break
 
-        try:
-            self.connection.reply(data, "info for command \x0303%s\x0301: \"%s\"" % (command, help))
-        except UnboundLocalError:
-            self.connection.reply(data, "sorry, no help for \x0303%s\x0301." % command)
+        msg = "sorry, no help for \x0303{0}\x0301.".format(command)
+        self.connection.reply(data, msg)

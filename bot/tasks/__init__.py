@@ -16,9 +16,9 @@ import config
 
 __all__ = ["load", "schedule", "start"]
 
-# store loaded tasks as a dict where the key is the task name and the value is
-# an instance of the task class (wiki.tasks.task_file.Task())
-_tasks = dict()
+# Store loaded tasks as a dict where the key is the task name and the value is
+# an instance of the task class:
+_tasks = {}
 
 def _load_class_from_file(f):
     """Look in a given file for the task class."""

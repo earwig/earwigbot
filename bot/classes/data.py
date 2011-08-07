@@ -13,11 +13,7 @@ class Data(object):
     
     def __init__(self, line):
         self.line = line
-        self.chan = str()
-        self.nick = str()
-        self.ident = str()
-        self.host = str()
-        self.msg = str()
+        self.chan = self.nick = self.ident = self.host = self.msg = ""
 
     def parse_args(self):
         """Parse command args from self.msg into self.command and self.args."""

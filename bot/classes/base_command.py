@@ -1,32 +1,41 @@
 # -*- coding: utf-8  -*-
 
 class BaseCommand(object):
-    """A base class for commands on IRC."""
+    """A base class for commands on IRC.
+
+    This docstring is reported to the user when they use !help <command>.
+    """
+    # This is the command's name, as reported to the user when they use !help:
+    name = "base_command"
+    
+    # Hooks are "msg", "msg_private", "msg_public", and "join". "msg" is the
+    # default behavior; if you wish to override that, change the value in your
+    # command subclass:
+    hooks = ["msg"]
 
     def __init__(self, connection):
         self.connection = connection
 
-    def get_hooks(self):
-        """Hooks are: 'msg', 'msg_private', 'msg_public', and 'join'. Return
-        the hooks you want this command to be called on."""
-        return []
-
-    def get_help(self, command):
-        """Return help information for the command, used by !help. return None
-        for no help. If a given class handles multiple commands, the command
-        variable can be used to return different help for each one."""
-        return None
-
     def check(self, data):
-        """Given a Data() object, return True if we should respond to this
-        activity, or False if we should ignore it/it doesn't apply to us. Most
-        commands return True if data.command == 'command_name', otherwise
-        they return False."""
+        """Returns whether this command should be called in response to 'data'.
+
+        Given a Data() instance, return True if we should respond to this
+        activity, or False if we should ignore it or it doesn't apply to us.
+
+        Most commands return True if data.command == self.name, otherwise they
+        return False. This is the default behavior of check(); you need only
+        override it if you wish to change that.
+        """
+        if data.is_command and data.command == self.name:
+            return True
         return False
 
     def process(self, data):
-        """Handle an activity (usually a message) on IRC. At this point, thanks
+        """Main entry point for doing a command.
+
+        Handle an activity (usually a message) on IRC. At this point, thanks
         to self.check() which is called automatically by command_handler, we
         know this is something we should respond to, so (usually) a
-        'if data.command != "command_name": return' is unnecessary."""
+        'if data.command != "command_name": return' is unnecessary.
+        """
         pass

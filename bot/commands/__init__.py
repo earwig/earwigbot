@@ -1,16 +1,23 @@
 # -*- coding: utf-8  -*-
 
-# A module to manage IRC commands.
+"""
+EarwigBot's IRC Command Manager
+
+This package provides the IRC "commands" used by the bot's front-end component.
+In __init__, you can find some functions used to load and run these commands.
+"""
 
 import os
 import traceback
 
 __all__ = ["load", "get_all", "check"]
 
-_commands = []
+# Store commands in a dict, where the key is the command's name and the value
+# is an instance of the command's class:
+_commands = {}
 
-def _process_module(connection, module):
-    """go through all objects in a module and add valid command classes to the commands variable"""
+def _load_class_from_file(connection, module):
+    """Add."""
     global commands
     objects = dir(module)
 
@@ -30,9 +37,9 @@ def _process_module(connection, module):
                 continue
 
 def load(connection):
-    """load all valid command classes from irc/commmands/ into the commands variable"""
-    files = os.listdir(os.path.join("irc", "commands")) # get all files in irc/commands/
-    files.sort() # alphabetically sort list of files
+    """Load all valid commands into the _commands global variable."""
+    files = os.listdir(os.path.join("bot", "commands"))
+    files.sort()
 
     for f in files:
         if f.startswith("_") or not f.endswith(".py"): # ignore non-python files or files beginning with "_"
@@ -50,12 +57,11 @@ def load(connection):
     print "Found %s command classes: %s." % (len(commands), ', '.join(pretty_cmnds))
 
 def get_all():
-    """Return our list of all commands."""
+    """Return our dict of all loaded commands."""
     return _commands
 
 def check(hook, data):
-    """Given an event on IRC, check if there's anything we can respond to by
-    calling each command class"""
+    """Given an event on IRC, check if there's anything we can respond to."""
     # parse command arguments into data.command and data.args
     data.parse_args()
 

@@ -19,7 +19,7 @@ class Connection(object):
         self.ident = ident
         self.realname = realname
 
-        # A lock to prevent us from sending two messages at once.
+        # A lock to prevent us from sending two messages at once:
         self.lock = threading.Lock()
 
     def connect(self):
@@ -58,8 +58,7 @@ class Connection(object):
         self.send(message)
 
     def reply(self, data, msg):
-        """Send a private message as a reply to a user on the server. `data` is
-        a Data object (or anything with chan and nick attributes)."""
+        """Send a private message as a reply to a user on the server."""
         message = "".join((chr(2), data.nick, chr(0x0f), ": ", msg))
         self.say(data.chan, message)
 
