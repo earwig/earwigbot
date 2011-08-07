@@ -60,7 +60,7 @@ def _process_message(line):
         # Ignore messages originating from channels not in our list, to prevent
         # someone PMing us false data:
         if chan not in config.irc["watcher"]["channels"]:
-            continue
+            return
 
         msg = ' '.join(line[3:])[1:]
         rc = RC(msg)  # new RC object to store this event's data
