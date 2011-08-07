@@ -4,6 +4,9 @@
 # Ignore bot-specific config file:
 config.json
 
+# Ignore cookies file:
+.cookies
+
 # Ignore OS X's crud:
 *.DS_Store
 

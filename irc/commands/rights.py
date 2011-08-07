@@ -4,10 +4,8 @@
 Retrieve a list of user rights for a given username via the API.
 """
 
-import json
-import urllib
-
 from irc.classes import BaseCommand
+from wiki import tools
 
 class Rights(BaseCommand):
     def get_hooks(self):
@@ -27,24 +25,14 @@ class Rights(BaseCommand):
             return
 
         username = ' '.join(data.args)
-        rights = self.get_rights(username)
+        site = tools.get_site()
+        user = site.get_user(username)
+        rights = user.groups()
         if rights:
+            try:
+                rights.remove("*")  # remove the implicit '*' group given to everyone
+            except ValueError:
+                pass
             self.connection.reply(data, "the rights for \x0302{0}\x0301 are {1}.".format(username, ', '.join(rights)))
         else:
             self.connection.reply(data, "the user \x0302{0}\x0301 has no rights, or does not exist.".format(username))
-
-    def get_rights(self, username):
-        params = {'action': 'query', 'format': 'json', 'list': 'users', 'usprop': 'groups'}
-        params['ususers'] = username
-        data = urllib.urlencode(params)
-        raw = urllib.urlopen("http://en.wikipedia.org/w/api.php", data).read()
-        res = json.loads(raw)
-        try:
-            rights = res['query']['users'][0]['groups']
-        except KeyError:  # 'groups' not found, meaning the user does not exist
-            return None
-        try:
-            rights.remove("*")  # remove the implicit '*' group given to everyone
-        except ValueError:  # I don't expect this to happen, but if it does, be prepared
-            pass
-        return rights
