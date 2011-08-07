@@ -57,13 +57,13 @@ def process(rc):
         chans.add("#wikipedia-en-afc")
     
     elif rc.flags == "delete" and r_delete.match(comment):
-        p = r_deleted_page.findall(rc.comment)[0][0]
+        p = r_deleted_page.findall(rc.comment)[0]
         tasks.start_task("afc_statistics", action="process_delete", page=p)
         tasks.start_task("afc_copyvios", action="process_delete", page=p)
         chans.add("#wikipedia-en-afc")
     
     elif rc.flags == "restore" and r_restore.match(comment):
-        p = r_restored_page.findall(rc.comment)[0][0]
+        p = r_restored_page.findall(rc.comment)[0]
         tasks.start_task("afc_statistics", action="process_restore", page=p)
         tasks.start_task("afc_copyvios", action="process_restore", page=p)
         chans.add("#wikipedia-en-afc")
