@@ -1,7 +1,7 @@
 # -*- coding: utf-8  -*-
 
 """
-EarwigBot's IRC Front-end Component
+EarwigBot's IRC Frontend Component
 
 The IRC frontend runs on a normal IRC server and expects users to interact with
 it and give it commands. Commands are stored as "command classes", subclasses
@@ -9,13 +9,16 @@ of BaseCommand in irc/base_command.py. All command classes are automatically
 imported by irc/command_handler.py if they are in irc/commands.
 """
 
-from re import findall
+import re
 
-from core import config
-from irc import command_handler
-from irc.classes import Connection, Data, BrokenSocketException
+import config
+import commands
+from classes import Connection, Data, BrokenSocketException
+
+__all__ = ["get_connection", "startup", "main"]
 
 connection = None
+sender_regex = re.compile(":(.*?)!(.*?)@(.*?)\Z")
 
 def get_connection():
     """Return a new Connection() instance with information about our server
@@ -31,16 +34,18 @@ def startup(conn):
     command_handler, and then establish a connection with the IRC server."""
     global connection
     connection = conn
-    command_handler.load_commands(connection)
+    commands.load(connection)
     connection.connect()
 
 def main():
-    """Main loop for the Frontend IRC Bot component. get_connection() and
-    startup() should have already been called."""
+    """Main loop for the frontend component.
+
+    get_connection() and startup() should have already been called before this.
+    """
     read_buffer = str()
 
     while 1:
-        try:        
+        try:
             read_buffer = read_buffer + connection.get()
         except BrokenSocketException:
             print "Socket has broken on front-end; restarting bot..."
@@ -48,57 +53,60 @@ def main():
 
         lines = read_buffer.split("\n")
         read_buffer = lines.pop()
+        for line in lines:
+            _process_message(line)
 
-        for line in lines:  # handle a single message from IRC
-            line = line.strip().split()
-            data = Data()  # new Data() instance to store info about this line
-            data.line = line
+def _process_message(line):
+    """Process a single message from IRC."""
+    line = line.strip().split()
+    data = Data(line)  # new Data instance to store info about this line
 
-            if line[1] == "JOIN":
-                data.nick, data.ident, data.host = findall(
-                        ":(.*?)!(.*?)@(.*?)\Z", line[0])[0]
-                data.chan = line[2][1:]
-                command_handler.check("join", data) # check for 'join' hooks in
-                                                    # our commands
+    if line[1] == "JOIN":
+        data.nick, data.ident, data.host = sender_regex.findall(line[0])[0]
+        data.chan = line[2][1:]
+        # Check for 'join' hooks in our commands:
+        commands.check("join", data)
 
-            if line[1] == "PRIVMSG":
-                data.nick, data.ident, data.host = findall(
-                        ":(.*?)!(.*?)@(.*?)\Z", line[0])[0]
-                data.msg = ' '.join(line[3:])[1:]
-                data.chan = line[2]
+    elif line[1] == "PRIVMSG":
+        data.nick, data.ident, data.host = sender_regex.findall(line[0])[0]
+        data.msg = ' '.join(line[3:])[1:]
+        data.chan = line[2]
 
-                if data.chan == config.irc["frontend"]["nick"]:
-                    # this is a privmsg to us, so set 'chan' as the nick of the
-                    # sender, then check for private-only command hooks
-                    data.chan = data.nick
-                    command_handler.check("msg_private", data)
-                else:
-                    # check for public-only command hooks
-                    command_handler.check("msg_public", data)
+        if data.chan == config.irc["frontend"]["nick"]:
+            # This is a privmsg to us, so set 'chan' as the nick of the, sender
+            # then check for private-only command hooks:
+            data.chan = data.nick
+            commands.check("msg_private", data)
+        else:
+            # Check for public-only command hooks:
+            commands.check("msg_public", data)
 
-                # check for command hooks that apply to all messages
-                command_handler.check("msg", data)
+        # Check for command hooks that apply to all messages:
+        commands.check("msg", data)
 
-                # hardcode the !restart command (we can't restart from within
-                # an ordinary command)
-                if data.msg in ["!restart", ".restart"]:
-                    if data.host in config.irc["permissions"]["owners"]:
-                        print "Restarting bot per owner request..."
-                        return
+        # Hardcode the !restart command (we can't restart from within an
+        # ordinary command):
+        if data.msg in ["!restart", ".restart"]:
+            if data.host in config.irc["permissions"]["owners"]:
+                print "Restarting bot per owner request..."
+                return
 
-            if line[0] == "PING":  # if we are pinged, pong back to the server
-                connection.send("PONG %s" % line[1])
+    # If we are pinged, pong back to the server:
+    if line[0] == "PING":
+        connection.send("PONG %s" % line[1])
 
-            if line[1] == "376":  # we've successfully connected to the network
-                try:  # if we're supposed to auth to nickserv, do that
-                    ns_username = config.irc["frontend"]["nickservUsername"]
-                    ns_password = config.irc["frontend"]["nickservPassword"]
-                except KeyError:
-                    pass
-                else:
-                    connection.say("NickServ", "IDENTIFY {0} {1}".format(
-                            ns_username, ns_password))
-                
-                # join all of our startup channels
-                for chan in config.irc["frontend"]["channels"]:
-                    connection.join(chan)
+    # On successful connection to the server:
+    if line[1] == "376":
+        # If we're supposed to auth to NickServ, do that:
+        try:
+            username = config.irc["frontend"]["nickservUsername"]
+            password = config.irc["frontend"]["nickservPassword"]
+        except KeyError:
+            pass
+        else:
+            msg = " ".join(("IDENTIFY", username, password))
+            connection.say("NickServ", msg)
+
+        # Join all of our startup channels:
+        for chan in config.irc["frontend"]["channels"]:
+            connection.join(chan)

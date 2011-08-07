@@ -33,17 +33,11 @@ Else, the bot will stop, as no components are enabled.
 import threading
 import time
 import traceback
-import sys
-import os
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-root_dir = os.path.split(script_dir)[0]  # the bot's "root" directory relative
-                                         # to its different components
-sys.path.append(root_dir)  # make sure we look in the root dir for modules
-
-from core import config
-from irc import frontend, watcher
-from wiki import task_manager
+import config
+import frontend
+import tasks
+import watcher
 
 f_conn = None
 w_conn = None
@@ -70,7 +64,7 @@ def wiki_scheduler():
         time_start = time.time()
         now = time.gmtime(time_start)
 
-        task_manager.start_tasks(now)
+        tasks.schedule(now)
 
         time_end = time.time()
         time_diff = time_start - time_end
@@ -89,7 +83,7 @@ def irc_frontend():
 
     if "wiki_schedule" in config.components:
         print "\nStarting wiki scheduler..."
-        task_manager.load_tasks()
+        tasks.load()
         t_scheduler = threading.Thread(target=wiki_scheduler)
         t_scheduler.name = "wiki-scheduler"
         t_scheduler.daemon = True
@@ -123,7 +117,7 @@ def run():
 
     elif "wiki_schedule" in enabled:       # run the scheduler on the main
         print "Starting wiki scheduler..." # thread, but also run the IRC
-        task_manager.load_tasks()          # watcher on another thread iff it
+        tasks.load()                       # watcher on another thread iff it
         if "irc_watcher" in enabled:       # is enabled
             print "\nStarting IRC watcher..."
             t_watcher = threading.Thread(target=irc_watcher, args=())

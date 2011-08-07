@@ -5,9 +5,31 @@
 import os
 import traceback
 
-commands = []
+__all__ = ["load", "get_all", "check"]
 
-def load_commands(connection):
+_commands = []
+
+def _process_module(connection, module):
+    """go through all objects in a module and add valid command classes to the commands variable"""
+    global commands
+    objects = dir(module)
+
+    for this_obj in objects: # go through everything in the file
+        obj = eval("module.%s" % this_obj) # this_obj is a string, so get the actual object corresponding to that string
+
+        try:
+            bases = obj.__bases__
+        except AttributeError: # object isn't a valid class, so ignore it
+            continue
+
+        for base in bases:
+            if base.__name__ == "BaseCommand": # this inherits BaseCommand, so it must be a command class
+                command = obj(connection) # initialize a new command object
+                _commands.append(command)
+                print "Added command class %s from %s..." % (this_obj, module.__name__)
+                continue
+
+def load(connection):
     """load all valid command classes from irc/commmands/ into the commands variable"""
     files = os.listdir(os.path.join("irc", "commands")) # get all files in irc/commands/
     files.sort() # alphabetically sort list of files
@@ -27,35 +49,17 @@ def load_commands(connection):
     pretty_cmnds = map(lambda c: c.__class__.__name__, commands)
     print "Found %s command classes: %s." % (len(commands), ', '.join(pretty_cmnds))
 
-def process_module(connection, module):
-    """go through all objects in a module and add valid command classes to the commands variable"""
-    global commands
-    objects = dir(module)
-
-    for this_obj in objects: # go through everything in the file
-        obj = eval("module.%s" % this_obj) # this_obj is a string, so get the actual object corresponding to that string
-
-        try:
-            bases = obj.__bases__
-        except AttributeError: # object isn't a valid class, so ignore it
-            continue
-
-        for base in bases:
-            if base.__name__ == "BaseCommand": # this inherits BaseCommand, so it must be a command class
-                command = obj(connection) # initialize a new command object
-                commands.append(command)
-                print "Added command class %s from %s..." % (this_obj, module.__name__)
-                continue
-
-def get_commands():
-    """get our commands"""
-    return commands
+def get_all():
+    """Return our list of all commands."""
+    return _commands
 
 def check(hook, data):
-    """given an event on IRC, check if there's anything we can respond to by calling each command class"""
-    data.parse_args() # parse command arguments into data.command and data.args
+    """Given an event on IRC, check if there's anything we can respond to by
+    calling each command class"""
+    # parse command arguments into data.command and data.args
+    data.parse_args()
 
-    for command in commands:
+    for command in _commands:
         if hook in command.get_hooks():
             if command.check(data):
                 try:

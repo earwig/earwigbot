@@ -11,9 +11,9 @@ class KwargParseException(Exception):
     pass
 
 class Data(object):
-    def __init__(self):
-        """store data from an individual line received on IRC"""
-        self.line = str()
+    def __init__(self, line):
+        """Store data from an individual line received on IRC."""
+        self.line = line
         self.chan = str()
         self.nick = str()
         self.ident = str()

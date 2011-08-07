@@ -18,9 +18,9 @@ from within config's three global variables and one function:
 """
 
 import json
-from os import makedirs, path
+from os import path
 
-from lib import blowfish
+import blowfish
 
 script_dir = path.dirname(path.abspath(__file__))
 root_dir = path.split(script_dir)[0]
@@ -149,7 +149,6 @@ def schedule(minute, hour, month_day, month, week_day):
 
 def make_new_config():
     """Make a new config file based on the user's input."""
-    makedirs(config_dir)
 
     encrypt = raw_input("Would you like to encrypt passwords stored in " +
             "config.json? [y/n] ")

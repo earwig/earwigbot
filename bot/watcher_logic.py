@@ -12,7 +12,7 @@ sense for this sort of thing... so...
 
 import re
 
-from wiki import task_manager as tasks
+import tasks
 
 afc_prefix = "wikipedia( talk)?:(wikiproject )?articles for creation"
 
@@ -39,8 +39,8 @@ def process(rc):
         chans.update(("##earwigbot", "#wikipedia-en-afc"))
         
     if r_page.search(page_name):
-        tasks.start_task("afc_statistics", action="process_edit", page=rc.page)
-        tasks.start_task("afc_copyvios", action="process_edit", page=rc.page)
+        tasks.start("afc_statistics", action="process_edit", page=rc.page)
+        tasks.start("afc_copyvios", action="process_edit", page=rc.page)
         chans.add("#wikipedia-en-afc")
         
     elif r_ffu.match(page_name):
@@ -50,22 +50,22 @@ def process(rc):
         chans.add("#wikipedia-en-afc")
     
     elif rc.flags == "move" and (r_move1.match(comment) or
-            r_move2.match(comment)):
+                                 r_move2.match(comment)):
         p = r_moved_pages.findall(rc.comment)[0]
-        tasks.start_task("afc_statistics", action="process_move", pages=p)
-        tasks.start_task("afc_copyvios", action="process_move", pages=p)
+        tasks.start("afc_statistics", action="process_move", pages=p)
+        tasks.start("afc_copyvios", action="process_move", pages=p)
         chans.add("#wikipedia-en-afc")
     
     elif rc.flags == "delete" and r_delete.match(comment):
         p = r_deleted_page.findall(rc.comment)[0]
-        tasks.start_task("afc_statistics", action="process_delete", page=p)
-        tasks.start_task("afc_copyvios", action="process_delete", page=p)
+        tasks.start("afc_statistics", action="process_delete", page=p)
+        tasks.start("afc_copyvios", action="process_delete", page=p)
         chans.add("#wikipedia-en-afc")
     
     elif rc.flags == "restore" and r_restore.match(comment):
         p = r_restored_page.findall(rc.comment)[0]
-        tasks.start_task("afc_statistics", action="process_restore", page=p)
-        tasks.start_task("afc_copyvios", action="process_restore", page=p)
+        tasks.start("afc_statistics", action="process_restore", page=p)
+        tasks.start("afc_copyvios", action="process_restore", page=p)
         chans.add("#wikipedia-en-afc")
     
     elif rc.flags == "protect" and r_protect.match(comment):

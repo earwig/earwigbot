@@ -20,7 +20,7 @@ from os import path
 from sys import executable
 from time import sleep
 
-from core.config import verify_config
+from bot import config
 
 __author__ = "Ben Kurtovic"
 __copyright__ = "Copyright (C) 2009, 2010, 2011 by Ben Kurtovic"
@@ -28,12 +28,12 @@ __license__ = "MIT License"
 __version__ = "0.1-dev"
 __email__ = "ben.kurtovic@verizon.net"
 
-bot_script = path.join(path.dirname(path.abspath(__file__)), "core", "main.py")
+bot_script = path.join(path.dirname(path.abspath(__file__)), "bot", "main.py")
 
 def main():
     print "EarwigBot v{0}\n".format(__version__)
 
-    is_encrypted = verify_config()
+    is_encrypted = config.verify_config()
     if is_encrypted:  # passwords in the config file are encrypted
         key = getpass("Enter key to unencrypt bot passwords: ")
     else:
