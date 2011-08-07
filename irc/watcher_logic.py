@@ -6,7 +6,7 @@ EarwigBot's IRC Watcher Logic
 This file contains (configurable!) rules that EarwigBot's watcher uses after it
 recieves an event from IRC.
 
-This should, ideally, be in config.xml somehow, but Python code makes more
+This should, ideally, be in config.json somehow, but Python code makes more
 sense for this sort of thing... so...
 """
 
