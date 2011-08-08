@@ -20,7 +20,7 @@ __all__ = ["load", "schedule", "start"]
 # an instance of the task class:
 _tasks = {}
 
-def _load_class_from_file(f):
+def _load_task(f):
     """Look in a given file for the task class."""
     global _tasks
 

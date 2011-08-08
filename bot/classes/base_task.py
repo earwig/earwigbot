@@ -8,7 +8,7 @@ class BaseTask(object):
         """Constructor for new tasks.
 
         This is called once immediately after the task class is loaded by
-        the task manager (in tasks._load_class_from_file()).
+        the task manager (in tasks._load_task()).
         """
         pass
 

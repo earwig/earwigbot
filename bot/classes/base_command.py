@@ -14,6 +14,13 @@ class BaseCommand(object):
     hooks = ["msg"]
 
     def __init__(self, connection):
+        """Constructor for new commands.
+        
+        This is called once when the command is loaded (from
+        commands._load_command()). `connection` is a Connection object,
+        allowing us to do self.connection.say(), self.connection.send(), etc,
+        from within a method.
+        """
         self.connection = connection
 
     def check(self, data):
@@ -34,8 +41,8 @@ class BaseCommand(object):
         """Main entry point for doing a command.
 
         Handle an activity (usually a message) on IRC. At this point, thanks
-        to self.check() which is called automatically by command_handler, we
-        know this is something we should respond to, so (usually) a
-        'if data.command != "command_name": return' is unnecessary.
+        to self.check() which is called automatically by the command handler,
+        we know this is something we should respond to, so (usually) something
+        like 'if data.command != "command_name": return' is unnecessary.
         """
         pass
