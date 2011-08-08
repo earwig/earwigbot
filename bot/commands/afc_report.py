@@ -56,7 +56,7 @@ class Command(BaseCommand):
         msg1 = "AfC submission report for \x0302{0}\x0301 ({1}):"
         msg2 = "Status: \x0303{0}\x0301"
         msg3 = "Submitted by \x0302{0}\x0301 ({1})"
-        if status == "accepted"
+        if status == "accepted":
             msg3 = "Reviewed by \x0302{0}\x0301 ({1})"
 
         self.connection.reply(data, msg1.format(short, url))
