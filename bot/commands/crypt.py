@@ -6,8 +6,8 @@ Cryptography functions (hashing and cyphers) for EarwigBot IRC.
 
 import hashlib
 
-from irc.classes import BaseCommand
-from lib import blowfish
+from classes import BaseCommand
+import blowfish
 
 class Cryptography(BaseCommand):
     def get_hooks(self):

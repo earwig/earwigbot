@@ -2,8 +2,8 @@
 
 # Voice/devoice/op/deop users in the channel.
 
-from irc.classes import BaseCommand
-from core import config
+from classes import BaseCommand
+import config
 
 class ChanOps(BaseCommand):
     def get_hooks(self):

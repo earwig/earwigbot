@@ -6,8 +6,8 @@ import shlex
 import subprocess
 import re
 
-from irc.classes import BaseCommand
-from core import config
+from classes import BaseCommand
+import config
 
 class Git(BaseCommand):
     def get_hooks(self):

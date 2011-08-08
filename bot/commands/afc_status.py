@@ -5,9 +5,9 @@ or a request via !status."""
 
 import re
 
-from core import config
-from irc.classes import BaseCommand
-from wiki import tools
+from classes import BaseCommand
+import config
+import wiki
 
 class AFCStatus(BaseCommand):
     def get_hooks(self):
@@ -28,7 +28,7 @@ class AFCStatus(BaseCommand):
         return False
 
     def process(self, data):
-        self.site = tools.get_site()
+        self.site = wiki.get_site()
 
         if data.line[1] == "JOIN":
             notice = self.get_join_notice()

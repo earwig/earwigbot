@@ -1,14 +1,10 @@
 # -*- coding: utf-8  -*-
 
-"""
-Get information about an AFC submission by name.
-"""
-
 import json
 import re
 import urllib
 
-from irc.classes import BaseCommand
+from classes import BaseCommand
 
 class AFCReport(BaseCommand):
     def get_hooks(self):

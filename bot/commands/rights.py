@@ -4,8 +4,8 @@
 Retrieve a list of user rights for a given username via the API.
 """
 
-from irc.classes import BaseCommand
-from wiki import tools
+from classes import BaseCommand
+import wiki
 
 class Rights(BaseCommand):
     def get_hooks(self):
@@ -25,7 +25,7 @@ class Rights(BaseCommand):
             return
 
         username = ' '.join(data.args)
-        site = tools.get_site()
+        site = wiki.get_site()
         user = site.get_user(username)
         rights = user.groups()
         if rights:

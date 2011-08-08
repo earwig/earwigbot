@@ -5,9 +5,9 @@
 import threading
 import re
 
-from irc.classes import BaseCommand, Data, KwargParseException
-from wiki import task_manager
-from core import config
+from classes import BaseCommand, Data, KwargParseException
+import tasks
+import config
 
 class Tasks(BaseCommand):
     def get_hooks(self):
@@ -77,7 +77,7 @@ class Tasks(BaseCommand):
     def do_listall(self):
         """With !tasks listall or !tasks all, list all loaded tasks, and report
         whether they are currently running or idle."""
-        tasks = task_manager.task_list.keys()
+        tasks = tasks._tasks.keys()
         threads = threading.enumerate()
         tasklist = []
 
@@ -115,11 +115,11 @@ class Tasks(BaseCommand):
             self.connection.reply(data, "error parsing argument: \x0303{0}\x0301.".format(arg))
             return
 
-        if task_name not in task_manager.task_list.keys(): # this task does not exist or hasn't been loaded
+        if task_name not in tasks._tasks.keys(): # this task does not exist or hasn't been loaded
             self.connection.reply(data, "task could not be found; either wiki/tasks/{0}.py doesn't exist, or it wasn't loaded correctly.".format(task_name))
             return
 
-        task_manager.start_task(task_name, **data.kwargs)
+        tasks.start(task_name, **data.kwargs)
         self.connection.reply(data, "task \x0302{0}\x0301 started.".format(task_name))
 
     def get_main_thread_name(self):

@@ -7,7 +7,7 @@ Set a message to be repeated to you in a certain amount of time.
 import threading
 import time
 
-from irc.classes import BaseCommand
+from classes import BaseCommand
 
 class Remind(BaseCommand):
     def get_hooks(self):
