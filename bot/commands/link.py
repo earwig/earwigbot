@@ -1,17 +1,13 @@
 # -*- coding: utf-8  -*-
 
-# Convert a Wikipedia page name into a URL.
-
 import re
+from urllib import quote
 
 from classes import BaseCommand
 
-class Link(BaseCommand):
-    def get_hooks(self):
-        return ["msg"]
-
-    def get_help(self, command):
-        return "Convert a Wikipedia page name into a URL."
+class Command(BaseCommand):
+    """Convert a Wikipedia page name into a URL."""
+    name = "link"
 
     def check(self, data):
         if ((data.is_command and data.command == "link") or
@@ -37,29 +33,31 @@ class Link(BaseCommand):
             self.connection.reply(data, link)
 
     def parse_line(self, line):
-        results = list()
+        results = []
 
-        line = re.sub("\{\{\{(.*?)\}\}\}", "", line) # destroy {{{template parameters}}}
+        # Destroy {{{template parameters}}}:
+        line = re.sub("\{\{\{(.*?)\}\}\}", "", line)
 
-        links = re.findall("(\[\[(.*?)(\||\]\]))", line) # find all [[links]]
+        # Find all [[links]]:
+        links = re.findall("(\[\[(.*?)(\||\]\]))", line)
         if links:
-            links = map(lambda x: x[1], links) # re.findall() returns a list of tuples, but we only want the 2nd item in each tuple
-            results.extend(map(self.parse_link, links))
+            # re.findall() returns a list of tuples, but we only want the 2nd
+            # item in each tuple:
+            links = [i[1] for i in links]
+            results = map(self.parse_link, links)
 
-        templates = re.findall("(\{\{(.*?)(\||\}\}))", line) # find all {{templates}}
+        # Find all {{templates}}
+        templates = re.findall("(\{\{(.*?)(\||\}\}))", line)
         if templates:
-            templates = map(lambda x: x[1], templates)
+            templates = [i[1] for i in templates]
             results.extend(map(self.parse_template, templates))
 
         return results
 
     def parse_link(self, pagename):
-        pagename = pagename.strip()
-        link = "http://enwp.org/" + pagename
-        link = link.replace(" ", "_")
-        return link
+        link = quote(pagename.replace(" ", "_"), safe="/:")
+        return "".join(("http://enwp.org/", link))
 
     def parse_template(self, pagename):
-        pagename = "Template:%s" % pagename # TODO: implement an actual namespace check
-        link = self.parse_link(pagename)
-        return link
+        pagename = "".join(("Template:", pagename))
+        return self.parse_link(pagename)

@@ -1,31 +1,14 @@
 # -*- coding: utf-8  -*-
 
-"""
-Cryptography functions (hashing and cyphers) for EarwigBot IRC.
-"""
-
 import hashlib
 
 from classes import BaseCommand
 import blowfish
 
-class Cryptography(BaseCommand):
-    def get_hooks(self):
-        return ["msg"]
-
-    def get_help(self, command):
-        if command == "hash":
-            return ("Return the hash of a string using a given algorithm, " +
-                    "e.g. '!hash sha512 Hello world!'. Use '!hash list' for " +
-                    "a list of supported algorithms.")
-        elif command == "encrypt":
-            return ("Encrypt any string with a given key using an " + 
-                    "implementation of Blowfish, e.g. '!encrypt some_key " + 
-                    "Hello!'.")
-        else:
-            return ("Decrypt any string with a given key using an " + 
-                    "implementation of Blowfish, e.g. '!decrypt some_key " + 
-                    "762cee8a5239548af18275d6c1184f16'.")
+class Command(BaseCommand):
+    """Provides hash functions with !hash (!hash list for supported algorithms)
+    and blowfish encryption with !encrypt and !decrypt."""
+    name = "cryptography"
 
     def check(self, data):
         if data.is_command and data.command in ["hash", "encrypt", "decrypt"]:
@@ -34,31 +17,31 @@ class Cryptography(BaseCommand):
 
     def process(self, data):
         if not data.args:
-            self.connection.reply(data, "what do you want me to {0}?".format(
-                    data.command))
+            msg = "what do you want me to {0}?".format(data.command)
+            self.connection.reply(data, msg)
             return
 
         if data.command == "hash":
             algo = data.args[0]
             if algo == "list":
                 algos = ', '.join(hashlib.algorithms)
-                self.connection.reply(data, "supported algorithms: " + algos +
-                        ".")
+                msg = algos.join(("supported algorithms: ", "."))
+                self.connection.reply(data, msg)
             elif algo in hashlib.algorithms:
                 string = ' '.join(data.args[1:])
-                result = eval("hashlib.{0}(string)".format(algo)).hexdigest()
+                result = getattr(hashlib, algo)(string).hexdigest()
                 self.connection.reply(data, result)
             else:
-                self.connection.reply(data, "unknown algorithm: '{0}'.".format(
-                        algo))
+                msg = "unknown algorithm: '{0}'.".format(algo)
+                self.connection.reply(data, msg)
 
         else:
             key = data.args[0]
             text = ' '.join(data.args[1:])
 
             if not text:
-                self.connection.reply(data, ("a key was provided, but text " +
-                "to {0} was not.").format(data.command))
+                msg = "a key was provided, but text to {0} was not."
+                self.connection.reply(data, msg.format(data.command))
                 return
 
             try:
@@ -67,5 +50,5 @@ class Cryptography(BaseCommand):
                 else:
                     self.connection.reply(data, blowfish.decrypt(key, text))
             except blowfish.BlowfishError as error:
-                self.connection.reply(data, "{0}: {1}.".format(
-                        error.__class__.__name__, error))
+                msg = "{0}: {1}.".format(error.__class__.__name__, error)
+                self.connection.reply(data, msg)

@@ -2,9 +2,9 @@
 
 from time import strptime
 
-from wiki.tools.constants import *
-from wiki.tools.exceptions import UserNotFoundError
-from wiki.tools.page import Page
+from wiki.constants import *
+from wiki.exceptions import UserNotFoundError
+from wiki.page import Page
 
 class User(object):
     """
@@ -94,7 +94,10 @@ class User(object):
             self._blockinfo = False
 
         self._groups = res["groups"]
-        self._rights = res["rights"].values()
+        try:
+            self._rights = res["rights"].values()
+        except AttributeError:
+            self._rights = res["rights"]
         self._editcount = res["editcount"]
 
         reg = res["registration"]

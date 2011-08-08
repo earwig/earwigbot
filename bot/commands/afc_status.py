@@ -1,24 +1,22 @@
 # -*- coding: utf-8  -*-
 
-"""Report the status of AFC submissions, either as an automatic message on join
-or a request via !status."""
-
 import re
 
 from classes import BaseCommand
 import config
 import wiki
 
-class AFCStatus(BaseCommand):
-    def get_hooks(self):
-        return ["join", "msg"]
-
-    def get_help(self, command):
-        return "Get the number of pending AfC submissions, open redirect requests, and open file upload requests."
+class Command(BaseCommand):
+    """Get the number of pending AfC submissions, open redirect requests, and
+    open file upload requests."""
+    name = "status"
+    hooks = ["join", "msg"]
 
     def check(self, data):
-        if data.is_command and data.command in ["status", "count", "num", "number", "afc_status"]:
+        commands = ["status", "count", "num", "number"]
+        if data.is_command and data.command in commands:
             return True
+
         try:
             if data.line[1] == "JOIN" and data.chan == "#wikipedia-en-afc":
                 if data.nick != config.irc["frontend"]["nick"]:
@@ -39,41 +37,48 @@ class AFCStatus(BaseCommand):
             action = data.args[0].lower()
             if action.startswith("sub") or action == "s":
                 subs = self.count_submissions()
-                self.connection.reply(data, "there are currently %s pending AfC submissions." % subs)
+                msg = "there are currently {0} pending AfC submissions."
+                self.connection.reply(data, msg.format(subs))
 
             elif action.startswith("redir") or action == "r":
                 redirs = self.count_redirects()
-                self.connection.reply(data, "there are currently %s open redirect requests." % redirs)
+                msg = "there are currently {0} open redirect requests."
+                self.connection.reply(data, msg.format(redirs))
 
             elif action.startswith("file") or action == "f":
                 files = self.count_redirects()
-                self.connection.reply(data, "there are currently %s open file upload requests." % files)
+                msg = "there are currently {0} open file upload requests."
+                self.connection.reply(data, msg.format(files))
 
             elif action.startswith("agg") or action == "a":
                 try:
                     agg_num = int(data.args[1])
                 except IndexError:
-                    agg_data = (self.count_submissions(), self.count_redirects(), self.count_files())
+                    agg_data = (self.count_submissions(),
+                                self.count_redirects(), self.count_files())
                     agg_num = self.get_aggregate_number(agg_data)
                 except ValueError:
-                    self.connection.reply(data, "\x0303%s\x0301 isn't a number!" % data.args[1])
+                    msg = "\x0303{0}\x0301 isn't a number!"
+                    self.connection.reply(data, msg.format(data.args[1]))
                     return
                 aggregate = self.get_aggregate(agg_num)
-                self.connection.reply(data, "aggregate is currently %s (AfC %s)." % (agg_num, aggregate))
+                msg = "aggregate is currently {0} (AfC {1})."
+                self.connection.reply(data, msg.format(agg_num, aggregate))
 
             elif action.startswith("join") or action == "j":
                 notice = self.get_join_notice()
                 self.connection.reply(data, notice)
 
             else:
-                self.connection.reply(data, "unknown argument: \x0303%s\x0301. Valid args are 'subs', 'redirs', 'files', 'agg', and 'join'." % data.args[0])
+                msg = "unknown argument: \x0303{0}\x0301. Valid args are 'subs', 'redirs', 'files', 'agg', and 'join'."
+                self.connection.reply(data, msg.format(data.args[0]))
 
         else:
             subs = self.count_submissions()
             redirs = self.count_redirects()
             files = self.count_files()
-            self.connection.reply(data, "there are currently %s pending submissions, %s open redirect requests, and %s open file upload requests."
-                    % (subs, redirs, files))
+            msg = "there are currently {0} pending submissions, {1} open redirect requests, and {2} open file upload requests."
+            self.connection.reply(data, msg.format(subs, redirs, files))
 
     def get_join_notice(self):
         subs = self.count_submissions()
@@ -81,20 +86,25 @@ class AFCStatus(BaseCommand):
         files = self.count_files()
         agg_num = self.get_aggregate_number((subs, redirs, files))
         aggregate = self.get_aggregate(agg_num)
-        return ("\x02Current status:\x0F Articles for Creation %s (\x0302AFC\x0301: \x0305%s\x0301; \x0302AFC/R\x0301: \x0305%s\x0301; \x0302FFU\x0301: \x0305%s\x0301)"
-                % (aggregate, subs, redirs, files))
+
+        msg = "\x02Current status:\x0F Articles for Creation {0} (\x0302AFC\x0301: \x0305{1}\x0301; \x0302AFC/R\x0301: \x0305{2}\x0301; \x0302FFU\x0301: \x0305{3}\x0301)"
+        return msg.format(aggregate, subs, redirs, files)
 
     def count_submissions(self):
         """Returns the number of open AFC submissions (count of CAT:PEND)."""
         cat = self.site.get_category("Pending AfC submissions")
-        subs = cat.members(limit=500)
-        subs -= 2 # remove [[Wikipedia:Articles for creation/Redirects]] and [[Wikipedia:Files for upload]], which aren't real submissions
+        subs = len(cat.members(limit=500))
+
+        # Remove [[Wikipedia:Articles for creation/Redirects]] and
+        # [[Wikipedia:Files for upload]], which aren't real submissions:
+        subs -= 2
         return subs
 
     def count_redirects(self):
         """Returns the number of open redirect submissions. Calculated as the
         total number of submissions minus the closed ones."""
-        content = self.site.get_page("Wikipedia:Articles for creation/Redirects").get()
+        title = "Wikipedia:Articles for creation/Redirects"
+        content = self.site.get_page(title).get()
         total = len(re.findall("^\s*==(.*?)==\s*$", content, re.MULTILINE))
         closed = content.lower().count("{{afc-c|b}}")
         redirs = total - closed

@@ -6,17 +6,9 @@ import urllib
 
 from classes import BaseCommand
 
-class AFCReport(BaseCommand):
-    def get_hooks(self):
-        return ["msg"]
-
-    def get_help(self, command):
-        return "Get information about an AFC submission by name."
-
-    def check(self, data):
-        if data.is_command and data.command in ["report", "afc_report"]:
-            return True
-        return False
+class Command(BaseCommand):
+    """Get information about an AFC submission by name."""
+    name = "report"
 
     def process(self, data):
         self.data = data

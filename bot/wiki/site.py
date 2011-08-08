@@ -9,11 +9,11 @@ from urllib import unquote_plus, urlencode
 from urllib2 import build_opener, HTTPCookieProcessor, URLError
 from urlparse import urlparse
 
-from wiki.tools.category import Category
-from wiki.tools.constants import *
-from wiki.tools.exceptions import *
-from wiki.tools.page import Page
-from wiki.tools.user import User
+from wiki.category import Category
+from wiki.constants import *
+from wiki.exceptions import *
+from wiki.page import Page
+from wiki.user import User
 
 class Site(object):
     """
@@ -96,8 +96,9 @@ class Site(object):
 
         We'll encode the given params, adding format=json along the way, and
         make the request through self._opener, which has built-in cookie
-        support via self._cookiejar, a User-Agent
-        (wiki.tools.constants.USER_AGENT), and Accept-Encoding set to "gzip".
+        support via self._cookiejar, a User-Agent (wiki.constants.USER_AGENT),
+        and Accept-Encoding set to "gzip".
+        
         Assuming everything went well, we'll gunzip the data (if compressed),
         load it as a JSON object, and return it.
 
@@ -153,7 +154,7 @@ class Site(object):
 
         params = {"action": "query", "meta": "siteinfo"}
 
-        if self._namespaces is None or force:
+        if not self._namespaces or force:
             params["siprop"] = "general|namespaces|namespacealiases"
             result = self._api_query(params)
             self._load_namespaces(result)

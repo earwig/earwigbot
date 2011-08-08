@@ -1,31 +1,30 @@
 # -*- coding: utf-8  -*-
 
-# Voice/devoice/op/deop users in the channel.
-
 from classes import BaseCommand
 import config
 
-class ChanOps(BaseCommand):
-    def get_hooks(self):
-        return ["msg"]
-
-    def get_help(self, command):
-        action = command.capitalize()
-        return "%s users in the channel." % action
+class Command(BaseCommand):
+    """Voice, devoice, op, or deop users in the channel."""
+    name = "chanops"
 
     def check(self, data):
-        if data.is_command and data.command in ["voice", "devoice", "op", "deop"]:
+        commands = ["voice", "devoice", "op", "deop"]
+        if data.is_command and data.command in commands:
             return True
         return False
 
     def process(self, data):
         if data.host not in config.irc["permissions"]["admins"]:
-            self.connection.reply(data, "you must be a bot admin to use this command.")
+            msg = "you must be a bot admin to use this command."
+            self.connection.reply(data, msg)
             return
 
-        if not data.args: # if it is just !op/!devoice/whatever without arguments, assume they want to do this to themselves
+        # If it is just !op/!devoice/whatever without arguments, assume they
+        # want to do this to themselves:
+        if not data.args:
             target = data.nick
         else:
             target = data.args[0]
 
-        self.connection.say("ChanServ", "%s %s %s" % (data.command, data.chan, target))
+        msg = " ".join((data.command, data.chan, target))
+        self.connection.say("ChanServ", msg)

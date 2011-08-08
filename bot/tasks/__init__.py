@@ -14,7 +14,7 @@ import os
 
 import config
 
-__all__ = ["load", "schedule", "start"]
+__all__ = ["load", "schedule", "start", "get_all"]
 
 # Store loaded tasks as a dict where the key is the task name and the value is
 # an instance of the task class:
@@ -46,14 +46,15 @@ def _wrapper(task, **kwargs):
     try:
         task.run(**kwargs)
     except:
-        print "Task '{0}' raised an exception and had to stop:".format(task.task_name)
+        error = "Task '{0}' raised an exception and had to stop:"
+        print error.format(task.task_name)
         traceback.print_exc()
     else:
         print "Task '{0}' finished without error.".format(task.task_name)
 
 def load():
-    """Load all valid task classes from bot/tasks/, and add them to the
-    _tasks variable."""
+    """Load all valid task classes from bot/tasks/, and add them to the _tasks
+    variable."""
     files = os.listdir(os.path.join("bot", "tasks"))
     files.sort()  # alphabetically sort all files in wiki/tasks/
     for f in files:
@@ -83,13 +84,19 @@ def start(task_name, **kwargs):
     try:
         task = _tasks[task_name]
     except KeyError:
-        print ("Couldn't find task '{0}': bot/tasks/{0}.py does not exist.").format(task_name)
+        error = "Couldn't find task '{0}': bot/tasks/{0}.py does not exist."
+        print error.format(task_name)
         return
 
     task_thread = threading.Thread(target=lambda: _wrapper(task, **kwargs))
-    task_thread.name = "{0} ({1})".format(task_name, time.strftime("%b %d %H:%M:%S"))
+    start_time = time.strftime("%b %d %H:%M:%S")
+    task_thread.name = "{0} ({1})".format(task_name, start_time)
 
-    # stop bot task threads automagically if the main bot stops
+    # Stop bot task threads automagically if the main bot stops:
     task_thread.daemon = True
 
     task_thread.start()
+
+def get_all():
+    """Return our dict of all loaded tasks."""
+    return _tasks

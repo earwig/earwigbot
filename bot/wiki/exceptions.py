@@ -3,7 +3,7 @@
 """
 EarwigBot's Wiki Toolset: Exceptions
 
-This module contains all exceptions used by the wiki.tools package.
+This module contains all exceptions used by the wiki package.
 """
 
 class WikiToolsetError(Exception):

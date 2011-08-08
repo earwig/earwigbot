@@ -1,7 +1,5 @@
 # -*- coding: utf-8  -*-
 
-# Commands to interface with the bot's git repository; use '!git help' for sub-command list.
-
 import shlex
 import subprocess
 import re
@@ -9,26 +7,21 @@ import re
 from classes import BaseCommand
 import config
 
-class Git(BaseCommand):
-    def get_hooks(self):
-        return ["msg"]
-
-    def get_help(self, command):
-        return "Commands to interface with the bot's git repository; use '!git help' for sub-command list."
-
-    def check(self, data):
-        if data.is_command and data.command == "git":
-            return True
-        return False
+class Command(BaseCommand):
+    """Commands to interface with the bot's git repository; use '!git help' for
+    a sub-command list."""
+    name = "git"
 
     def process(self, data):
         self.data = data
         if data.host not in config.irc["permissions"]["owners"]:
-            self.connection.reply(data, "you must be a bot owner to use this command.")
+            msg = "you must be a bot owner to use this command."
+            self.connection.reply(data, msg)
             return
 
         if not data.args:
-            self.connection.reply(data, "no arguments provided. Maybe you wanted '!git help'?")
+            msg = "no arguments provided. Maybe you wanted '!git help'?"
+            self.connection.reply(data, msg)
             return
 
         if data.args[0] == "help":
@@ -52,19 +45,20 @@ class Git(BaseCommand):
         elif data.args[0] == "status":
             self.do_status()
 
-        else: # they asked us to do something we don't know
-            self.connection.reply(data, "unknown argument: \x0303%s\x0301." % data.args[0])
+        else:  # They asked us to do something we don't know
+            msg = "unknown argument: \x0303{0}\x0301.".format(data.args[0])
+            self.connection.reply(data, msg)
 
     def exec_shell(self, command):
-        """execute a shell command and get the output"""
+        """Execute a shell command and get the output."""
         command = shlex.split(command)
         result = subprocess.check_output(command, stderr=subprocess.STDOUT)
         if result:
-            result = result[:-1] # strip newline
+            result = result[:-1]  # Strip newline
         return result
 
     def do_help(self):
-        """display all commands"""
+        """Display all commands."""
         help_dict = {
             "branch": "get current branch",
             "branches": "get all branches",
@@ -82,21 +76,24 @@ class Git(BaseCommand):
         self.connection.reply(self.data, "sub-commands are: %s." % help)
 
     def do_branch(self):
-        """get our current branch"""
+        """Get our current branch."""
         branch = self.exec_shell("git name-rev --name-only HEAD")
-        self.connection.reply(self.data, "currently on branch \x0302%s\x0301." % branch)
+        msg = "currently on branch \x0302{0}\x0301.".format(branch)
+        self.connection.reply(self.data, msg)
 
     def do_branches(self):
-        """get list of branches"""
+        """Get a list of branches."""
         branches = self.exec_shell("git branch")
-        branches = branches.replace('\n* ', ', ') # cleanup extraneous characters
+        # Remove extraneous characters:
+        branches = branches.replace('\n* ', ', ')
         branches = branches.replace('* ', ' ')
         branches = branches.replace('\n  ', ', ')
         branches = branches.strip()
-        self.connection.reply(self.data, "branches: \x0302%s\x0301." % branches)
+        msg = "branches: \x0302{0}\x0301.".format(branches)
+        self.connection.reply(self.data, msg)
 
     def do_checkout(self):
-        """switch branches"""
+        """Switch branches."""
         try:
             branch = self.data.args[1]
         except IndexError: # no branch name provided
@@ -108,15 +105,20 @@ class Git(BaseCommand):
         try:
             result = self.exec_shell("git checkout %s" % branch)
             if "Already on" in result:
-                self.connection.reply(self.data, "already on \x0302%s\x0301!" % branch)
+                msg = "already on \x0302{0}\x0301!".format(branch)
+                self.connection.reply(self.data, msg)
             else:
-                self.connection.reply(self.data, "switched from branch \x0302%s\x0301 to \x0302%s\x0301." % (current_branch, branch))
+                ms = "switched from branch \x0302{1}\x0301 to \x0302{1}\x0301."
+                msg = ms.format(current_branch, branch)
+                self.connection.reply(self.data, msg)
 
-        except subprocess.CalledProcessError: # git couldn't switch branches
-            self.connection.reply(self.data, "branch \x0302%s\x0301 doesn't exist!" % branch)
+        except subprocess.CalledProcessError:
+            # Git couldn't switch branches; assume the branch doesn't exist:
+            msg = "branch \x0302{0}\x0301 doesn't exist!".format(branch)
+            self.connection.reply(self.data, msg)
 
     def do_delete(self):
-        """delete a branch, while making sure that we are not on it"""
+        """Delete a branch, while making sure that we are not already on it."""
         try:
             delete_branch = self.data.args[1]
         except IndexError: # no branch name provided
@@ -126,38 +128,51 @@ class Git(BaseCommand):
         current_branch = self.exec_shell("git name-rev --name-only HEAD")
 
         if current_branch == delete_branch:
-            self.connection.reply(self.data, "you're currently on this branch; please checkout to a different branch before deleting.")
+            msg = "you're currently on this branch; please checkout to a different branch before deleting."
+            self.connection.reply(self.data, msg)
             return
 
         try:
             self.exec_shell("git branch -d %s" % delete_branch)
-            self.connection.reply(self.data, "branch \x0302%s\x0301 has been deleted locally." % delete_branch)
-        except subprocess.CalledProcessError: # git couldn't delete
-            self.connection.reply(self.data, "branch \x0302%s\x0301 doesn't exist!" % delete_branch)
+            msg = "branch \x0302{0}\x0301 has been deleted locally."
+            self.connection.reply(self.data, msg.format(delete_branch))
+        except subprocess.CalledProcessError:
+            # Git couldn't switch branches; assume the branch doesn't exist:
+            msg = "branch \x0302{0}\x0301 doesn't exist!".format(delete_branch)
+            self.connection.reply(self.data, msg)
 
     def do_pull(self):
-        """pull from remote repository"""
+        """Pull from our remote repository."""
         branch = self.exec_shell("git name-rev --name-only HEAD")
-        self.connection.reply(self.data, "pulling from remote (currently on \x0302%s\x0301)..." % branch)
+        msg = "pulling from remote (currently on \x0302{0}\x0301)..."
+        self.connection.reply(self.data, msg.format(branch))
 
         result = self.exec_shell("git pull")
 
         if "Already up-to-date." in result:
             self.connection.reply(self.data, "done; no new changes.")
         else:
-            changes = re.findall("\s*((.*?)\sfile(.*?)tions?\(-\))", result)[0][0] # find the changes
+            regex = "\s*((.*?)\sfile(.*?)tions?\(-\))"
+            changes = re.findall(regex, result)[0][0]
             try:
-                remote = self.exec_shell("git config --get branch.%s.remote" % branch)
-                url = self.exec_shell("git config --get remote.%s.url" % remote)
-                self.connection.reply(self.data, "done; %s [from %s]." % (changes, url))
-            except subprocess.CalledProcessError: # something in .git/config is not specified correctly, so we cannot get the remote's url
+                cmnd_remt = "git config --get branch.{0}.remote".format(branch)
+                remote = self.exec_shell(cmnd_rmt)
+                cmnd_url = "git config --get remote.{0}.url".format(remote)
+                url = self.exec_shell(cmnd_url)
+                msg = "done; {0} [from {1}].".format(changes, url)
+                self.connection.reply(self.data, msg)
+            except subprocess.CalledProcessError:
+                # Something in .git/config is not specified correctly, so we
+                # cannot get the remote's URL. However, pull was a success:
                 self.connection.reply(self.data, "done; %s." % changes)
 
     def do_status(self):
-        """check whether we have anything to pull"""
-        last = self.exec_shell("git log -n 1 --pretty=\"%ar\"")
+        """Check whether we have anything to pull."""
+        last = self.exec_shell('git log -n 1 --pretty="%ar"')
         result = self.exec_shell("git fetch --dry-run")
-        if not result: # nothing was fetched, so remote and local are equal
-            self.connection.reply(self.data, "last commit was %s. Local copy is \x02up-to-date\x0F with remote." % last)
+        if not result:  # Nothing was fetched, so remote and local are equal
+            msg = "last commit was {0}. Local copy is \x02up-to-date\x0F with remote."
+            self.connection.reply(self.data, msg.format(last))
         else:
-            self.connection.reply(self.data, "last local commit was %s. Remote is \x02ahead\x0F of local copy." % last)
+            msg = "last local commit was {0}. Remote is \x02ahead\x0F of local copy."
+            self.connection.reply(self.data, msg.format(last))

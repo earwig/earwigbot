@@ -3,11 +3,11 @@
 """
 EarwigBot's Wiki Toolset: Misc Functions
 
-This module, a component of the wiki.tools package, contains miscellaneous
-functions that are not methods of any class, like get_site().
+This module, a component of the wiki package, contains miscellaneous functions
+that are not methods of any class, like get_site().
 
 There's no need to import this module explicitly. All functions here are
-automatically available from wiki.tools.
+automatically available from wiki.
 """
 
 from cookielib import LWPCookieJar, LoadError
@@ -16,9 +16,9 @@ from getpass import getpass
 from os import chmod, path
 import stat
 
-from core import config
-from wiki.tools.exceptions import SiteNotFoundError
-from wiki.tools.site import Site
+import config
+from wiki.exceptions import SiteNotFoundError
+from wiki.site import Site
 
 __all__ = ["get_site"]
 
@@ -84,9 +84,13 @@ def _get_site_object_from_dict(name, d):
     article_path = d.get("articlePath")
     script_path = d.get("scriptPath")
     sql = (d.get("sqlServer"), d.get("sqlDB"))
-    namespaces = d.get("namespaces")
+    namespaces = d.get("namespaces", {})
     login = (config.wiki.get("username"), config.wiki.get("password"))
     cookiejar = _get_cookiejar()
+
+    for key, value in namespaces.items():  # Convert string keys to integers
+        del namespaces[key]
+        namespaces[int(key)] = value
 
     return Site(name=name, project=project, lang=lang, base_url=base_url,
                 article_path=article_path, script_path=script_path, sql=sql,

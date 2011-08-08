@@ -1,23 +1,14 @@
 # -*- coding: utf-8  -*-
 
-# A somewhat advanced calculator: http://futureboy.us/fsp/frink.fsp.
-
 import re
 import urllib
 
 from classes import BaseCommand
 
-class Calc(BaseCommand):
-    def get_hooks(self):
-        return ["msg"]
-
-    def get_help(self, command):
-        return "A somewhat advanced calculator: see http://futureboy.us/fsp/frink.fsp for details."
-
-    def check(self, data):
-        if data.is_command and data.command == "calc":
-            return True
-        return False
+class Command(BaseCommand):
+    """A somewhat advanced calculator: see http://futureboy.us/fsp/frink.fsp
+    for details."""
+    name = "calc"
 
     def process(self, data):
         if not data.args:
@@ -27,7 +18,8 @@ class Calc(BaseCommand):
         query = ' '.join(data.args)
         query = self.cleanup(query)
 
-        url = "http://futureboy.us/fsp/frink.fsp?fromVal=%s" % urllib.quote(query)
+        url = "http://futureboy.us/fsp/frink.fsp?fromVal={0}"
+        url = url.format(urllib.quote(query))
         result = urllib.urlopen(url).read()
 
         r_result = re.compile(r'(?i)<A NAME=results>(.*?)</A>')

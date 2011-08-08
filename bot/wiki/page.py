@@ -3,7 +3,7 @@
 import re
 from urllib import quote
 
-from wiki.tools.exceptions import *
+from wiki.exceptions import *
 
 class Page(object):
     """

@@ -6,7 +6,7 @@ EarwigBot's Wiki Toolset: Constants
 This module defines some useful constants, such as default namespace IDs for
 easy lookup and our user agent.
 
-Import with `from wiki.tools.constants import *`.
+Import with `from wiki.constants import *`.
 """
 
 import platform

@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 
-from wiki.tools.page import Page
+from wiki.page import Page
 
 class Category(Page):
     """
@@ -24,7 +24,7 @@ class Category(Page):
         up to 500, and bots can go up to 5,000 on a single API query.
         """
         params = {"action": "query", "list": "categorymembers",
-            "cmlimit": limit, "cmtitle": self.title}
+            "cmlimit": limit, "cmtitle": self._title}
         result = self._site._api_query(params)
         members = result['query']['categorymembers']
         return [member["title"] for member in members]
