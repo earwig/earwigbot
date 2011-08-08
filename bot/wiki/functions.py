@@ -90,7 +90,11 @@ def _get_site_object_from_dict(name, d):
 
     for key, value in namespaces.items():  # Convert string keys to integers
         del namespaces[key]
-        namespaces[int(key)] = value
+        try:
+            namespaces[int(key)] = value
+        except ValueError:  # Data is broken, ignore it
+            namespaces = None
+            break
 
     return Site(name=name, project=project, lang=lang, base_url=base_url,
                 article_path=article_path, script_path=script_path, sql=sql,

@@ -1,92 +1,87 @@
 # -*- coding: utf-8  -*-
 
-import json
 import re
-import urllib
 
 from classes import BaseCommand
+import wiki
 
 class Command(BaseCommand):
     """Get information about an AFC submission by name."""
     name = "report"
 
     def process(self, data):
+        self.site = wiki.get_site()
         self.data = data
+
         if not data.args:
-            self.connection.reply(data, "what submission do you want me to give information about?")
+            msg = "what submission do you want me to give information about?"
+            self.connection.reply(data, msg)
             return
 
-        pagename = ' '.join(data.args)
-        pagename = pagename.replace("http://en.wikipedia.org/wiki/", "").replace("http://enwp.org/", "").replace("_", " ")
-        pagename = pagename.strip()
+        title = ' '.join(data.args)
+        title = title.replace("http://en.wikipedia.org/wiki/", "")
+        title = title.replace("http://enwp.org/", "").strip()
 
-        if self.page_exists(pagename):  # given '!report Foo', first try [[Foo]]
-            self.report(pagename)
-        else:  # if that doesn't work, try [[Wikipedia:Articles for creation/Foo]]
-            if self.page_exists("Wikipedia:Articles for creation/" + pagename):
-                self.report("Wikipedia:Articles for creation/" + pagename)
-            else:  # if that doesn't work, try [[Wikipedia talk:Articles for creation/Foo]]
-                if self.page_exists("Wikipedia talk:Articles for creation/" + pagename):
-                    self.report("Wikipedia talk:Articles for creation/" + pagename)
-                else:
-                    self.connection.reply(data, "submission \x0302{0}\x0301 not found.".format(pagename))
+        # Given '!report Foo', first try [[Foo]]:
+        if self.report(title):
+            return
 
-    def report(self, pagename):
+        # Then try [[Wikipedia:Articles for creation/Foo]]:
+        title2 = "".join(("Wikipedia:Articles for creation/", title))
+        if self.report(title2):
+            return
+
+        # Then try [[Wikipedia talk:Articles for creation/Foo]]:
+        title3 = "".join(("Wikipedia talk:Articles for creation/", title))
+        if self.report(title3):
+            return
+
+        msg = "submission \x0302{0}\x0301 not found.".format(title)
+        self.connection.reply(data, msg)
+
+    def report(self, title):
         data = self.data
-        shortname = pagename.replace("Wikipedia:Articles for creation/", "").replace("Wikipedia talk:Articles for creation/", "")
-        url = "http://enwp.org/" + urllib.quote(pagename.replace(" ", "_"))
-        status = self.get_status(pagename)
-        user, user_url = self.get_creator(pagename)
+        page = self.site.get_page(title, follow_redirects=False)
+        if not page.exists()[0]:
+            return
 
-        self.connection.reply(data, "AfC submission report for \x0302{0}\x0301 ({1}):".format(shortname, url))
-        self.connection.say(data.chan, "Status: \x0303{0}\x0301".format(status))
-        if status == "accepted":  # the first edit will be the redirect [[WT:AFC/Foo]] -> [[Foo]], NOT the creation of the submission
-            self.connection.say(data.chan, "Reviewed by \x0302{0}\x0301 ({1})".format(user, user_url))
-        else:
-            self.connection.say(data.chan, "Submitted by \x0302{0}\x0301 ({1})".format(user, user_url))
+        url = page.url().replace("en.wikipedia.org/wiki", "enwp.org")
+        short = re.sub(r"wikipedia( talk)?:articles for creation/", "", title,
+                       re.IGNORECASE)
+        status = self.get_status(page)
+        user = self.site.get_user(page.creator())
+        user_name = user.name()
+        user_url = user.get_userpage().url()
 
-    def page_exists(self, pagename):
-        params = {'action': 'query', 'format': 'json', 'titles': pagename}
-        data = urllib.urlencode(params)
-        raw = urllib.urlopen("http://en.wikipedia.org/w/api.php", data).read()
-        res = json.loads(raw)
-        try:
-            res['query']['pages'].values()[0]['missing']  # this key will appear if the page does not exist
-            return False
-        except KeyError:  # if it's not there, the page exists
-            return True
+        msg1 = "AfC submission report for \x0302{0}\x0301 ({1}):"
+        msg2 = "Status: \x0303{0}\x0301"
+        msg3 = "Submitted by \x0302{0}\x0301 ({1})"
+        if status == "accepted"
+            msg3 = "Reviewed by \x0302{0}\x0301 ({1})"
 
-    def get_status(self, pagename):
-        params = {'action': 'query', 'prop': 'revisions', 'rvprop':'content', 'rvlimit':'1', 'format': 'json'}
-        params['titles'] = pagename
-        data = urllib.urlencode(params)
-        raw = urllib.urlopen("http://en.wikipedia.org/w/api.php", data).read()
-        res = json.loads(raw)
-        pageid = res['query']['pages'].keys()[0]
-        content = res['query']['pages'][pageid]['revisions'][0]['*']
-        lcontent = content.lower()
-        if re.search("\{\{afc submission\|r\|(.*?)\}\}", lcontent):
+        self.connection.reply(data, msg1.format(short, url))
+        self.connection.say(data.chan, msg2.format(status))
+        self.connection.say(data.chan, msg3.format(user_name, user_url))
+
+        return True
+
+    def get_status(self, page):
+        content = page.get()
+
+        if page.is_redirect():
+            target = page.get_redirect_target()
+            if self.site.get_page(target).namespace() == 0:
+                return "accepted"
+            return "redirect"
+        if re.search("\{\{afc submission\|r\|(.*?)\}\}", content, re.I):
             return "being reviewed"
-        elif re.search("\{\{afc submission\|\|(.*?)\}\}", lcontent):
+        if re.search("\{\{afc submission\|\|(.*?)\}\}", content, re.I):
             return "pending"
-        elif re.search("\{\{afc submission\|d\|(.*?)\}\}", lcontent):
+        if re.search("\{\{afc submission\|d\|(.*?)\}\}", content, re.I):
+            regex = "\{\{afc submission\|d\|(.*?)(\||\}\})"
             try:
-                reason = re.findall("\{\{afc submission\|d\|(.*?)(\||\}\})", lcontent)[0][0]
-                return "declined with reason \"{0}\"".format(reason)
+                reason = re.findall(regex, content, re.I)[0][0]
             except IndexError:
                 return "declined"
-        else:
-            if "#redirect" in content:
-                return "accepted"
-            else:
-                return "unkown"
-
-    def get_creator(self, pagename):
-        params = {'action': 'query', 'prop': 'revisions', 'rvprop': 'user', 'rvdir': 'newer', 'rvlimit': '1', 'format': 'json'}
-        params['titles'] = pagename
-        data = urllib.urlencode(params)
-        raw = urllib.urlopen("http://en.wikipedia.org/w/api.php", data).read()
-        res = json.loads(raw)
-        user = res['query']['pages'].values()[0]['revisions'][0]['user']
-        user_url = "http://enwp.org/User_talk:" + urllib.quote(user.replace(" ", "_"))
-        return user, user_url
+            return "declined with reason \"{0}\"".format(reason)
+        return "unkown"

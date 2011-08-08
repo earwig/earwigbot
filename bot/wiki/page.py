@@ -20,6 +20,7 @@ class Page(object):
     url                 -- returns the page's URL
     namespace           -- returns the page's namespace as an integer
     protection          -- returns the page's current protection status
+    creator             -- returns the page's creator (first user to edit)
     is_talkpage         -- returns True if the page is a talkpage, else False
     is_redirect         -- returns True if the page is a redirect, else False
     toggle_talk         -- returns a content page's talk page, or vice versa
@@ -51,6 +52,7 @@ class Page(object):
         self._protection = None
         self._fullurl = None
         self._content = None
+        self._creator = None
 
         # Try to determine the page's namespace using our site's namespace
         # converter:
@@ -122,15 +124,17 @@ class Page(object):
         """Loads various data from the API in a single query.
 
         Loads self._title, ._exists, ._is_redirect, ._pageid, ._fullurl,
-        ._protection, ._namespace, ._is_talkpage, and ._lastrevid using the
-        API. It will do a query of its own unless `result` is provided, in
-        which case we'll pretend `result` is what the query returned.
+        ._protection, ._namespace, ._is_talkpage, ._creator, and ._lastrevid
+        using the API. It will do a query of its own unless `result` is
+        provided, in which case we'll pretend `result` is what the query
+        returned.
 
         Assuming the API is sound, this should not raise any exceptions.
         """
         if result is None:
-            params = {"action": "query", "prop": "info", "titles": self._title,
-                      "inprop": "protection|url"}
+            params = {"action": "query", "rvprop": "user", "rvdir": "newer",
+                      "prop": "info|revisions", "rvlimit": 1,
+                      "titles": self._title, "inprop": "protection|url"}
             result = self._site._api_query(params)
 
         res = result["query"]["pages"].values()[0]
@@ -169,9 +173,10 @@ class Page(object):
         self._namespace = res["ns"]
         self._is_talkpage = self._namespace % 2 == 1  # talkpages have odd IDs
 
-        # This last field will only be specified if the page exists:
+        # These last two fields will only be specified if the page exists:
+        self._lastrevid = res.get("lastrevid")
         try:
-            self._lastrevid = res["lastrevid"]
+            self._creator = res['revisions'][0]['user']
         except KeyError:
             pass
 
@@ -286,6 +291,27 @@ class Page(object):
             self._load_wrapper()
         self._force_validity()  # invalid pages cannot be protected
         return self._protection
+
+    def creator(self, force=False):
+        """Returns the page's creator (i.e., the first user to edit the page).
+
+        Makes an API query if force is True or if we haven't already made one.
+        Normally, we can get the creator along with everything else (except
+        content) in self._load_attributes(). However, due to a limitation in
+        the API (can't get the editor of one revision and the content of
+        another at both ends of the history), if our other attributes were only
+        loaded from get(), we'll have to do another API query. This is done
+        by calling ourselves again with force=True.
+
+        Raises InvalidPageError or PageNotFoundError if the page name is
+        invalid or the page does not exist, respectively.
+        """
+        if self._exists == 0 or force:
+            self._load_wrapper()
+        self._force_existence()
+        if not self._creator and not force:
+            self.creator(force=True)
+        return self._creator
 
     def is_talkpage(self, force=False):
         """Returns True if the page is a talkpage, else False.
