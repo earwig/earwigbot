@@ -51,7 +51,7 @@ class Command(BaseCommand):
         status = self.get_status(page)
         user = self.site.get_user(page.creator())
         user_name = user.name()
-        user_url = user.get_userpage().url()
+        user_url = user.get_talkpage().url()
 
         msg1 = "AfC submission report for \x0302{0}\x0301 ({1}):"
         msg2 = "Status: \x0303{0}\x0301"
