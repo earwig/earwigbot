@@ -48,9 +48,9 @@ def main(connection, f_conn=None):
         read_buffer = lines.pop()
 
         for line in lines:
-            _process_message(line)
+            _process_message(connection, line)
 
-def _process_message(line):
+def _process_message(connection, line):
     """Process a single message from IRC."""
     line = line.strip().split()
 

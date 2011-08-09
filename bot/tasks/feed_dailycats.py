@@ -1,10 +1,10 @@
 # -*- coding: utf-8  -*-
 
-from wiki.base_task import BaseTask
+from classes import BaseTask
 
 class Task(BaseTask):
     """A task to create daily categories for [[WP:FEED]]."""
-    task_name = "feed_dailycats"
+    name = "feed_dailycats"
 
     def __init__(self):
         pass

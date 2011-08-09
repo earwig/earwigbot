@@ -7,39 +7,43 @@ This package provides the wiki bot "tasks" EarwigBot runs. Here in __init__,
 you can find some functions used to load and run these tasks.
 """
 
+import os
+import sys
+import threading
 import time
 import traceback
-import threading
-import os
 
+from classes import BaseTask
 import config
 
 __all__ = ["load", "schedule", "start", "get_all"]
+
+# Base directory when searching for tasks:
+base_dir = os.path.join(config.root_dir, "bot", "tasks")
 
 # Store loaded tasks as a dict where the key is the task name and the value is
 # an instance of the task class:
 _tasks = {}
 
-def _load_task(f):
-    """Look in a given file for the task class."""
+def _load_task(filename):
+    """Try to load a specific task from a module, identified by file name."""
     global _tasks
 
-    module = f[:-3]  # strip .py from end
+    # Strip .py from the end of the filename and join with our package name:
+    name = ".".join(("tasks", filename[:-3]))
     try:
-        exec "from wiki.tasks import %s as m" % module
-    except:  # importing the file failed for some reason...
-        print "Couldn't load task file %s:" % f
-        traceback.print_exc()
-        return
-    try:
-        task_class = m.Task
+         __import__(name)
     except:
-        print "Couldn't find or get task class in file %s:" % f
+        print "Couldn't load file {0}:".format(filename)
         traceback.print_exc()
         return
-    task_name = task_class.task_name
-    _tasks[task_name] = task_class()
-    print "Added task %s from bot/tasks/%s..." % (task_name, f)
+
+    task = sys.modules[name].Task()
+    if not isinstance(task, BaseTask):
+        return
+
+    _tasks[task.name] = task
+    print "Added task {0}...".format(task.name)
 
 def _wrapper(task, **kwargs):
     """Wrapper for task classes: run the task and catch any errors."""
@@ -47,28 +51,31 @@ def _wrapper(task, **kwargs):
         task.run(**kwargs)
     except:
         error = "Task '{0}' raised an exception and had to stop:"
-        print error.format(task.task_name)
+        print error.format(task.name)
         traceback.print_exc()
     else:
-        print "Task '{0}' finished without error.".format(task.task_name)
+        print "Task '{0}' finished without error.".format(task.name)
 
 def load():
-    """Load all valid task classes from bot/tasks/, and add them to the _tasks
-    variable."""
-    files = os.listdir(os.path.join("bot", "tasks"))
-    files.sort()  # alphabetically sort all files in wiki/tasks/
-    for f in files:
-        if not os.path.isfile(os.path.join("bot", "tasks", f)):
-            continue  # ignore non-files
-        if f.startswith("_") or not f.endswith(".py"):
-            continue  # ignore non-python files or files beginning with an _
-        load_class_from_file(f)
-    print "Found %s tasks: %s." % (len(_tasks), ', '.join(_tasks.keys()))
+    """Load all valid tasks from bot/tasks/, into the _tasks variable."""
+    files = os.listdir(base_dir)
+    files.sort()
+
+    for filename in files:
+        if filename.startswith("_") or not filename.endswith(".py"):
+            continue
+        try:
+            _load_task(filename)
+        except AttributeError:
+            pass  # The file is doesn't contain a task, so just move on
+
+    print "Found {0} tasks: {1}.".format(len(_tasks), ', '.join(_tasks.keys()))
 
 def schedule(now=time.gmtime()):
     """Start all tasks that are supposed to be run at a given time."""
+    # Get list of tasks to run this turn:
     tasks = config.schedule(now.tm_min, now.tm_hour, now.tm_mday, now.tm_mon,
-            now.tm_wday)  # get list of tasks to run this turn
+                            now.tm_wday) 
 
     for task in tasks:
         if isinstance(task, list):     # they've specified kwargs

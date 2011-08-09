@@ -67,7 +67,7 @@ def load(connection):
         except AttributeError:
             pass  # The file is doesn't contain a command, so just move on
 
-    msg = "Found {0} command classes: {1}."
+    msg = "Found {0} commands: {1}."
     print msg.format(len(_commands), ", ".join(_commands.keys()))
 
 def get_all():

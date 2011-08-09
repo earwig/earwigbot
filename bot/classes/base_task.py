@@ -2,7 +2,7 @@
 
 class BaseTask(object):
     """A base class for bot tasks that edit Wikipedia."""
-    task_name = None
+    name = None
 
     def __init__(self):
         """Constructor for new tasks.

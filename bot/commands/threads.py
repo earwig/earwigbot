@@ -126,8 +126,8 @@ class Command(BaseCommand):
             self.connection.reply(data, msg)
             return
 
-        # This task does not exist or hasn't been loaded:
-        if task_name not in tasks._tasks.keys():
+        if task_name not in tasks.get_all().keys():
+            # This task does not exist or hasn't been loaded:
             msg = "task could not be found; either bot/tasks/{0}.py doesn't exist, or it wasn't loaded correctly."
             self.connection.reply(data, msg.format(task_name))
             return
