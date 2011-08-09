@@ -18,9 +18,8 @@ class Command(BaseCommand):
 
     def do_main_help(self, data):
         """Give the user a general help message with a list of all commands."""
-        msg = "I am a bot! I have {0} commands loaded: {1}. You can get help for any command with '!help <command>'."
-        cmnds = self.cmnds.keys()
-        cmnds.sort()
+        msg = "Hi, I'm a bot! I have {0} commands loaded: {1}. You can get help for any command with '!help <command>'."
+        cmnds = sorted(self.cmnds.keys())
         msg = msg.format(len(cmnds), ', '.join(cmnds))
         self.connection.reply(data, msg)
 

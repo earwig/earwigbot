@@ -93,7 +93,8 @@ def _process_message(line):
 
     # If we are pinged, pong back to the server:
     if line[0] == "PING":
-        connection.send("PONG %s" % line[1])
+        msg = " ".join(("PONG", line[1]))
+        connection.send(msg)
 
     # On successful connection to the server:
     if line[1] == "376":

@@ -8,12 +8,17 @@ class Command(BaseCommand):
     name = "chanops"
 
     def check(self, data):
-        commands = ["voice", "devoice", "op", "deop"]
+        commands = ["chanops", "voice", "devoice", "op", "deop"]
         if data.is_command and data.command in commands:
             return True
         return False
 
     def process(self, data):
+        if data.command == "chanops":
+            msg = "available commands are !voice, !devoice, !op, and !deop."
+            self.connection.reply(data, msg)
+            return
+
         if data.host not in config.irc["permissions"]["admins"]:
             msg = "you must be a bot admin to use this command."
             self.connection.reply(data, msg)

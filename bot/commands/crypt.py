@@ -8,14 +8,20 @@ import blowfish
 class Command(BaseCommand):
     """Provides hash functions with !hash (!hash list for supported algorithms)
     and blowfish encryption with !encrypt and !decrypt."""
-    name = "cryptography"
+    name = "crypt"
 
     def check(self, data):
-        if data.is_command and data.command in ["hash", "encrypt", "decrypt"]:
+        commands = ["crypt", "hash", "encrypt", "decrypt"]
+        if data.is_command and data.command in commands:
             return True
         return False
 
     def process(self, data):
+        if data.command == "crypt":
+            msg = "available commands are !hash, !encrypt, and !decrypt."
+            self.connection.reply(data, msg)
+            return
+
         if not data.args:
             msg = "what do you want me to {0}?".format(data.command)
             self.connection.reply(data, msg)

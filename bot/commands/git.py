@@ -8,8 +8,8 @@ from classes import BaseCommand
 import config
 
 class Command(BaseCommand):
-    """Commands to interface with the bot's git repository; use '!git help' for
-    a sub-command list."""
+    """Commands to interface with the bot's git repository; use '!git' for a
+    sub-command list."""
     name = "git"
 
     def process(self, data):
@@ -20,8 +20,7 @@ class Command(BaseCommand):
             return
 
         if not data.args:
-            msg = "no arguments provided. Maybe you wanted '!git help'?"
-            self.connection.reply(data, msg)
+            self.do_help()
             return
 
         if data.args[0] == "help":
@@ -59,7 +58,7 @@ class Command(BaseCommand):
 
     def do_help(self):
         """Display all commands."""
-        help_dict = {
+        help = {
             "branch": "get current branch",
             "branches": "get all branches",
             "checkout": "switch branches",
@@ -67,13 +66,11 @@ class Command(BaseCommand):
             "pull": "update everything from the remote server",
             "status": "check if we are up-to-date",
         }
-        keys = help_dict.keys()
-        keys.sort()
-        help = ""
-        for key in keys:
-            help += "\x0303%s\x0301 (%s), " % (key, help_dict[key])
-        help = help[:-2] # trim last comma and space
-        self.connection.reply(self.data, "sub-commands are: %s." % help)
+        msg = ""
+        for key in sorted(help.keys()):
+            msg += "\x0303{0}\x0301 ({1}), ".format(key, help[key])
+        msg = msg[:-2]  # Trim last comma and space
+        self.connection.reply(self.data, "sub-commands are: {0}.".format(msg))
 
     def do_branch(self):
         """Get our current branch."""

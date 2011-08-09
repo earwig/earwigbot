@@ -46,8 +46,8 @@ class Command(BaseCommand):
             return
 
         url = page.url().replace("en.wikipedia.org/wiki", "enwp.org")
-        short = re.sub(r"wikipedia( talk)?:articles for creation/", "", title,
-                       re.IGNORECASE)
+        short = re.sub("wikipedia( talk)?\:articles for creation\/", "", title,
+                       flags=re.IGNORECASE)
         status = self.get_status(page)
         user = self.site.get_user(page.creator())
         user_name = user.name()

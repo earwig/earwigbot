@@ -20,7 +20,7 @@ class Command(BaseCommand):
     def process(self, data):
         self.data = data
         if data.host not in config.irc["permissions"]["owners"]:
-            msg = "at this time, you must be a bot owner to use this command."
+            msg = "you must be a bot owner to use this command."
             self.connection.reply(data, msg)
             return
 
