@@ -8,7 +8,7 @@ config.json
 .cookies
 
 # Ignore OS X's crud:
-*.DS_Store
+.DS_Store
 
 # Ignore pydev's nonsense:
 .project
