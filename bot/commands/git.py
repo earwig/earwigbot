@@ -153,7 +153,7 @@ class Command(BaseCommand):
             changes = re.findall(regex, result)[0][0]
             try:
                 cmnd_remt = "git config --get branch.{0}.remote".format(branch)
-                remote = self.exec_shell(cmnd_rmt)
+                remote = self.exec_shell(cmnd_remt)
                 cmnd_url = "git config --get remote.{0}.url".format(remote)
                 url = self.exec_shell(cmnd_url)
                 msg = "done; {0} [from {1}].".format(changes, url)
