@@ -91,13 +91,13 @@ def _process_message(line):
                 print "Restarting bot per owner request..."
                 return
 
-    # If we are pinged, pong back to the server:
-    if line[0] == "PING":
+    # If we are pinged, pong back:
+    elif line[0] == "PING":
         msg = " ".join(("PONG", line[1]))
         connection.send(msg)
 
     # On successful connection to the server:
-    if line[1] == "376":
+    elif line[1] == "376":
         # If we're supposed to auth to NickServ, do that:
         try:
             username = config.irc["frontend"]["nickservUsername"]

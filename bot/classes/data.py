@@ -17,7 +17,7 @@ class Data(object):
 
     def parse_args(self):
         """Parse command args from self.msg into self.command and self.args."""
-        args = self.msg.strip().split(" ")
+        args = self.msg.strip().split()
 
         while "" in args:
             args.remove("")
