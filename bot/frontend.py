@@ -54,7 +54,9 @@ def main():
         lines = read_buffer.split("\n")
         read_buffer = lines.pop()
         for line in lines:
-            _process_message(line)
+            ret = _process_message(line)
+            if ret:
+                return
 
 def _process_message(line):
     """Process a single message from IRC."""
@@ -89,7 +91,7 @@ def _process_message(line):
         if data.msg in ["!restart", ".restart"]:
             if data.host in config.irc["permissions"]["owners"]:
                 print "Restarting bot per owner request..."
-                return
+                return True
 
     # If we are pinged, pong back:
     elif line[0] == "PING":
