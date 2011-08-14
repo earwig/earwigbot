@@ -128,7 +128,7 @@ def get_site(name=None, project=None, lang=None):
     found in the config, SiteNotFoundError is raised.
     """
     # check if config has been loaded, and load it if it hasn't
-    if not config.is_config_loaded():
+    if not config.is_loaded():
         _load_config()
 
     # someone specified a project without a lang (or a lang without a project)!
