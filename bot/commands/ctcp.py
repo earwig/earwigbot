@@ -4,6 +4,7 @@ import platform
 import time
 
 from classes import BaseCommand
+import config
 
 class Command(BaseCommand):
     """Not an actual command, this module is used to respond to the CTCP
@@ -40,6 +41,7 @@ class Command(BaseCommand):
             self.connection.notice(target, "\x01TIME {0}\x01".format(ts))
 
         elif command == "VERSION":
-            vers = "EarwigBot - 0.1-dev - Python/{0} https://github.com/earwig/earwigbot"
-            vers = vers.format(platform.python_version())
+            default = "EarwigBot - 0.1-dev - Python/$1 https://github.com/earwig/earwigbot"
+            vers = config.metadata.get("ircVersion", default)
+            vers = vers.replace("$1", platform.python_version())
             self.connection.notice(target, "\x01VERSION {0}\x01".format(vers))

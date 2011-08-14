@@ -442,8 +442,8 @@ class Blowfish(object):
 
     def encrypt(self, data):
         if not len(data) == 8:
-            raise BlockSizeError("blocks must be 8 bytes long, but tried to " +
-                    "encrypt one {0} bytes long".format(len(data)))
+            e = "blocks must be 8 bytes long, but tried to encrypt one {0} bytes long"
+            raise BlockSizeError(e.format(len(data)))
 
         # Use big endianess since that's what everyone else uses
         xl = ord (data[3]) | (ord (data[2]) << 8) | (ord (data[1]) << 16) | (ord (data[0]) << 24)
@@ -458,8 +458,8 @@ class Blowfish(object):
 
     def decrypt(self, data):
         if not len(data) == 8:
-            raise BlockSizeError("blocks must be 8 bytes long, but tried to " +
-                    "decrypt one {0} bytes long".format(len(data)))
+            e = "blocks must be 8 bytes long, but tried to decrypt one {0} bytes long"
+            raise BlockSizeError(e.format(len(data)))
 
         # Use big endianess since that's what everyone else uses
         cl = ord (data[3]) | (ord (data[2]) << 8) | (ord (data[1]) << 16) | (ord (data[0]) << 24)
@@ -482,16 +482,18 @@ class Blowfish(object):
         return 56 * 8
 
     def verify_key(self, key):
-        """Make sure our key is not too short or too long; if there's a
-        problem, raise KeyTooShortError() or KeyTooLongError()."""
+        """Make sure our key is not too short or too long.
+        
+        If there's a problem, raise KeyTooShortError() or KeyTooLongError().
+        """
         if not key:
             raise KeyLengthError("no key given")
         if len(key) < 8:
-            raise KeyLengthError(("key is {0} bytes long, but it must be at " +
-                    "least 8").format(len(key)))
+            e = "key is {0} bytes long, but it must be at least 8"
+            raise KeyLengthError(e.format(len(key)))
         if len(key) > 56:
-            raise KeyLengthError(("key is {0} bytes long, but it must be " +
-                    "less than 56").format(len(key)))
+            e = "key is {0} bytes long, but it must be less than 56"
+            raise KeyLengthError(e.format(len(key)))
 
 def encrypt(key, plaintext):
     """Encrypt any length of plaintext using a given key that must be between
@@ -518,24 +520,25 @@ def decrypt(key, cyphertext):
 
     try:
         cyphertext = cyphertext.decode("hex")
-    except TypeError as error:
+    except (TypeError, AttributeError) as error:
         e = error.message
         raise DecryptionError("cyphertext could not be decoded: " + e.lower())
 
     if len(cyphertext) % 8 > 0:
-        raise DecryptionError("cyphertext cannot be broken into " +
-                "8-byte blocks evenly")
+        e = "cyphertext cannot be broken into 8-byte blocks evenly"
+        raise DecryptionError(e)
 
     blocks = [cyphertext[f:f+8] for f in range(0, len(cyphertext), 8)]
     msg = ''.join(map(cypher.decrypt, blocks))
 
-    if not msg.startswith("TRUE"):  # sanity check to ensure valid decryption
-        raise DecryptionError("the given key is incorrect, or part of the " +
-                "cyphertext is malformed")
+    # Sanity check to ensure valid decryption:
+    if not msg.startswith("TRUE"):
+        e = "the given key is incorrect, or part of the cyphertext is malformed"
+        raise DecryptionError(e)
 
     size, msg = msg[4:].split("|", 1)
     while len(msg) > int(size):
-        msg = msg[:-1]  # remove the padding that we applied earlier
+        msg = msg[:-1]  # Remove the padding that we applied earlier
 
     return msg
 

@@ -14,6 +14,7 @@ from cookielib import LWPCookieJar, LoadError
 import errno
 from getpass import getpass
 from os import chmod, path
+import platform
 import stat
 
 import config
@@ -30,12 +31,10 @@ def _load_config():
     directly from Python's interpreter and not the bot itself, because
     earwigbot.py or core/main.py will already call these functions.
     """
-    is_encrypted = config.verify_config()
+    is_encrypted = config.load()
     if is_encrypted:  # passwords in the config file are encrypted
         key = getpass("Enter key to unencrypt bot passwords: ")
-        config.parse_config(key)
-    else:
-        config.parse_config(None)
+        config.decrypt(key)
 
 def _get_cookiejar():
     """Returns a LWPCookieJar object loaded from our .cookies file. The same
@@ -87,6 +86,10 @@ def _get_site_object_from_dict(name, d):
     namespaces = d.get("namespaces", {})
     login = (config.wiki.get("username"), config.wiki.get("password"))
     cookiejar = _get_cookiejar()
+    user_agent = config.metadata.get("userAgent")
+
+    if user_agent:
+        user_agent = user_agent.replace("$1", platform.python_version())
 
     for key, value in namespaces.items():  # Convert string keys to integers
         del namespaces[key]
@@ -98,7 +101,8 @@ def _get_site_object_from_dict(name, d):
 
     return Site(name=name, project=project, lang=lang, base_url=base_url,
                 article_path=article_path, script_path=script_path, sql=sql,
-                namespaces=namespaces, login=login, cookiejar=cookiejar)
+                namespaces=namespaces, login=login, cookiejar=cookiejar,
+                user_agent=user_agent)
 
 def get_site(name=None, project=None, lang=None):
     """Returns a Site instance based on information from our config file.

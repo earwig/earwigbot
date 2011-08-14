@@ -40,7 +40,8 @@ class Site(object):
 
     def __init__(self, name=None, project=None, lang=None, base_url=None,
                  article_path=None, script_path=None, sql=(None, None),
-                 namespaces=None, login=(None, None), cookiejar=None):
+                 namespaces=None, login=(None, None), cookiejar=None,
+                 user_agent=None):
         """Constructor for new Site instances.
 
         This probably isn't necessary to call yourself unless you're building a
@@ -57,8 +58,8 @@ class Site(object):
         the API, and then log in if a username/pass was given and we aren't
         already logged in.
         """
-        # attributes referring to site information, filled in by an API query
-        # if they are missing (and an API url can be determined)
+        # Attributes referring to site information, filled in by an API query
+        # if they are missing (and an API url can be determined):
         self._name = name
         self._project = project
         self._lang = lang
@@ -68,19 +69,21 @@ class Site(object):
         self._sql = sql
         self._namespaces = namespaces
 
-        # set up cookiejar and URL opener for making API queries
+        # Set up cookiejar and URL opener for making API queries:
         if cookiejar is not None:
             self._cookiejar = cookiejar
         else:
             self._cookiejar = CookieJar()
+        if user_agent is None:
+            user_agent = USER_AGENT  # Set default UA from wiki.constants
         self._opener = build_opener(HTTPCookieProcessor(self._cookiejar))
-        self._opener.addheaders = [("User-Agent", USER_AGENT),
+        self._opener.addheaders = [("User-Agent", user_agent),
                                    ("Accept-Encoding", "gzip")]
 
-        # get all of the above attributes that were not specified as arguments
+        # Get all of the above attributes that were not specified as arguments:
         self._load_attributes()
 
-        # if we have a name/pass and the API says we're not logged in, log in
+        # If we have a name/pass and the API says we're not logged in, log in:
         self._login_info = name, password = login
         if name is not None and password is not None:
             logged_in_as = self._get_username_from_cookies()
@@ -112,7 +115,7 @@ class Site(object):
             raise SiteAPIError(e)
 
         url = ''.join((self._base_url, self._script_path, "/api.php"))
-        params["format"] = "json"  # this is the only format we understand
+        params["format"] = "json"  # This is the only format we understand
         data = urlencode(params)
 
         print url, data  # debug code
@@ -135,7 +138,7 @@ class Site(object):
                 stream = StringIO(result)
                 gzipper = GzipFile(fileobj=stream)
                 result = gzipper.read()
-            return loads(result)  # parse as a JSON object
+            return loads(result)  # Parse as a JSON object
 
     def _load_attributes(self, force=False):
         """Load data about our Site from the API.
@@ -147,8 +150,8 @@ class Site(object):
         Additionally, you can call this with `force=True` to forcibly reload
         all attributes.
         """
-        # all attributes to be loaded, except _namespaces, which is a special
-        # case because it requires additional params in the API query
+        # All attributes to be loaded, except _namespaces, which is a special
+        # case because it requires additional params in the API query:
         attrs = [self._name, self._project, self._lang, self._base_url,
             self._article_path, self._script_path]
 
@@ -158,9 +161,9 @@ class Site(object):
             params["siprop"] = "general|namespaces|namespacealiases"
             result = self._api_query(params)
             self._load_namespaces(result)
-        elif all(attrs):  # everything is already specified and we're not told
+        elif all(attrs):  # Everything is already specified and we're not told
             return        # to force a reload, so do nothing
-        else:  # we're only loading attributes other than _namespaces
+        else:  # We're only loading attributes other than _namespaces
             params["siprop"] = "general"
             result = self._api_query(params)
 
@@ -240,9 +243,9 @@ class Site(object):
                 continue
             if cookie.name != name:
                 continue
-            # build a regex that will match domains this cookie affects
+            # Build a regex that will match domains this cookie affects:
             search = ''.join(("(.*?)", re_escape(cookie.domain)))
-            if re_match(search, domain):  # test it against our site
+            if re_match(search, domain):  # Test it against our site
                 user_name = self._get_cookie("centralauth_User", cookie.domain)
                 if user_name is not None:
                     return user_name.value
@@ -402,7 +405,7 @@ class Site(object):
         """
         lname = name.lower()
         for ns_id, names in self._namespaces.items():
-            lnames = [n.lower() for n in names]  # be case-insensitive
+            lnames = [n.lower() for n in names]  # Be case-insensitive
             if lname in lnames:
                 return ns_id
 
@@ -421,7 +424,7 @@ class Site(object):
         """
         prefixes = self.namespace_id_to_name(NS_CATEGORY, all=True)
         prefix = title.split(":", 1)[0]
-        if prefix != title:  # avoid a page that is simply "Category"
+        if prefix != title:  # Avoid a page that is simply "Category"
             if prefix in prefixes:
                 return Category(self, title, follow_redirects)
         return Page(self, title, follow_redirects)

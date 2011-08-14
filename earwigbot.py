@@ -33,7 +33,7 @@ bot_script = path.join(path.dirname(path.abspath(__file__)), "bot", "main.py")
 def main():
     print "EarwigBot v{0}\n".format(__version__)
 
-    is_encrypted = config.verify_config()
+    is_encrypted = config.load()
     if is_encrypted:  # passwords in the config file are encrypted
         key = getpass("Enter key to unencrypt bot passwords: ")
     else:
@@ -41,7 +41,7 @@ def main():
 
     while 1:
         bot = Popen([executable, bot_script], stdin=PIPE)
-        bot.communicate(key)  # give the key to core.config.load_config()
+        bot.communicate(key)  # give the key to core.config.decrypt()
         return_code = bot.wait()
         if return_code == 1:
             exit()  # let critical exceptions in the subprocess cause us to

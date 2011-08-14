@@ -4,9 +4,9 @@
 """
 EarwigBot's Core
 
-This (should) not be run directly; the wrapper in "earwigbot.py" is preferred,
+This should not be run directly; the wrapper in "earwigbot.py" is preferred,
 but it should work fine alone, as long as you enter the password-unlock key at
-the initial hidden prompt.
+the initial hidden prompt if one is needed.
 
 The core is essentially responsible for starting the various bot components
 (irc, scheduler, etc) and making sure they are all happy. An explanation of the
@@ -103,12 +103,14 @@ def irc_frontend():
     f_conn.close()
 
 def run():
+    config.load()
     try:
-        key = raw_input()  # wait for our password unlock key from the bot's
-    except EOFError:       # wrapper
-        key = None
-    config.parse_config(key)  # load data from the config file and parse it
-                              # using the unlock key
+        key = raw_input()    # wait for our password decrypt key from the bot's
+    except EOFError:         # wrapper, then decrypt passwords
+        pass
+    else:
+        config.decrypt(key)
+
     enabled = config.components
 
     if "irc_frontend" in enabled:  # make the frontend run on our primary
@@ -120,7 +122,7 @@ def run():
         tasks.load()                       # watcher on another thread iff it
         if "irc_watcher" in enabled:       # is enabled
             print "\nStarting IRC watcher..."
-            t_watcher = threading.Thread(target=irc_watcher, args=())
+            t_watcher = threading.Thread(target=irc_watcher)
             t_watcher.name = "irc-watcher"
             t_watcher.daemon = True
             t_watcher.start()
