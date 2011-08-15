@@ -514,8 +514,7 @@ def encrypt(key, plaintext):
 
 def decrypt(key, cyphertext):
     """Decrypt the result of encrypt() using the original key, or raise
-    IncorrectKeyError(). If the cyphertext is malformed, raise
-    BadCyphertextError()."""
+    DecryptionError()."""
     cypher = Blowfish(key)
 
     try:
