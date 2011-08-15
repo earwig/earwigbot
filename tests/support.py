@@ -36,7 +36,7 @@ class CommandTestCase(TestCase):
     def get_single(self):
         data = self.connection.get().split("\n")
         line = data.pop(0)
-        for remaining in data:
+        for remaining in data[1:]:
             self.connection.send(remaining)
         return line
 
@@ -47,6 +47,20 @@ class CommandTestCase(TestCase):
     def assertSentIn(self, msgs):
         line = self.get_single()
         self.assertIn(line, msgs)
+
+    def assertSaid(self, msg):
+        self.assertSent("PRIVMSG #channel :{0}".format(msg))
+
+    def assertSaidIn(self, msgs):
+        msgs = ["PRIVMSG #channel :{0}".format(msg) for msg in msgs]
+        self.assertSentIn(msgs)
+
+    def assertReply(self, msg):
+        self.assertSaid("\x02Foo\x0F: {0}".format(msg))
+
+    def assertReplyIn(self, msgs):
+        msgs = ["\x02Foo\x0F: {0}".format(msg) for msg in msgs]
+        self.assertSaidIn(msgs)
 
     def maker(self, line, chan, msg=None):
         data = Data(line)

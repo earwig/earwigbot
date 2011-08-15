@@ -18,11 +18,12 @@ class TestTest(support.CommandTestCase):
         self.assertTrue(self.command.check(self.make_msg("TEST", "foo")))
 
     def test_process(self):
-        self.command.process(self.make_msg("test"))
+        def _test():
+            self.command.process(self.make_msg("test"))
+            self.assertSaidIn(["Hey \x02Foo\x0F!", "'sup \x02Foo\x0F?"])
 
-        msgs = ["PRIVMSG #channel :Hey \x02Foo\x0F!",
-                "PRIVMSG #channel :'sup \x02Foo\x0F?"]
-        self.assertSentIn(msgs)
+        for i in xrange(64):
+            _test()
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

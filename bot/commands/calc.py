@@ -12,7 +12,7 @@ class Command(BaseCommand):
 
     def process(self, data):
         if not data.args:
-            self.connection.reply(data, "What do you want me to calculate?")
+            self.connection.reply(data, "what do you want me to calculate?")
             return
 
         query = ' '.join(data.args)
