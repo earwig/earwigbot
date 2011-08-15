@@ -29,7 +29,7 @@ class Command(BaseCommand):
 
         # Create a dummy message to test which commands pick up the user's
         # input:
-        dummy = Data("PRIVMSG #fake-channel :Fake messsage!".split())
+        dummy = Data(":foo!bar@example.com PRIVMSG #channel :msg!".split())
         dummy.command = command.lower()
         dummy.is_command = True
 

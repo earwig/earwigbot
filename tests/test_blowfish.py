@@ -74,4 +74,4 @@ class TestBlowfish(unittest.TestCase):
         self.assertRaisesRegexp(e, e3, d, "some_key", "abcdabcdabcdabcd")
 
 if __name__ == "__main__":
-    support.run(TestBlowfish)
+    unittest.main(verbosity=2)
