@@ -42,6 +42,6 @@ class Command(BaseCommand):
 
         elif command == "VERSION":
             default = "EarwigBot - 0.1-dev - Python/$1 https://github.com/earwig/earwigbot"
-            vers = config.metadata.get("ircVersion", default)
+            vers = config.irc.get("version", default)
             vers = vers.replace("$1", platform.python_version())
             self.connection.notice(target, "\x01VERSION {0}\x01".format(vers))

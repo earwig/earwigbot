@@ -86,7 +86,9 @@ def _get_site_object_from_dict(name, d):
     namespaces = d.get("namespaces", {})
     login = (config.wiki.get("username"), config.wiki.get("password"))
     cookiejar = _get_cookiejar()
-    user_agent = config.metadata.get("userAgent")
+    user_agent = config.wiki.get("userAgent")
+    assert_edit = config.wiki.get("assert")
+    maxlag = config.wiki.get("maxlag")
 
     if user_agent:
         user_agent = user_agent.replace("$1", platform.python_version())
@@ -102,7 +104,7 @@ def _get_site_object_from_dict(name, d):
     return Site(name=name, project=project, lang=lang, base_url=base_url,
                 article_path=article_path, script_path=script_path, sql=sql,
                 namespaces=namespaces, login=login, cookiejar=cookiejar,
-                user_agent=user_agent)
+                user_agent=user_agent, assert_edit=assert_edit, maxlag=maxlag)
 
 def get_site(name=None, project=None, lang=None):
     """Returns a Site instance based on information from our config file.
