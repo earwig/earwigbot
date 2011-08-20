@@ -20,6 +20,7 @@ class Command(BaseCommand):
 
         username = ' '.join(data.args)
         site = wiki.get_site()
+        site._maxlag = None
         user = site.get_user(username)
         
         try:

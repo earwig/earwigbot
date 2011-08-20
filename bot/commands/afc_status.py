@@ -27,6 +27,7 @@ class Command(BaseCommand):
 
     def process(self, data):
         self.site = wiki.get_site()
+        self.site._maxlag = None
 
         if data.line[1] == "JOIN":
             notice = self.get_join_notice()
