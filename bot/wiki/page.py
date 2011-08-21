@@ -1,6 +1,8 @@
 # -*- coding: utf-8  -*-
 
+from hashlib import md5
 import re
+from time import strftime
 from urllib import quote
 
 from wiki.exceptions import *
@@ -25,7 +27,9 @@ class Page(object):
     is_redirect         -- returns True if the page is a redirect, else False
     toggle_talk         -- returns a content page's talk page, or vice versa
     get                 -- returns page content
-    get_redirect_target -- if the page is a redirect, returns its destination 
+    get_redirect_target -- if the page is a redirect, returns its destination
+    edit                -- replaces the page's content or creates a new page
+    add_section         -- add a new section at the bottom of the page
     """
 
     def __init__(self, site, title, follow_redirects=False):
@@ -53,6 +57,11 @@ class Page(object):
         self._fullurl = None
         self._content = None
         self._creator = None
+
+        # Attributes used for editing/deleting/protecting/etc:
+        self._token = None
+        self._basetimestamp = None
+        self._starttimestamp = None
 
         # Try to determine the page's namespace using our site's namespace
         # converter:
@@ -124,16 +133,16 @@ class Page(object):
         """Loads various data from the API in a single query.
 
         Loads self._title, ._exists, ._is_redirect, ._pageid, ._fullurl,
-        ._protection, ._namespace, ._is_talkpage, ._creator, and ._lastrevid
-        using the API. It will do a query of its own unless `result` is
-        provided, in which case we'll pretend `result` is what the query
-        returned.
+        ._protection, ._namespace, ._is_talkpage, ._creator, ._lastrevid,
+        ._token, and ._starttimestamp using the API. It will do a query of
+        its own unless `result` is provided, in which case we'll pretend
+        `result` is what the query returned.
 
         Assuming the API is sound, this should not raise any exceptions.
         """
         if result is None:
-            params = {"action": "query", "rvprop": "user", "rvdir": "newer",
-                      "prop": "info|revisions", "rvlimit": 1,
+            params = {"action": "query", "rvprop": "user", "intoken": "edit",
+                      "prop": "info|revisions", "rvlimit": 1, "rvdir": "newer",
                       "titles": self._title, "inprop": "protection|url"}
             result = self._site._api_query(params)
 
@@ -168,6 +177,13 @@ class Page(object):
         self._fullurl = res["fullurl"]
         self._protection = res["protection"]
 
+        try:
+            self._token = res["edittoken"]
+        except KeyError:
+            pass
+        else:
+            self._starttimestamp = strftime("%Y-%m-%dT%H:%M:%SZ")
+
         # We've determined the namespace and talkpage status in __init__()
         # based on the title, but now we can be sure:
         self._namespace = res["ns"]
@@ -192,19 +208,38 @@ class Page(object):
         """
         if result is None:
             params = {"action": "query", "prop": "revisions", "rvlimit": 1,
-                      "rvprop": "content", "titles": self._title}
+                      "rvprop": "content|timestamp", "titles": self._title}
             result = self._site._api_query(params)
 
         res = result["query"]["pages"].values()[0]
         try:
-            content = res["revisions"][0]["*"]
-            self._content = content
+            self._content = res["revisions"][0]["*"]
+            self._basetimestamp = res["revisions"][0]["timestamp"]
         except KeyError:
             # This can only happen if the page was deleted since we last called
             # self._load_attributes(). In that case, some of our attributes are
             # outdated, so force another self._load_attributes():
             self._load_attributes()
             self._force_existence()
+
+    def _get_token(self):
+        """Tries to get an edit token for the page.
+
+        This is actually the same as the delete and protect tokens, so we'll
+        use it for everything. Raises PermissionError if we're not allowed to
+        edit the page, otherwise sets self._token and self._starttimestamp.
+        """
+        params = {"action": "query", "prop": "info", "intoken": "edit",
+                  "titles": self._title}
+        result = self._site._api_query(params)
+
+        try:
+            self._token = result["query"]["pages"].values()[0]["edittoken"]
+        except KeyError:
+            e = "You don't have permission to edit this page."
+            raise PermissionsError(e)
+        else:
+            self._starttimestamp = strftime("%Y-%m-%dT%H:%M:%SZ")
 
     def title(self, force=False):
         """Returns the Page's title, or pagename.
@@ -394,9 +429,9 @@ class Page(object):
         if force or self._exists == 0:
             # Kill two birds with one stone by doing an API query for both our
             # attributes and our page content:
-            params = {"action": "query", "rvprop": "content", "rvlimit": 1,
+            params = {"action": "query", "rvlimit": 1, "titles": self._title,
                       "prop": "info|revisions", "inprop": "protection|url",
-                      "titles": self._title}
+                      "intoken": "edit", "rvprop": "content|timestamp"}
             result = self._site._api_query(params)
             self._load_attributes(result=result)
             self._force_existence()
@@ -438,3 +473,45 @@ class Page(object):
         except IndexError:
             e = "The page does not appear to have a redirect target."
             raise RedirectError(e)
+
+    def edit(self, text, summary, minor=False, bot=True, force=False):
+        """Replaces the page's content or creates a new page.
+
+        `text` is the new page content, with `summary` as the edit summary.
+        If `minor` is True, the edit will be marked as minor. If `bot` is true,
+        the edit will be marked as a bot edit, but only if we actually have a
+        bot flag.
+
+        Use `force` to ignore edit conflicts and page deletions/recreations
+        that occured between getting our edit token and editing our page. Be
+        careful with this!
+        """
+        if not self._token:
+            self._get_token()
+
+        hashed = md5(text).hexdigest()
+
+        params = {"action": "edit", "title": self._title, "text": text,
+                  "token": self._token, "summary": summary, "md5": hashed}
+
+        if minor:
+            params["minor"] = "true"
+        else:
+            params["notminor"] = "true"
+        if bot:
+            params["bot"] = "true"
+
+        if not force:
+            params["starttimestamp"] = self._starttimestamp
+            if self._basetimestamp:
+                params["basetimestamp"] = self._basetimestamp
+        else:
+            params["recreate"] = "true"
+
+        result = self._site._api_query(params)
+        print result
+
+    def add_section(self, text, title, minor=False, bot=True):
+        """
+        """
+        pass
