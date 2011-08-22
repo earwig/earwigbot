@@ -32,7 +32,7 @@ class Command(BaseCommand):
             self.connection.reply(data, msg.format(name))
             return
 
-        date = time.strftime("%b %m, %Y at %I:%M:%S %p", reg)
+        date = time.strftime("%b %m, %Y at %H:%M:%S %Z", reg)
         age = self.get_diff(time.mktime(reg), time.mktime(time.gmtime()))
 
         g = user.gender()
