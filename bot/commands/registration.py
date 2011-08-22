@@ -41,7 +41,7 @@ class Command(BaseCommand):
         elif g == "female":
             gender = "She's"
         else:
-            gende = "They're"
+            gender = "They're"
         
         msg = "\x0302{0}\x0301 registered on {1}. {2} {3} old."
         self.connection.reply(data, msg.format(name, date, gender, age))
