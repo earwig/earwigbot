@@ -1,5 +1,7 @@
 # -*- coding: utf-8  -*-
 
+from urllib import quote_plus
+
 from classes import BaseCommand
 import wiki
 
@@ -30,5 +32,8 @@ class Command(BaseCommand):
             self.connection.reply(data, msg.format(username))
             return
 
-        msg = "\x0302{0}\x0301 has {1} edits."
-        self.connection.reply(data, msg.format(username, count))
+        url = "http://toolserver.org/~soxred93/pcount/index.php?name={0}&lang=en&wiki=wikipedia"
+        url = url.format(quote_plus(user.name()))
+
+        msg = "\x0302{0}\x0301 has {1} edits ({2})."
+        self.connection.reply(data, msg.format(username, count, url))
