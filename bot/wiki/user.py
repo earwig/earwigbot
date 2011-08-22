@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 
-from time import strptime
+from time import gmtime, strptime
 
 from wiki.constants import *
 from wiki.exceptions import UserNotFoundError
@@ -101,7 +101,12 @@ class User(object):
         self._editcount = res["editcount"]
 
         reg = res["registration"]
-        self._registration = strptime(reg, "%Y-%m-%dT%H:%M:%SZ")
+        try:
+            self._registration = strptime(reg, "%Y-%m-%dT%H:%M:%SZ")
+        except TypeError:
+            # Sometimes the API doesn't give a date; the user's probably really
+            # old. There's nothing else we can do!
+            self._registration = gmtime(0)
 
         try:
             res["emailable"]
