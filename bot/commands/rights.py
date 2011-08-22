@@ -4,7 +4,7 @@ from classes import BaseCommand
 import wiki
 
 class Command(BaseCommand):
-    """Retrieve a list of rights for a given username."""
+    """Retrieve a list of rights for a given name."""
     name = "rights"
 
     def check(self, data):
@@ -15,19 +15,19 @@ class Command(BaseCommand):
 
     def process(self, data):
         if not data.args:
-            self.connection.reply(data, "who do you want me to look up?")
-            return
+            name = data.nick
+        else:
+            name = ' '.join(data.args)
 
-        username = ' '.join(data.args)
         site = wiki.get_site()
         site._maxlag = None
-        user = site.get_user(username)
-        
+        user = site.get_user(name)
+
         try:
             rights = user.groups()
         except wiki.UserNotFoundError:
             msg = "the user \x0302{0}\x0301 does not exist."
-            self.connection.reply(data, msg.format(username))
+            self.connection.reply(data, msg.format(name))
             return
 
         try:
@@ -35,4 +35,4 @@ class Command(BaseCommand):
         except ValueError:
             pass
         msg = "the rights for \x0302{0}\x0301 are {1}."
-        self.connection.reply(data, msg.format(username, ', '.join(rights)))
+        self.connection.reply(data, msg.format(name, ', '.join(rights)))
