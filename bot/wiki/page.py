@@ -222,24 +222,104 @@ class Page(object):
             self._load_attributes()
             self._force_existence()
 
-    def _get_token(self):
-        """Tries to get an edit token for the page.
-
-        This is actually the same as the delete and protect tokens, so we'll
-        use it for everything. Raises PermissionError if we're not allowed to
-        edit the page, otherwise sets self._token and self._starttimestamp.
+    def _edit(self, params=None, text=None, summary=None, minor=None, bot=None,
+              force=None, section=None, captcha_id=None, captcha_word=None,
+              tries=0):
+        """Edit a page!
+        
+        If `params` is given, 
         """
-        params = {"action": "query", "prop": "info", "intoken": "edit",
-                  "titles": self._title}
-        result = self._site._api_query(params)
-
-        try:
-            self._token = result["query"]["pages"].values()[0]["edittoken"]
-        except KeyError:
+        if not self._token:
+            self._load_attributes()
+        if not self._token:
             e = "You don't have permission to edit this page."
             raise PermissionsError(e)
+        self._force_validity()  # Weed these out before we get too far
+
+        if not params:
+            params = self._build_edit_params(text, summary, minor, bot, force,
+                                             section, captcha_id, captcha_word)
+
+        try:
+            result = self._site._api_query(params)
+        except SiteAPIError as error:
+            if not hasattr(error, code):
+                raise
+            result = self._handle_edit_exceptions(error, params, tries)
+
+        # These attributes are now invalidated:
+        self._content = None
+        self._basetimestamp = None
+
+        return result
+
+    def _build_edit_params(self, text, summary, minor, bot, force, section,
+                           captcha_id, captcha_word):
+        """Something."""
+        hashed = md5(text).hexdigest()  # Checksum to ensure text is correct
+        params = {"action": "edit", "title": self._title, "text": text,
+                  "token": self._token, "summary": summary, "md5": hashed}
+
+        if section:
+            params["section"] = section
+        if captcha_id and captcha_word:
+            params["captchaid"] = captcha_id
+            params["captchaword"] = captcha_word
+        if minor:
+            params["minor"] = "true"
         else:
-            self._starttimestamp = strftime("%Y-%m-%dT%H:%M:%SZ")
+            params["notminor"] = "true"
+        if bot:
+            params["bot"] = "true"
+        if self._exists == 2:  # Page does not already exist
+            params["recreate"] = "true"
+
+        if not force:
+            params["starttimestamp"] = self._starttimestamp
+            if self._basetimestamp:
+                params["basetimestamp"] = self._basetimestamp
+            if self._exists == 3:
+                # Page exists; don't re-create it by accident if it's deleted:
+                params["nocreate"] = "true"
+            else:
+                # Page does not exist; don't edit if it already exists:
+                params["createonly"] = "true"
+
+        return params
+
+    def _handle_edit_exceptions(self, error, params, tries):
+        """Something."""
+        if error.code in ["noedit", "cantcreate", "protectedtitle",
+                          "noimageredirect"]:
+            raise PermissionsError(error.info)
+
+        elif error.code in ["noedit-anon", "cantcreate-anon",
+                            "noimageredirect-anon"]:
+            if not all(self._site._login_info):  # Insufficient login info
+                raise PermissionsError(error.info)
+            if self.tries == 0:  # We have login info; try to login:
+                self._site._login(self._site._login_info)
+                return self._edit(params=params, tries=1)
+            else:  # We already tried to log in and failed!
+                e = "Although we should be logged in, we are not. This may be a cookie problem or an odd bug."
+                raise LoginError(e)
+
+        elif error.code in ["editconflict", "pagedeleted", "articleexists"]:
+            raise EditConflictError(error.info)
+
+        elif error.code in ["emptypage", "emptynewsection"]:
+            raise NoContentError(error.info)
+
+        elif error.code == "contenttoobig":
+            raise ContentTooBigError(error.info)
+
+        elif error.code == "spamdetected":
+            raise SpamDetectedError(error.info)
+
+        elif error.code == "filtered":
+            raise FilteredError(error.info)
+
+        raise EditError(", ".join((error.code, error.info)))
 
     def title(self, force=False):
         """Returns the Page's title, or pagename.
@@ -482,36 +562,23 @@ class Page(object):
         the edit will be marked as a bot edit, but only if we actually have a
         bot flag.
 
-        Use `force` to ignore edit conflicts and page deletions/recreations
-        that occured between getting our edit token and editing our page. Be
-        careful with this!
+        Use `force` to push the new content even if there's an edit conflict or
+        the page was deleted/recreated between getting our edit token and
+        editing our page. Be careful with this!
         """
-        if not self._token:
-            self._get_token()
+        self._edit(text=text, summary=summary, minor=minor, bot=bot,
+                   force=force)
 
-        hashed = md5(text).hexdigest()
+    def add_section(self, text, title, minor=False, bot=True, force=False):
+        """Adds a new section to the bottom of the page.
 
-        params = {"action": "edit", "title": self._title, "text": text,
-                  "token": self._token, "summary": summary, "md5": hashed}
+        The arguments for this are the same as those for edit(), but instead of
+        providing a summary, you provide a section title.
 
-        if minor:
-            params["minor"] = "true"
-        else:
-            params["notminor"] = "true"
-        if bot:
-            params["bot"] = "true"
+        Likewise, raised exceptions are the same as edit()'s.
 
-        if not force:
-            params["starttimestamp"] = self._starttimestamp
-            if self._basetimestamp:
-                params["basetimestamp"] = self._basetimestamp
-        else:
-            params["recreate"] = "true"
-
-        result = self._site._api_query(params)
-        print result
-
-    def add_section(self, text, title, minor=False, bot=True):
+        This should create the page if it does not already exist, with just the
+        new section as content.
         """
-        """
-        pass
+        self._edit(text=text, summary=title, minor=minor, bot=bot, force=force,
+                   section="new")

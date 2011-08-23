@@ -176,7 +176,9 @@ class Site(object):
             return self._api_query(params, tries=tries, wait=wait*3)
         else:
             e = 'API query failed: got error "{0}"; server says: "{1}".'
-            raise SiteAPIError(e.format(code, info))
+            error = SiteAPIError(e.format(code, info))
+            error.code, error.info = code, info
+            raise error
 
     def _load_attributes(self, force=False):
         """Load data about our Site from the API.
