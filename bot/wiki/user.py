@@ -45,6 +45,14 @@ class User(object):
         self._site = site
         self._name = name
 
+    def __repr__(self):
+        """Returns the canonical string representation of the User."""
+        return "User(name={0!r}, site={1!r})".format(self._name, self._site)
+
+    def __str__(self):
+        """Returns a nice string representation of the User."""
+        return '<User "{0}" of {1}>'.format(self.name(), str(self._site))
+
     def _get_attribute(self, attr, force):
         """Internally used to get an attribute by name.
 

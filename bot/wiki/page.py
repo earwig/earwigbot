@@ -81,6 +81,16 @@ class Page(object):
         else:
             self._is_talkpage = self._namespace % 2 == 1
 
+    def __repr__(self):
+        """Returns the canonical string representation of the Page."""
+        res = ", ".join(("Page(title={0!r}", "follow_redirects={1!r}",
+                         "site={2!r})"))
+        return res.format(self._title, self._follow_redirects, self._site)
+
+    def __str__(self):
+        """Returns a nice string representation of the Page."""
+        return '<Page "{0}" of {1}>'.format(self.title(), str(self._site))
+
     def _force_validity(self):
         """Used to ensure that our page's title is valid.
 

@@ -96,6 +96,31 @@ class Site(object):
             if logged_in_as is None or name != logged_in_as:
                 self._login(login)
 
+    def __repr__(self):
+        """Returns the canonical string representation of the Site."""
+        res = ", ".join((
+            "Site(name={_name!r}", "project={_project!r}", "lang={_lang!r}",
+            "base_url={_base_url!r}", "article_path={_article_path!r}",
+            "script_path={_script_path!r}", "assert_edit={_assert_edit!r}",
+            "maxlag={_maxlag!r}", "sql={_sql!r}", "login={0}",
+            "user_agent={2!r}", "cookiejar={1})"
+        ))
+        name, password = self._login_info
+        login = "({0}, {1})".format(repr(name), "hidden" if password else None)
+        cookies = self._cookiejar.__class__.__name__
+        try:
+            cookies += "({0!r})".format(self._cookiejar.filename)
+        except AttributeError:
+            cookies += "()"
+        agent = self._opener.addheaders[0][1]
+        return res.format(login, cookies, agent, **self.__dict__)
+
+    def __str__(self):
+        """Returns a nice string representation of the Site."""
+        res = "<Site {0} ({1}:{2}) at {3}>"
+        return res.format(self.name(), self.project(), self.lang(),
+                          self.domain())
+
     def _api_query(self, params, tries=0, wait=5):
         """Do an API query with `params` as a dict of parameters.
 
