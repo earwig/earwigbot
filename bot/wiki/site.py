@@ -162,7 +162,7 @@ class Site(object):
         try:
             code = res["error"]["code"]
             info = res["error"]["info"]
-        except KeyError:
+        except (TypeError, KeyError):
             return res
 
         if code == "maxlag":

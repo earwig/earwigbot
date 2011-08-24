@@ -2,7 +2,7 @@
 
 from hashlib import md5
 import re
-from time import strftime
+from time import gmtime, strftime
 from urllib import quote
 
 from wiki.exceptions import *
@@ -182,7 +182,7 @@ class Page(object):
         except KeyError:
             pass
         else:
-            self._starttimestamp = strftime("%Y-%m-%dT%H:%M:%SZ")
+            self._starttimestamp = strftime("%Y-%m-%dT%H:%M:%SZ", gmtime())
 
         # We've determined the namespace and talkpage status in __init__()
         # based on the title, but now we can be sure:
@@ -225,37 +225,59 @@ class Page(object):
     def _edit(self, params=None, text=None, summary=None, minor=None, bot=None,
               force=None, section=None, captcha_id=None, captcha_word=None,
               tries=0):
-        """Edit a page!
+        """Edit the page!
+
+        If `params` is given, we'll use it as our API query parameters.
+        Otherwise, we'll build params using the given kwargs via
+        _build_edit_params().
         
-        If `params` is given, 
+        We'll then try to do the API query, and catch any errors the API raises
+        in _handle_edit_errors(). We'll then throw these back as subclasses of
+        EditError.
         """
+        # Try to get our edit token, and die if we can't:
         if not self._token:
             self._load_attributes()
         if not self._token:
             e = "You don't have permission to edit this page."
             raise PermissionsError(e)
-        self._force_validity()  # Weed these out before we get too far
+        
+        # Weed out invalid pages before we get too far:
+        self._force_validity()
 
+        # Build our API query string:
         if not params:
             params = self._build_edit_params(text, summary, minor, bot, force,
                                              section, captcha_id, captcha_word)
+        else: # Make sure we have the right token:
+            params["token"] = self._token
 
+        # Try the API query, catching most errors with our handler:
         try:
             result = self._site._api_query(params)
         except SiteAPIError as error:
-            if not hasattr(error, code):
-                raise
-            result = self._handle_edit_exceptions(error, params, tries)
+            if not hasattr(error, "code"):
+                raise  # We can only handle errors with a code attribute
+            result = self._handle_edit_errors(error, params, tries)
 
-        # These attributes are now invalidated:
-        self._content = None
-        self._basetimestamp = None
+        # If everything was successful, reset invalidated attributes:
+        if result["edit"]["result"] == "Success":
+            self._content = None
+            self._basetimestamp = None
+            self._exists = 0
+            return
 
-        return result
+        # If we're here, then the edit failed. If it's because of AssertEdit,
+        # handle that. Otherwise, die - something odd is going on:
+        try:
+            assertion = result["edit"]["assert"]
+        except KeyError:
+            raise EditError(result["edit"])
+        self._handle_assert_edit(assertion, params, tries)
 
     def _build_edit_params(self, text, summary, minor, bot, force, section,
                            captcha_id, captcha_word):
-        """Something."""
+        """Given some keyword arguments, build an API edit query string."""
         hashed = md5(text).hexdigest()  # Checksum to ensure text is correct
         params = {"action": "edit", "title": self._title, "text": text,
                   "token": self._token, "summary": summary, "md5": hashed}
@@ -271,40 +293,50 @@ class Page(object):
             params["notminor"] = "true"
         if bot:
             params["bot"] = "true"
-        if self._exists == 2:  # Page does not already exist
-            params["recreate"] = "true"
 
         if not force:
             params["starttimestamp"] = self._starttimestamp
             if self._basetimestamp:
                 params["basetimestamp"] = self._basetimestamp
-            if self._exists == 3:
-                # Page exists; don't re-create it by accident if it's deleted:
-                params["nocreate"] = "true"
-            else:
+            if self._exists == 2:
                 # Page does not exist; don't edit if it already exists:
                 params["createonly"] = "true"
+        else:
+            params["recreate"] = "true"            
 
         return params
 
-    def _handle_edit_exceptions(self, error, params, tries):
-        """Something."""
+    def _handle_edit_errors(self, error, params, tries):
+        """If our edit fails due to some error, try to handle it.
+
+        We'll either raise an appropriate exception (for example, if the page
+        is protected), or we'll try to fix it (for example, if we can't edit
+        due to being logged out, we'll try to log in).
+        """
         if error.code in ["noedit", "cantcreate", "protectedtitle",
                           "noimageredirect"]:
             raise PermissionsError(error.info)
 
         elif error.code in ["noedit-anon", "cantcreate-anon",
                             "noimageredirect-anon"]:
-            if not all(self._site._login_info):  # Insufficient login info
+            if not all(self._site._login_info):
+                # Insufficient login info:
                 raise PermissionsError(error.info)
-            if self.tries == 0:  # We have login info; try to login:
+            if tries == 0:
+                # We have login info; try to login:
                 self._site._login(self._site._login_info)
+                self._token = None  # Need a new token; old one is invalid now
                 return self._edit(params=params, tries=1)
-            else:  # We already tried to log in and failed!
+            else:
+                # We already tried to log in and failed!
                 e = "Although we should be logged in, we are not. This may be a cookie problem or an odd bug."
                 raise LoginError(e)
 
         elif error.code in ["editconflict", "pagedeleted", "articleexists"]:
+            # These attributes are now invalidated:
+            self._content = None
+            self._basetimestamp = None
+            self._exists = 0
             raise EditConflictError(error.info)
 
         elif error.code in ["emptypage", "emptynewsection"]:
@@ -319,7 +351,36 @@ class Page(object):
         elif error.code == "filtered":
             raise FilteredError(error.info)
 
-        raise EditError(", ".join((error.code, error.info)))
+        raise EditError(": ".join((error.code, error.info)))
+
+    def _handle_assert_edit(self, assertion, params, tries):
+        """If we can't edit due to a failed AssertEdit assertion, handle that.
+
+        If the assertion was 'user' and we have valid login information, try to
+        log in. Otherwise, raise PermissionsError with details.
+        """
+        if assertion == "user":
+            if not all(self._site._login_info):
+                # Insufficient login info:
+                e = "AssertEdit: user assertion failed, and no login info was provided."
+                raise PermissionsError(e)
+            if tries == 0:
+                # We have login info; try to login:
+                self._site._login(self._site._login_info)
+                self._token = None  # Need a new token; old one is invalid now
+                return self._edit(params=params, tries=1)
+            else:
+                # We already tried to log in and failed!
+                e = "Although we should be logged in, we are not. This may be a cookie problem or an odd bug."
+                raise LoginError(e)
+
+        elif assertion == "bot":
+            e = "AssertEdit: bot assertion failed; we don't have a bot flag!"
+            raise PermissionsError(e)
+
+        # Unknown assertion, maybe "true", "false", or "exists":
+        e = "AssertEdit: assertion '{0}' failed.".format(assertion)
+        raise PermissionsError(e)
 
     def title(self, force=False):
         """Returns the Page's title, or pagename.
