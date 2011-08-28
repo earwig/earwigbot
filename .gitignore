@@ -7,6 +7,9 @@ config.json
 # Ignore cookies file:
 .cookies
 
+# Ignore statistics file:
+statistics.txt
+
 # Ignore OS X's crud:
 .DS_Store
 

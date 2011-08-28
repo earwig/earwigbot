@@ -4,7 +4,7 @@ from classes import BaseCommand
 import wiki
 
 class Command(BaseCommand):
-    """Retrieve a list of rights for a given name."""
+    """Retrieve a list of rights for a given username."""
     name = "rights"
 
     def check(self, data):

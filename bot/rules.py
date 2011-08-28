@@ -36,8 +36,8 @@ def process(rc):
         chans.update(("##earwigbot", "#wikipedia-en-afc"))
         
     if r_page.search(page_name):
-        tasks.start("afc_statistics", action="process_edit", page=rc.page)
-        tasks.start("afc_copyvios", action="process_edit", page=rc.page)
+        tasks.start("afc_statistics", action="edit", page=rc.page)
+        tasks.start("afc_copyvios", action="edit", page=rc.page)
         chans.add("#wikipedia-en-afc")
         
     elif r_ffu.match(page_name):
@@ -49,20 +49,20 @@ def process(rc):
     elif rc.flags == "move" and (r_move1.match(comment) or
                                  r_move2.match(comment)):
         p = r_moved_pages.findall(rc.comment)[0]
-        tasks.start("afc_statistics", action="process_move", pages=p)
-        tasks.start("afc_copyvios", action="process_move", pages=p)
+        tasks.start("afc_statistics", action="move", page=p)
+        tasks.start("afc_copyvios", action="move", page=p)
         chans.add("#wikipedia-en-afc")
     
     elif rc.flags == "delete" and r_delete.match(comment):
         p = r_deleted_page.findall(rc.comment)[0]
-        tasks.start("afc_statistics", action="process_delete", page=p)
-        tasks.start("afc_copyvios", action="process_delete", page=p)
+        tasks.start("afc_statistics", action="delete", page=p)
+        tasks.start("afc_copyvios", action="delete", page=p)
         chans.add("#wikipedia-en-afc")
     
     elif rc.flags == "restore" and r_restore.match(comment):
         p = r_restored_page.findall(rc.comment)[0]
-        tasks.start("afc_statistics", action="process_restore", page=p)
-        tasks.start("afc_copyvios", action="process_restore", page=p)
+        tasks.start("afc_statistics", action="restore", page=p)
+        tasks.start("afc_copyvios", action="restore", page=p)
         chans.add("#wikipedia-en-afc")
     
     elif rc.flags == "protect" and r_protect.match(comment):
