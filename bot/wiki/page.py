@@ -83,8 +83,7 @@ class Page(object):
 
     def __repr__(self):
         """Returns the canonical string representation of the Page."""
-        res = ", ".join(("Page(title={0!r}", "follow_redirects={1!r}",
-                         "site={2!r})"))
+        res = "Page(title={0!r}, follow_redirects={1!r}, site={2!r})"
         return res.format(self._title, self._follow_redirects, self._site)
 
     def __str__(self):
