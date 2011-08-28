@@ -11,6 +11,7 @@ class Command(BaseCommand):
 
     def process(self, data):
         self.site = wiki.get_site()
+        self.site._maxlag = None
         self.data = data
 
         if not data.args:

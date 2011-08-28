@@ -5,6 +5,7 @@ from gzip import GzipFile
 from json import loads
 from re import escape as re_escape, match as re_match
 from StringIO import StringIO
+from time import sleep
 from urllib import unquote_plus, urlencode
 from urllib2 import build_opener, HTTPCookieProcessor, URLError
 from urlparse import urlparse
@@ -41,7 +42,7 @@ class Site(object):
     def __init__(self, name=None, project=None, lang=None, base_url=None,
                  article_path=None, script_path=None, sql=(None, None),
                  namespaces=None, login=(None, None), cookiejar=None,
-                 user_agent=None):
+                 user_agent=None, assert_edit=None, maxlag=None):
         """Constructor for new Site instances.
 
         This probably isn't necessary to call yourself unless you're building a
@@ -69,6 +70,11 @@ class Site(object):
         self._sql = sql
         self._namespaces = namespaces
 
+        # Attributes used when querying the API: 
+        self._assert_edit = assert_edit
+        self._maxlag = maxlag
+        self._max_retries = 5
+
         # Set up cookiejar and URL opener for making API queries:
         if cookiejar is not None:
             self._cookiejar = cookiejar
@@ -90,22 +96,50 @@ class Site(object):
             if logged_in_as is None or name != logged_in_as:
                 self._login(login)
 
-    def _api_query(self, params):
+    def __repr__(self):
+        """Returns the canonical string representation of the Site."""
+        res = ", ".join((
+            "Site(name={_name!r}", "project={_project!r}", "lang={_lang!r}",
+            "base_url={_base_url!r}", "article_path={_article_path!r}",
+            "script_path={_script_path!r}", "assert_edit={_assert_edit!r}",
+            "maxlag={_maxlag!r}", "sql={_sql!r}", "login={0}",
+            "user_agent={2!r}", "cookiejar={1})"
+        ))
+        name, password = self._login_info
+        login = "({0}, {1})".format(repr(name), "hidden" if password else None)
+        cookies = self._cookiejar.__class__.__name__
+        try:
+            cookies += "({0!r})".format(self._cookiejar.filename)
+        except AttributeError:
+            cookies += "()"
+        agent = self._opener.addheaders[0][1]
+        return res.format(login, cookies, agent, **self.__dict__)
+
+    def __str__(self):
+        """Returns a nice string representation of the Site."""
+        res = "<Site {0} ({1}:{2}) at {3}>"
+        return res.format(self.name(), self.project(), self.lang(),
+                          self.domain())
+
+    def _api_query(self, params, tries=0, wait=5):
         """Do an API query with `params` as a dict of parameters.
 
         This will first attempt to construct an API url from self._base_url and
         self._script_path. We need both of these, or else we'll raise
         SiteAPIError.
 
-        We'll encode the given params, adding format=json along the way, and
-        make the request through self._opener, which has built-in cookie
+        We'll encode the given params, adding format=json along the way, as
+        well as &assert= and &maxlag= based on self._assert_edit and _maxlag.
+        We make the request through self._opener, which has built-in cookie
         support via self._cookiejar, a User-Agent (wiki.constants.USER_AGENT),
         and Accept-Encoding set to "gzip".
-        
+
         Assuming everything went well, we'll gunzip the data (if compressed),
         load it as a JSON object, and return it.
 
-        If our request failed, we'll raise SiteAPIError with details.
+        If our request failed for some reason, we'll raise SiteAPIError with
+        details. If that reason was due to maxlag, we'll sleep for a bit and
+        then repeat the query until we exceed self._max_retries.
 
         There's helpful MediaWiki API documentation at
         <http://www.mediawiki.org/wiki/API>.
@@ -115,7 +149,13 @@ class Site(object):
             raise SiteAPIError(e)
 
         url = ''.join((self._base_url, self._script_path, "/api.php"))
+
         params["format"] = "json"  # This is the only format we understand
+        if self._assert_edit:  # If requested, ensure that we're logged in
+            params["assert"] = self._assert_edit
+        if self._maxlag:  # If requested, don't overload the servers
+            params["maxlag"] = self._maxlag
+
         data = urlencode(params)
 
         print url, data  # debug code
@@ -124,21 +164,46 @@ class Site(object):
             response = self._opener.open(url, data)
         except URLError as error:
             if hasattr(error, "reason"):
-                e = "API query at {0} failed because {1}."
-                e = e.format(error.geturl, error.reason)
+                e = "API query failed: {0}.".format(error.reason)
             elif hasattr(error, "code"):
-                e = "API query at {0} failed; got an error code of {1}."
-                e = e.format(error.geturl, error.code)
+                e = "API query failed: got an error code of {0}."
+                e = e.format(error.code)
             else:
                 e = "API query failed."
             raise SiteAPIError(e)
+
+        result = response.read()
+        if response.headers.get("Content-Encoding") == "gzip":
+            stream = StringIO(result)
+            gzipper = GzipFile(fileobj=stream)
+            result = gzipper.read()
+
+        try:
+            res = loads(result)  # Parse as a JSON object
+        except ValueError:
+            e = "API query failed: JSON could not be decoded."
+            raise SiteAPIError(e)
+
+        try:
+            code = res["error"]["code"]
+            info = res["error"]["info"]
+        except (TypeError, KeyError):
+            return res
+
+        if code == "maxlag":
+            if tries >= self._max_retries:
+                e = "Maximum number of retries reached ({0})."
+                raise SiteAPIError(e.format(self._max_retries))
+            tries += 1
+            msg = 'Server says: "{0}". Retrying in {1} seconds ({2}/{3}).'
+            print msg.format(info, wait, tries, self._max_retries)
+            sleep(wait)
+            return self._api_query(params, tries=tries, wait=wait*3)
         else:
-            result = response.read()
-            if response.headers.get("Content-Encoding") == "gzip":
-                stream = StringIO(result)
-                gzipper = GzipFile(fileobj=stream)
-                result = gzipper.read()
-            return loads(result)  # Parse as a JSON object
+            e = 'API query failed: got error "{0}"; server says: "{1}".'
+            error = SiteAPIError(e.format(code, info))
+            error.code, error.info = code, info
+            raise error
 
     def _load_attributes(self, force=False):
         """Load data about our Site from the API.

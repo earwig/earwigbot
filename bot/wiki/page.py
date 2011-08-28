@@ -1,6 +1,8 @@
 # -*- coding: utf-8  -*-
 
+from hashlib import md5
 import re
+from time import gmtime, strftime
 from urllib import quote
 
 from wiki.exceptions import *
@@ -25,7 +27,9 @@ class Page(object):
     is_redirect         -- returns True if the page is a redirect, else False
     toggle_talk         -- returns a content page's talk page, or vice versa
     get                 -- returns page content
-    get_redirect_target -- if the page is a redirect, returns its destination 
+    get_redirect_target -- if the page is a redirect, returns its destination
+    edit                -- replaces the page's content or creates a new page
+    add_section         -- add a new section at the bottom of the page
     """
 
     def __init__(self, site, title, follow_redirects=False):
@@ -54,6 +58,11 @@ class Page(object):
         self._content = None
         self._creator = None
 
+        # Attributes used for editing/deleting/protecting/etc:
+        self._token = None
+        self._basetimestamp = None
+        self._starttimestamp = None
+
         # Try to determine the page's namespace using our site's namespace
         # converter:
         prefix = self._title.split(":", 1)[0]
@@ -71,6 +80,16 @@ class Page(object):
             self._is_talkpage = False
         else:
             self._is_talkpage = self._namespace % 2 == 1
+
+    def __repr__(self):
+        """Returns the canonical string representation of the Page."""
+        res = ", ".join(("Page(title={0!r}", "follow_redirects={1!r}",
+                         "site={2!r})"))
+        return res.format(self._title, self._follow_redirects, self._site)
+
+    def __str__(self):
+        """Returns a nice string representation of the Page."""
+        return '<Page "{0}" of {1}>'.format(self.title(), str(self._site))
 
     def _force_validity(self):
         """Used to ensure that our page's title is valid.
@@ -124,16 +143,16 @@ class Page(object):
         """Loads various data from the API in a single query.
 
         Loads self._title, ._exists, ._is_redirect, ._pageid, ._fullurl,
-        ._protection, ._namespace, ._is_talkpage, ._creator, and ._lastrevid
-        using the API. It will do a query of its own unless `result` is
-        provided, in which case we'll pretend `result` is what the query
-        returned.
+        ._protection, ._namespace, ._is_talkpage, ._creator, ._lastrevid,
+        ._token, and ._starttimestamp using the API. It will do a query of
+        its own unless `result` is provided, in which case we'll pretend
+        `result` is what the query returned.
 
         Assuming the API is sound, this should not raise any exceptions.
         """
         if result is None:
-            params = {"action": "query", "rvprop": "user", "rvdir": "newer",
-                      "prop": "info|revisions", "rvlimit": 1,
+            params = {"action": "query", "rvprop": "user", "intoken": "edit",
+                      "prop": "info|revisions", "rvlimit": 1, "rvdir": "newer",
                       "titles": self._title, "inprop": "protection|url"}
             result = self._site._api_query(params)
 
@@ -168,6 +187,13 @@ class Page(object):
         self._fullurl = res["fullurl"]
         self._protection = res["protection"]
 
+        try:
+            self._token = res["edittoken"]
+        except KeyError:
+            pass
+        else:
+            self._starttimestamp = strftime("%Y-%m-%dT%H:%M:%SZ", gmtime())
+
         # We've determined the namespace and talkpage status in __init__()
         # based on the title, but now we can be sure:
         self._namespace = res["ns"]
@@ -192,19 +218,179 @@ class Page(object):
         """
         if result is None:
             params = {"action": "query", "prop": "revisions", "rvlimit": 1,
-                      "rvprop": "content", "titles": self._title}
+                      "rvprop": "content|timestamp", "titles": self._title}
             result = self._site._api_query(params)
 
         res = result["query"]["pages"].values()[0]
         try:
-            content = res["revisions"][0]["*"]
-            self._content = content
+            self._content = res["revisions"][0]["*"]
+            self._basetimestamp = res["revisions"][0]["timestamp"]
         except KeyError:
             # This can only happen if the page was deleted since we last called
             # self._load_attributes(). In that case, some of our attributes are
             # outdated, so force another self._load_attributes():
             self._load_attributes()
             self._force_existence()
+
+    def _edit(self, params=None, text=None, summary=None, minor=None, bot=None,
+              force=None, section=None, captcha_id=None, captcha_word=None,
+              tries=0):
+        """Edit the page!
+
+        If `params` is given, we'll use it as our API query parameters.
+        Otherwise, we'll build params using the given kwargs via
+        _build_edit_params().
+        
+        We'll then try to do the API query, and catch any errors the API raises
+        in _handle_edit_errors(). We'll then throw these back as subclasses of
+        EditError.
+        """
+        # Try to get our edit token, and die if we can't:
+        if not self._token:
+            self._load_attributes()
+        if not self._token:
+            e = "You don't have permission to edit this page."
+            raise PermissionsError(e)
+        
+        # Weed out invalid pages before we get too far:
+        self._force_validity()
+
+        # Build our API query string:
+        if not params:
+            params = self._build_edit_params(text, summary, minor, bot, force,
+                                             section, captcha_id, captcha_word)
+        else: # Make sure we have the right token:
+            params["token"] = self._token
+
+        # Try the API query, catching most errors with our handler:
+        try:
+            result = self._site._api_query(params)
+        except SiteAPIError as error:
+            if not hasattr(error, "code"):
+                raise  # We can only handle errors with a code attribute
+            result = self._handle_edit_errors(error, params, tries)
+
+        # If everything was successful, reset invalidated attributes:
+        if result["edit"]["result"] == "Success":
+            self._content = None
+            self._basetimestamp = None
+            self._exists = 0
+            return
+
+        # If we're here, then the edit failed. If it's because of AssertEdit,
+        # handle that. Otherwise, die - something odd is going on:
+        try:
+            assertion = result["edit"]["assert"]
+        except KeyError:
+            raise EditError(result["edit"])
+        self._handle_assert_edit(assertion, params, tries)
+
+    def _build_edit_params(self, text, summary, minor, bot, force, section,
+                           captcha_id, captcha_word):
+        """Given some keyword arguments, build an API edit query string."""
+        hashed = md5(text).hexdigest()  # Checksum to ensure text is correct
+        params = {"action": "edit", "title": self._title, "text": text,
+                  "token": self._token, "summary": summary, "md5": hashed}
+
+        if section:
+            params["section"] = section
+        if captcha_id and captcha_word:
+            params["captchaid"] = captcha_id
+            params["captchaword"] = captcha_word
+        if minor:
+            params["minor"] = "true"
+        else:
+            params["notminor"] = "true"
+        if bot:
+            params["bot"] = "true"
+
+        if not force:
+            params["starttimestamp"] = self._starttimestamp
+            if self._basetimestamp:
+                params["basetimestamp"] = self._basetimestamp
+            if self._exists == 2:
+                # Page does not exist; don't edit if it already exists:
+                params["createonly"] = "true"
+        else:
+            params["recreate"] = "true"            
+
+        return params
+
+    def _handle_edit_errors(self, error, params, tries):
+        """If our edit fails due to some error, try to handle it.
+
+        We'll either raise an appropriate exception (for example, if the page
+        is protected), or we'll try to fix it (for example, if we can't edit
+        due to being logged out, we'll try to log in).
+        """
+        if error.code in ["noedit", "cantcreate", "protectedtitle",
+                          "noimageredirect"]:
+            raise PermissionsError(error.info)
+
+        elif error.code in ["noedit-anon", "cantcreate-anon",
+                            "noimageredirect-anon"]:
+            if not all(self._site._login_info):
+                # Insufficient login info:
+                raise PermissionsError(error.info)
+            if tries == 0:
+                # We have login info; try to login:
+                self._site._login(self._site._login_info)
+                self._token = None  # Need a new token; old one is invalid now
+                return self._edit(params=params, tries=1)
+            else:
+                # We already tried to log in and failed!
+                e = "Although we should be logged in, we are not. This may be a cookie problem or an odd bug."
+                raise LoginError(e)
+
+        elif error.code in ["editconflict", "pagedeleted", "articleexists"]:
+            # These attributes are now invalidated:
+            self._content = None
+            self._basetimestamp = None
+            self._exists = 0
+            raise EditConflictError(error.info)
+
+        elif error.code in ["emptypage", "emptynewsection"]:
+            raise NoContentError(error.info)
+
+        elif error.code == "contenttoobig":
+            raise ContentTooBigError(error.info)
+
+        elif error.code == "spamdetected":
+            raise SpamDetectedError(error.info)
+
+        elif error.code == "filtered":
+            raise FilteredError(error.info)
+
+        raise EditError(": ".join((error.code, error.info)))
+
+    def _handle_assert_edit(self, assertion, params, tries):
+        """If we can't edit due to a failed AssertEdit assertion, handle that.
+
+        If the assertion was 'user' and we have valid login information, try to
+        log in. Otherwise, raise PermissionsError with details.
+        """
+        if assertion == "user":
+            if not all(self._site._login_info):
+                # Insufficient login info:
+                e = "AssertEdit: user assertion failed, and no login info was provided."
+                raise PermissionsError(e)
+            if tries == 0:
+                # We have login info; try to login:
+                self._site._login(self._site._login_info)
+                self._token = None  # Need a new token; old one is invalid now
+                return self._edit(params=params, tries=1)
+            else:
+                # We already tried to log in and failed!
+                e = "Although we should be logged in, we are not. This may be a cookie problem or an odd bug."
+                raise LoginError(e)
+
+        elif assertion == "bot":
+            e = "AssertEdit: bot assertion failed; we don't have a bot flag!"
+            raise PermissionsError(e)
+
+        # Unknown assertion, maybe "true", "false", or "exists":
+        e = "AssertEdit: assertion '{0}' failed.".format(assertion)
+        raise PermissionsError(e)
 
     def title(self, force=False):
         """Returns the Page's title, or pagename.
@@ -394,9 +580,9 @@ class Page(object):
         if force or self._exists == 0:
             # Kill two birds with one stone by doing an API query for both our
             # attributes and our page content:
-            params = {"action": "query", "rvprop": "content", "rvlimit": 1,
+            params = {"action": "query", "rvlimit": 1, "titles": self._title,
                       "prop": "info|revisions", "inprop": "protection|url",
-                      "titles": self._title}
+                      "intoken": "edit", "rvprop": "content|timestamp"}
             result = self._site._api_query(params)
             self._load_attributes(result=result)
             self._force_existence()
@@ -438,3 +624,32 @@ class Page(object):
         except IndexError:
             e = "The page does not appear to have a redirect target."
             raise RedirectError(e)
+
+    def edit(self, text, summary, minor=False, bot=True, force=False):
+        """Replaces the page's content or creates a new page.
+
+        `text` is the new page content, with `summary` as the edit summary.
+        If `minor` is True, the edit will be marked as minor. If `bot` is true,
+        the edit will be marked as a bot edit, but only if we actually have a
+        bot flag.
+
+        Use `force` to push the new content even if there's an edit conflict or
+        the page was deleted/recreated between getting our edit token and
+        editing our page. Be careful with this!
+        """
+        self._edit(text=text, summary=summary, minor=minor, bot=bot,
+                   force=force)
+
+    def add_section(self, text, title, minor=False, bot=True, force=False):
+        """Adds a new section to the bottom of the page.
+
+        The arguments for this are the same as those for edit(), but instead of
+        providing a summary, you provide a section title.
+
+        Likewise, raised exceptions are the same as edit()'s.
+
+        This should create the page if it does not already exist, with just the
+        new section as content.
+        """
+        self._edit(text=text, summary=title, minor=minor, bot=bot, force=force,
+                   section="new")

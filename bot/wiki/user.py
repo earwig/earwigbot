@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 
-from time import strptime
+from time import gmtime, strptime
 
 from wiki.constants import *
 from wiki.exceptions import UserNotFoundError
@@ -44,6 +44,14 @@ class User(object):
         """
         self._site = site
         self._name = name
+
+    def __repr__(self):
+        """Returns the canonical string representation of the User."""
+        return "User(name={0!r}, site={1!r})".format(self._name, self._site)
+
+    def __str__(self):
+        """Returns a nice string representation of the User."""
+        return '<User "{0}" of {1}>'.format(self.name(), str(self._site))
 
     def _get_attribute(self, attr, force):
         """Internally used to get an attribute by name.
@@ -101,7 +109,12 @@ class User(object):
         self._editcount = res["editcount"]
 
         reg = res["registration"]
-        self._registration = strptime(reg, "%Y-%m-%dT%H:%M:%SZ")
+        try:
+            self._registration = strptime(reg, "%Y-%m-%dT%H:%M:%SZ")
+        except TypeError:
+            # Sometimes the API doesn't give a date; the user's probably really
+            # old. There's nothing else we can do!
+            self._registration = gmtime(0)
 
         try:
             res["emailable"]

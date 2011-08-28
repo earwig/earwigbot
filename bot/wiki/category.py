@@ -16,6 +16,16 @@ class Category(Page):
     members -- returns a list of titles in the category
     """
 
+    def __repr__(self):
+        """Returns the canonical string representation of the Category."""
+        res = ", ".join(("Category(title={0!r}", "follow_redirects={1!r}",
+                         "site={2!r})"))
+        return res.format(self._title, self._follow_redirects, self._site)
+
+    def __str__(self):
+        """Returns a nice string representation of the Category."""
+        return '<Category "{0}" of {1}>'.format(self.title(), str(self._site))
+
     def members(self, limit=50):
         """Returns a list of titles in the category.
 

@@ -3,7 +3,7 @@
 """
 EarwigBot's Wiki Toolset: Exceptions
 
-This module contains all exceptions used by the wiki package.
+This module contains all exceptions used by the wiki package. There are a lot.
 """
 
 class WikiToolsetError(Exception):
@@ -21,11 +21,6 @@ class SiteAPIError(WikiToolsetError):
 class LoginError(WikiToolsetError):
     """An error occured while trying to login. Perhaps the username/password is
     incorrect."""
-
-class PermissionsError(WikiToolsetError):
-    """We tried to do something we don't have permission to, like a non-admin
-    trying to delete a page, or trying to edit a page when no login information
-    was provided."""
 
 class NamespaceNotFoundError(WikiToolsetError):
     """A requested namespace name or namespace ID does not exist."""
@@ -45,3 +40,27 @@ class RedirectError(WikiToolsetError):
 class UserNotFoundError(WikiToolsetError):
     """Attempting to get certain information about a user that does not
     exist."""
+
+class EditError(WikiToolsetError):
+    """We got some error while editing. Sometimes, a subclass of this exception
+    will be used, like PermissionsError or EditConflictError."""
+
+class PermissionsError(EditError):
+    """We tried to do something we don't have permission to, like a non-admin
+    trying to delete a page, or trying to edit a page when no login information
+    was provided."""
+
+class EditConflictError(EditError):
+    """We've gotten an edit conflict or a (rarer) delete/recreate conflict."""
+
+class NoContentError(EditError):
+    """We tried to create a page or new section with no content."""
+
+class ContentTooBigError(EditError):
+    """The edit we tried to push exceeded the article size limit."""
+
+class SpamDetectedError(EditError):
+    """The spam filter refused our edit."""
+
+class FilteredError(EditError):
+    """The edit filter refused our edit."""

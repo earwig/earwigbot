@@ -1,14 +1,16 @@
 # -*- coding: utf-8  -*-
 
+from urllib import quote_plus
+
 from classes import BaseCommand
 import wiki
 
 class Command(BaseCommand):
-    """Retrieve a list of rights for a given name."""
-    name = "rights"
+    """Return a user's edit count."""
+    name = "editcount"
 
     def check(self, data):
-        commands = ["rights", "groups", "permissions", "privileges"]
+        commands = ["ec", "editcount"]
         if data.is_command and data.command in commands:
             return True
         return False
@@ -24,15 +26,13 @@ class Command(BaseCommand):
         user = site.get_user(name)
 
         try:
-            rights = user.groups()
+            count = user.editcount()
         except wiki.UserNotFoundError:
             msg = "the user \x0302{0}\x0301 does not exist."
             self.connection.reply(data, msg.format(name))
             return
 
-        try:
-            rights.remove("*")  # Remove the '*' group given to everyone
-        except ValueError:
-            pass
-        msg = "the rights for \x0302{0}\x0301 are {1}."
-        self.connection.reply(data, msg.format(name, ', '.join(rights)))
+        safe = quote_plus(user.name())
+        url = "http://toolserver.org/~soxred93/pcount/index.php?name={0}&lang=en&wiki=wikipedia"
+        msg = "\x0302{0}\x0301 has {1} edits ({2})."
+        self.connection.reply(data, msg.format(name, count, url.format(safe)))
