@@ -30,25 +30,25 @@ class Command(BaseCommand):
         self.site._maxlag = None
 
         if data.line[1] == "JOIN":
-            notice = self.get_join_notice()
-            self.connection.notice(data.nick, notice)
+            status = " ".format(("\x02Current status:\x0F", self.get_status()))
+            self.connection.notice(data.nick, status)
             return
 
         if data.args:
             action = data.args[0].lower()
             if action.startswith("sub") or action == "s":
                 subs = self.count_submissions()
-                msg = "there are currently {0} pending AfC submissions."
+                msg = "there are \x0305{0}\x0301 pending AfC submissions (\x0302WP:AFC\x0301)."
                 self.connection.reply(data, msg.format(subs))
 
             elif action.startswith("redir") or action == "r":
                 redirs = self.count_redirects()
-                msg = "there are currently {0} open redirect requests."
+                msg = "there are \x0305{0}\x0301 open redirect requests (\x0302WP:AFC/R\x0301)."
                 self.connection.reply(data, msg.format(redirs))
 
             elif action.startswith("file") or action == "f":
                 files = self.count_redirects()
-                msg = "there are currently {0} open file upload requests."
+                msg = "there are \x0305{0}\x0301 open file upload requests (\x0302WP:FFU\x0301)."
                 self.connection.reply(data, msg.format(files))
 
             elif action.startswith("agg") or action == "a":
@@ -63,32 +63,24 @@ class Command(BaseCommand):
                     self.connection.reply(data, msg.format(data.args[1]))
                     return
                 aggregate = self.get_aggregate(agg_num)
-                msg = "aggregate is currently {0} (AfC {1})."
+                msg = "aggregate is \x0305{0}\x0301 (AfC {1})."
                 self.connection.reply(data, msg.format(agg_num, aggregate))
 
-            elif action.startswith("join") or action == "j":
-                notice = self.get_join_notice()
-                self.connection.reply(data, notice)
-
             else:
-                msg = "unknown argument: \x0303{0}\x0301. Valid args are 'subs', 'redirs', 'files', 'agg', and 'join'."
+                msg = "unknown argument: \x0303{0}\x0301. Valid args are 'subs', 'redirs', 'files', 'agg'."
                 self.connection.reply(data, msg.format(data.args[0]))
 
         else:
-            subs = self.count_submissions()
-            redirs = self.count_redirects()
-            files = self.count_files()
-            msg = "there are currently {0} pending submissions, {1} open redirect requests, and {2} open file upload requests."
-            self.connection.reply(data, msg.format(subs, redirs, files))
+            self.connection.reply(data, self.get_status())
 
-    def get_join_notice(self):
+    def get_status(self):
         subs = self.count_submissions()
         redirs = self.count_redirects()
         files = self.count_files()
         agg_num = self.get_aggregate_number((subs, redirs, files))
         aggregate = self.get_aggregate(agg_num)
 
-        msg = "\x02Current status:\x0F Articles for Creation {0} (\x0302AFC\x0301: \x0305{1}\x0301; \x0302AFC/R\x0301: \x0305{2}\x0301; \x0302FFU\x0301: \x0305{3}\x0301)"
+        msg = "Articles for creation {0} (\x0302AFC\x0301: \x0305{1}\x0301; \x0302AFC/R\x0301: \x0305{2}\x0301; \x0302FFU\x0301: \x0305{3}\x0301)"
         return msg.format(aggregate, subs, redirs, files)
 
     def count_submissions(self):
