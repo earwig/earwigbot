@@ -80,7 +80,7 @@ class Command(BaseCommand):
         agg_num = self.get_aggregate_number((subs, redirs, files))
         aggregate = self.get_aggregate(agg_num)
 
-        msg = "Articles for creation {0} (\x0302AFC\x0301: \x0305{1}\x0301; \x0302AFC/R\x0301: \x0305{2}\x0301; \x0302FFU\x0301: \x0305{3}\x0301)"
+        msg = "Articles for creation {0} (\x0302AFC\x0301: \x0305{1}\x0301; \x0302AFC/R\x0301: \x0305{2}\x0301; \x0302FFU\x0301: \x0305{3}\x0301)."
         return msg.format(aggregate, subs, redirs, files)
 
     def count_submissions(self):
