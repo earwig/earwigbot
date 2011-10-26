@@ -30,7 +30,7 @@ class Command(BaseCommand):
         self.site._maxlag = None
 
         if data.line[1] == "JOIN":
-            status = " ".format(("\x02Current status:\x0F", self.get_status()))
+            status = " ".join(("\x02Current status:\x0F", self.get_status()))
             self.connection.notice(data.nick, status)
             return
 
