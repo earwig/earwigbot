@@ -32,7 +32,7 @@ def _load_config():
     earwigbot.py or core/main.py will already call these functions.
     """
     is_encrypted = config.load()
-    if is_encrypted:  # passwords in the config file are encrypted
+    if is_encrypted:  # Passwords in the config file are encrypted
         key = getpass("Enter key to unencrypt bot passwords: ")
         config.decrypt(key)
 
@@ -60,12 +60,11 @@ def _get_cookiejar():
     try:
         _cookiejar.load()
     except LoadError:
-        # file contains bad data, so ignore it completely
-        pass
+        pass  # File contains bad data, so ignore it completely
     except IOError as e:
         if e.errno == errno.ENOENT:  # "No such file or directory"
-            # create the file and restrict reading/writing only to the owner,
-            # so others can't peak at our cookies
+            # Create the file and restrict reading/writing only to the owner,
+            # so others can't peak at our cookies:
             open(cookie_file, "w").close()
             chmod(cookie_file, stat.S_IRUSR|stat.S_IWUSR)
         else:
@@ -82,7 +81,7 @@ def _get_site_object_from_dict(name, d):
     base_url = d.get("baseURL")
     article_path = d.get("articlePath")
     script_path = d.get("scriptPath")
-    sql = (d.get("sqlServer"), d.get("sqlDB"))
+    sql = d.get("sql", {})
     namespaces = d.get("namespaces", {})
     login = (config.wiki.get("username"), config.wiki.get("password"))
     cookiejar = _get_cookiejar()
@@ -129,18 +128,18 @@ def get_site(name=None, project=None, lang=None):
     then `project` and `lang`. If, with any number of args, a site cannot be
     found in the config, SiteNotFoundError is raised.
     """
-    # check if config has been loaded, and load it if it hasn't
+    # Check if config has been loaded, and load it if it hasn't:
     if not config.is_loaded():
         _load_config()
 
-    # someone specified a project without a lang (or a lang without a project)!
+    # Someone specified a project without a lang (or a lang without a project)!
     if (project is None and lang is not None) or (project is not None and
                                                   lang is None):
         e = "Keyword arguments 'lang' and 'project' must be specified together."
         raise TypeError(e)
 
-    # no args given, so return our default site (project is None implies lang
-    # is None, so we don't need to add that in)
+    # No args given, so return our default site (project is None implies lang
+    # is None, so we don't need to add that in):
     if name is None and project is None:
         try:
             default = config.wiki["defaultSite"]
@@ -154,12 +153,12 @@ def get_site(name=None, project=None, lang=None):
             raise SiteNotFoundError(e)
         return _get_site_object_from_dict(default, site)
 
-    # name arg given, but don't look at others unless `name` isn't found
+    # Name arg given, but don't look at others unless `name` isn't found:
     if name is not None:
         try:
             site = config.wiki["sites"][name]
         except KeyError:
-            if project is None:  # implies lang is None, so only name was given
+            if project is None:  # Implies lang is None, so only name was given
                 e = "Site '{0}' not found in config.".format(name)
                 raise SiteNotFoundError(e)
             for sitename, site in config.wiki["sites"].items():
@@ -171,7 +170,7 @@ def get_site(name=None, project=None, lang=None):
         else:
             return _get_site_object_from_dict(name, site)
 
-    # if we end up here, then project and lang are both not None
+    # If we end up here, then project and lang are both not None:
     for sitename, site in config.wiki["sites"].items():
         if site["project"] == project and site["lang"] == lang:
             return _get_site_object_from_dict(sitename, site)

@@ -19,3 +19,12 @@ made over 45,000 edits.
 A project to rewrite it from scratch began in early April 2011, thus moving
 away from the Pywikipedia framework and allowing for less overall code, better
 integration between bot parts, and easier maintenance.
+
+# Installation
+
+## Dependencies
+
+EarwigBot uses the MySQL library
+[oursql](http://packages.python.org/oursql/) (>= 0.9.2) for communicating with
+MediaWiki databases, and some tasks use their own tables for storage. It is not
+required.

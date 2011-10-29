@@ -64,3 +64,6 @@ class SpamDetectedError(EditError):
 
 class FilteredError(EditError):
     """The edit filter refused our edit."""
+
+class SQLError(WikiToolsetError):
+    """Some error involving SQL querying occurred."""

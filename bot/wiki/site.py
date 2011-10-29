@@ -10,6 +10,11 @@ from urllib import unquote_plus, urlencode
 from urllib2 import build_opener, HTTPCookieProcessor, URLError
 from urlparse import urlparse
 
+try:
+    from oursql import connect
+except ImportError:
+    connect = None
+
 from wiki.category import Category
 from wiki.constants import *
 from wiki.exceptions import *
@@ -40,7 +45,7 @@ class Site(object):
     """
 
     def __init__(self, name=None, project=None, lang=None, base_url=None,
-                 article_path=None, script_path=None, sql=(None, None),
+                 article_path=None, script_path=None, sql=None,
                  namespaces=None, login=(None, None), cookiejar=None,
                  user_agent=None, assert_edit=None, maxlag=None):
         """Constructor for new Site instances.
@@ -67,13 +72,16 @@ class Site(object):
         self._base_url = base_url
         self._article_path = article_path
         self._script_path = script_path
-        self._sql = sql
         self._namespaces = namespaces
 
-        # Attributes used when querying the API: 
+        # Attributes used for API queries: 
         self._assert_edit = assert_edit
         self._maxlag = maxlag
         self._max_retries = 5
+
+        # Attributes used for SQL queries:
+        self._sql_data = sql
+        self._sql_conn = None
 
         # Set up cookiejar and URL opener for making API queries:
         if cookiejar is not None:
@@ -416,12 +424,53 @@ class Site(object):
         self._cookiejar.clear()
         self._save_cookiejar()
 
+    def _sql_connect(self, **kwargs):
+        """Attempt to establish a connection with this site's SQL database.
+        
+        Will raise SQLError() if the module "oursql" is not available.
+        """
+        if not connect:
+            e = "Module 'oursql' is required for SQL queries."
+            raise SQLError(e)
+
+        args = self._sql_data
+        for key, value in kwargs.iteritems():
+            args[key] = value
+
+        if "read_default_file" not in args and "user" not in args and "passwd" not in args:
+            args["read_default_file"] = "~/.my.cnf"
+
+        self._sql_conn = connect(**args)
+
     def api_query(self, **kwargs):
         """Do an API query with `kwargs` as the parameters.
 
         See _api_query()'s documentation for details.
         """
         return self._api_query(kwargs)
+
+    def sql_query(self, query, params=(), plain_query=False, cursor_class=None,
+                  show_table=False):
+        """Do an SQL query and yield its results.
+
+        For example:
+        >>> query = "SELECT user_name, user_registration FROM user WHERE user_name IN (?, ?)"
+        >>> for row in site.sql_query(query, ("EarwigBot", "The Earwig")):
+        ...     print row
+        ('EarwigBot', '20090428220032')
+        ('The Earwig', '20080703215134')
+
+        May raise SQLError() or one of oursql's exceptions
+        (oursql.ProgrammingError, oursql.InterfaceError, ...) if there were
+        problems with the query.
+        """
+        if not self._sql_conn:
+            self._sql_connect()
+
+        with self._sql_conn.cursor(cursor_class, show_table=show_table) as cur:
+            cur.execute(query, params, plain_query)
+            for result in cur:
+                yield result
 
     def name(self):
         """Returns the Site's name (or "wikiid" in the API), like "enwiki"."""
