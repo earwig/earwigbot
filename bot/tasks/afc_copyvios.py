@@ -6,6 +6,7 @@ class Task(BaseTask):
     """A task to check newly-edited [[WP:AFC]] submissions for copyright
     violations."""
     name = "afc_copyvios"
+    number = 1
 
     def __init__(self):
         pass

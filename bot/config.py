@@ -8,10 +8,11 @@ including encrypting and decrypting passwords and making a new config file from
 scratch at the inital bot run.
 
 Usually you'll just want to do "from core import config" and access config data
-from within config's four global variables and one function:
+from within config's five global variables and one function:
 
 * config.components  - a list of enabled components
 * config.wiki        - a dict of information about wiki-editing
+* config.tasks       - a dict of information for bot tasks
 * config.irc         - a dict of information about IRC
 * config.metadata    - a dict of miscellaneous information
 * config.schedule()  - returns a list of tasks scheduled to run at a given time
@@ -34,8 +35,8 @@ config_path = path.join(root_dir, "config.json")
 
 _config = None  # Holds data loaded from our config file
 
-# Set our four easy-config-access global variables to None
-components, wiki, irc, metadata = None, None, None, None
+# Set our five easy-config-access global variables to None
+components, wiki, tasks, irc, metadata = None, None, None, None, None
 
 def _load():
     """Load data from our JSON config file (config.json) into _config."""
@@ -68,8 +69,9 @@ def load():
     First, check if we have a valid config file, and if not, notify the user.
     If there is no config file at all, offer to make one, otherwise exit.
 
-    Store data from our config file in four global variables (components, wiki,
-    irc, metadata) for easy access (as well as the internal _config variable).
+    Store data from our config file in five global variables (components, wiki,
+    tasks, irc, metadata) for easy access (as well as the internal _config
+    variable).
 
     If everything goes well, return True if stored passwords are
     encrypted in the file, or False if they are not.
@@ -88,6 +90,7 @@ def load():
 
     components = _config.get("components", [])
     wiki = _config.get("wiki", {})
+    tasks = _config.get("tasks", {})
     irc = _config.get("irc", {})
     metadata = _config.get("metadata", {})
 
