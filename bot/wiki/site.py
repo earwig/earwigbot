@@ -11,9 +11,9 @@ from urllib2 import build_opener, HTTPCookieProcessor, URLError
 from urlparse import urlparse
 
 try:
-    from oursql import connect
+    import oursql
 except ImportError:
-    connect = None
+    oursql = None
 
 from wiki.category import Category
 from wiki.constants import *
@@ -37,6 +37,7 @@ class Site(object):
     lang                 -- returns our language code, like "en"
     domain               -- returns our web domain, like "en.wikipedia.org"
     api_query            -- does an API query with the given kwargs as params
+    sql_query            -- does an SQL query and yields its results
     namespace_id_to_name -- given a namespace ID, returns associated name(s)
     namespace_name_to_id -- given a namespace name, returns associated id
     get_page             -- returns a Page object for the given title
@@ -426,10 +427,17 @@ class Site(object):
 
     def _sql_connect(self, **kwargs):
         """Attempt to establish a connection with this site's SQL database.
-        
-        Will raise SQLError() if the module "oursql" is not available.
+
+        oursql.connect() will be called with self._sql_data as its kwargs,
+        which is usually config.wiki["sites"][self.name()]["sql"]. Any kwargs
+        given to this function will be passed to connect() and will have
+        precedence over the config file.
+
+        Will raise SQLError() if the module "oursql" is not available. oursql
+        may raise its own exceptions (e.g. oursql.InterfaceError) if it cannot
+        establish a connection.
         """
-        if not connect:
+        if not oursql:
             e = "Module 'oursql' is required for SQL queries."
             raise SQLError(e)
 
@@ -440,7 +448,23 @@ class Site(object):
         if "read_default_file" not in args and "user" not in args and "passwd" not in args:
             args["read_default_file"] = "~/.my.cnf"
 
-        self._sql_conn = connect(**args)
+        self._sql_conn = oursql.connect(**args)
+
+    def name(self):
+        """Returns the Site's name (or "wikiid" in the API), like "enwiki"."""
+        return self._name
+
+    def project(self):
+        """Returns the Site's project name in lowercase, like "wikipedia"."""
+        return self._project
+
+    def lang(self):
+        """Returns the Site's language code, like "en" or "es"."""
+        return self._lang
+
+    def domain(self):
+        """Returns the Site's web domain, like "en.wikipedia.org"."""
+        return urlparse(self._base_url).netloc
 
     def api_query(self, **kwargs):
         """Do an API query with `kwargs` as the parameters.
@@ -460,7 +484,22 @@ class Site(object):
         ('EarwigBot', '20090428220032')
         ('The Earwig', '20080703215134')
 
-        May raise SQLError() or one of oursql's exceptions
+        <http://packages.python.org/oursql> has helpful documentation on the
+        SQL module used by EarwigBot.
+
+        If `plain_query` is True, we will force an unparameterized query.
+        Specifying both params and plain_query will cause an error.
+
+        `cursor_class` may oursql.Cursor or oursql.DictCursor. If it is not
+        given, the connection default will be used, which is a regular Cursor
+        unless _sql_connect() is passed a `default_cursor` kwarg.
+
+        If `show_table` is True, the name of the table will be prepended to the
+        name of the column. This will mainly affect a DictCursor.
+
+        See _sql_connect() for information on how a connection is acquired.
+
+        This may raise SQLError() or one of oursql's exceptions
         (oursql.ProgrammingError, oursql.InterfaceError, ...) if there were
         problems with the query.
         """
@@ -471,22 +510,6 @@ class Site(object):
             cur.execute(query, params, plain_query)
             for result in cur:
                 yield result
-
-    def name(self):
-        """Returns the Site's name (or "wikiid" in the API), like "enwiki"."""
-        return self._name
-
-    def project(self):
-        """Returns the Site's project name in lowercase, like "wikipedia"."""
-        return self._project
-
-    def lang(self):
-        """Returns the Site's language code, like "en" or "es"."""
-        return self._lang
-
-    def domain(self):
-        """Returns the Site's web domain, like "en.wikipedia.org"."""
-        return urlparse(self._base_url).netloc
 
     def namespace_id_to_name(self, ns_id, all=False):
         """Given a namespace ID, returns associated namespace names.
