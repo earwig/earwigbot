@@ -61,12 +61,13 @@ class Task(BaseTask):
         page = self.site.get_page(self.pagename)
         text = page.get()
         newtext = re.sub("(<!-- stat begin -->)(.*?)(<!-- stat end -->)",
-                         "\\1~~~~\\3", text, flags=re.DOTALL)
+                         statistics.join(("\\1", "\\3")), text,
+                         flags=re.DOTALL)
         if newtext == text:
             return  # Don't edit the page if we're not adding anything
 
         newtext = re.sub("(<!-- sig begin -->)(.*?)(<!-- sig end -->)",
-                         "\\1~~~~\\3", newtext)
+                         "\\1~~~ at ~~~~~\\3", newtext)
         page.edit(newtext, self.summary, minor=True)
 
     def process_edit(self, page):
