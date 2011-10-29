@@ -473,31 +473,34 @@ class Site(object):
         """
         return self._api_query(kwargs)
 
-    def sql_query(self, query, params=(), plain_query=False, cursor_class=None,
-                  show_table=False):
+    def sql_query(self, query, params=(), plain_query=False, dict_cursor=False,
+                  cursor_class=None, show_table=False):
         """Do an SQL query and yield its results.
-
-        For example:
-        >>> query = "SELECT user_name, user_registration FROM user WHERE user_name IN (?, ?)"
-        >>> for row in site.sql_query(query, ("EarwigBot", "The Earwig")):
-        ...     print row
-        ('EarwigBot', '20090428220032')
-        ('The Earwig', '20080703215134')
-
-        <http://packages.python.org/oursql> has helpful documentation on the
-        SQL module used by EarwigBot.
 
         If `plain_query` is True, we will force an unparameterized query.
         Specifying both params and plain_query will cause an error.
 
-        `cursor_class` may oursql.Cursor or oursql.DictCursor. If it is not
-        given, the connection default will be used, which is a regular Cursor
-        unless _sql_connect() is passed a `default_cursor` kwarg.
+        If `dict_cursor` is True, we will use oursql.DictCursor as our cursor,
+        otherwise the default oursql.Cursor. If `cursor_class` is given, it
+        will override this option.
 
         If `show_table` is True, the name of the table will be prepended to the
         name of the column. This will mainly affect a DictCursor.
 
+        Example:
+        >>> query = "SELECT user_id, user_registration FROM user WHERE user_name = ?"
+        >>> params = ("The Earwig",)
+        >>> result1 = site.sql_query(query, params)
+        >>> result2 = site.sql_query(query, params, dict_cursor=True)
+        >>> for row in result1: print row
+        (7418060L, '20080703215134')
+        >>> for row in result2: print row
+        {'user_id': 7418060L, 'user_registration': '20080703215134'}
+
         See _sql_connect() for information on how a connection is acquired.
+
+        <http://packages.python.org/oursql> has helpful documentation on the
+        oursql module.
 
         This may raise SQLError() or one of oursql's exceptions
         (oursql.ProgrammingError, oursql.InterfaceError, ...) if there were
@@ -505,6 +508,12 @@ class Site(object):
         """
         if not self._sql_conn:
             self._sql_connect()
+
+        if not cursor_class:
+            if dict_cursor:
+                cursor_class = oursql.DictCursor
+            else:
+                cursor_class = oursql.Cursor
 
         with self._sql_conn.cursor(cursor_class, show_table=show_table) as cur:
             cur.execute(query, params, plain_query)
