@@ -197,20 +197,27 @@ class Task(BaseTask):
 
     def process_move(self, page, **kwargs):
         query1 = "SELECT * FROM page WHERE page_title = ?"
-        query2 = "SELECT page_latest FROM page WHERE page_title = ?"
+        query2 = "SELECT page_latest FROM page WHERE page_title = ? AND page_namespace = ?"
         query3 = "UPDATE page SET page_title = ?, page_modify_oldid = ? WHERE page_title = ?"
         source, dest = page
         with self.conn.cursor() as cursor, self.db_access_lock:
             cursor.execute(query1, (source,))
             result = cursor.fetchall()
-            if not result:
-                self.track_page(cursor, dest)
-            else:
+            if result:
+                dest_ns, dest_main = dest.split(":", 1)[0]
                 try:
-                    new_oldid = list(self.site.sql_query(query2, (dest,)))[0][0]
+                    dest_ns = self.site.namespace_name_to_id(dest_ns)
+                except wiki.NamespaceNotFoundError:
+                    res = self.site.sql_query(query2, (dest,)))
+                else:
+                    res = self.site.sql_query(query2, (dest_main, dest_ns)))
+                try:
+                    new_oldid = list(res)[0][0]
                 except IndexError:
-                    new_oldid = result[11]
+                    new_oldid = result[0][11]
                 cursor.execute(query3, (dest, new_oldid, source))
+            else:
+                self.track_page(cursor, dest)
 
     def process_delete(self, page, **kwargs):
         query = "SELECT page_id FROM page WHERE page_title = ?"
