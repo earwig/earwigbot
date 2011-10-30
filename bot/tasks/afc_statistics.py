@@ -22,7 +22,7 @@ class Task(BaseTask):
     number = 2
 
     def __init__(self):
-        self.cfg = config.tasks.get(self.name, {})
+        self.cfg = cfg = config.tasks.get(self.name, {})
 
         # Set some wiki-related attributes:
         self.pagename = cfg.get("page", "Template:AFC statistics")
