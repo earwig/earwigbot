@@ -232,12 +232,13 @@ class Task(BaseTask):
             self.track_page(cursor, page)
 
     def untrack_page(self, cursor, pageid=None, title=None):
-        query = """DELETE FROM page, row USING page JOIN row
-                   ON page_id = row_id WHERE ? = ?"""
+        query = "DELETE FROM page, row USING page JOIN row ON page_id = row_id WHERE "
         if pageid:
-            cursor.execute(query, ("page_id", pageid))
+            query += "page_id = ?"
+            cursor.execute(query, (pageid,))
         elif title:
-            cursor.execute(query, ("page_title", title))
+            query += "page_title = ?"
+            cursor.execute(query, (title,))
 
     def track_page(self, cursor, title):
         """Update hook for when page is not in our database."""
