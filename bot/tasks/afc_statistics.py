@@ -113,12 +113,12 @@ class Task(BaseTask):
         row += "cr={page_create_user}|cd={page_create_time}|ci={page_create_oldid}|"
         row += "mr={page_modify_user}|md={page_modify_time}|mi={page_modify_oldid}|"
 
-        page["page_create_time"] = format_timestamp(page["page_create_time"])
-        page["page_modify_time"] = format_timestamp(page["page_modify_time"])
+        page["page_create_time"] = self.format_timestamp(page["page_create_time"])
+        page["page_modify_time"] = self.format_timestamp(page["page_modify_time"])
 
         if page["page_special_user"]:
             row += "sr={page_special_user}|sd={page_special_time}|si={page_special_oldid}|"
-            page["page_special_time"] = format_timestamp(page["page_special_time"])
+            page["page_special_time"] = self.format_timestamp(page["page_special_time"])
 
         if page["page_notes"]:
             row += "n=1{page_notes}"
