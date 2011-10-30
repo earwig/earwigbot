@@ -143,23 +143,24 @@ class Task(BaseTask):
         query2 = "SELECT page_id FROM page WHERE page_id = ?"
         cursor.execute(query1)
         for page in cursor:
-            result = self.site.sql_query(query2, (page,))
-            if not list(result)[0]:
-                self.untrack_page(cursor, pageid=page)
+            result = self.site.sql_query(query2, (page[0],))
+            if not list(result):
+                self.untrack_page(cursor, pageid=page[0])
 
     def sync_oldids(self, cursor):
         query1 = "SELECT page_id, page_title, page_modify_oldid FROM page"
-        query2 = "SELECT page_latest FROM page WHERE page_id = ?"
+        query2 = "SELECT page_latest, page_title FROM page WHERE page_id = ?"
         cursor.execute(query1)
         for page_id, title, oldid in cursor:
             result = self.site.sql_query(query2, (page_id,))
             try:
                 real_oldid = list(result)[0][0]
+                real_title = list(result)[0][1]
             except IndexError:  # Page doesn't exist!
                 self.untrack_page(cursor, pageid=page_id)
                 continue
             if real_oldid != oldid:
-                self.update_page(cursor, title)
+                self.update_page(cursor, real_title)
 
     def sync_pending(self, cursor):
         query = """SELECT page_title FROM page JOIN row ON page_id = row_id
@@ -207,7 +208,7 @@ class Task(BaseTask):
         query = "SELECT page_id FROM page WHERE page_title = ?"
         with self.conn.cursor() as cursor, self.db_access_lock:
             result = self.site.sql_query(query, (page,))
-            if list(result)[0]:
+            if list(result):
                 self.sync_page(cursor, page)
             else:
                 self.untrack_page(cursor, title=page)
@@ -222,7 +223,8 @@ class Task(BaseTask):
             self.track_page(cursor, page)
 
     def untrack_page(self, cursor, pageid=None, title=None):
-        query = "DELETE FROM page JOIN row ON page_id = row_id WHERE ? = ?"
+        query = """DELETE FROM page, row USING page JOIN row
+                   ON page_id = row_id WHERE ? = ?"""
         if pageid:
             cursor.execute(query, ("page_id", pageid))
         elif title:
