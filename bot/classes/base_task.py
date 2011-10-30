@@ -43,7 +43,7 @@ class BaseTask(object):
             summary = config.wiki["summary"]
         except KeyError:
             return comment
-        return summary.replace("$1", self.number).replace("$2", comment)
+        return summary.replace("$1", str(self.number)).replace("$2", comment)
 
     def shutoff_enabled(self, site=None):
         """Returns whether on-wiki shutoff is enabled for this task.
