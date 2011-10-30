@@ -27,7 +27,7 @@ class Task(BaseTask):
 
         # Set some wiki-related attributes:
         self.pagename = cfg.get("page", "Template:AFC statistics")
-        self.pending_cat = cfg.get("pending", "Pending AfC submissions")
+        self.pending_cat = cfg.get("pending", "Pending_AfC_submissions")
         self.ignore_list = cfg.get("ignore_list", [])
         default_summary = "Updating statistics for [[WP:WPAFC|WikiProject Articles for creation]]."
         self.summary = self.make_summary(cfg.get("summary", default_summary))
@@ -38,14 +38,15 @@ class Task(BaseTask):
         self.tl_row = templates.get("row", "AFC statistics/row")
         self.tl_footer = templates.get("footer", "AFC statistics/footer")
 
-        # Establish a connection with our SQL database:
+        # Connection data for our SQL database:
         kwargs = cfg.get("sql", {})
         kwargs["read_default_file"] = expanduser("~/.my.cnf")
-        self.conn = oursql.connect(**kwargs)
+        self.conn_data = kwargs
         self.db_access_lock = Lock()
 
     def run(self, **kwargs):
         self.site = wiki.get_site()
+        self.conn = oursql.connect(**self.conn_data)
 
         action = kwargs.get("action")
         if not action:
@@ -62,7 +63,10 @@ class Task(BaseTask):
 
         method = methods.get(action)
         if method:
-            method(**kwargs)            
+            try:
+                method(**kwargs)
+            finally:
+                self.conn.close()            
 
     def save(self, **kwargs):
         if kwargs.get("fromIRC"):
@@ -163,17 +167,21 @@ class Task(BaseTask):
                 self.update_page(cursor, real_title)
 
     def sync_pending(self, cursor):
-        query = """SELECT page_title FROM page JOIN row ON page_id = row_id
-                   WHERE row_chart IN (1, 2, 3)"""
-        cursor.execute(query)
+        query1 = """SELECT page_id FROM page JOIN row ON page_id = row_id
+                    WHERE row_chart IN (1, 2, 3)"""
+        query2 = """SELECT cl_from, page_title, page_namespace
+                    FROM categorylinks JOIN page ON cl_from = page_id
+                    WHERE cl_to = ?"""
+        cursor.execute(query1)
         tracked = [i[0] for i in cursor.fetchall()]
-        
-        category = self.site.get_category(self.pending_cat)
-        for page in category.members(limit=500):
-            if page in self.ignore_list:
+        result = self.site.sql_query(query2, (self.pending_cat,))
+
+        for pageid, title, ns in result:
+            title = ":".join((self.site.namespace_id_to_name(ns), title))
+            if title in self.ignore_list:
                 continue
-            if page not in tracked:
-                self.track_page(cursor, page)
+            if pageid not in tracked:
+                self.track_page(cursor, title)
 
     def sync_old(self, cursor):
         query = """DELETE FROM page, row USING page JOIN row
@@ -321,7 +329,7 @@ class Task(BaseTask):
 
     def get_create(self, pageid):
         query1 = "SELECT MIN(rev_id) FROM revision WHERE rev_page = ?"
-        query1 = "SELECT rev_user_text, rev_timestamp, rev_id FROM revision WHERE rev_id = ?"
+        query2 = "SELECT rev_user_text, rev_timestamp, rev_id FROM revision WHERE rev_id = ?"
         result1 = self.site.sql_query(query1, (pageid,))
         rev_id = list(result1)[0][0]
         result2 = self.site.sql_query(query2, (rev_id,))
