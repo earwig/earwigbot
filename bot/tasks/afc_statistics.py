@@ -26,6 +26,8 @@ class Task(BaseTask):
 
         # Set some wiki-related attributes:
         self.pagename = cfg.get("page", "Template:AFC statistics")
+        self.pending_cat = cfg.get("pending", "Pending AfC submissions")
+        self.ignore_list = cfg.get("ignore_list", [])
         default_summary = "Updating statistics for [[WP:WPAFC|WikiProject Articles for creation]]."
         self.summary = self.make_summary(cfg.get("summary", default_summary))
 
@@ -136,18 +138,55 @@ class Task(BaseTask):
             self.sync_old(cursor)      # Remove old declined and accepted subs
 
     def sync_deleted(self, cursor):
-        pass
+        query1 = "SELECT page_id FROM page"
+        query2 = "SELECT page_id FROM page WHERE page_id = ?"
+        query3 = "DELETE FROM page JOIN row ON page_id = row_id WHERE page_id = ?"
+        cursor.execute(query1)
+        for page in cursor:
+            result = self.site.sql_query(query2, (page,))
+            if not list(result)[0]:
+                cursor.execute(query3, (page,))
 
     def sync_oldids(self, cursor):
-        pass
+        query1 = "SELECT page_id, page_title, page_modify_oldid FROM page"
+        query2 = "SELECT page_latest FROM page WHERE page_id = ?"
+        query3 = "DELETE FROM page JOIN row ON page_id = row_id WHERE page_id = ?"
+        cursor.execute(query1)
+        for page_id, title, oldid in cursor:
+            result = self.site.sql_query(query2, (page_id,))
+            try:
+                real_oldid = list(result)[0][0]
+            except IndexError:  # Page doesn't exist!
+                cursor.execute(query3, (page_id,))
+                continue
+            if real_oldid == oldid:
+                continue
+            self.update_page(title)
 
     def sync_pending(self, cursor):
-        pass
+        query = """SELECT page_title FROM page JOIN row ON page_id = row_id
+                   WHERE row_chart IN (1, 2, 3)"""
+        cursor.execute(query)
+        tracked = [i[0] for i in cursor.fetchall()]
+        
+        category = self.site.get_category(self.pending_cat)
+        for page in category.members(limit=500):
+            if page in self.ignore_list:
+                continue
+            if page not in tracked:
+                self.track_page(page)
 
     def sync_old(self, cursor):
-        query = """DELETE FROM page, row USING page JOIN row ON page_id = row_id
-        WHERE row_chart IN (4, 5) AND ADDTIME(page_special_time, '36:00:00')  < NOW()"""
+        query = """DELETE FROM page, row USING page JOIN row
+                   ON page_id = row_id WHERE row_chart IN (4, 5)
+                   AND ADDTIME(page_special_time, '36:00:00')  < NOW()"""
         cursor.execute(query)
+
+    def track_page(self, page):
+        pass
+
+    def update_page(self, page):
+        pass
 
     def process_edit(self, page, **kwargs):
         pass
