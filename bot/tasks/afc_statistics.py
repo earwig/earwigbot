@@ -140,24 +140,22 @@ class Task(BaseTask):
     def sync_deleted(self, cursor):
         query1 = "SELECT page_id FROM page"
         query2 = "SELECT page_id FROM page WHERE page_id = ?"
-        query3 = "DELETE FROM page JOIN row ON page_id = row_id WHERE page_id = ?"
         cursor.execute(query1)
         for page in cursor:
             result = self.site.sql_query(query2, (page,))
             if not list(result)[0]:
-                cursor.execute(query3, (page,))
+                self.untrack_page(cursor, pageid=page)
 
     def sync_oldids(self, cursor):
         query1 = "SELECT page_id, page_title, page_modify_oldid FROM page"
         query2 = "SELECT page_latest FROM page WHERE page_id = ?"
-        query3 = "DELETE FROM page JOIN row ON page_id = row_id WHERE page_id = ?"
         cursor.execute(query1)
         for page_id, title, oldid in cursor:
             result = self.site.sql_query(query2, (page_id,))
             try:
                 real_oldid = list(result)[0][0]
             except IndexError:  # Page doesn't exist!
-                cursor.execute(query3, (page_id,))
+                self.untrack_page(cursor, pageid=page_id)
                 continue
             if real_oldid != oldid:
                 self.update_page(cursor, title)
@@ -205,14 +203,13 @@ class Task(BaseTask):
                 cursor.execute(query3, (dest, new_oldid, source))
 
     def process_delete(self, page, **kwargs):
-        query1 = "SELECT page_id FROM page WHERE page_title = ?"
-        query2 = "DELETE FROM page JOIN row ON page_id = row_id WHERE page_title = ?"
+        query = "SELECT page_id FROM page WHERE page_title = ?"
         with self.conn.cursor() as cursor, self.db_access_lock:
-            result = self.site.sql_query(query1, (page,))
+            result = self.site.sql_query(query, (page,))
             if list(result)[0]:
                 self.sync_page(cursor, page)
             else:
-                cursor.execute(query2, (page,))
+                self.untrack_page(cursor, title=page)
 
     def sync_page(self, cursor, page):
         query = "SELECT * FROM page WHERE page_title = ?"
@@ -223,10 +220,110 @@ class Task(BaseTask):
         else:
             self.track_page(cursor, page)
 
-    def track_page(self, cursor, page):
-        # Update hook when page is not in our database.
-        pass
+    def untrack_page(self, cursor, pageid=None, title=None):
+        query = "DELETE FROM page JOIN row ON page_id = row_id WHERE ? = ?"
+        if pageid:
+            cursor.execute(query, ("page_id", pageid))
+        elif title:
+            cursor.execute(query, ("page_title", title))
 
-    def update_page(self, cursor, page):
-        # Update hook when page is in our database.
-        pass
+    def track_page(self, cursor, title):
+        """Update hook for when page is not in our database."""
+        page = self.site.get_page(title)
+        status, chart = self.get_status_and_chart(page)
+        if not status or status in ("accept", "decline"):
+            return
+
+        pageid = page.pageid()
+        title = page.title()
+        short = self.get_short_title(title)
+        size = len(page.get())
+        notes = self.get_notes(page)
+        c_user, c_time, c_id = self.get_create(title)
+        m_user, m_time, m_id = self.get_modify(title)
+        s_user, s_time, s_id = self.get_special(page, status)
+
+        query1 = "INSERT INTO row VALUES (?, ?)"
+        query2 = "INSERT INTO page VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        cursor.execute(query1, (pageid, chart))
+        cursor.execute(query2, (pageid, status, title, short, size, notes,
+                                c_user, c_time, c_id, m_user, m_time, m_id,
+                                s_user, s_time, s_id))
+
+    def update_page(self, cursor, title):
+        """Update hook for when page is in our database."""
+        page = self.site.get_page(title)
+        status, chart = self.get_status_and_chart(page)
+        if not status:
+            self.untrack_page(cursor, title=title)
+
+        pageid = page.pageid()
+        title = page.title()
+        size = len(page.get())
+        notes = self.get_notes(page)
+        m_user, m_time, m_id = self.get_modify(title)
+
+        query = "SELECT * FROM page JOIN row ON page_id = row_id WHERE page_id = ?"
+        with self.conn.cursor(oursql.DictCursor) as dict_cursor:
+            dict_cursor.execute(query, (pageid,))
+            result = dict_cursor.fetchall()[0]
+
+        if title != result["page_title"]:
+            query = "UPDATE page SET page_title = ?, page_short = ? WHERE page_id = ?"
+            short = self.get_short_title(title)
+            cursor.execute(query, (title, short, pageid))
+
+        if m_id != result["page_modify_oldid"]:
+            query = """UPDATE page SET page_size = ?, page_modify_user = ?,
+                       page_modify_time = ?, page_modify_oldid = ?
+                       WHERE page_id = ?"""
+            cursor.execute(query, (size, m_user, m_time, m_id, pageid))
+
+        if status != result["page_status"]:
+            query1 = """UPDATE page JOIN row ON page_id = row_id
+                       SET page_status = ?, row_chart = ? WHERE page_id = ?"""
+            query2 = """UPDATE page SET page_special_user = ?,
+                       page_special_time = ?, page_special_oldid = ?
+                       WHERE page_id = ?"""
+            cursor.execute(query1, (status, chart, pageid))
+            s_user, s_time, s_id = self.get_special(page, status)
+            if s_id != result["page_special_oldid"]:
+                cursor.execute(query2, (s_user, s_time, s_id, pageid))
+
+        if notes != result["page_notes"]:
+            query = "UPDATE page SET page_notes = ? WHERE page_id = ?"
+            cursor.execute(query, (notes, pageid))
+
+    def get_status_and_chart(self, page):
+        content = page.get()
+        if page.is_redirect():
+            target = page.get_redirect_target()
+            if self.site.get_page(target).namespace() == 0:
+                return "accept", 4
+            return None, 0
+        elif re.search("\{\{afc submission\|r\|(.*?)\}\}", content, re.I):
+            return "review", 3
+        elif re.search("\{\{afc submission\|h\|(.*?)\}\}", content, re.I):
+            return "pend", 2
+        elif re.search("\{\{afc submission\|\|(.*?)\}\}", content, re.I):
+            return "pend", 1
+        elif re.search("\{\{afc submission\|t\|(.*?)\}\}", content, re.I):
+            return None, 0
+        elif re.search("\{\{afc submission\|d\|(.*?)\}\}", content, re.I):
+            return "decline", 5
+        return None, 0
+
+    def get_short_title(self, title):
+        return re.sub("Wikipedia(\s*talk)?\:Articles\sfor\screation\/", "", title)
+
+    def get_create(self, title):
+        return None, None, None
+
+    def get_modify(self, title):
+        return None, None, None
+
+    def get_special(self, page, status):
+        return None, None, None
+
+    def get_notes(self, page):
+        return None

@@ -74,11 +74,13 @@ class Command(BaseCommand):
             if self.site.get_page(target).namespace() == 0:
                 return "accepted"
             return "redirect"
-        if re.search("\{\{afc submission\|r\|(.*?)\}\}", content, re.I):
+        elif re.search("\{\{afc submission\|r\|(.*?)\}\}", content, re.I):
             return "being reviewed"
-        if re.search("\{\{afc submission\|\|(.*?)\}\}", content, re.I):
+        elif re.search("\{\{afc submission\|h?\|(.*?)\}\}", content, re.I):
             return "pending"
-        if re.search("\{\{afc submission\|d\|(.*?)\}\}", content, re.I):
+        elif re.search("\{\{afc submission\|t\|(.*?)\}\}", content, re.I):
+            return "unsubmitted draft"
+        elif re.search("\{\{afc submission\|d\|(.*?)\}\}", content, re.I):
             regex = "\{\{afc submission\|d\|(.*?)(\||\}\})"
             try:
                 reason = re.findall(regex, content, re.I)[0][0]
