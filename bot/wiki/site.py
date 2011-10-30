@@ -3,6 +3,7 @@
 from cookielib import CookieJar
 from gzip import GzipFile
 from json import loads
+from os.path import expanduser
 from re import escape as re_escape, match as re_match
 from StringIO import StringIO
 from time import sleep
@@ -446,7 +447,7 @@ class Site(object):
             args[key] = value
 
         if "read_default_file" not in args and "user" not in args and "passwd" not in args:
-            args["read_default_file"] = "~/.my.cnf"
+            args["read_default_file"] = expanduser("~/.my.cnf")
 
         self._sql_conn = oursql.connect(**args)
 
