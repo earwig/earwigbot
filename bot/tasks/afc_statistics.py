@@ -101,7 +101,7 @@ class Task(BaseTask):
 
         query = "SELECT * FROM page JOIN row ON page_id = row_id WHERE row_chart = ?"
         with self.conn.cursor(oursql.DictCursor) as cursor:
-            cursor.execute(query, chart_id)
+            cursor.execute(query, (chart_id,))
             for page in cursor:
                 chart += "\n" + self.compile_chart_row(page)
 
