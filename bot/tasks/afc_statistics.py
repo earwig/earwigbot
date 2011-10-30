@@ -336,7 +336,10 @@ class Task(BaseTask):
         return None, 0
 
     def get_short_title(self, title):
-        return re.sub("Wikipedia(\s*talk)?\:Articles\sfor\screation\/", "", title)
+        short = re.sub("Wikipedia(\s*talk)?\:Articles\sfor\screation\/", "", title)
+        if len(short) > 50:
+            short = "".join((short[:47], "..."))
+        return short
 
     def get_create(self, pageid):
         query1 = "SELECT MIN(rev_id) FROM revision WHERE rev_page = ?"
