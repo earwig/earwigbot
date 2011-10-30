@@ -197,20 +197,14 @@ class Task(BaseTask):
 
     def process_move(self, page, **kwargs):
         query1 = "SELECT * FROM page WHERE page_title = ?"
-        query2 = "SELECT page_latest FROM page WHERE page_title = ? AND page_namespace = ?"
+        query2 = "SELECT page_latest FROM page WHERE page_namespace = ? AND page_title = ?"
         query3 = "UPDATE page SET page_title = ?, page_modify_oldid = ? WHERE page_title = ?"
         source, dest = page
         with self.conn.cursor() as cursor, self.db_access_lock:
             cursor.execute(query1, (source,))
             result = cursor.fetchall()
             if result:
-                dest_ns, dest_main = dest.split(":", 1)[0]
-                try:
-                    dest_ns = self.site.namespace_name_to_id(dest_ns)
-                except wiki.NamespaceNotFoundError:
-                    res = self.site.sql_query(query2, (dest,)))
-                else:
-                    res = self.site.sql_query(query2, (dest_main, dest_ns)))
+                res = self.site.sql_query(query2, self.split_title(dest)))
                 try:
                     new_oldid = list(res)[0][0]
                 except IndexError:
@@ -219,10 +213,20 @@ class Task(BaseTask):
             else:
                 self.track_page(cursor, dest)
 
+    def split_title(self, title):
+        namespace, body = title.split(":", 1)[0]
+        if not body:
+            return 0, title
+        try:
+            ns = self.site.namespace_name_to_id(namespace)
+        except wiki.NamespaceNotFoundError:
+            return 0, title
+        return ns, body
+
     def process_delete(self, page, **kwargs):
-        query = "SELECT page_id FROM page WHERE page_title = ?"
+        query = "SELECT page_id FROM page WHERE page_namespace = ? AND page_title = ?"
         with self.conn.cursor() as cursor, self.db_access_lock:
-            result = self.site.sql_query(query, (page,))
+            result = self.site.sql_query(query, self.split_title(page))
             if list(result):
                 self.sync_page(cursor, page)
             else:
