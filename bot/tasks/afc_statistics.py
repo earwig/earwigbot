@@ -53,7 +53,7 @@ class Task(BaseTask):
 
         methods = {
             "save": self.save,
-            "sync", self.sync,
+            "sync": self.sync,
             "edit": self.process_edit,
             "move": self.process_move,
             "delete": self.process_delete,
