@@ -72,7 +72,7 @@ class Task(BaseTask):
         page = self.site.get_page(self.pagename)
         text = page.get()
         newtext = re.sub("(<!-- stat begin -->)(.*?)(<!-- stat end -->)",
-                         statistics.join(("\\1", "\\3")), text,
+                         statistics.join(("\\1\n", "\n\\3")), text,
                          flags=re.DOTALL)
         if newtext == text:
             return  # Don't edit the page if we're not adding anything
