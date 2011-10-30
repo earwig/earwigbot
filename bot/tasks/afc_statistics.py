@@ -56,7 +56,7 @@ class Task(BaseTask):
             "edit": self.process_edit,
             "move": self.process_move,
             "delete": self.process_delete,
-            "restore": self.process_restore,
+            "restore": self.process_edit,
         }
 
         method = methods.get(action)
@@ -161,7 +161,7 @@ class Task(BaseTask):
                 continue
             if real_oldid == oldid:
                 continue
-            self.update_page(title)
+            self.update_page(cursor, title)
 
     def sync_pending(self, cursor):
         query = """SELECT page_title FROM page JOIN row ON page_id = row_id
@@ -174,7 +174,7 @@ class Task(BaseTask):
             if page in self.ignore_list:
                 continue
             if page not in tracked:
-                self.track_page(page)
+                self.track_page(cursor, page)
 
     def sync_old(self, cursor):
         query = """DELETE FROM page, row USING page JOIN row
@@ -182,20 +182,47 @@ class Task(BaseTask):
                    AND ADDTIME(page_special_time, '36:00:00')  < NOW()"""
         cursor.execute(query)
 
-    def track_page(self, page):
+    def track_page(self, cursor, page):
+        # Page update hook when page is not in our database.
         pass
 
-    def update_page(self, page):
+    def update_page(self, cursor, page):
+        # Page update hook when page is in our database.
         pass
 
     def process_edit(self, page, **kwargs):
-        pass
+        query = "SELECT * FROM page WHERE page_title = ?"
+        with self.conn.cursor() as cursor, self.db_access_lock:
+            cursor.execute(query, (page,))
+            result = cursor.fetchall()
+            if result:
+                self.update_page(cursor, page)
+            else:
+                self.track_page(cursor, page)
 
     def process_move(self, page, **kwargs):
-        pass
+        query1 = "SELECT * FROM page WHERE page_title = ?"
+        query2 = "SELECT page_latest FROM page WHERE page_title = ?"
+        query3 = "UPDATE page SET page_title = ?, page_modify_oldid = ? WHERE page_title = ?"
+        source, dest = page
+        with self.conn.cursor() as cursor, self.db_access_lock:
+            cursor.execute(query1, (source,))
+            result = cursor.fetchall()
+            if not result:
+                self.track_page(cursor, page)
+            else:
+                try:
+                    new_oldid = list(self.site.sql_query(query2, (dest,)))[0][0]
+                except IndexError:
+                    new_oldid = result[11]
+                cursor.execute(query3, (dest, new_oldid, source))
 
     def process_delete(self, page, **kwargs):
-        pass
-
-    def process_restore(self, page, **kwargs):
-        pass
+        query1 = "SELECT page_id FROM page WHERE page_title = ?"
+        query2 = "DELETE FROM page JOIN row ON page_id = row_id WHERE page_title = ?"
+        with self.conn.cursor() as cursor, self.db_access_lock:
+            result = self.site.sql_query(query1, (page,))
+            if not list(result)[0]:
+                cursor.execute(query2, (page,))
+                return                
+        self.process_edit(page)
