@@ -1,5 +1,6 @@
 # -*- coding: utf-8  -*-
 
+from datetime import datetime
 import re
 from os.path import expanduser
 from threading import Lock
@@ -239,8 +240,8 @@ class Task(BaseTask):
         short = self.get_short_title(title)
         size = len(page.get())
         notes = self.get_notes(page)
-        c_user, c_time, c_id = self.get_create(title)
-        m_user, m_time, m_id = self.get_modify(title)
+        c_user, c_time, c_id = self.get_create(pageid)
+        m_user, m_time, m_id = self.get_modify(pageid)
         s_user, s_time, s_id = self.get_special(page, status)
 
         query1 = "INSERT INTO row VALUES (?, ?)"
@@ -261,7 +262,7 @@ class Task(BaseTask):
         title = page.title()
         size = len(page.get())
         notes = self.get_notes(page)
-        m_user, m_time, m_id = self.get_modify(title)
+        m_user, m_time, m_id = self.get_modify(pageid)
 
         query = "SELECT * FROM page JOIN row ON page_id = row_id WHERE page_id = ?"
         with self.conn.cursor(oursql.DictCursor) as dict_cursor:
@@ -316,11 +317,21 @@ class Task(BaseTask):
     def get_short_title(self, title):
         return re.sub("Wikipedia(\s*talk)?\:Articles\sfor\screation\/", "", title)
 
-    def get_create(self, title):
-        return None, None, None
+    def get_create(self, pageid):
+        query1 = "SELECT MIN(rev_id) FROM revision WHERE rev_page = ?"
+        query1 = "SELECT rev_user_text, rev_timestamp, rev_id FROM revision WHERE rev_id = ?"
+        result1 = self.site.sql_query(query1, (pageid,))
+        rev_id = list(result1)[0][0]
+        result2 = self.site.sql_query(query2, (rev_id,))
+        m_user, m_time, m_id = list(result2)[0]
+        return m_user, datetime.strptime(m_time, "%Y%m%d%H%M%S"), m_id
 
-    def get_modify(self, title):
-        return None, None, None
+    def get_modify(self, pageid):
+        query = """SELECT rev_user_text, rev_timestamp, rev_id FROM revision
+                   JOIN page ON rev_id = page_latest WHERE page_id = ?"""
+        result = self.site.sql_query(query, (pageid,))
+        m_user, m_time, m_id = list(result)[0]
+        return m_user, datetime.strptime(m_time, "%Y%m%d%H%M%S"), m_id
 
     def get_special(self, page, status):
         return None, None, None
