@@ -134,7 +134,7 @@ class Task(BaseTask):
         with self.conn.cursor() as cursor, self.db_access_lock:
             self.sync_deleted(cursor)  # Remove deleted subs
             self.sync_oldids(cursor)   # Make sure all subs are up to date
-            self.sync_pending(cursor)  # Add missed pending subs
+            self.sync_pending(cursor)  # Add missing pending subs
             self.sync_old(cursor)      # Remove old declined and accepted subs
 
     def sync_deleted(self, cursor):
@@ -159,9 +159,8 @@ class Task(BaseTask):
             except IndexError:  # Page doesn't exist!
                 cursor.execute(query3, (page_id,))
                 continue
-            if real_oldid == oldid:
-                continue
-            self.update_page(cursor, title)
+            if real_oldid != oldid:
+                self.update_page(cursor, title)
 
     def sync_pending(self, cursor):
         query = """SELECT page_title FROM page JOIN row ON page_id = row_id
@@ -182,14 +181,6 @@ class Task(BaseTask):
                    AND ADDTIME(page_special_time, '36:00:00')  < NOW()"""
         cursor.execute(query)
 
-    def track_page(self, cursor, page):
-        # Page update hook when page is not in our database.
-        pass
-
-    def update_page(self, cursor, page):
-        # Page update hook when page is in our database.
-        pass
-
     def process_edit(self, page, **kwargs):
         query = "SELECT * FROM page WHERE page_title = ?"
         with self.conn.cursor() as cursor, self.db_access_lock:
@@ -209,7 +200,7 @@ class Task(BaseTask):
             cursor.execute(query1, (source,))
             result = cursor.fetchall()
             if not result:
-                self.track_page(cursor, page)
+                self.track_page(cursor, dest)
             else:
                 try:
                     new_oldid = list(self.site.sql_query(query2, (dest,)))[0][0]
@@ -226,3 +217,11 @@ class Task(BaseTask):
                 cursor.execute(query2, (page,))
                 return                
         self.process_edit(page)
+
+    def track_page(self, cursor, page):
+        # Update hook when page is not in our database.
+        pass
+
+    def update_page(self, cursor, page):
+        # Update hook when page is in our database.
+        pass
