@@ -182,14 +182,10 @@ class Task(BaseTask):
         cursor.execute(query)
 
     def process_edit(self, page, **kwargs):
-        query = "SELECT * FROM page WHERE page_title = ?"
+        if page in self.ignore_list:
+            return
         with self.conn.cursor() as cursor, self.db_access_lock:
-            cursor.execute(query, (page,))
-            result = cursor.fetchall()
-            if result:
-                self.update_page(cursor, page)
-            else:
-                self.track_page(cursor, page)
+            self.sync_page(cursor, page)
 
     def process_move(self, page, **kwargs):
         query1 = "SELECT * FROM page WHERE page_title = ?"
@@ -213,10 +209,19 @@ class Task(BaseTask):
         query2 = "DELETE FROM page JOIN row ON page_id = row_id WHERE page_title = ?"
         with self.conn.cursor() as cursor, self.db_access_lock:
             result = self.site.sql_query(query1, (page,))
-            if not list(result)[0]:
+            if list(result)[0]:
+                self.sync_page(cursor, page)
+            else:
                 cursor.execute(query2, (page,))
-                return                
-        self.process_edit(page)
+
+    def sync_page(self, cursor, page):
+        query = "SELECT * FROM page WHERE page_title = ?"
+        cursor.execute(query, (page,))
+        result = cursor.fetchall()
+        if result:
+            self.update_page(cursor, page)
+        else:
+            self.track_page(cursor, page)
 
     def track_page(self, cursor, page):
         # Update hook when page is not in our database.
