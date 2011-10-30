@@ -204,7 +204,7 @@ class Task(BaseTask):
             cursor.execute(query1, (source,))
             result = cursor.fetchall()
             if result:
-                res = self.site.sql_query(query2, self.split_title(dest)))
+                res = self.site.sql_query(query2, self.split_title(dest))
                 try:
                     new_oldid = list(res)[0][0]
                 except IndexError:
@@ -212,16 +212,6 @@ class Task(BaseTask):
                 cursor.execute(query3, (dest, new_oldid, source))
             else:
                 self.track_page(cursor, dest)
-
-    def split_title(self, title):
-        namespace, body = title.split(":", 1)[0]
-        if not body:
-            return 0, title
-        try:
-            ns = self.site.namespace_name_to_id(namespace)
-        except wiki.NamespaceNotFoundError:
-            return 0, title
-        return ns, body
 
     def process_delete(self, page, **kwargs):
         query = "SELECT page_id FROM page WHERE page_namespace = ? AND page_title = ?"
@@ -315,6 +305,16 @@ class Task(BaseTask):
         if notes != result["page_notes"]:
             query = "UPDATE page SET page_notes = ? WHERE page_id = ?"
             cursor.execute(query, (notes, pageid))
+
+    def split_title(self, title):
+        namespace, body = title.split(":", 1)[0]
+        if not body:
+            return 0, title
+        try:
+            ns = self.site.namespace_name_to_id(namespace)
+        except wiki.NamespaceNotFoundError:
+            return 0, title
+        return ns, body
 
     def get_status_and_chart(self, page):
         content = page.get()
