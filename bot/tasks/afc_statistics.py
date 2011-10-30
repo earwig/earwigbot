@@ -2,7 +2,6 @@
 
 import re
 from os.path import expanduser
-from time import strftime, strptime
 
 import oursql
 
@@ -86,18 +85,17 @@ class Task(BaseTask):
         stats = ""
         with self.conn.cursor() as cursor:
             cursor.execute("SELECT * FROM chart")
-            charts = cursor.fetchall()
-            for chart_info in charts:
-                stats += self.compile_chart(chart_info) + "\n"
+            for chart in cursor:
+                stats += self.compile_chart(chart) + "\n"
         return stats[:-1]  # Drop the last newline
 
     def compile_chart(self, chart_info):
         chart_id, chart_title, special_title = chart_info
 
+        chart = "|".join((self.tl_header, chart_title))
         if special_title:
-            chart = "{{{0}|{1}|{2}}}".format(self.tl_header, chart_title, special_title)
-        else:
-            chart = "{{{0}|{1}}}".format(self.tl_header, chart_title)
+            chart += "".join(("|", special_title))
+        chart = "".join(("{{", chart, "}}"))
 
         query = "SELECT * FROM page JOIN row ON page_id = row_id WHERE row_chart = ?"
         with self.conn.cursor(oursql.DictCursor) as cursor:
@@ -105,29 +103,28 @@ class Task(BaseTask):
             for page in cursor:
                 chart += "\n" + self.compile_chart_row(page)
 
-        chart += "\n{{{0}}}".format(self.tl_footer)
+        chart += "".join(("\n{{", self.tl_footer, "}}"))
         return chart
 
     def compile_chart_row(self, page):
-        row = "{{{0}|s={page_status}|t={page_title}|h={page_short}|z={page_size}|"
+        row = "{0}|s={page_status}|t={page_title}|h={page_short}|z={page_size}|"
         row += "cr={page_create_user}|cd={page_create_time}|ci={page_create_oldid}|"
         row += "mr={page_modify_user}|md={page_modify_time}|mi={page_modify_oldid}|"
 
-        page["page_create_time"] = self.format_timestamp(page["page_create_time"])
-        page["page_modify_time"] = self.format_timestamp(page["page_modify_time"])
+        page["page_create_time"] = self.format_time(page["page_create_time"])
+        page["page_modify_time"] = self.format_time(page["page_modify_time"])
 
         if page["page_special_user"]:
             row += "sr={page_special_user}|sd={page_special_time}|si={page_special_oldid}|"
-            page["page_special_time"] = self.format_timestamp(page["page_special_time"])
+            page["page_special_time"] = self.format_time(page["page_special_time"])
 
         if page["page_notes"]:
             row += "n=1{page_notes}"
 
-        row += "}}"
-        return row.format(self.tl_row, **page)
+        return "".join(("{{", row.format(self.tl_row, **page), "}}"))
 
-    def format_timestamp(self, ts):
-        return strftime("%H:%M, %d %B %Y", strptime(ts, "%Y-%m-%d %H:%M:%S"))
+    def format_time(self, timestamp):
+        return timestamp.strftime("%H:%M, %d %B %Y")
 
     def check_integrity(self):
         pass
