@@ -76,7 +76,7 @@ def load():
     If everything goes well, return True if stored passwords are
     encrypted in the file, or False if they are not.
     """
-    global components, wiki, irc, metadata
+    global components, wiki, tasks, irc, metadata
 
     if not path.exists(config_path):
         print "You haven't configured the bot yet!"
