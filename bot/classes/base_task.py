@@ -73,7 +73,7 @@ class BaseTask(object):
             return False
         title = cfg.get("page", "User:$1/Shutoff/Task $2")
         username = site.get_user().name()
-        title = title.replace("$1", username).replace("$2", self.number)
+        title = title.replace("$1", username).replace("$2", str(self.number))
         page = site.get_page(title)
 
         try:
