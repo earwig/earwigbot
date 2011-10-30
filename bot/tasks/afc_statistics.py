@@ -2,6 +2,7 @@
 
 import re
 from os.path import expanduser
+from threading import Lock
 
 import oursql
 
@@ -38,34 +39,35 @@ class Task(BaseTask):
         kwargs = cfg.get("sql", {})
         kwargs["read_default_file"] = expanduser("~/.my.cnf")
         self.conn = oursql.connect(**kwargs)
+        self.db_access_lock = Lock()
 
     def run(self, **kwargs):
         self.site = wiki.get_site()
-        
+
         action = kwargs.get("action")
         if not action:
             return
-        if action == "save":
-            self.save()
-            return
 
-        page = kwargs.get("page")
-        if page:
-            methods = {
-                "edit": self.process_edit,
-                "move": self.process_move,
-                "delete": self.process_delete,
-                "restore": self.process_restore,
-            }
-            method = methods.get(action)
-            if method:
-                method(page)
+        methods = {
+            "save": self.save,
+            "sync", self.sync,
+            "edit": self.process_edit,
+            "move": self.process_move,
+            "delete": self.process_delete,
+            "restore": self.process_restore,
+        }
 
-    def save(self):
-        self.check_integrity()
+        method = methods.get(action)
+        if method:
+            method(**kwargs)            
 
-        if self.shutoff_enabled():
-            return
+    def save(self, **kwargs):
+        if kwargs.get("fromIRC"):
+            summary = " ".join((self.summary, "(!earwigbot)"))
+        else:
+            if self.shutoff_enabled():
+                return
+            summary = self.summary
 
         statistics = self.compile_charts()
 
@@ -79,11 +81,11 @@ class Task(BaseTask):
 
         newtext = re.sub("(<!-- sig begin -->)(.*?)(<!-- sig end -->)",
                          "\\1~~~ at ~~~~~\\3", newtext)
-        page.edit(newtext, self.summary, minor=True, bot=True)
+        page.edit(newtext, summary, minor=True, bot=True)
 
     def compile_charts(self):
         stats = ""
-        with self.conn.cursor() as cursor:
+        with self.conn.cursor() as cursor, self.db_access_lock:
             cursor.execute("SELECT * FROM chart")
             for chart in cursor:
                 stats += self.compile_chart(chart) + "\n"
@@ -126,17 +128,35 @@ class Task(BaseTask):
     def format_time(self, timestamp):
         return timestamp.strftime("%H:%M, %d %B %Y")
 
-    def check_integrity(self):
+    def sync(self, **kwargs):
+        with self.conn.cursor() as cursor, self.db_access_lock:
+            self.sync_deleted(cursor)  # Remove deleted subs
+            self.sync_oldids(cursor)   # Make sure all subs are up to date
+            self.sync_pending(cursor)  # Add missed pending subs
+            self.sync_old(cursor)      # Remove old declined and accepted subs
+
+    def sync_deleted(self, cursor):
         pass
 
-    def process_edit(self, page):
+    def sync_oldids(self, cursor):
         pass
 
-    def process_move(self, page):
+    def sync_pending(self, cursor):
         pass
 
-    def process_delete(self, page):
+    def sync_old(self, cursor):
+        query = """DELETE FROM page, row USING page JOIN row ON page_id = row_id
+        WHERE row_chart IN (4, 5) AND ADDTIME(page_special_time, '36:00:00')  < NOW()"""
+        cursor.execute(query)
+
+    def process_edit(self, page, **kwargs):
         pass
 
-    def process_restore(self, page):
+    def process_move(self, page, **kwargs):
+        pass
+
+    def process_delete(self, page, **kwargs):
+        pass
+
+    def process_restore(self, page, **kwargs):
         pass

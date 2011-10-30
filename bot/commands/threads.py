@@ -132,6 +132,7 @@ class Command(BaseCommand):
             self.connection.reply(data, msg.format(task_name))
             return
 
+        data.kwargs["fromIRC"] = True
         tasks.start(task_name, **data.kwargs)
         msg = "task \x0302{0}\x0301 started.".format(task_name)
         self.connection.reply(data, msg)
