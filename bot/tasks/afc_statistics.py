@@ -156,10 +156,10 @@ class Task(BaseTask):
         query2 = "SELECT page_latest, page_title FROM page WHERE page_id = ?"
         cursor.execute(query1)
         for page_id, title, oldid in cursor:
-            result = self.site.sql_query(query2, (page_id,))
+            result = list(self.site.sql_query(query2, (page_id,)))
             try:
-                real_oldid = list(result)[0][0]
-                real_title = list(result)[0][1]
+                real_oldid = result[0][0]
+                real_title = result[0][1]
             except IndexError:  # Page doesn't exist!
                 self.untrack_page(cursor, pageid=page_id)
                 continue
@@ -178,7 +178,7 @@ class Task(BaseTask):
 
         for pageid, title, ns in result:
             title = ":".join((self.site.namespace_id_to_name(ns), title))
-            if title in self.ignore_list:
+            if title.replace("_", " ") in self.ignore_list:
                 continue
             if pageid not in tracked:
                 self.track_page(cursor, title)
