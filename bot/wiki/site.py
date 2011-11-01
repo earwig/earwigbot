@@ -39,6 +39,7 @@ class Site(object):
     domain               -- returns our web domain, like "en.wikipedia.org"
     api_query            -- does an API query with the given kwargs as params
     sql_query            -- does an SQL query and yields its results
+    get_replag           -- returns the estimated database replication lag
     namespace_id_to_name -- given a namespace ID, returns associated name(s)
     namespace_name_to_id -- given a namespace name, returns associated id
     get_page             -- returns a Page object for the given title
@@ -520,6 +521,18 @@ class Site(object):
             cur.execute(query, params, plain_query)
             for result in cur:
                 yield result
+
+    def get_replag(self):
+        """Return the estimated database replication lag in seconds.
+        
+        Requires SQL access. This function only makes sense on a replicated
+        database (e.g. the Wikimedia Toolserver) and on a wiki that receives a
+        large number of edits (ideally, at least one per second), or the result
+        may be larger than expected. 
+        """
+        query = "SELECT NOW() - MAX(rev_timestamp) FROM revision"
+        result = list(self.sql_query(query))
+        return result[0][0]
 
     def namespace_id_to_name(self, ns_id, all=False):
         """Given a namespace ID, returns associated namespace names.
