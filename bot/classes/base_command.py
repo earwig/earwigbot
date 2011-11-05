@@ -1,5 +1,7 @@
 # -*- coding: utf-8  -*-
 
+import logging
+
 class BaseCommand(object):
     """A base class for commands on IRC.
 
@@ -15,13 +17,15 @@ class BaseCommand(object):
 
     def __init__(self, connection):
         """Constructor for new commands.
-        
+
         This is called once when the command is loaded (from
         commands._load_command()). `connection` is a Connection object,
         allowing us to do self.connection.say(), self.connection.send(), etc,
         from within a method.
         """
         self.connection = connection
+        self.logger = logging.getLogger(".".join(("commands", name)))
+        self.logger.setLevel(logging.DEBUG)
 
     def check(self, data):
         """Returns whether this command should be called in response to 'data'.

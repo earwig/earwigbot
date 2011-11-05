@@ -39,6 +39,7 @@ def _load_task(filename):
         return
 
     task = sys.modules[name].Task()
+    task._setup_logger()
     if not isinstance(task, BaseTask):
         return
 

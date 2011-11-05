@@ -1,5 +1,7 @@
 # -*- coding: utf-8  -*-
 
+import logging
+
 import config
 import wiki
 
@@ -15,6 +17,11 @@ class BaseTask(object):
         the task manager (in tasks._load_task()).
         """
         pass
+
+    def _setup_logger(self):
+        """Set up a basic module-level logger."""
+        self.logger = logging.getLogger(".".join(("tasks", name)))
+        self.logger.setLevel(logging.DEBUG)
 
     def run(self, **kwargs):
         """Main entry point to run a given task.

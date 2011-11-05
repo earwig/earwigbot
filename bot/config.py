@@ -8,7 +8,7 @@ including encrypting and decrypting passwords and making a new config file from
 scratch at the inital bot run.
 
 Usually you'll just want to do "from core import config" and access config data
-from within config's five global variables and one function:
+from within config's global variables and functions:
 
 * config.components  - a list of enabled components
 * config.wiki        - a dict of information about wiki-editing
@@ -17,7 +17,7 @@ from within config's five global variables and one function:
 * config.metadata    - a dict of miscellaneous information
 * config.schedule()  - returns a list of tasks scheduled to run at a given time
 
-Additionally, functions related to config loading:
+Additionally, there are functions used in config loading:
 * config.load()     - loads and parses our config file, returning True if
                       passwords are stored encrypted or False otherwise
 * config.decrypt()  - given a key, decrypts passwords inside our config
@@ -25,6 +25,7 @@ Additionally, functions related to config loading:
 """
 
 import json
+import logging
 from os import path
 
 import blowfish
@@ -32,10 +33,11 @@ import blowfish
 script_dir = path.dirname(path.abspath(__file__))
 root_dir = path.split(script_dir)[0]
 config_path = path.join(root_dir, "config.json")
+log_dir = path.join(root_dir, "logs")
 
 _config = None  # Holds data loaded from our config file
 
-# Set our five easy-config-access global variables to None
+# Set our easy-config-access global variables to None
 components, wiki, tasks, irc, metadata = None, None, None, None, None
 
 def _load():
@@ -48,6 +50,35 @@ def _load():
             print "Error parsing config file {0}:".format(config_path)
             print error
             exit(1)
+
+def _setup_logging():
+    """Configures the logging module so it works the way we want it to."""
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    if metadata.get("enableLogging"):
+        import logging.handlers
+        hand = logging.handlers.TimedRotatingFileHandler
+        fmt = "[%(asctime)s %(levelname)-8s] %(name)s: %(message)s"
+        formatter = logging.Formatter(fmt=fmt, datefmt="%Y-%m-%d %H:%M:%S")
+
+        logfile = lambda f: path.join(log_dir, f)
+
+        main_handler = hand(logfile("bot.log"), "midnight", 1. 7)
+        error_handler = hand(logfile("error.log"), "W", 6, 4)
+        debug_handler = hand(logfile("debug.log"), "H", 1, 6)
+
+        main_handler.setLevel(logging.INFO)
+        error_handler.setLevel(logging.ERROR)
+        debug_handler.setLevel(logging.DEBUG)
+
+        handlers = (main_handler, error_handler, debug_handler)
+        for h in handlers:
+            h.setFormatter(formatter)
+            logger.addHandler(h)
+
+    else:
+        logger.addHandler(logging.NullHandler())
 
 def _make_new():
     """Make a new config file based on the user's input."""
@@ -93,6 +124,8 @@ def load():
     tasks = _config.get("tasks", {})
     irc = _config.get("irc", {})
     metadata = _config.get("metadata", {})
+
+    _setup_logging()
 
     # Are passwords encrypted?
     return metadata.get("encryptPasswords", False)
