@@ -26,6 +26,7 @@ Additionally, there are functions used in config loading:
 
 import json
 import logging
+import logging.handlers
 from os import path
 
 import blowfish
@@ -57,22 +58,23 @@ def _setup_logging():
     logger.setLevel(logging.DEBUG)
 
     if metadata.get("enableLogging"):
-        import logging.handlers
         hand = logging.handlers.TimedRotatingFileHandler
         fmt = "[%(asctime)s %(levelname)-8s] %(name)s: %(message)s"
         formatter = logging.Formatter(fmt=fmt, datefmt="%Y-%m-%d %H:%M:%S")
 
         logfile = lambda f: path.join(log_dir, f)
 
-        main_handler = hand(logfile("bot.log"), "midnight", 1. 7)
-        error_handler = hand(logfile("error.log"), "W", 6, 4)
+        main_handler = hand(logfile("bot.log"), "midnight", 1, 7)
+        error_handler = hand(logfile("error.log"), "W6", 1, 4)
         debug_handler = hand(logfile("debug.log"), "H", 1, 6)
+        stream_handler = logging.StreamHandler()
 
         main_handler.setLevel(logging.INFO)
         error_handler.setLevel(logging.ERROR)
         debug_handler.setLevel(logging.DEBUG)
+        stream_handler.setLevel(logging.DEBUG)
 
-        handlers = (main_handler, error_handler, debug_handler)
+        handlers = (main_handler, error_handler, debug_handler, stream_handler)
         for h in handlers:
             h.setFormatter(formatter)
             logger.addHandler(h)

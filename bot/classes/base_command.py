@@ -24,7 +24,7 @@ class BaseCommand(object):
         from within a method.
         """
         self.connection = connection
-        self.logger = logging.getLogger(".".join(("commands", name)))
+        self.logger = logging.getLogger(".".join(("commands", self.name)))
         self.logger.setLevel(logging.DEBUG)
 
     def check(self, data):

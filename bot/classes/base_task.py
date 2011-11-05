@@ -20,7 +20,7 @@ class BaseTask(object):
 
     def _setup_logger(self):
         """Set up a basic module-level logger."""
-        self.logger = logging.getLogger(".".join(("tasks", name)))
+        self.logger = logging.getLogger(".".join(("tasks", self.name)))
         self.logger.setLevel(logging.DEBUG)
 
     def run(self, **kwargs):
