@@ -10,7 +10,7 @@ class BrokenSocketException(Exception):
 
 class Connection(object):
     """A class to interface with IRC."""
-    
+
     def __init__(self, host=None, port=None, nick=None, ident=None,
                  realname=None, logger=None):
         self.host = host
@@ -26,7 +26,11 @@ class Connection(object):
     def connect(self):
         """Connect to our IRC server."""
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((self.host, self.port))
+        try:
+            self.sock.connect((self.host, self.port))
+        except socket.error:
+            self.logger.critical("Couldn't connect to IRC server", exc_info=1)
+            exit(1)
         self.send("NICK %s" % self.nick)
         self.send("USER %s %s * :%s" % (self.ident, self.host, self.realname))
 
@@ -68,7 +72,7 @@ class Connection(object):
         message = "".join((chr(1), "ACTION ", msg, chr(1)))
         self.say(target, message)
 
-    def notice(self, target, msg): 
+    def notice(self, target, msg):
         """Send a notice to a target on the server."""
         message = "".join(("NOTICE ", target, " :", msg))
         self.send(message)
