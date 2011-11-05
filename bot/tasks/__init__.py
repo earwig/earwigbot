@@ -7,11 +7,11 @@ This package provides the wiki bot "tasks" EarwigBot runs. Here in __init__,
 you can find some functions used to load and run these tasks.
 """
 
+import logging
 import os
 import sys
 import threading
 import time
-import traceback
 
 from classes import BaseTask
 import config
@@ -25,6 +25,9 @@ base_dir = os.path.join(config.root_dir, "bot", "tasks")
 # an instance of the task class:
 _tasks = {}
 
+# Logger for this module:
+logger = logging.getLogger("commands")
+
 def _load_task(filename):
     """Try to load a specific task from a module, identified by file name."""
     global _tasks
@@ -34,8 +37,7 @@ def _load_task(filename):
     try:
          __import__(name)
     except:
-        print "Couldn't load file {0}:".format(filename)
-        traceback.print_exc()
+        logger.exception("Couldn't load file {0}:".format(filename))
         return
 
     task = sys.modules[name].Task()
@@ -44,18 +46,17 @@ def _load_task(filename):
         return
 
     _tasks[task.name] = task
-    print "Added task {0}...".format(task.name)
+    logger.debug("Added task {0}".format(task.name))
 
 def _wrapper(task, **kwargs):
     """Wrapper for task classes: run the task and catch any errors."""
     try:
         task.run(**kwargs)
     except:
-        error = "Task '{0}' raised an exception and had to stop:"
-        print error.format(task.name)
-        traceback.print_exc()
+        error = "Task '{0}' raised an exception and had to stop"
+        logger.exception(error.format(task.name))
     else:
-        print "Task '{0}' finished without error.".format(task.name)
+        logger.info("Task '{0}' finished without error".format(task.name))
 
 def load():
     """Load all valid tasks from bot/tasks/, into the _tasks variable."""
@@ -70,7 +71,7 @@ def load():
         except AttributeError:
             pass  # The file is doesn't contain a task, so just move on
 
-    print "Found {0} tasks: {1}.".format(len(_tasks), ', '.join(_tasks.keys()))
+    logger.info("Found {0} tasks: {1}".format(len(_tasks), ', '.join(_tasks.keys())))
 
 def schedule(now=time.gmtime()):
     """Start all tasks that are supposed to be run at a given time."""
@@ -87,13 +88,13 @@ def schedule(now=time.gmtime()):
 def start(task_name, **kwargs):
     """Start a given task in a new thread. Pass args to the task's run()
     function."""
-    print "Starting task '{0}' in a new thread...".format(task_name)
+    logger.info("Starting task '{0}' in a new thread".format(task_name))
 
     try:
         task = _tasks[task_name]
     except KeyError:
-        error = "Couldn't find task '{0}': bot/tasks/{0}.py does not exist."
-        print error.format(task_name)
+        error = "Couldn't find task '{0}': bot/tasks/{0}.py does not exist"
+        logger.error(error.format(task_name))
         return
 
     task_thread = threading.Thread(target=lambda: _wrapper(task, **kwargs))

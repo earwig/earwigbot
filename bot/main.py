@@ -30,9 +30,9 @@ There is a "priority" system here:
 Else, the bot will stop, as no components are enabled.
 """
 
+import logging
 import threading
 import time
-import traceback
 
 import config
 import frontend
@@ -49,13 +49,12 @@ def irc_watcher(f_conn=None):
     while 1:  # restart the watcher component if it breaks (and nothing else)
         w_conn = watcher.get_connection()
         w_conn.connect()
-        print  # blank line to signify that the bot has finished starting up
         try:
             watcher.main(w_conn, f_conn)
         except:
-            traceback.print_exc()
+            logging.exception("Watcher had an error")
         time.sleep(5)  # sleep a bit before restarting watcher
-        print "\nWatcher has stopped; restarting component..."
+        logging.warn("Watcher has stopped; restarting component")
 
 def wiki_scheduler():
     """Function to handle the wiki scheduler as another thread, or as the
@@ -77,12 +76,12 @@ def irc_frontend():
     enabled."""
     global f_conn
 
-    print "Starting IRC frontend..."
+    logging.info("Starting IRC frontend")
     f_conn = frontend.get_connection()
     frontend.startup(f_conn)
 
     if "wiki_schedule" in config.components:
-        print "\nStarting wiki scheduler..."
+        logging.info("Starting wiki scheduler")
         tasks.load()
         t_scheduler = threading.Thread(target=wiki_scheduler)
         t_scheduler.name = "wiki-scheduler"
@@ -90,7 +89,7 @@ def irc_frontend():
         t_scheduler.start()
 
     if "irc_watcher" in config.components:
-        print "\nStarting IRC watcher..."
+        logging.info("Starting IRC watcher")
         t_watcher = threading.Thread(target=irc_watcher, args=(f_conn,))
         t_watcher.name = "irc-watcher"
         t_watcher.daemon = True
@@ -105,40 +104,47 @@ def irc_frontend():
 def run():
     config.load()
     try:
-        key = raw_input()    # wait for our password decrypt key from the bot's
-    except EOFError:         # wrapper, then decrypt passwords
+        # Wait for our password decrypt key from the bot's wrapper, then
+        # decrypt passwords:
+        key = raw_input()
+    except EOFError:
         pass
     else:
         config.decrypt(key)
 
     enabled = config.components
 
-    if "irc_frontend" in enabled:  # make the frontend run on our primary
-        irc_frontend()             # thread if enabled, and enable additional
-                                   # components through that function
+    if "irc_frontend" in enabled:
+        # Make the frontend run on our primary thread if enabled, and enable
+        # additional components through that function
+        irc_frontend()
 
-    elif "wiki_schedule" in enabled:       # run the scheduler on the main
-        print "Starting wiki scheduler..." # thread, but also run the IRC
-        tasks.load()                       # watcher on another thread iff it
-        if "irc_watcher" in enabled:       # is enabled
-            print "\nStarting IRC watcher..."
+    elif "wiki_schedule" in enabled:
+        # Run the scheduler on the main thread, but also run the IRC watcher on
+        # another thread iff it is enabled
+        logging.info("Starting wiki scheduler")
+        tasks.load()
+        if "irc_watcher" in enabled:
+            logging.info("Starting IRC watcher")
             t_watcher = threading.Thread(target=irc_watcher)
             t_watcher.name = "irc-watcher"
             t_watcher.daemon = True
             t_watcher.start()
         wiki_scheduler()
 
-    elif "irc_watcher" in enabled:      # the IRC watcher is our only enabled
-        print "Starting IRC watcher..." # component, so run its function only
-        irc_watcher()                   # and don't worry about anything else
+    elif "irc_watcher" in enabled:
+        # The IRC watcher is our only enabled component, so run its function
+        # only and don't worry about anything else:
+        logging.info("Starting IRC watcher")
+        irc_watcher()
 
-    else:  # nothing is enabled!
-        print "No bot parts are enabled; stopping..."
+    else:  # Nothing is enabled!
+        logging.critical("No bot parts are enabled; stopping")
         exit(1)
 
 if __name__ == "__main__":
     try:
         run()
     except KeyboardInterrupt:
-        print "\nKeyboardInterrupt: stopping main bot loop."
+        logging.critical("KeyboardInterrupt: stopping main bot loop")
         exit(1)

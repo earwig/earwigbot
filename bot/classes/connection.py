@@ -12,12 +12,13 @@ class Connection(object):
     """A class to interface with IRC."""
     
     def __init__(self, host=None, port=None, nick=None, ident=None,
-                 realname=None):
+                 realname=None, logger=None):
         self.host = host
         self.port = port
         self.nick = nick
         self.ident = ident
         self.realname = realname
+        self.logger = logger
 
         # A lock to prevent us from sending two messages at once:
         self.lock = threading.Lock()
@@ -50,7 +51,7 @@ class Connection(object):
         # Ensure that we only send one message at a time with a blocking lock:
         with self.lock:
             self.sock.sendall(msg + "\r\n")
-            print "   %s" % msg
+            self.logger.debug(msg)
 
     def say(self, target, msg):
         """Send a private message to a target on the server."""

@@ -9,6 +9,7 @@ of BaseCommand in irc/base_command.py. All command classes are automatically
 imported by irc/command_handler.py if they are in irc/commands.
 """
 
+import logging
 import re
 
 import config
@@ -18,6 +19,7 @@ from classes import Connection, Data, BrokenSocketException
 __all__ = ["get_connection", "startup", "main"]
 
 connection = None
+logger = logging.getLogger("frontend")
 sender_regex = re.compile(":(.*?)!(.*?)@(.*?)\Z")
 
 def get_connection():
@@ -25,7 +27,7 @@ def get_connection():
     connection, but don't actually connect yet."""
     cf = config.irc["frontend"]
     connection = Connection(cf["host"], cf["port"], cf["nick"], cf["ident"],
-            cf["realname"])
+            cf["realname"], logger)
     return connection
 
 def startup(conn):
@@ -48,7 +50,7 @@ def main():
         try:
             read_buffer = read_buffer + connection.get()
         except BrokenSocketException:
-            print "Socket has broken on front-end; restarting bot..."
+            logger.warn("Socket has broken on front-end; restarting bot")
             return
 
         lines = read_buffer.split("\n")
@@ -90,7 +92,7 @@ def _process_message(line):
         # ordinary command):
         if data.msg in ["!restart", ".restart"]:
             if data.host in config.irc["permissions"]["owners"]:
-                print "Restarting bot per owner request..."
+                logger.info("Restarting bot per owner request")
                 return True
 
     # If we are pinged, pong back:

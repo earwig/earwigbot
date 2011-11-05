@@ -16,6 +16,7 @@ try:
 except ImportError:
     oursql = None
 
+from wiki import logger
 from wiki.category import Category
 from wiki.constants import *
 from wiki.exceptions import *
@@ -169,7 +170,7 @@ class Site(object):
 
         data = urlencode(params)
 
-        print url, data  # debug code
+        logger.debug("{0} -> {1}".format(url, data))
 
         try:
             response = self._opener.open(url, data)
@@ -207,7 +208,7 @@ class Site(object):
                 raise SiteAPIError(e.format(self._max_retries))
             tries += 1
             msg = 'Server says: "{0}". Retrying in {1} seconds ({2}/{3}).'
-            print msg.format(info, wait, tries, self._max_retries)
+            logger.info(msg.format(info, wait, tries, self._max_retries))
             sleep(wait)
             return self._api_query(params, tries=tries, wait=wait*3)
         else:

@@ -70,7 +70,7 @@ def _setup_logging():
         stream_handler = logging.StreamHandler()
 
         main_handler.setLevel(logging.INFO)
-        error_handler.setLevel(logging.ERROR)
+        error_handler.setLevel(logging.WARNING)
         debug_handler.setLevel(logging.DEBUG)
         stream_handler.setLevel(logging.DEBUG)
 

@@ -10,6 +10,10 @@ written by Mr.Z-man, other than a similar purpose. We share no code.
 Import the toolset with `import wiki`.
 """
 
+import logging
+logger = logging.getLogger("wiki")
+logger.addHandler(logging.NullHandler())
+
 from wiki.constants import *
 from wiki.exceptions import *
 from wiki.functions import *

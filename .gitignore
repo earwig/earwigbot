@@ -4,11 +4,11 @@
 # Ignore bot-specific config file:
 config.json
 
+# Ignore logs directory:
+logs/
+
 # Ignore cookies file:
 .cookies
-
-# Ignore statistics file:
-statistics.txt
 
 # Ignore OS X's crud:
 .DS_Store

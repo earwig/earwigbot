@@ -7,9 +7,9 @@ This package provides the IRC "commands" used by the bot's front-end component.
 In __init__, you can find some functions used to load and run these commands.
 """
 
+import logging
 import os
 import sys
-import traceback
 
 from classes import BaseCommand
 import config
@@ -22,6 +22,9 @@ base_dir = os.path.join(config.root_dir, "bot", "commands")
 # Store commands in a dict, where the key is the command's name and the value
 # is an instance of the command's class:
 _commands = {}
+
+# Logger for this module:
+logger = logging.getLogger("tasks")
 
 def _load_command(connection, filename):
     """Try to load a specific command from a module, identified by file name.
@@ -39,8 +42,7 @@ def _load_command(connection, filename):
     try:
          __import__(name)
     except:
-        print "Couldn't load file {0}:".format(filename)
-        traceback.print_exc()
+        logger.exception("Couldn't load file {0}".format(filename))
         return
 
     command = sys.modules[name].Command(connection)
@@ -48,7 +50,7 @@ def _load_command(connection, filename):
         return
 
     _commands[command.name] = command
-    print "Added command {0}...".format(command.name)
+    logger.debug("Added command {0}".format(command.name))
 
 def load(connection):
     """Load all valid commands into the _commands global variable.
@@ -67,8 +69,8 @@ def load(connection):
         except AttributeError:
             pass  # The file is doesn't contain a command, so just move on
 
-    msg = "Found {0} commands: {1}."
-    print msg.format(len(_commands), ", ".join(_commands.keys()))
+    msg = "Found {0} commands: {1}"
+    logger.info(msg.format(len(_commands), ", ".join(_commands.keys())))
 
 def get_all():
     """Return our dict of all loaded commands."""
@@ -85,6 +87,5 @@ def check(hook, data):
                 try:
                     command.process(data)
                 except:
-                    print "Error executing command '{0}':".format(data.command)
-                    traceback.print_exc()
+                    logger.exception("Error executing command '{0}'".format(data.command))
                 break

@@ -10,11 +10,14 @@ being started (located in tasks/) or messages being sent to channels on the IRC
 frontend.
 """
 
+import logging
+
 import config
 from classes import Connection, RC, BrokenSocketException
 import rules
 
 frontend_conn = None
+logger = logging.getLogger("watcher")
 
 def get_connection():
     """Return a new Connection() instance with connection information.
@@ -23,7 +26,7 @@ def get_connection():
     """
     cf = config.irc["watcher"]
     connection = Connection(cf["host"], cf["port"], cf["nick"], cf["ident"],
-            cf["realname"])
+            cf["realname"], logger)
     return connection
 
 def main(connection, f_conn=None):
