@@ -1,6 +1,7 @@
 # -*- coding: utf-8  -*-
 
 from datetime import datetime
+import logging
 import re
 from os.path import expanduser
 from threading import Lock
@@ -27,7 +28,7 @@ class Task(BaseTask):
 
         # Set some wiki-related attributes:
         self.pagename = cfg.get("page", "Template:AFC statistics")
-        self.pending_cat = cfg.get("pending", "Pending_AfC_submissions")
+        self.pending_cat = cfg.get("pending", "Pending AfC submissions")
         self.ignore_list = cfg.get("ignore_list", [])
         default_summary = "Updating statistics for [[WP:WPAFC|WikiProject Articles for creation]]."
         self.summary = self.make_summary(cfg.get("summary", default_summary))
@@ -49,26 +50,16 @@ class Task(BaseTask):
         self.conn = oursql.connect(**self.conn_data)
 
         action = kwargs.get("action")
-        if not action:
-            return
-
-        methods = {
-            "save": self.save,
-            "sync": self.sync,
-            "edit": self.process_edit,
-            "move": self.process_move,
-            "delete": self.process_delete,
-            "restore": self.process_edit,
-        }
-
-        method = methods.get(action)
-        if method:
-            try:
-                method(**kwargs)
-            finally:
-                self.conn.close()            
+        try:
+            if action == "save":
+                self.save()
+            elif action == "sync":
+                self.sync()
+        finally:
+            self.conn.close()            
 
     def save(self, **kwargs):
+        self.logger.info("Saving chart")
         if kwargs.get("fromIRC"):
             summary = " ".join((self.summary, "(!earwigbot)"))
         else:
@@ -84,11 +75,13 @@ class Task(BaseTask):
                          statistics.join(("\\1\n", "\n\\3")), text,
                          flags=re.DOTALL)
         if newtext == text:
+            self.logger.info("Chart unchanged; not saving")
             return  # Don't edit the page if we're not adding anything
 
         newtext = re.sub("(<!-- sig begin -->)(.*?)(<!-- sig end -->)",
                          "\\1~~~ at ~~~~~\\3", newtext)
         page.edit(newtext, summary, minor=True, bot=True)
+        self.logger.info("Chart saved to [[{0}]]".format(page.title()))
 
     def compile_charts(self):
         stats = ""
@@ -136,118 +129,81 @@ class Task(BaseTask):
         return timestamp.strftime("%H:%M, %d %B %Y")
 
     def sync(self, **kwargs):
+        self.logger.info("Starting sync")
+        self.report_replag()
         with self.conn.cursor() as cursor, self.db_access_lock:
-            self.sync_deleted(cursor)  # Remove deleted subs
-            self.sync_oldids(cursor)   # Make sure all subs are up to date
-            self.sync_pending(cursor)  # Add missing pending subs
-            self.sync_old(cursor)      # Remove old declined and accepted subs
+            self.update_tracked(cursor)
+            self.add_untracked(cursor)
+            self.delete_old(cursor)
+        self.logger.info("Sync completed")
 
-    def sync_deleted(self, cursor):
-        query1 = "SELECT page_id FROM page"
-        query2 = "SELECT page_id FROM page WHERE page_id = ?"
-        cursor.execute(query1)
-        for page in cursor:
-            result = self.site.sql_query(query2, (page[0],))
-            if not list(result):
-                self.untrack_page(cursor, pageid=page[0])
+    def report_replag(self):
+        replag = self.site.get_replag()
+        if replag < 60:
+            lvl = logging.DEBUG
+        elif replag < 720:
+            lvl = logging.INFO
+        else:
+            lvl = logging.WARNING
+        self.logger.log(lvl, "Server replag is {0}".format(replag))
 
-    def sync_oldids(self, cursor):
+    def update_tracked(self, cursor):
+        self.logger.debug("Updating tracked submissions")
         query1 = "SELECT page_id, page_title, page_modify_oldid FROM page"
         query2 = "SELECT page_latest, page_title FROM page WHERE page_id = ?"
         cursor.execute(query1)
-        for page_id, title, oldid in cursor:
-            result = list(self.site.sql_query(query2, (page_id,)))
+        for pageid, title, oldid in cursor:
+            msg = "Updating tracked page: [[{0}]] (id: {1}) @ {2}"
+            self.logger.debug(msg.format(pageid, title, oldid))
+            result = list(self.site.sql_query(query2, (pageid,)))
             try:
                 real_oldid = result[0][0]
                 real_title = result[0][1]
             except IndexError:  # Page doesn't exist!
-                self.untrack_page(cursor, pageid=page_id)
+                self.untrack_page(cursor, pageid)
                 continue
             if real_oldid != oldid:
-                self.update_page(cursor, real_title)
+                self.update_page(cursor, pageid, real_title)
 
-    def sync_pending(self, cursor):
-        query1 = """SELECT page_id FROM page JOIN row ON page_id = row_id
-                    WHERE row_chart IN (1, 2, 3)"""
-        query2 = """SELECT cl_from, page_title, page_namespace
-                    FROM categorylinks JOIN page ON cl_from = page_id
-                    WHERE cl_to = ?"""
-        cursor.execute(query1)
+    def add_untracked(self, cursor):
+        self.logger.debug("Adding untracked pending submissions")
+        cursor.execute("SELECT page_id FROM page")
         tracked = [i[0] for i in cursor.fetchall()]
-        result = self.site.sql_query(query2, (self.pending_cat,))
 
-        for pageid, title, ns in result:
-            title = ":".join((self.site.namespace_id_to_name(ns), title))
-            if title.replace("_", " ") in self.ignore_list:
+        category = self.site.get_category(self.pending_cat)
+        pending = category.members(limit=500)
+
+        for title, pageid in pending:
+            if title in self.ignore_list:
                 continue
             if pageid not in tracked:
-                self.track_page(cursor, title)
+                self.track_page(cursor, pageid, title)
 
-    def sync_old(self, cursor):
+    def delete_old(self, cursor):
+        self.logger.debug("Removing old submissions from chart")
         query = """DELETE FROM page, row USING page JOIN row
                    ON page_id = row_id WHERE row_chart IN (4, 5)
                    AND ADDTIME(page_special_time, '36:00:00')  < NOW()"""
         cursor.execute(query)
 
-    def process_edit(self, page, **kwargs):
-        if page in self.ignore_list:
-            return
-        with self.conn.cursor() as cursor, self.db_access_lock:
-            self.sync_page(cursor, page)
+    def untrack_page(self, cursor, pageid):
+        self.logger.debug("Untracking page (id: {0})".format(pageid))
+        query = """DELETE FROM page, row USING page JOIN row
+                   ON page_id = row_id WHERE page_id = ?"""
+        cursor.execute(query, (pageid,))
 
-    def process_move(self, page, **kwargs):
-        query1 = "SELECT * FROM page WHERE page_title = ?"
-        query2 = "SELECT page_latest FROM page WHERE page_namespace = ? AND page_title = ?"
-        query3 = "UPDATE page SET page_title = ?, page_modify_oldid = ? WHERE page_title = ?"
-        source, dest = page
-        with self.conn.cursor() as cursor, self.db_access_lock:
-            cursor.execute(query1, (source,))
-            result = cursor.fetchall()
-            if result:
-                res = self.site.sql_query(query2, self.split_title(dest))
-                try:
-                    new_oldid = list(res)[0][0]
-                except IndexError:
-                    new_oldid = result[0][11]
-                cursor.execute(query3, (dest, new_oldid, source))
-            else:
-                self.track_page(cursor, dest)
-
-    def process_delete(self, page, **kwargs):
-        query = "SELECT page_id FROM page WHERE page_namespace = ? AND page_title = ?"
-        with self.conn.cursor() as cursor, self.db_access_lock:
-            result = self.site.sql_query(query, self.split_title(page))
-            if list(result):
-                self.sync_page(cursor, page)
-            else:
-                self.untrack_page(cursor, title=page)
-
-    def sync_page(self, cursor, page):
-        query = "SELECT * FROM page WHERE page_title = ?"
-        cursor.execute(query, (page,))
-        result = cursor.fetchall()
-        if result:
-            self.update_page(cursor, page)
-        else:
-            self.track_page(cursor, page)
-
-    def untrack_page(self, cursor, pageid=None, title=None):
-        query = "DELETE FROM page, row USING page JOIN row ON page_id = row_id WHERE "
-        if pageid:
-            query += "page_id = ?"
-            cursor.execute(query, (pageid,))
-        elif title:
-            query += "page_title = ?"
-            cursor.execute(query, (title,))
-
-    def track_page(self, cursor, title):
+    def track_page(self, cursor, pageid, title):
         """Update hook for when page is not in our database."""
+        msg = "Tracking page [[{0}]] (id: {1})".format(title, pageid)
+        self.logger.debug(msg)
+
         page = self.site.get_page(title)
         status, chart = self.get_status_and_chart(page)
-        if not status or status in ("accept", "decline"):
+        if not status:
+            msg = "Could not find a status for [[{0}]]".format(title)
+            self.logger.warn(msg)
             return
 
-        pageid = page.pageid()
         title = page.title()
         short = self.get_short_title(title)
         size = len(page.get())
@@ -256,21 +212,29 @@ class Task(BaseTask):
         m_user, m_time, m_id = self.get_modify(pageid)
         s_user, s_time, s_id = self.get_special(page, status)
 
-        query1 = "INSERT INTO row VALUES (?, ?)"
-        query2 = "INSERT INTO page VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        cursor.execute(query1, (pageid, chart))
-        cursor.execute(query2, (pageid, status, title, short, size, notes,
+        query1 = "INSERT INTO row VALUES ?"
+        query2 = "INSERT INTO page VALUES ?"
+        cursor.execute(query1, ((pageid, chart),))
+        cursor.execute(query2, ((pageid, status, title, short, size, notes,
                                 c_user, c_time, c_id, m_user, m_time, m_id,
-                                s_user, s_time, s_id))
+                                s_user, s_time, s_id),))
 
-    def update_page(self, cursor, title):
+    def update_page(self, cursor, pageid, title):
         """Update hook for when page is in our database."""
+        msg = "Updating page [[{0}]] (id: {1})".format(title, pageid)
+        self.logger.debug(msg)
+
         page = self.site.get_page(title)
         status, chart = self.get_status_and_chart(page)
         if not status:
-            self.untrack_page(cursor, title=title)
+            self.untrack_page(cursor, pageid)
 
-        pageid = page.pageid()
+        if pageid != page.pageid():
+            msg = "Page [[{0}]] is not what it should be! (id: {0} != {1})"
+            self.logger.warn(msg.format(pageid, page.pageid()))
+            self.report_replag()
+            self.untrack_page(cursor, pageid)
+
         title = page.title()
         size = len(page.get())
         notes = self.get_notes(page)
@@ -282,43 +246,72 @@ class Task(BaseTask):
             result = dict_cursor.fetchall()[0]
 
         if title != result["page_title"]:
-            query = "UPDATE page SET page_title = ?, page_short = ? WHERE page_id = ?"
-            short = self.get_short_title(title)
-            cursor.execute(query, (title, short, pageid))
+            self.update_page_title(cursor, result, pageid, title)
 
         if m_id != result["page_modify_oldid"]:
-            query = """UPDATE page SET page_size = ?, page_modify_user = ?,
-                       page_modify_time = ?, page_modify_oldid = ?
-                       WHERE page_id = ?"""
-            cursor.execute(query, (size, m_user, m_time, m_id, pageid))
+            self.update_page_modify(cursor, result, pageid, size, m_user, m_time, m_id)
 
         if status != result["page_status"]:
-            query1 = """UPDATE page JOIN row ON page_id = row_id
-                       SET page_status = ?, row_chart = ? WHERE page_id = ?"""
-            query2 = """UPDATE page SET page_special_user = ?,
-                       page_special_time = ?, page_special_oldid = ?
-                       WHERE page_id = ?"""
-            cursor.execute(query1, (status, chart, pageid))
-            s_user, s_time, s_id = self.get_special(page, status)
-            if s_id != result["page_special_oldid"]:
-                cursor.execute(query2, (s_user, s_time, s_id, pageid))
+            self.update_page_special(cursor, result, pageid, status, chart, page)
 
         if notes != result["page_notes"]:
-            query = "UPDATE page SET page_notes = ? WHERE page_id = ?"
-            cursor.execute(query, (notes, pageid))
+            self.update_page_notes(cursor, result, pageid, notes)
 
-    def split_title(self, title):
-        namespace, body = title.split(":", 1)[0]
-        if not body:
-            return 0, title
-        try:
-            ns = self.site.namespace_name_to_id(namespace)
-        except wiki.NamespaceNotFoundError:
-            return 0, title
-        return ns, body
+    def update_page_title(self, cursor, result, pageid, title):
+        query = "UPDATE page SET page_title = ?, page_short = ? WHERE page_id = ?"
+        short = self.get_short_title(title)
+        cursor.execute(query, (title, short, pageid))
+        msg = "{0}: title: {1} -> {2}"
+        self.logger.debug(msg.format(pageid, result["page_title"], title))
+
+    def update_page_modify(self, cursor, result, pageid, size, m_user, m_time, m_id):
+        query = """UPDATE page SET page_size = ?, page_modify_user = ?,
+                   page_modify_time = ?, page_modify_oldid = ?
+                   WHERE page_id = ?"""
+        cursor.execute(query, (size, m_user, m_time, m_id, pageid))
+
+        msg = "{0}: modify: {1} / {2} / {3} -> {4} / {5} / {6}"
+        msg = msg.format(pageid, result["page_modify_user"],
+                         result["page_modify_time"],
+                         result["page_modify_oldid"], m_user, m_time, m_id)
+        self.logger.debug(msg)
+
+    def update_page_special(self, cursor, result, pageid, status, chart, page):
+        query1 = """UPDATE page JOIN row ON page_id = row_id
+                   SET page_status = ?, row_chart = ? WHERE page_id = ?"""
+        query2 = """UPDATE page SET page_special_user = ?,
+                   page_special_time = ?, page_special_oldid = ?
+                   WHERE page_id = ?"""
+        cursor.execute(query1, (status, chart, pageid))
+
+        msg = "{0}: status: {1} ({2}) -> {3} ({4})"
+        self.logger.debug(msg.format(pageid, result["page_status"],
+                                     result["row_chart"], status, chart))
+
+        s_user, s_time, s_id = self.get_special(page, status)
+
+        if s_id != result["page_special_oldid"]:
+            cursor.execute(query2, (s_user, s_time, s_id, pageid))
+            msg = "{0}: special: {1} / {2} / {3} -> {4} / {5} / {6}"
+            msg = msg.format(pageid, result["page_special_user"],
+                             result["page_special_time"],
+                             result["page_special_oldid"], m_user, m_time, m_id)
+            self.logger.debug(msg)
+
+    def update_page_notes(self, cursor, result, pageid, notes):
+        query = "UPDATE page SET page_notes = ? WHERE page_id = ?"
+        cursor.execute(query, (notes, pageid))
+        msg = "{0}: notes: {1} -> {2}"
+        self.logger.debug(msg.format(pageid, result["page_notes"], notes))
 
     def get_status_and_chart(self, page):
-        content = page.get()
+        try:
+            content = page.get()
+        except wiki.PageNotFoundError:
+            msg = "Page [[{0}]] does not exist, but the server said it should!"
+            self.logger.warn(msg.format(page.title()))
+            return None, 0
+
         if page.is_redirect():
             target = page.get_redirect_target()
             if self.site.get_page(target).namespace() == 0:
@@ -343,13 +336,12 @@ class Task(BaseTask):
         return short
 
     def get_create(self, pageid):
-        query1 = "SELECT MIN(rev_id) FROM revision WHERE rev_page = ?"
-        query2 = "SELECT rev_user_text, rev_timestamp, rev_id FROM revision WHERE rev_id = ?"
-        result1 = self.site.sql_query(query1, (pageid,))
-        rev_id = list(result1)[0][0]
-        result2 = self.site.sql_query(query2, (rev_id,))
-        m_user, m_time, m_id = list(result2)[0]
-        return m_user, datetime.strptime(m_time, "%Y%m%d%H%M%S"), m_id
+        query = """SELECT rev_user_text, rev_timestamp, rev_id
+                   FROM revision WHERE rev_id =
+                   (SELECT MIN(rev_id) FROM revision WHERE rev_page = ?)"""
+        result = self.site.sql_query(query, (pageid,))
+        c_user, c_time, c_id = list(result)[0]
+        return c_user, datetime.strptime(c_time, "%Y%m%d%H%M%S"), c_id
 
     def get_modify(self, pageid):
         query = """SELECT rev_user_text, rev_timestamp, rev_id FROM revision

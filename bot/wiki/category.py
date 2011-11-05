@@ -13,7 +13,7 @@ class Category(Page):
     because it accepts category names without the namespace prefix.
 
     Public methods:
-    members -- returns a list of titles in the category
+    members -- returns a list of pages in the category as (title, id) tuples
     """
 
     def __repr__(self):
@@ -26,7 +26,7 @@ class Category(Page):
         return '<Category "{0}" of {1}>'.format(self.title(), str(self._site))
 
     def members(self, limit=50):
-        """Returns a list of titles in the category.
+        """Returns a list of pages in the category as (title, pageid) tuples.
 
         If `limit` is provided, we will provide this many titles, or less if
         the category is too small. `limit` defaults to 50; normal users can go
@@ -36,4 +36,4 @@ class Category(Page):
             "cmlimit": limit, "cmtitle": self._title}
         result = self._site._api_query(params)
         members = result['query']['categorymembers']
-        return [member["title"] for member in members]
+        return [(member["title"], member["pageid"]) for member in members]

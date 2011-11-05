@@ -89,4 +89,6 @@ class BaseTask(object):
             return False
         if content == cfg.get("disabled", "run"):
             return False
+
+        self.logger.warn("Emergency task shutoff has been enabled!")
         return True
