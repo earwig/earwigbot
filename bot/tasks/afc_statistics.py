@@ -538,6 +538,7 @@ class Task(BaseTask):
         result = self.site.sql_query(query, (pageid,))
 
         counter = 0
+        last = (None, None, None)
         for user, ts, revid in result:
             counter += 1
             if counter > 250:
@@ -546,7 +547,8 @@ class Task(BaseTask):
                 break
             content = self.get_revision_content(revid)
             if content and not re.search(search, content, re.I):
-                return user, datetime.strptime(ts, "%Y%m%d%H%M%S"), revid
+                return last
+            last = (user, datetime.strptime(ts, "%Y%m%d%H%M%S"), revid)
 
         return None, None, None
 
