@@ -5,6 +5,7 @@ import logging
 import re
 from os.path import expanduser
 from threading import Lock
+from time import sleep
 
 import oursql
 
@@ -215,7 +216,7 @@ class Task(BaseTask):
                 self.logger.debug("  {0} -> {1}".format(oldid, real_oldid))
                 body = result[0][1].replace("_", " ")
                 ns = self.site.namespace_id_to_name(result[0][2])
-                real_title = ":".join(ns, body)
+                real_title = ":".join((ns, body))
                 self.update_page(cursor, pageid, real_title)
 
     def add_untracked(self, cursor):
@@ -268,6 +269,11 @@ class Task(BaseTask):
         which are then saved to our database.
         """
         content = self.get_content(title)
+        if not content:
+            msg = "Could not get page content for [[{0}]]".format(title)
+            self.logger.error(msg)
+            return
+
         status, chart = self.get_status_and_chart(content)
         if not status:
             msg = "Could not find a status for [[{0}]]".format(title)
@@ -304,6 +310,11 @@ class Task(BaseTask):
         happened, and we'll untrack the submission.
         """
         content = self.get_content(title)
+        if not content:
+            msg = "Could not get page content for [[{0}]]".format(title)
+            self.logger.error(msg)
+            return
+
         try:
             redirect_regex = wiki.Page.re_redirect
             target_title = re.findall(redirect_regex, content, flags=re.I)[0]
@@ -402,16 +413,11 @@ class Task(BaseTask):
         self.logger.debug(msg.format(pageid, result["page_notes"], notes))
 
     def get_content(self, title):
-        """Get the current content of a page by title from SQL.
+        """Get the current content of a page by title from the API.
 
         The page's current revision ID is retrieved from SQL, and then
-        site.get_revid_content() is called.
-
-        The reason a more conventional method (i.e. site.get_page.get()) is
-        avoided is that due to replication lag, a discrepancy between the live
-        database (which the API uses) and the replicated database (which SQL
-        uses) can lead to incorrect and very confusing data, such as missing
-        pages that are supposed to exist, if both are used interchangeably.
+        an API query is made to get its content. This is the only API query
+        used in the task's code.
         """
         query = "SELECT page_latest FROM page WHERE page_title = ? AND page_namespace = ?"
         namespace, base = title.split(":", 1)
@@ -423,7 +429,19 @@ class Task(BaseTask):
 
         result = self.site.sql_query(query, (base, ns))
         revid = list(result)[0]
-        return self.site.get_revid_content(revid)
+
+        res = self.site.api_query(action="query", prop="revisions",
+                                  revids=revid, rvprop="content")
+        try:
+            return res["query"]["pages"].values()[0]["revisions"][0]["*"]
+        except KeyError:
+            sleep(5)
+            res = self.site.api_query(action="query", prop="revisions",
+                                      revids=revid, rvprop="content")
+            try:
+                return res["query"]["pages"].values()[0]["revisions"][0]["*"]
+            except KeyError:
+                return None
 
     def get_status_and_chart(self, content):
         """Determine the status and chart number of an AFC submission.
