@@ -216,13 +216,13 @@ class BotFormatter(logging.Formatter):
     def format_color(self, record):
         l = record.levelname.ljust(8)
         if record.levelno == logging.DEBUG:
-            record.lvl = l.join(("\x1b[37m", "\x1b[0m"))
+            record.lvl = l.join(("\x1b[34m", "\x1b[0m"))  # Blue
         if record.levelno == logging.INFO:
-            record.lvl = l.join(("\x1b[32m", "\x1b[0m"))
+            record.lvl = l.join(("\x1b[32m", "\x1b[0m"))  # Green
         if record.levelno == logging.WARNING:
-            record.lvl = l.join(("\x1b[36m", "\x1b[0m"))
+            record.lvl = l.join(("\x1b[33m", "\x1b[0m"))  # Yellow
         if record.levelno == logging.ERROR:
-            record.lvl = l.join(("\x1b[33m", "\x1b[0m"))
+            record.lvl = l.join(("\x1b[31m", "\x1b[0m"))  # Red
         if record.levelno == logging.CRITICAL:
-            record.lvl = l.join(("\x1b[31m", "\x1b[0m"))
+            record.lvl = l.join(("\x1b[1m\x1b[31m", "\x1b[0m"))  # Bold red
         return record

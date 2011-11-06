@@ -12,6 +12,14 @@ from classes import BaseTask
 import config
 import wiki
 
+# Chart status number constants:
+CHART_NONE = 0
+CHART_PEND = 1
+CHART_DRAFT = 2
+CHART_REVIEW = 3
+CHART_ACCEPT = 4
+CHART_DECLINE = 5
+
 class Task(BaseTask):
     """A task to generate statistics for WikiProject Articles for Creation.
 
@@ -56,7 +64,7 @@ class Task(BaseTask):
             elif action == "sync":
                 self.sync()
         finally:
-            self.conn.close()            
+            self.conn.close()
 
     def save(self, **kwargs):
         self.logger.info("Saving chart")
@@ -130,27 +138,25 @@ class Task(BaseTask):
 
     def sync(self, **kwargs):
         self.logger.info("Starting sync")
-        self.report_replag()
+
+        replag = self.site.get_replag()
+        self.logger.debug("Server replag is {0}".format(replag))
+        if replag > 600:
+            msg = "Sync canceled as replag ({0} secs) is greater than ten minutes."
+            self.logger.warn(msg.format(replag))
+
         with self.conn.cursor() as cursor, self.db_access_lock:
             self.update_tracked(cursor)
             self.add_untracked(cursor)
             self.delete_old(cursor)
-        self.logger.info("Sync completed")
 
-    def report_replag(self):
-        replag = self.site.get_replag()
-        if replag < 60:
-            lvl = logging.DEBUG
-        elif replag < 720:
-            lvl = logging.INFO
-        else:
-            lvl = logging.WARNING
-        self.logger.log(lvl, "Server replag is {0}".format(replag))
+        self.logger.info("Sync completed")
 
     def update_tracked(self, cursor):
         self.logger.debug("Updating tracked submissions")
         query1 = "SELECT page_id, page_title, page_modify_oldid FROM page"
-        query2 = "SELECT page_latest, page_title FROM page WHERE page_id = ?"
+        query2 = """SELECT page_latest, page_title, page_namespace FROM page
+                    WHERE page_id = ?"""
         cursor.execute(query1)
         for pageid, title, oldid in cursor:
             msg = "Updating tracked page: [[{0}]] (id: {1}) @ {2}"
@@ -158,11 +164,13 @@ class Task(BaseTask):
             result = list(self.site.sql_query(query2, (pageid,)))
             try:
                 real_oldid = result[0][0]
-                real_title = result[0][1]
             except IndexError:  # Page doesn't exist!
                 self.untrack_page(cursor, pageid)
                 continue
             if real_oldid != oldid:
+                body = result[0][1].replace("_", " ")
+                ns = self.site.namespace_id_to_name(result[0][2])
+                real_title = ":".join(ns, body)
                 self.update_page(cursor, pageid, real_title)
 
     def add_untracked(self, cursor):
@@ -171,7 +179,7 @@ class Task(BaseTask):
         tracked = [i[0] for i in cursor.fetchall()]
 
         category = self.site.get_category(self.pending_cat)
-        pending = category.members(limit=500)
+        pending = category.members(use_sql=True)
 
         for title, pageid in pending:
             if title in self.ignore_list:
@@ -182,9 +190,9 @@ class Task(BaseTask):
     def delete_old(self, cursor):
         self.logger.debug("Removing old submissions from chart")
         query = """DELETE FROM page, row USING page JOIN row
-                   ON page_id = row_id WHERE row_chart IN (4, 5)
+                   ON page_id = row_id WHERE row_chart IN ?
                    AND ADDTIME(page_special_time, '36:00:00')  < NOW()"""
-        cursor.execute(query)
+        cursor.execute(query, ((CHART_ACCEPT, CHART_DECLINE),))
 
     def untrack_page(self, cursor, pageid):
         self.logger.debug("Untracking page (id: {0})".format(pageid))
@@ -197,20 +205,19 @@ class Task(BaseTask):
         msg = "Tracking page [[{0}]] (id: {1})".format(title, pageid)
         self.logger.debug(msg)
 
-        page = self.site.get_page(title)
-        status, chart = self.get_status_and_chart(page)
+        content = self.get_content(title)
+        status, chart = self.get_status_and_chart(content)
         if not status:
             msg = "Could not find a status for [[{0}]]".format(title)
-            self.logger.warn(msg)
+            self.logger.error(msg)
             return
 
-        title = page.title()
         short = self.get_short_title(title)
-        size = len(page.get())
-        notes = self.get_notes(page)
+        size = len(content)
+        notes = self.get_notes(pageid)
         c_user, c_time, c_id = self.get_create(pageid)
         m_user, m_time, m_id = self.get_modify(pageid)
-        s_user, s_time, s_id = self.get_special(page, status)
+        s_user, s_time, s_id = self.get_special(pageid, chart)
 
         query1 = "INSERT INTO row VALUES ?"
         query2 = "INSERT INTO page VALUES ?"
@@ -224,20 +231,31 @@ class Task(BaseTask):
         msg = "Updating page [[{0}]] (id: {1})".format(title, pageid)
         self.logger.debug(msg)
 
-        page = self.site.get_page(title)
-        status, chart = self.get_status_and_chart(page)
+        content = self.get_content(title)
+        try:
+            redirect_regex = wiki.Page.re_redirect
+            target_title = re.findall(redirect_regex, content, flags=re.I)[0]
+        except IndexError:
+            pass
+        else:
+            target_ns = self.site.get_page(target_title).namespace()
+            if target_ns == wiki.NS_MAIN:
+                status, chart = "accept", CHART_ACCEPT
+            elif target_ns in [wiki.NS_PROJECT, wiki.NS_PROJECT_TALK]:
+                title = target_title
+                content = self.get_content(title)
+            else:
+                msg = "Page has moved to namespace {0}".format(target_ns)
+                self.logger.debug(msg)
+                self.untrack_page(cursor, pageid)
+                return
+
+        status, chart = self.get_status_and_chart(content)
         if not status:
             self.untrack_page(cursor, pageid)
 
-        if pageid != page.pageid():
-            msg = "Page [[{0}]] is not what it should be! (id: {0} != {1})"
-            self.logger.warn(msg.format(pageid, page.pageid()))
-            self.report_replag()
-            self.untrack_page(cursor, pageid)
-
-        title = page.title()
-        size = len(page.get())
-        notes = self.get_notes(page)
+        size = len(content)
+        notes = self.get_notes(pageid)
         m_user, m_time, m_id = self.get_modify(pageid)
 
         query = "SELECT * FROM page JOIN row ON page_id = row_id WHERE page_id = ?"
@@ -288,7 +306,7 @@ class Task(BaseTask):
         self.logger.debug(msg.format(pageid, result["page_status"],
                                      result["row_chart"], status, chart))
 
-        s_user, s_time, s_id = self.get_special(page, status)
+        s_user, s_time, s_id = self.get_special(pageid, chart)
 
         if s_id != result["page_special_oldid"]:
             cursor.execute(query2, (s_user, s_time, s_id, pageid))
@@ -304,30 +322,31 @@ class Task(BaseTask):
         msg = "{0}: notes: {1} -> {2}"
         self.logger.debug(msg.format(pageid, result["page_notes"], notes))
 
-    def get_status_and_chart(self, page):
+    def get_content(self, title):
+        query = "SELECT page_latest FROM page WHERE page_title = ? AND page_namespace = ?"
+        namespace, base = title.split(":", 1)
         try:
-            content = page.get()
-        except wiki.PageNotFoundError:
-            msg = "Page [[{0}]] does not exist, but the server said it should!"
-            self.logger.warn(msg.format(page.title()))
-            return None, 0
+            ns = self.site.namespace_name_to_id(namespace)
+        except wiki.NamespaceNotFoundError:
+            base = title
+            ns = wiki.NS_MAIN
 
-        if page.is_redirect():
-            target = page.get_redirect_target()
-            if self.site.get_page(target).namespace() == 0:
-                return "accept", 4
-            return None, 0
-        elif re.search("\{\{afc submission\|r\|(.*?)\}\}", content, re.I):
-            return "review", 3
+        result = self.site.sql_query(query, (base, ns))
+        revid = list(result)[0]
+        return self.site.get_revid_content(revid)
+
+    def get_status_and_chart(self, content):
+        if re.search("\{\{afc submission\|r\|(.*?)\}\}", content, re.I):
+            return "review", CHART_REVIEW
         elif re.search("\{\{afc submission\|h\|(.*?)\}\}", content, re.I):
-            return "pend", 2
+            return "pend", CHART_DRAFT
         elif re.search("\{\{afc submission\|\|(.*?)\}\}", content, re.I):
-            return "pend", 1
+            return "pend", CHART_PEND
         elif re.search("\{\{afc submission\|t\|(.*?)\}\}", content, re.I):
-            return None, 0
+            return None, CHART_NONE
         elif re.search("\{\{afc submission\|d\|(.*?)\}\}", content, re.I):
-            return "decline", 5
-        return None, 0
+            return "decline", CHART_DECLINE
+        return None, CHART_NONE
 
     def get_short_title(self, title):
         short = re.sub("Wikipedia(\s*talk)?\:Articles\sfor\screation\/", "", title)
@@ -350,8 +369,32 @@ class Task(BaseTask):
         m_user, m_time, m_id = list(result)[0]
         return m_user, datetime.strptime(m_time, "%Y%m%d%H%M%S"), m_id
 
-    def get_special(self, page, status):
+    def get_special(self, pageid, chart):
+        if chart == CHART_PEND:
+            return None, None, None
+        elif chart == CHART_ACCEPT:
+            return self.get_create(pageid)
+        elif chart == CHART_DRAFT:
+            search = "(?!\{\{afc submission\|h\|(.*?)\}\})"
+        elif chart == CHART_REVIEW:
+            search = "(?!\{\{afc submission\|r\|(.*?)\}\})"
+        elif chart == CHART_DECLINE:
+            search = "(?!\{\{afc submission\|d\|(.*?)\}\})"
+
+        query = """SELECT rev_user_text, rev_timestamp, rev_id
+                   FROM revision WHERE rev_page = ? ORDER BY rev_id DESC"""
+        result = self.site.sql_query(query, (pageid,))
+
+        counter = 0
+        for user, ts, revid in result:
+            counter += 1
+            if counter > 100:
+                break
+            content = self.site.get_revid_content(revid)
+            if re.search(search, content, re.I):
+                return user, datetime.strptime(ts, "%Y%m%d%H%M%S"), revid
+
         return None, None, None
 
-    def get_notes(self, page):
+    def get_notes(self, pageid):
         return None

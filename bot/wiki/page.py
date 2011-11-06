@@ -32,6 +32,8 @@ class Page(object):
     add_section         -- add a new section at the bottom of the page
     """
 
+    re_redirect = "^\s*\#\s*redirect\s*\[\[(.*?)\]\]"
+
     def __init__(self, site, title, follow_redirects=False):
         """Constructor for new Page instances.
 
@@ -617,9 +619,8 @@ class Page(object):
         if the page is not a redirect.
         """
         content = self.get(force)
-        regexp = "^\s*\#\s*redirect\s*\[\[(.*?)\]\]"
         try:
-            return re.findall(regexp, content, flags=re.IGNORECASE)[0]
+            return re.findall(self.re_redirect, content, flags=re.I)[0]
         except IndexError:
             e = "The page does not appear to have a redirect target."
             raise RedirectError(e)
