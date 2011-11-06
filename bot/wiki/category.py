@@ -41,12 +41,12 @@ class Category(Page):
                        JOIN categorylinks ON page_id = cl_from
                        WHERE cl_to = ?"""
             title = self.title().replace(" ", "_").split(":", 1)[1]
-            result = self.site.sql_query(query, (title,))
+            result = self._site.sql_query(query, (title,))
             members = []
             for row in result:
                 body = row[0].replace("_", " ")
-                namespace = self.site.namespace_id_to_name(row[1])
-                title = ":".join(namespace, body)
+                namespace = self._site.namespace_id_to_name(row[1])
+                title = ":".join((str(namespace), body))
                 members.append((title, row[2]))
             return members
 

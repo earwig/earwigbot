@@ -216,7 +216,7 @@ class Task(BaseTask):
                 self.logger.debug("  {0} -> {1}".format(oldid, real_oldid))
                 body = result[0][1].replace("_", " ")
                 ns = self.site.namespace_id_to_name(result[0][2])
-                real_title = ":".join((ns, body))
+                real_title = ":".join((str(ns), body))
                 self.update_page(cursor, pageid, real_title)
 
     def add_untracked(self, cursor):
@@ -235,7 +235,7 @@ class Task(BaseTask):
         pending = category.members(use_sql=True)
 
         for title, pageid in pending:
-            if title in self.ignore_list:
+            if title.decode("utf8") in self.ignore_list:
                 continue
             if pageid not in tracked:
                 msg = "Tracking page [[{0}]] (id: {1})".format(title, pageid)
@@ -250,10 +250,9 @@ class Task(BaseTask):
         """
         self.logger.debug("Removing old submissions from chart")
         query = """DELETE FROM page, row USING page JOIN row
-                   ON page_id = row_id WHERE row_chart IN ?
-                   AND ADDTIME(page_special_time, '36:00:00')  < NOW()"""
-        old_charts = (CHART_ACCEPT, CHART_DECLINE)
-        cursor.execute(query, (old_charts,))
+                   ON page_id = row_id WHERE row_chart IN (?, ?)
+                   AND ADDTIME(page_special_time, '36:00:00') < NOW()"""
+        cursor.execute(query, (CHART_ACCEPT, CHART_DECLINE))
 
     def untrack_page(self, cursor, pageid):
         """Remove a page, given by ID, from our database."""
@@ -287,12 +286,13 @@ class Task(BaseTask):
         m_user, m_time, m_id = self.get_modify(pageid)
         s_user, s_time, s_id = self.get_special(pageid, chart)
 
-        query1 = "INSERT INTO row VALUES ?"
-        query2 = "INSERT INTO page VALUES ?"
-        cursor.execute(query1, ((pageid, chart),))
-        cursor.execute(query2, ((pageid, status, title, short, size, notes,
-                                c_user, c_time, c_id, m_user, m_time, m_id,
-                                s_user, s_time, s_id),))
+        query1 = "INSERT INTO row VALUES (?, ?)"
+        query2 = "INSERT INTO page VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        cursor.execute(query1, (pageid, chart))
+        cursor.execute(query2, (pageid, status, title.decode("utf8"),
+                                short.decode("utf8"), size, notes, c_user,
+                                c_time, c_id, m_user, m_time, m_id, s_user,
+                                s_time, s_id))
 
     def update_page(self, cursor, pageid, title):
         """Update hook for when page is already in our database.
@@ -356,7 +356,7 @@ class Task(BaseTask):
             self.update_page_modify(cursor, result, pageid, size, m_user, m_time, m_id)
 
         if status != result["page_status"]:
-            self.update_page_status(cursor, result, pageid, status, chart, page)
+            self.update_page_status(cursor, result, pageid, status, chart)
 
         if notes != result["page_notes"]:
             self.update_page_notes(cursor, result, pageid, notes)
@@ -365,7 +365,8 @@ class Task(BaseTask):
         """Update the title and short_title of a page in our database."""
         query = "UPDATE page SET page_title = ?, page_short = ? WHERE page_id = ?"
         short = self.get_short_title(title)
-        cursor.execute(query, (title, short, pageid))
+        cursor.execute(query, (title.decode("utf8"), short.decode("utf8"),
+                               pageid))
         msg = "  {0}: title: {1} -> {2}"
         self.logger.debug(msg.format(pageid, result["page_title"], title))
 
@@ -382,7 +383,7 @@ class Task(BaseTask):
                          result["page_modify_oldid"], m_user, m_time, m_id)
         self.logger.debug(msg)
 
-    def update_page_status(self, cursor, result, pageid, status, chart, page):
+    def update_page_status(self, cursor, result, pageid, status, chart):
         """Update the status and "specialed" information of a page."""
         query1 = """UPDATE page JOIN row ON page_id = row_id
                    SET page_status = ?, row_chart = ? WHERE page_id = ?"""
@@ -402,7 +403,7 @@ class Task(BaseTask):
             msg = "{0}: special: {1} / {2} / {3} -> {4} / {5} / {6}"
             msg = msg.format(pageid, result["page_special_user"],
                              result["page_special_time"],
-                             result["page_special_oldid"], m_user, m_time, m_id)
+                             result["page_special_oldid"], s_user, s_time, s_id)
             self.logger.debug(msg)
 
     def update_page_notes(self, cursor, result, pageid, notes):
@@ -420,7 +421,7 @@ class Task(BaseTask):
         used in the task's code.
         """
         query = "SELECT page_latest FROM page WHERE page_title = ? AND page_namespace = ?"
-        namespace, base = title.split(":", 1)
+        namespace, base = title.decode("utf8").split(":", 1)
         try:
             ns = self.site.namespace_name_to_id(namespace)
         except wiki.NamespaceNotFoundError:
@@ -430,6 +431,10 @@ class Task(BaseTask):
         result = self.site.sql_query(query, (base.replace(" ", "_"), ns))
         revid = int(list(result)[0][0])
 
+        return self.get_revision_content(revid)
+
+    def get_revision_content(self, revid):
+        """Get the content of a revision by ID from the API."""
         res = self.site.api_query(action="query", prop="revisions",
                                   revids=revid, rvprop="content")
         try:
@@ -539,8 +544,8 @@ class Task(BaseTask):
                 msg = "Exceeded 250 content lookups while determining special for page (id: {0}, chart: {1})"
                 self.logger.warn(msg.format(pageid, chart))
                 break
-            content = self.site.get_revid_content(revid)
-            if re.search(search, content, re.I):
+            content = self.get_revision_content(revid)
+            if content and re.search(search, content, re.I):
                 return user, datetime.strptime(ts, "%Y%m%d%H%M%S"), revid
 
         return None, None, None
