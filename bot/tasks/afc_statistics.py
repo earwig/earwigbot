@@ -527,11 +527,11 @@ class Task(BaseTask):
         elif chart == CHART_ACCEPT:
             return self.get_create(pageid)
         elif chart == CHART_DRAFT:
-            search = "(?!\{\{afc submission\|h\|(.*?)\}\})"
+            search = "\{\{afc submission\|h\|(.*?)\}\}"
         elif chart == CHART_REVIEW:
-            search = "(?!\{\{afc submission\|r\|(.*?)\}\})"
+            search = "\{\{afc submission\|r\|(.*?)\}\}"
         elif chart == CHART_DECLINE:
-            search = "(?!\{\{afc submission\|d\|(.*?)\}\})"
+            search = "\{\{afc submission\|d\|(.*?)\}\}"
 
         query = """SELECT rev_user_text, rev_timestamp, rev_id
                    FROM revision WHERE rev_page = ? ORDER BY rev_id DESC"""
@@ -545,7 +545,7 @@ class Task(BaseTask):
                 self.logger.warn(msg.format(pageid, chart))
                 break
             content = self.get_revision_content(revid)
-            if content and re.search(search, content, re.I):
+            if content and not re.search(search, content, re.I):
                 return user, datetime.strptime(ts, "%Y%m%d%H%M%S"), revid
 
         return None, None, None
