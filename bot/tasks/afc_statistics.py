@@ -24,8 +24,8 @@ class Task(BaseTask):
     """A task to generate statistics for WikiProject Articles for Creation.
 
     Statistics are stored in a MySQL database ("u_earwig_afc_statistics")
-    accessed with oursql. Statistics are updated live while watching the recent
-    changes IRC feed and saved once an hour, on the hour, to self.pagename.
+    accessed with oursql. Statistics are synchronied with the live database
+    every four minutes and saved once an hour, on the hour, to self.pagename.
     In the live bot, this is "Template:AFC statistics".
     """
     name = "afc_statistics"
@@ -201,16 +201,18 @@ class Task(BaseTask):
         query2 = """SELECT page_latest, page_title, page_namespace FROM page
                     WHERE page_id = ?"""
         cursor.execute(query1)
+
         for pageid, title, oldid in cursor:
-            msg = "Updating tracked page: [[{0}]] (id: {1}) @ {2}"
+            msg = "Updating page [[{0}]] (id: {1}) @ {2}"
             self.logger.debug(msg.format(pageid, title, oldid))
             result = list(self.site.sql_query(query2, (pageid,)))
-            try:
-                real_oldid = result[0][0]
-            except IndexError:  # Page doesn't exist!
+            if not result:
                 self.untrack_page(cursor, pageid)
                 continue
-            if real_oldid != oldid:
+
+            real_oldid = result[0][0]
+            if oldid != real_oldid:
+                self.logger.debug("  {0} -> {1}".format(oldid, real_oldid))
                 body = result[0][1].replace("_", " ")
                 ns = self.site.namespace_id_to_name(result[0][2])
                 real_title = ":".join(ns, body)
@@ -235,6 +237,8 @@ class Task(BaseTask):
             if title in self.ignore_list:
                 continue
             if pageid not in tracked:
+                msg = "Tracking page [[{0}]] (id: {1})".format(title, pageid)
+                self.logger.debug(msg)
                 self.track_page(cursor, pageid, title)
 
     def delete_old(self, cursor):
@@ -263,9 +267,6 @@ class Task(BaseTask):
         A variety of SQL queries are used to gather information about the page,
         which are then saved to our database.
         """
-        msg = "Tracking page [[{0}]] (id: {1})".format(title, pageid)
-        self.logger.debug(msg)
-
         content = self.get_content(title)
         status, chart = self.get_status_and_chart(content)
         if not status:
@@ -302,9 +303,6 @@ class Task(BaseTask):
         space). If it was moved to another namespace, something unusual has
         happened, and we'll untrack the submission.
         """
-        msg = "Updating page [[{0}]] (id: {1})".format(title, pageid)
-        self.logger.debug(msg)
-
         content = self.get_content(title)
         try:
             redirect_regex = wiki.Page.re_redirect
@@ -326,7 +324,7 @@ class Task(BaseTask):
                     self.untrack_page(cursor, pageid)
                     return
             else:
-                msg = "Page has moved to namespace {0}".format(target_ns)
+                msg = "  Page has moved to namespace {0}".format(target_ns)
                 self.logger.debug(msg)
                 self.untrack_page(cursor, pageid)
                 return
@@ -357,7 +355,7 @@ class Task(BaseTask):
         query = "UPDATE page SET page_title = ?, page_short = ? WHERE page_id = ?"
         short = self.get_short_title(title)
         cursor.execute(query, (title, short, pageid))
-        msg = "{0}: title: {1} -> {2}"
+        msg = "  {0}: title: {1} -> {2}"
         self.logger.debug(msg.format(pageid, result["page_title"], title))
 
     def update_page_modify(self, cursor, result, pageid, size, m_user, m_time, m_id):
@@ -367,7 +365,7 @@ class Task(BaseTask):
                    WHERE page_id = ?"""
         cursor.execute(query, (size, m_user, m_time, m_id, pageid))
 
-        msg = "{0}: modify: {1} / {2} / {3} -> {4} / {5} / {6}"
+        msg = "  {0}: modify: {1} / {2} / {3} -> {4} / {5} / {6}"
         msg = msg.format(pageid, result["page_modify_user"],
                          result["page_modify_time"],
                          result["page_modify_oldid"], m_user, m_time, m_id)
@@ -382,7 +380,7 @@ class Task(BaseTask):
                    WHERE page_id = ?"""
         cursor.execute(query1, (status, chart, pageid))
 
-        msg = "{0}: status: {1} ({2}) -> {3} ({4})"
+        msg = "  {0}: status: {1} ({2}) -> {3} ({4})"
         self.logger.debug(msg.format(pageid, result["page_status"],
                                      result["row_chart"], status, chart))
 
@@ -400,7 +398,7 @@ class Task(BaseTask):
         """Update the notes (or warnings) of a page in our database."""
         query = "UPDATE page SET page_notes = ? WHERE page_id = ?"
         cursor.execute(query, (notes, pageid))
-        msg = "{0}: notes: {1} -> {2}"
+        msg = "  {0}: notes: {1} -> {2}"
         self.logger.debug(msg.format(pageid, result["page_notes"], notes))
 
     def get_content(self, title):
@@ -499,7 +497,7 @@ class Task(BaseTask):
         its revision ID. If the page's status is not something that involves
         "special"-ing, we will return None for all three. The same will be
         returned if we cannot determine when the page was "special"-ed, or if
-        it was "special"-ed more than 100 edits ago.
+        it was "special"-ed more than 250 edits ago.
         """
         if chart in [CHART_NONE, CHART_PEND]:
             return None, None, None
@@ -519,7 +517,9 @@ class Task(BaseTask):
         counter = 0
         for user, ts, revid in result:
             counter += 1
-            if counter > 100:
+            if counter > 250:
+                msg = "Exceeded 250 content lookups while determining special for page (id: {0}, chart: {1})"
+                self.logger.warn(msg.format(pageid, chart))
                 break
             content = self.site.get_revid_content(revid)
             if re.search(search, content, re.I):

@@ -548,7 +548,7 @@ class Site(object):
         entire list, which includes the canonical name.
 
         For example, returns u"Wikipedia" if ns_id=4 and all=False on enwiki;
-        returns [u"Wikipedia", u"Project"] if ns_id=4 and all=True.
+        returns [u"Wikipedia", u"Project", u"WP"] if ns_id=4 and all=True.
 
         Raises NamespaceNotFoundError if the ID is not found.
         """
