@@ -205,7 +205,7 @@ class Task(BaseTask):
 
         for pageid, title, oldid in cursor:
             msg = "Updating page [[{0}]] (id: {1}) @ {2}"
-            self.logger.debug(msg.format(pageid, title, oldid))
+            self.logger.debug(msg.format(title, pageid, oldid))
             result = list(self.site.sql_query(query2, (pageid,)))
             if not result:
                 self.untrack_page(cursor, pageid)
@@ -427,8 +427,8 @@ class Task(BaseTask):
             base = title
             ns = wiki.NS_MAIN
 
-        result = self.site.sql_query(query, (base, ns))
-        revid = list(result)[0]
+        result = self.site.sql_query(query, (base.replace(" ", "_"), ns))
+        revid = int(list(result)[0][0])
 
         res = self.site.api_query(action="query", prop="revisions",
                                   revids=revid, rvprop="content")
