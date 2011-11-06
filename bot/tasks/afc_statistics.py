@@ -89,10 +89,10 @@ class Task(BaseTask):
                 return
             summary = self.summary
 
-        statistics = self.compile_charts()
+        statistics = self.compile_charts().encode("utf8")
 
         page = self.site.get_page(self.pagename)
-        text = page.get()
+        text = page.get().encode("utf8")
         newtext = re.sub("(<!-- stat begin -->)(.*?)(<!-- stat end -->)",
                          statistics.join(("\\1\n", "\n\\3")), text,
                          flags=re.DOTALL)
@@ -127,7 +127,7 @@ class Task(BaseTask):
         with self.conn.cursor(oursql.DictCursor) as cursor:
             cursor.execute(query, (chart_id,))
             for page in cursor:
-                chart += "\n" + self.compile_chart_row(page)
+                chart += "\n" + self.compile_chart_row(page).decode("utf8")
 
         chart += "".join(("\n{{", self.tl_footer, "}}"))
         return chart
@@ -204,8 +204,6 @@ class Task(BaseTask):
         cursor.execute(query1)
 
         for pageid, title, oldid in cursor:
-            msg = "Updating page [[{0}]] (id: {1}) @ {2}"
-            self.logger.debug(msg.format(title, pageid, oldid))
             result = list(self.site.sql_query(query2, (pageid,)))
             if not result:
                 self.untrack_page(cursor, pageid)
@@ -213,6 +211,8 @@ class Task(BaseTask):
 
             real_oldid = result[0][0]
             if oldid != real_oldid:
+                msg = "Updating page [[{0}]] (id: {1}) @ {2}"
+                self.logger.debug(msg.format(title, pageid, oldid))
                 self.logger.debug("  {0} -> {1}".format(oldid, real_oldid))
                 body = result[0][1].replace("_", " ")
                 ns = self.site.namespace_id_to_name(result[0][2])
