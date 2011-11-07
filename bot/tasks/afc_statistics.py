@@ -429,6 +429,7 @@ class Task(BaseTask):
             namespace, base = title.decode("utf8").split(":", 1)
         except ValueError:
             base = title.decode("utf8")
+            ns = wiki.NS_MAIN
         else:
             try:
                 ns = self.site.namespace_name_to_id(namespace)
