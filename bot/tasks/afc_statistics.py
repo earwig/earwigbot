@@ -63,16 +63,17 @@ class Task(BaseTask):
         local database.
         """
         self.site = wiki.get_site()
-        self.conn = oursql.connect(**self.conn_data)
+        with self.db_access_lock:
+            self.conn = oursql.connect(**self.conn_data)
 
-        action = kwargs.get("action")
-        try:
-            if action == "save":
-                self.save(**kwargs)
-            elif action == "sync":
-                self.sync(**kwargs)
-        finally:
-            self.conn.close()
+            action = kwargs.get("action")
+            try:
+                if action == "save":
+                    self.save(**kwargs)
+                elif action == "sync":
+                    self.sync(**kwargs)
+            finally:
+                self.conn.close()
 
     def save(self, **kwargs):
         """Save our local statistics to the wiki.
@@ -108,7 +109,7 @@ class Task(BaseTask):
     def compile_charts(self):
         """Compile and return all statistics information from our local db."""
         stats = ""
-        with self.conn.cursor() as cursor, self.db_access_lock:
+        with self.conn.cursor() as cursor:
             cursor.execute("SELECT * FROM chart")
             for chart in cursor:
                 stats += self.compile_chart(chart) + "\n"
@@ -179,7 +180,7 @@ class Task(BaseTask):
             msg = "Sync canceled as replag ({0} secs) is greater than ten minutes."
             self.logger.warn(msg.format(replag))
 
-        with self.conn.cursor() as cursor, self.db_access_lock:
+        with self.conn.cursor() as cursor:
             self.update_tracked(cursor)
             self.add_untracked(cursor)
             self.delete_old(cursor)
@@ -216,7 +217,10 @@ class Task(BaseTask):
                 self.logger.debug("  {0} -> {1}".format(oldid, real_oldid))
                 body = result[0][1].replace("_", " ")
                 ns = self.site.namespace_id_to_name(result[0][2])
-                real_title = ":".join((str(ns), body))
+                if ns:
+                    real_title = ":".join((str(ns), body))
+                else:
+                    real_title = body
                 self.update_page(cursor, pageid, real_title)
 
     def add_untracked(self, cursor):
@@ -281,10 +285,10 @@ class Task(BaseTask):
 
         short = self.get_short_title(title)
         size = len(content)
-        notes = self.get_notes(pageid)
         c_user, c_time, c_id = self.get_create(pageid)
         m_user, m_time, m_id = self.get_modify(pageid)
         s_user, s_time, s_id = self.get_special(pageid, chart)
+        notes = self.get_notes(content, m_time, c_user)
 
         query1 = "INSERT INTO row VALUES (?, ?)"
         query2 = "INSERT INTO page VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -326,7 +330,7 @@ class Task(BaseTask):
         else:
             target_ns = self.site.get_page(target_title).namespace()
             if target_ns in [wiki.NS_MAIN, wiki.NS_TEMPLATE]:
-                status, chart = "accept", CHART_ACCEPT
+                status, chart = "a", CHART_ACCEPT
             elif target_ns in [wiki.NS_PROJECT, wiki.NS_PROJECT_TALK]:
                 title = target_title
                 content = self.get_content(title)
@@ -340,14 +344,14 @@ class Task(BaseTask):
                 self.untrack_page(cursor, pageid)
                 return
 
-        size = len(content)
-        notes = self.get_notes(pageid)
-        m_user, m_time, m_id = self.get_modify(pageid)
-
         query = "SELECT * FROM page JOIN row ON page_id = row_id WHERE page_id = ?"
         with self.conn.cursor(oursql.DictCursor) as dict_cursor:
             dict_cursor.execute(query, (pageid,))
             result = dict_cursor.fetchall()[0]
+
+        size = len(content)
+        m_user, m_time, m_id = self.get_modify(pageid)
+        notes = self.get_notes(content, m_time, result["page_create_user"])
 
         if title != result["page_title"]:
             self.update_page_title(cursor, result, pageid, title)
@@ -459,15 +463,15 @@ class Task(BaseTask):
         idea :P).
         """
         if re.search("\{\{afc submission\|r\|(.*?)\}\}", content, re.I):
-            return "review", CHART_REVIEW
+            return "r", CHART_REVIEW
         elif re.search("\{\{afc submission\|h\|(.*?)\}\}", content, re.I):
-            return "pend", CHART_DRAFT
+            return "p", CHART_DRAFT
         elif re.search("\{\{afc submission\|\|(.*?)\}\}", content, re.I):
-            return "pend", CHART_PEND
+            return "p", CHART_PEND
         elif re.search("\{\{afc submission\|t\|(.*?)\}\}", content, re.I):
             return None, CHART_NONE
         elif re.search("\{\{afc submission\|d\|(.*?)\}\}", content, re.I):
-            return "decline", CHART_DECLINE
+            return "d", CHART_DECLINE
         return None, CHART_NONE
 
     def get_short_title(self, title):
@@ -552,9 +556,24 @@ class Task(BaseTask):
 
         return last
 
-    def get_notes(self, pageid):
+    def get_notes(self, content, m_time, c_user):
         """Return any special notes or warnings about this page.
 
         Currently unimplemented, so always returns None.
         """
-        return None
+        # accepted subs
+        # rebuild action
+        
+        # resubmit          submission was resubmitted after a previous decline
+        #                   re.search("\{\{afc submission\|d\|(.*?)\}\}", content, re.I)
+        # short             submission is less than X bytes
+        #                   len(content) < X
+        # no-inline         submission has no inline citations
+        #                   not re.search("\<ref\s*(.*?)\>(.*?)\</ref\>", content, re.I|re.S)
+        # unsourced         submission lacks references completely
+        #                   not re.search(references, content, re.I|re.S) and search(hyperlinks)
+        # old               submission has not been touched in > 4 days
+        #                   m_time < now - 4 hours
+        # blocked           submitter is currently blocked
+        #                   c_user is blocked via API
+        return ""
