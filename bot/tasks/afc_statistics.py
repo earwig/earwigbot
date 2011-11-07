@@ -544,13 +544,13 @@ class Task(BaseTask):
             if counter > 250:
                 msg = "Exceeded 250 content lookups while determining special for page (id: {0}, chart: {1})"
                 self.logger.warn(msg.format(pageid, chart))
-                break
+                return None, None, None
             content = self.get_revision_content(revid)
             if content and not re.search(search, content, re.I):
                 return last
             last = (user, datetime.strptime(ts, "%Y%m%d%H%M%S"), revid)
 
-        return None, None, None
+        return last
 
     def get_notes(self, pageid):
         """Return any special notes or warnings about this page.
