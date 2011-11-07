@@ -425,12 +425,16 @@ class Task(BaseTask):
         used in the task's code.
         """
         query = "SELECT page_latest FROM page WHERE page_title = ? AND page_namespace = ?"
-        namespace, base = title.decode("utf8").split(":", 1)
         try:
-            ns = self.site.namespace_name_to_id(namespace)
-        except wiki.NamespaceNotFoundError:
-            base = title
-            ns = wiki.NS_MAIN
+            namespace, base = title.decode("utf8").split(":", 1)
+        except ValueError:
+            base = title.decode("utf8")
+        else:
+            try:
+                ns = self.site.namespace_name_to_id(namespace)
+            except wiki.NamespaceNotFoundError:
+                base = title.decode("utf8")
+                ns = wiki.NS_MAIN
 
         result = self.site.sql_query(query, (base.replace(" ", "_"), ns))
         revid = int(list(result)[0][0])
