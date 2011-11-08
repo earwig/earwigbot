@@ -261,7 +261,7 @@ class Task(BaseTask):
         cursor.execute(query, (CHART_ACCEPT, CHART_DECLINE))
 
     def update(self, **kwargs):
-        title = kwargs.get(page)
+        title = kwargs.get("page")
         if not title:
             return
 
