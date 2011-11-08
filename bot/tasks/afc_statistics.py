@@ -261,6 +261,11 @@ class Task(BaseTask):
         cursor.execute(query, (CHART_ACCEPT, CHART_DECLINE))
 
     def update(self, **kwargs):
+        """Update a page by name, regardless of whether anything has changed.
+
+        Mainly intended as a command to be used via IRC, e.g.:
+        !tasks start afc_statistics action=update page=Foobar
+        """
         title = kwargs.get("page")
         if not title:
             return
@@ -487,18 +492,70 @@ class Task(BaseTask):
         use (revision history search to find the most recent isn't a viable
         idea :P).
         """
-        flags = re.I|re.S
-        if re.search("\{\{afc submission\|r\|(.*?)\}\}", content, flags):
+        statuses = self.get_statuses(content)
+        if "R" in statuses:
             return "r", CHART_REVIEW
-        elif re.search("\{\{afc submission\|h\|(.*?)\}\}", content, flags):
+        elif "H" in statuses:
             return "p", CHART_DRAFT
-        elif re.search("\{\{afc submission\|\|(.*?)\}\}", content, flags):
+        elif "P" in statuses:
             return "p", CHART_PEND
-        elif re.search("\{\{afc submission\|t\|(.*?)\}\}", content, flags):
+        elif "T" in statuses:
             return None, CHART_NONE
-        elif re.search("\{\{afc submission\|d\|(.*?)\}\}", content, flags):
+        elif "D" in statuses:
             return "d", CHART_DECLINE
         return None, CHART_NONE
+
+    def get_statuses(self, content):
+        """Return a list of all AFC submission statuses in a page's text."""
+        re_has_templates = "\{\{[aA][fF][cC] submission\s*(\}\}|\||/)"
+        re_template = "\{\{[aA][fF][cC] submission\s*(.*?)\}\}"
+        re_remove_embed = "(\{\{[aA][fF][cC] submission\s*(.*?))\{\{(.*?)\}\}(.*?)\}\}"
+        valid = ["R", "H", "P", "T", "D"]
+        subtemps = {
+            "/reviewing": "R",
+            "/onhold": "H",
+            "/pending": "P",
+            "/draft": "T",
+            "/declined": "D"
+        }
+        statuses = []
+
+        while re.search(re_has_templates, content):
+            status = "P"
+            match = re.search(re_template, content, re.S)
+            if not match:
+                return statuses
+            temp = match.group(1)
+            limit = 0
+            while "{{" in temp and limit < 50:
+                content = re.sub(re_remove_embed, "\\1\\4}}", content, 1, re.S)
+                match = re.search(re_template, content, re.S)
+                temp = match.group(1)
+                limit += 1
+            params = temp.split("|")
+            try:
+                subtemp, params = params[0].strip(), params[1:]
+            except IndexError:
+                status = "P"
+                params = []
+            else:
+                if subtemp:
+                    status = subtemps.get(subtemp)
+                    params = []
+            for param in params:
+                param = param.strip().upper()
+                if "=" in param:
+                    key, value = param.split("=", 1)
+                    if key.strip() == "1":
+                        status = value if value in valid else "P"
+                        break
+                else:
+                    status = param if param in valid else "P"
+                    break
+            statuses.append(status)
+            content = re.sub(re_template, "", content, 1, re.S)
+
+        return statuses
 
     def get_short_title(self, title):
         """Shorten a title so we can display it in a chart using less space.
@@ -557,11 +614,11 @@ class Task(BaseTask):
         elif chart == CHART_ACCEPT:
             return self.get_create(pageid)
         elif chart == CHART_DRAFT:
-            search = "\{\{afc submission\|h\|(.*?)\}\}"
+            search_for = "H"
         elif chart == CHART_REVIEW:
-            search = "\{\{afc submission\|r\|(.*?)\}\}"
+            search_for = "R"
         elif chart == CHART_DECLINE:
-            search = "\{\{afc submission\|d\|(.*?)\}\}"
+            search_for = "D"
 
         query = """SELECT rev_user_text, rev_timestamp, rev_id
                    FROM revision WHERE rev_page = ? ORDER BY rev_id DESC"""
@@ -576,7 +633,8 @@ class Task(BaseTask):
                 self.logger.warn(msg.format(pageid, chart))
                 return None, None, None
             content = self.get_revision_content(revid)
-            if content and not re.search(search, content, re.I|re.S):
+            statuses = self.get_statuses(content)
+            if search_for in statuses:
                 return last
             last = (user, datetime.strptime(ts, "%Y%m%d%H%M%S"), revid)
 
@@ -598,7 +656,8 @@ class Task(BaseTask):
         if chart in ignored_charts:
             return notes
 
-        if re.search("\{\{afc submission\|d\|(.*?)\}\}", content, re.I|re.S):
+        statuses = self.get_statuses(content)
+        if "D" in statuses:
             notes += "|nr=1"  # Submission was resubmitted
 
         if len(content) < 500:
