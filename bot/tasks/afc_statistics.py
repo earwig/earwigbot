@@ -634,7 +634,7 @@ class Task(BaseTask):
                 return None, None, None
             content = self.get_revision_content(revid)
             statuses = self.get_statuses(content)
-            if search_for in statuses:
+            if search_for not in statuses:
                 return last
             last = (user, datetime.strptime(ts, "%Y%m%d%H%M%S"), revid)
 
