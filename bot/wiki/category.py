@@ -46,7 +46,10 @@ class Category(Page):
             for row in result:
                 body = row[0].replace("_", " ")
                 namespace = self._site.namespace_id_to_name(row[1])
-                title = ":".join((str(namespace), body))
+                if namespace:
+                    title = ":".join((str(namespace), body))
+                else:  # Avoid doing a silly (albeit valid) ":Pagename" thing
+                    title = body
                 members.append((title, row[2]))
             return members
 
