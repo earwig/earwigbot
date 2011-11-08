@@ -594,6 +594,10 @@ class Task(BaseTask):
         """
         notes = ""
 
+        ignored_charts = [CHART_ACCEPT, CHART_DECLINE]
+        if chart in ignored_charts:
+            return notes
+
         if re.search("\{\{afc submission\|d\|(.*?)\}\}", content, re.I|re.S):
             notes += "|nr=1"  # Submission was resubmitted
 
@@ -606,10 +610,9 @@ class Task(BaseTask):
             else:
                 notes += "|nu=1"  # Submission is completely unsourced
 
-        pending_charts = [CHART_PEND, CHART_DRAFT, CHART_REVIEW]
         time_since_modify = (datetime.now() - m_time).seconds
         max_time = 4 * 24 * 60 * 60
-        if chart in pending_charts and time_since_modify > max_time:
+        if time_since_modify > max_time:
             notes += "|no=1"  # Submission hasn't been touched in over 4 days
 
         creator = self.site.get_user(c_user)
