@@ -267,7 +267,7 @@ class Task(BaseTask):
 
         query = "SELECT page_id, page_modify_oldid FROM page WHERE page_title = ?"
         with self.conn.cursor() as cursor:
-            cursor.execute(query, (title,))
+            cursor.execute(query, (title.replace("_", " "),))
             try:
                 pageid, oldid = cursor.fetchall()[0]
             except IndexError:
@@ -613,7 +613,10 @@ class Task(BaseTask):
             notes += "|no=1"  # Submission hasn't been touched in over 4 days
 
         creator = self.site.get_user(c_user)
-        if creator.blockinfo():
-            notes += "|nb=1"  # Submitter is blocked
+        try:
+            if creator.blockinfo():
+                notes += "|nb=1"  # Submitter is blocked
+        except wiki.UserNotFoundError:  # Likely an IP
+            pass
 
         return notes
