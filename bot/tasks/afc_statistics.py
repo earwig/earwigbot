@@ -72,6 +72,8 @@ class Task(BaseTask):
                     self.save(**kwargs)
                 elif action == "sync":
                     self.sync(**kwargs)
+                elif action == "update":
+                    self.update(**kwargs)
             finally:
                 self.conn.close()
 
@@ -258,6 +260,24 @@ class Task(BaseTask):
                    AND ADDTIME(page_special_time, '36:00:00') < NOW()"""
         cursor.execute(query, (CHART_ACCEPT, CHART_DECLINE))
 
+    def update(self, **kwargs):
+        title = kwargs.get(page)
+        if not title:
+            return
+
+        query = "SELECT page_id, page_modify_oldid FROM page WHERE page_title = ?"
+        with self.conn.cursor() as cursor:
+            cursor.execute(query, (title,))
+            try:
+                pageid, oldid = cursor.fetchall()[0]
+            except IndexError:
+                msg = "Page [[{0}]] not found in database".format(title)
+                self.logger.error(msg)
+
+            msg = "Updating page [[{0}]] (id: {1}) @ {2}"
+            self.logger.info(msg.format(title, pageid, oldid))
+            self.update_page(cursor, pageid, title)
+
     def untrack_page(self, cursor, pageid):
         """Remove a page, given by ID, from our database."""
         self.logger.debug("Untracking page (id: {0})".format(pageid))
@@ -280,7 +300,7 @@ class Task(BaseTask):
         status, chart = self.get_status_and_chart(content)
         if not status:
             msg = "Could not find a status for [[{0}]]".format(title)
-            self.logger.error(msg)
+            self.logger.warn(msg)
             return
 
         short = self.get_short_title(title)
@@ -288,7 +308,7 @@ class Task(BaseTask):
         c_user, c_time, c_id = self.get_create(pageid)
         m_user, m_time, m_id = self.get_modify(pageid)
         s_user, s_time, s_id = self.get_special(pageid, chart)
-        notes = self.get_notes(content, m_time, c_user)
+        notes = self.get_notes(chart, content, m_time, c_user)
 
         query1 = "INSERT INTO row VALUES (?, ?)"
         query2 = "INSERT INTO page VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -351,7 +371,7 @@ class Task(BaseTask):
 
         size = len(content)
         m_user, m_time, m_id = self.get_modify(pageid)
-        notes = self.get_notes(content, m_time, result["page_create_user"])
+        notes = self.get_notes(chart, content, m_time, result["page_create_user"])
 
         if title != result["page_title"]:
             self.update_page_title(cursor, result, pageid, title)
@@ -467,15 +487,16 @@ class Task(BaseTask):
         use (revision history search to find the most recent isn't a viable
         idea :P).
         """
-        if re.search("\{\{afc submission\|r\|(.*?)\}\}", content, re.I):
+        flags = re.I|re.S
+        if re.search("\{\{afc submission\|r\|(.*?)\}\}", content, flags):
             return "r", CHART_REVIEW
-        elif re.search("\{\{afc submission\|h\|(.*?)\}\}", content, re.I):
+        elif re.search("\{\{afc submission\|h\|(.*?)\}\}", content, flags):
             return "p", CHART_DRAFT
-        elif re.search("\{\{afc submission\|\|(.*?)\}\}", content, re.I):
+        elif re.search("\{\{afc submission\|\|(.*?)\}\}", content, flags):
             return "p", CHART_PEND
-        elif re.search("\{\{afc submission\|t\|(.*?)\}\}", content, re.I):
+        elif re.search("\{\{afc submission\|t\|(.*?)\}\}", content, flags):
             return None, CHART_NONE
-        elif re.search("\{\{afc submission\|d\|(.*?)\}\}", content, re.I):
+        elif re.search("\{\{afc submission\|d\|(.*?)\}\}", content, flags):
             return "d", CHART_DECLINE
         return None, CHART_NONE
 
@@ -555,30 +576,44 @@ class Task(BaseTask):
                 self.logger.warn(msg.format(pageid, chart))
                 return None, None, None
             content = self.get_revision_content(revid)
-            if content and not re.search(search, content, re.I):
+            if content and not re.search(search, content, re.I|re.S):
                 return last
             last = (user, datetime.strptime(ts, "%Y%m%d%H%M%S"), revid)
 
         return last
 
-    def get_notes(self, content, m_time, c_user):
+    def get_notes(self, chart, content, m_time, c_user):
         """Return any special notes or warnings about this page.
 
-        Currently unimplemented, so always returns None.
+        resubmit:   submission was resubmitted after a previous decline
+        short:      submission is less than 500 bytes
+        no-inline:  submission has no inline citations
+        unsourced:  submission lacks references completely
+        old:        submission has not been touched in > 4 days
+        blocked:    submitter is currently blocked
         """
-        # accepted subs
-        # rebuild action
-        
-        # resubmit          submission was resubmitted after a previous decline
-        #                   re.search("\{\{afc submission\|d\|(.*?)\}\}", content, re.I)
-        # short             submission is less than X bytes
-        #                   len(content) < X
-        # no-inline         submission has no inline citations
-        #                   not re.search("\<ref\s*(.*?)\>(.*?)\</ref\>", content, re.I|re.S)
-        # unsourced         submission lacks references completely
-        #                   not re.search(references, content, re.I|re.S) and search(hyperlinks)
-        # old               submission has not been touched in > 4 days
-        #                   m_time < now - 4 hours
-        # blocked           submitter is currently blocked
-        #                   c_user is blocked via API
-        return ""
+        notes = ""
+
+        if re.search("\{\{afc submission\|d\|(.*?)\}\}", content, re.I|re.S):
+            notes += "|nr=1"  # Submission was resubmitted
+
+        if len(content) < 500:
+            notes += "|ns=1"  # Submission is short
+
+        if not re.search("\<ref\s*(.*?)\>(.*?)\</ref\>", content, re.I|re.S):
+            if re.search("https?:\/\/(.*?)\.", content, re.I|re.S):
+                notes += "|ni=1"  # Submission has no inline citations
+            else:
+                notes += "|nu=1"  # Submission is completely unsourced
+
+        pending_charts = [CHART_PEND, CHART_DRAFT, CHART_REVIEW]
+        time_since_modify = (datetime.now() - m_time).seconds
+        max_time = 4 * 24 * 60 * 60
+        if chart in pending_charts and time_since_modify > max_time:
+            notes += "|no=1"  # Submission hasn't been touched in over 4 days
+
+        creator = self.site.get_user(c_user)
+        if creator.blockinfo():
+            notes += "|nb=1"  # Submitter is blocked
+
+        return notes
