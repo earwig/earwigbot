@@ -270,9 +270,10 @@ class Task(BaseTask):
         if not title:
             return
 
+        title = title.replace("_", " ")
         query = "SELECT page_id, page_modify_oldid FROM page WHERE page_title = ?"
         with self.conn.cursor() as cursor:
-            cursor.execute(query, (title.replace("_", " "),))
+            cursor.execute(query, (title,))
             try:
                 pageid, oldid = cursor.fetchall()[0]
             except IndexError:
