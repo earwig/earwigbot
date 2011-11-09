@@ -311,7 +311,7 @@ class Task(BaseTask):
             return
 
         short = self.get_short_title(title)
-        size = len(content)
+        size = self.get_size(content)
         c_user, c_time, c_id = self.get_create(pageid)
         m_user, m_time, m_id = self.get_modify(pageid)
         s_user, s_time, s_id = self.get_special(pageid, chart)
@@ -349,7 +349,7 @@ class Task(BaseTask):
             dict_cursor.execute(query, (pageid,))
             result = dict_cursor.fetchall()[0]
 
-        size = len(content)
+        size = self.get_size(content)
         m_user, m_time, m_id = self.get_modify(pageid)
         notes = self.get_notes(chart, content, m_time, result["page_create_user"])
 
@@ -488,7 +488,7 @@ class Task(BaseTask):
             else:
                 status, chart = None, CHART_MISPLACE
 
-        return status
+        return status, chart
 
     def get_statuses(self, content):
         """Return a list of all AFC submission statuses in a page's text."""
@@ -553,6 +553,10 @@ class Task(BaseTask):
         if len(short) > 50:
             short = "".join((short[:47], "..."))
         return short
+
+    def get_size(self, content):
+        """Return a page's size in a short, pretty format."""
+        return "{0} kB".format(round(len(content) / 1000.0, 2))
 
     def get_create(self, pageid):
         """Return information about a page's first edit ("creation").
