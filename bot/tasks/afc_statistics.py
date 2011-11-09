@@ -20,6 +20,7 @@ CHART_DRAFT = 2
 CHART_REVIEW = 3
 CHART_ACCEPT = 4
 CHART_DECLINE = 5
+CHART_MISPLACE = 6
 
 class Task(BaseTask):
     """A task to generate statistics for WikiProject Articles for Creation.
@@ -159,7 +160,7 @@ class Task(BaseTask):
 
     def format_time(self, timestamp):
         """Format a datetime into the standard MediaWiki timestamp format."""
-        return timestamp.strftime("%H:%M, %d %B %Y")
+        return timestamp.strftime("%H:%M, %d %b %Y")
 
     def sync(self, **kwargs):
         """Synchronize our local statistics database with the site.
@@ -330,14 +331,6 @@ class Task(BaseTask):
         A variety of SQL queries are used to gather information about the page,
         which is compared against our stored information. Differing information
         is then updated.
-
-        If our page is now a redirect, we will determine the namespace it was
-        moved to. If it was moved to the mainspace or template space, we will
-        set the sub's status as accepted. If it was to the Project: or Project
-        talk: namespaces, we'll merely update our stored title (this is likely
-        to occur if a submission was moved from the userspace to the project
-        space). If it was moved to another namespace, something unusual has
-        happened, and we'll untrack the submission.
         """
         content = self.get_content(title)
         if not content:
@@ -345,30 +338,11 @@ class Task(BaseTask):
             self.logger.error(msg)
             return
 
-        try:
-            redirect_regex = wiki.Page.re_redirect
-            target_title = re.findall(redirect_regex, content, flags=re.I)[0]
-        except IndexError:
-            status, chart = self.get_status_and_chart(content)
-            if not status:
-                self.untrack_page(cursor, pageid)
-                return
-        else:
-            target_ns = self.site.get_page(target_title).namespace()
-            if target_ns in [wiki.NS_MAIN, wiki.NS_TEMPLATE]:
-                status, chart = "a", CHART_ACCEPT
-            elif target_ns in [wiki.NS_PROJECT, wiki.NS_PROJECT_TALK]:
-                title = target_title
-                content = self.get_content(title)
-                status, chart = self.get_status_and_chart(content)
-                if not status:
-                    self.untrack_page(cursor, pageid)
-                    return
-            else:
-                msg = "  Page has moved to namespace {0}".format(target_ns)
-                self.logger.debug(msg)
-                self.untrack_page(cursor, pageid)
-                return
+        namespace = self.site.get_page(title).namespace()
+        status, chart = self.get_status_and_chart(content, namespace)
+        if chart == CHART_NONE:
+            self.untrack_page(cursor, pageid)
+            return
 
         query = "SELECT * FROM page JOIN row ON page_id = row_id WHERE page_id = ?"
         with self.conn.cursor(oursql.DictCursor) as dict_cursor:
@@ -483,7 +457,7 @@ class Task(BaseTask):
             except KeyError:
                 return None
 
-    def get_status_and_chart(self, content):
+    def get_status_and_chart(self, content, namespace):
         """Determine the status and chart number of an AFC submission.
 
         The methodology used here is the same one I've been using for years
@@ -494,17 +468,27 @@ class Task(BaseTask):
         idea :P).
         """
         statuses = self.get_statuses(content)
+
         if "R" in statuses:
-            return "r", CHART_REVIEW
+            status, chart = "r", CHART_REVIEW
         elif "H" in statuses:
-            return "p", CHART_DRAFT
+            status, chart = "p", CHART_DRAFT
         elif "P" in statuses:
-            return "p", CHART_PEND
+            status, chart = "p", CHART_PEND
         elif "T" in statuses:
-            return None, CHART_NONE
+            status, chart = None, CHART_MISPLACE
         elif "D" in statuses:
-            return "d", CHART_DECLINE
-        return None, CHART_NONE
+            status, chart = "d", CHART_DECLINE
+        else:
+            status, chart = None, CHART_NONE
+
+        if namespace == wiki.NS_MAIN:
+            if chart == CHART_NONE:
+                status, chart = "a", CHART_ACCEPT
+            else:
+                status, chart = None, CHART_MISPLACE
+
+        return status
 
     def get_statuses(self, content):
         """Return a list of all AFC submission statuses in a page's text."""
@@ -610,16 +594,23 @@ class Task(BaseTask):
         returned if we cannot determine when the page was "special"-ed, or if
         it was "special"-ed more than 250 edits ago.
         """
-        if chart in [CHART_NONE, CHART_PEND]:
+        if chart in [CHART_NONE, CHART_MISPLACE]:
             return None, None, None
         elif chart == CHART_ACCEPT:
-            return self.get_create(pageid)
+            search_for = None
+            search_not = ["R", "H", "P", "T", "D"]
         elif chart == CHART_DRAFT:
             search_for = "H"
+            search_not = []
+        elif chart == CHART_PEND:
+            search_for = "P"
+            search_not = []
         elif chart == CHART_REVIEW:
             search_for = "R"
+            search_not = []
         elif chart == CHART_DECLINE:
             search_for = "D"
+            search_not = ["R", "H", "P", "T"]
 
         query = """SELECT rev_user_text, rev_timestamp, rev_id
                    FROM revision WHERE rev_page = ? ORDER BY rev_id DESC"""
@@ -629,14 +620,19 @@ class Task(BaseTask):
         last = (None, None, None)
         for user, ts, revid in result:
             counter += 1
-            if counter > 250:
-                msg = "Exceeded 250 content lookups while determining special for page (id: {0}, chart: {1})"
+            if counter > 100:
+                msg = "Exceeded 100 content lookups while determining special for page (id: {0}, chart: {1})"
                 self.logger.warn(msg.format(pageid, chart))
                 return None, None, None
             content = self.get_revision_content(revid)
             statuses = self.get_statuses(content)
-            if search_for not in statuses:
-                return last
+            matches = [s in statuses for s in search_not]
+            if search_for:
+                if search_for not in statuses or any(matches):
+                    return last
+            else:
+                if any(matches):
+                    return last
             last = (user, datetime.strptime(ts, "%Y%m%d%H%M%S"), revid)
 
         return last
@@ -645,7 +641,7 @@ class Task(BaseTask):
         """Return any special notes or warnings about this page.
 
         resubmit:   submission was resubmitted after a previous decline
-        short:      submission is less than 500 bytes
+        short:      submission is fewer than 500 bytes
         no-inline:  submission has no inline citations
         unsourced:  submission lacks references completely
         old:        submission has not been touched in > 4 days
