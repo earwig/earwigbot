@@ -306,7 +306,7 @@ class Task(BaseTask):
 
         namespace = self.site.get_page(title).namespace()
         status, chart = self.get_status_and_chart(content, namespace)
-        if not status:
+        if chart == CHART_NONE:
             msg = "Could not find a status for [[{0}]]".format(title)
             self.logger.warn(msg)
             return
