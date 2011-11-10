@@ -143,18 +143,14 @@ class Task(BaseTask):
         table, where keys are column names and values are their cell contents.
         """
         row = "{0}|s={page_status}|t={page_title}|h={page_short}|z={page_size}|"
-        row += "cr={page_create_user}|cd={page_create_time}|ci={page_create_oldid}|"
+        row += "sr={page_special_user}|sd={page_special_time}|si={page_special_oldid}"
         row += "mr={page_modify_user}|md={page_modify_time}|mi={page_modify_oldid}|"
 
-        page["page_create_time"] = self.format_time(page["page_create_time"])
+        page["page_special_time"] = self.format_time(page["page_special_time"])
         page["page_modify_time"] = self.format_time(page["page_modify_time"])
 
-        if page["page_special_user"]:
-            row += "sr={page_special_user}|sd={page_special_time}|si={page_special_oldid}|"
-            page["page_special_time"] = self.format_time(page["page_special_time"])
-
         if page["page_notes"]:
-            row += "n=1{page_notes}"
+            row += "|n=1{page_notes}"
 
         return "".join(("{{", row.format(self.tl_row, **page), "}}"))
 
@@ -313,18 +309,17 @@ class Task(BaseTask):
 
         short = self.get_short_title(title)
         size = self.get_size(content)
-        c_user, c_time, c_id = self.get_create(pageid)
         m_user, m_time, m_id = self.get_modify(pageid)
         s_user, s_time, s_id = self.get_special(pageid, chart)
-        notes = self.get_notes(chart, content, m_time, c_user)
+        notes = self.get_notes(chart, content, m_time, s_user)
 
         query1 = "INSERT INTO row VALUES (?, ?)"
-        query2 = "INSERT INTO page VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        query2 = "INSERT INTO page VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         cursor.execute(query1, (pageid, chart))
         cursor.execute(query2, (pageid, status, title.decode("utf8"),
-                                short.decode("utf8"), size, notes, c_user,
-                                c_time, c_id, m_user, m_time, m_id, s_user,
-                                s_time, s_id))
+                                short.decode("utf8"), size, notes,
+                                m_user.decode("utf8"), m_time, m_id,
+                                s_user.decode("utf8"), s_time, s_id))
 
     def update_page(self, cursor, pageid, title):
         """Update hook for when page is already in our database.
@@ -352,7 +347,7 @@ class Task(BaseTask):
 
         size = self.get_size(content)
         m_user, m_time, m_id = self.get_modify(pageid)
-        notes = self.get_notes(chart, content, m_time, result["page_create_user"])
+        notes = self.get_notes(chart, content, m_time, result["page_special_user"])
 
         if title != result["page_title"]:
             self.update_page_title(cursor, result, pageid, title)
@@ -380,7 +375,8 @@ class Task(BaseTask):
         query = """UPDATE page SET page_size = ?, page_modify_user = ?,
                    page_modify_time = ?, page_modify_oldid = ?
                    WHERE page_id = ?"""
-        cursor.execute(query, (size, m_user, m_time, m_id, pageid))
+        cursor.execute(query, (size, m_user.decode("utf8"), m_time, m_id,
+                               pageid))
 
         msg = "  {0}: modify: {1} / {2} / {3} -> {4} / {5} / {6}"
         msg = msg.format(pageid, result["page_modify_user"],
@@ -404,7 +400,8 @@ class Task(BaseTask):
         s_user, s_time, s_id = self.get_special(pageid, chart)
 
         if s_id != result["page_special_oldid"]:
-            cursor.execute(query2, (s_user, s_time, s_id, pageid))
+            cursor.execute(query2, (s_user.decode("utf8"), s_time, s_id,
+                                    pageid))
             msg = "{0}: special: {1} / {2} / {3} -> {4} / {5} / {6}"
             msg = msg.format(pageid, result["page_special_user"],
                              result["page_special_time"],
@@ -477,14 +474,14 @@ class Task(BaseTask):
         elif "P" in statuses:
             status, chart = "p", CHART_PEND
         elif "T" in statuses:
-            status, chart = None, CHART_MISPLACE
+            status, chart = None, CHART_NONE
         elif "D" in statuses:
             status, chart = "d", CHART_DECLINE
         else:
             status, chart = None, CHART_NONE
 
         if namespace == wiki.NS_MAIN:
-            if chart == CHART_NONE:
+            if not statuses:
                 status, chart = "a", CHART_ACCEPT
             else:
                 status, chart = None, CHART_MISPLACE
@@ -559,19 +556,6 @@ class Task(BaseTask):
         """Return a page's size in a short, pretty format."""
         return "{0} kB".format(round(len(content) / 1000.0, 2))
 
-    def get_create(self, pageid):
-        """Return information about a page's first edit ("creation").
-
-        This consists of the page creator, creation time, and the earliest
-        revision ID.
-        """
-        query = """SELECT rev_user_text, rev_timestamp, rev_id
-                   FROM revision WHERE rev_id =
-                   (SELECT MIN(rev_id) FROM revision WHERE rev_page = ?)"""
-        result = self.site.sql_query(query, (pageid,))
-        c_user, c_time, c_id = list(result)[0]
-        return c_user, datetime.strptime(c_time, "%Y%m%d%H%M%S"), c_id
-
     def get_modify(self, pageid):
         """Return information about a page's last edit ("modification").
 
@@ -590,8 +574,8 @@ class Task(BaseTask):
         I tend to use the term "special" as a verb a lot, which is bound to
         cause confusion. It is merely a short way of saying "the edit in which
         a declined submission was declined, an accepted submission was
-        accepted, a submission in review was set as such, and a pending draft
-        was submitted."
+        accepted, a submission in review was set as such, a pending submission
+        was submitted, and a "misplaced" submission was created."
 
         This "information" consists of the special edit's editor, its time, and
         its revision ID. If the page's status is not something that involves
@@ -599,8 +583,10 @@ class Task(BaseTask):
         returned if we cannot determine when the page was "special"-ed, or if
         it was "special"-ed more than 250 edits ago.
         """
-        if chart in [CHART_NONE, CHART_MISPLACE]:
+        if chart ==CHART_NONE:
             return None, None, None
+        elif chart == CHART_MISPLACE:
+            return self.get_create(pageid)
         elif chart == CHART_ACCEPT:
             search_for = None
             search_not = ["R", "H", "P", "T", "D"]
@@ -642,7 +628,20 @@ class Task(BaseTask):
 
         return last
 
-    def get_notes(self, chart, content, m_time, c_user):
+    def get_create(self, pageid):
+        """Return information about a page's first edit ("creation").
+
+        This consists of the page creator, creation time, and the earliest
+        revision ID.
+        """
+        query = """SELECT rev_user_text, rev_timestamp, rev_id
+                   FROM revision WHERE rev_id =
+                   (SELECT MIN(rev_id) FROM revision WHERE rev_page = ?)"""
+        result = self.site.sql_query(query, (pageid,))
+        c_user, c_time, c_id = list(result)[0]
+        return c_user, datetime.strptime(c_time, "%Y%m%d%H%M%S"), c_id
+
+    def get_notes(self, chart, content, m_time, s_user):
         """Return any special notes or warnings about this page.
 
         resubmit:   submission was resubmitted after a previous decline
@@ -676,7 +675,7 @@ class Task(BaseTask):
         if time_since_modify > max_time:
             notes += "|no=1"  # Submission hasn't been touched in over 4 days
 
-        creator = self.site.get_user(c_user)
+        creator = self.site.get_user(s_user)
         try:
             if creator.blockinfo():
                 notes += "|nb=1"  # Submitter is blocked
