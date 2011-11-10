@@ -653,12 +653,12 @@ class Task(BaseTask):
         """
         notes = ""
 
-        ignored_charts = [CHART_ACCEPT, CHART_DECLINE]
+        ignored_charts = [CHART_NONE, CHART_ACCEPT, CHART_DECLINE]
         if chart in ignored_charts:
             return notes
 
         statuses = self.get_statuses(content)
-        if "D" in statuses:
+        if "D" in statuses and chart != CHART_MISPLACE:
             notes += "|nr=1"  # Submission was resubmitted
 
         if len(content) < 500:
@@ -675,11 +675,12 @@ class Task(BaseTask):
         if time_since_modify > max_time:
             notes += "|no=1"  # Submission hasn't been touched in over 4 days
 
-        creator = self.site.get_user(s_user)
-        try:
-            if creator.blockinfo():
-                notes += "|nb=1"  # Submitter is blocked
-        except wiki.UserNotFoundError:  # Likely an IP
-            pass
+        if chart in [CHART_PEND, CHART_DRAFT]:
+            submitter = self.site.get_user(s_user)
+            try:
+                if submitter.blockinfo():
+                    notes += "|nb=1"  # Submitter is blocked
+            except wiki.UserNotFoundError:  # Likely an IP
+                pass
 
         return notes
