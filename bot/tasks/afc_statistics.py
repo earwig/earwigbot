@@ -143,8 +143,8 @@ class Task(BaseTask):
         table, where keys are column names and values are their cell contents.
         """
         row = "{0}|s={page_status}|t={page_title}|h={page_short}|z={page_size}|"
-        row += "sr={page_special_user}|sd={page_special_time}|si={page_special_oldid}"
-        row += "mr={page_modify_user}|md={page_modify_time}|mi={page_modify_oldid}|"
+        row += "sr={page_special_user}|sd={page_special_time}|si={page_special_oldid}|"
+        row += "mr={page_modify_user}|md={page_modify_time}|mi={page_modify_oldid}"
 
         page["page_special_time"] = self.format_time(page["page_special_time"])
         page["page_modify_time"] = self.format_time(page["page_modify_time"])
@@ -554,7 +554,7 @@ class Task(BaseTask):
 
     def get_size(self, content):
         """Return a page's size in a short, pretty format."""
-        return "{0} kB".format(round(len(content) / 1000.0, 2))
+        return "{0} kB".format(round(len(content) / 1000.0, 1))
 
     def get_modify(self, pageid):
         """Return information about a page's last edit ("modification").
