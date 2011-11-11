@@ -295,7 +295,7 @@ class Task(BaseTask):
         which are then saved to our database.
         """
         content = self.get_content(title)
-        if not content:
+        if content is None:
             msg = "Could not get page content for [[{0}]]".format(title)
             self.logger.error(msg)
             return
@@ -329,7 +329,7 @@ class Task(BaseTask):
         is then updated.
         """
         content = self.get_content(title)
-        if not content:
+        if content is None:
             msg = "Could not get page content for [[{0}]]".format(title)
             self.logger.error(msg)
             return
