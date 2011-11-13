@@ -66,21 +66,27 @@ class Command(BaseCommand):
                 msg = "aggregate is \x0305{0}\x0301 (AfC {1})."
                 self.connection.reply(data, msg.format(agg_num, aggregate))
 
+            elif action.startswith("nocolor") or action == "n":
+                self.connection.reply(data, self.get_status(color=False))
+
             else:
-                msg = "unknown argument: \x0303{0}\x0301. Valid args are 'subs', 'redirs', 'files', 'agg'."
+                msg = "unknown argument: \x0303{0}\x0301. Valid args are 'subs', 'redirs', 'files', 'agg', 'nocolor'."
                 self.connection.reply(data, msg.format(data.args[0]))
 
         else:
             self.connection.reply(data, self.get_status())
 
-    def get_status(self):
+    def get_status(self, color=True):
         subs = self.count_submissions()
         redirs = self.count_redirects()
         files = self.count_files()
         agg_num = self.get_aggregate_number((subs, redirs, files))
         aggregate = self.get_aggregate(agg_num)
 
-        msg = "Articles for creation {0} (\x0302AFC\x0301: \x0305{1}\x0301; \x0302AFC/R\x0301: \x0305{2}\x0301; \x0302FFU\x0301: \x0305{3}\x0301)."
+        if color:
+            msg = "Articles for creation {0} (\x0302AFC\x0301: \x0305{1}\x0301; \x0302AFC/R\x0301: \x0305{2}\x0301; \x0302FFU\x0301: \x0305{3}\x0301)."
+        else:
+            msg = "Articles for creation {0} (AFC: {1}; AFC/R: {2}; FFU: {3})."
         return msg.format(aggregate, subs, redirs, files)
 
     def count_submissions(self):

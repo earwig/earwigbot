@@ -292,7 +292,7 @@ class Task(BaseTask):
         """Update hook for when page is not in our database.
 
         A variety of SQL queries are used to gather information about the page,
-        which are then saved to our database.
+        which is then saved to our database.
         """
         content = self.get_content(title)
         if content is None:
