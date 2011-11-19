@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 from os.path import expanduser
 from threading import Lock
 
+import oursql
+
 from classes import BaseTask
 import config
 import wiki
