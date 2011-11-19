@@ -111,7 +111,7 @@ class Task(BaseTask):
                     continue
 
                 if stored:
-                    stored_date, stored_status = list(stored)
+                    stored_date, stored_status = list(stored)[0]
                     if date != stored_date or status != stored_status:
                         cursor.execute(q_update, (date, status, pageid))
 
