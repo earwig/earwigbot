@@ -133,8 +133,9 @@ class Task(BaseTask):
             return STATUS_ACCEPT
 
         cats = self.categories
-        query = "SELECT 1 FROM categorylinks WHERE cl_from = ? AND cl_to = ?"
-        match = lambda cat: list(self.site.sql_query(query, (cat, pageid)))
+        sq = self.site.sql_query
+        query = "SELECT 1 FROM categorylinks WHERE cl_to = ? AND cl_from = ?"
+        match = lambda cat: list(sq(query, (cat.replace(" ", "_"), pageid)))
 
         if match(cats["pending"]):
             return STATUS_PEND
