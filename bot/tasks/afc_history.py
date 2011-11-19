@@ -122,13 +122,13 @@ class Task(BaseTask):
         ns = page.namespace()
 
         if ns == wiki.NS_FILE_TALK:  # Ignore accepted FFU requests
-            return CHART_NONE
+            return STATUS_NONE
 
         if ns == wiki.NS_TALK:
             new_page = page.toggle_talk()
             if new_page.is_redirect():
-                return CHART_NONE  # Ignore accepted AFC/R requests
-            return CHART_ACCEPT
+                return STATUS_NONE  # Ignore accepted AFC/R requests
+            return STATUS_ACCEPT
 
         cats = self.categories
         query = "SELECT 1 FROM categorylinks WHERE cl_from = ? AND cl_to = ?"
