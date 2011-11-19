@@ -93,29 +93,28 @@ class Task(BaseTask):
         msg = "Updating {0} ([[{1}]])".format(date, category.title())
         self.logger.debug(msg)
 
-        q_select = "SELECT page_id, page_status FROM page WHERE page_date = ?"
+        q_select = "SELECT page_date, page_status FROM page WHERE page_id = ?"
         q_delete = "DELETE FROM page WHERE page_id = ?"
-        q_update = "UPDATE page SET page_status = ? WHERE page_id = ?"
+        q_update = "UPDATE page SET page_date = ?, page_status = ? WHERE page_id = ?"
         q_insert = "INSERT INTO page VALUES (?, ?, ?)"
         members = category.members(use_sql=True)
-        tracked = []
-        statuses = {}
 
         with self.conn.cursor() as cursor:
-            cursor.execute(q_select, (date,))
-            for pageid, status in cursor:
-                tracked.append(pageid)
-                statuses[pageid] = status
-
             for title, pageid in members:
+                cursor.execute(q_select, (pageid,))
+                stored = cursor.fetchall()
                 status = self.get_status(title, pageid)
+
                 if status == STATUS_NONE:
-                    if pageid in tracked:
+                    if stored:
                         cursor.execute(q_delete, (pageid,))
                     continue
-                if pageid in tracked:
-                    if status != statuses[pageid]:
-                        cursor.execute(q_update, (status, pageid))
+
+                if stored:
+                    stored_date, stored_status = list(stored)
+                    if date != stored_date or status != stored_status:
+                        cursor.execute(q_update, (date, status, pageid))
+
                 else:
                     cursor.execute(q_insert, (pageid, date, status))
 
