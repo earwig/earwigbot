@@ -49,10 +49,11 @@ class Task(BaseTask):
             
             action = kwargs.get("action")
             try:
+                num_days = int(kwargs.get("days", 90))
                 if action == "update":
-                    self.update(kwargs.get("days", 90))
+                    self.update(num_days)
                 elif action == "generate":
-                    self.generate(kwargs.get("days", 90))
+                    self.generate(num_days)
             finally:
                 self.conn.close()
 
@@ -66,7 +67,7 @@ class Task(BaseTask):
             sleep(15)
         self.logger.info("Update complete")
 
-    def generate(self, data):
+    def generate(self, num_days):
         self.logger.info("Generating chart for past {0} days".format(num_days))
         data = {}
         generator = self.backwards_cat_iterator()
