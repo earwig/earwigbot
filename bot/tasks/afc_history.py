@@ -5,6 +5,7 @@ from os.path import expanduser
 from threading import Lock
 
 from classes import BaseTask
+import config
 import wiki
 
 # Valid submission statuses:
