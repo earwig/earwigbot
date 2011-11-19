@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta
 from os.path import expanduser
 from threading import Lock
+from time import sleep
 
 import oursql
 
@@ -62,6 +63,7 @@ class Task(BaseTask):
             category = generator.next()
             date = category.title().split("/")[-1]
             self.update_date(date, category)
+            sleep(15)
         self.logger.info("Update complete")
 
     def generate(self, data):
