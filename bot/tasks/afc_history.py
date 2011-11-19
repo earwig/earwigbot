@@ -82,7 +82,7 @@ class Task(BaseTask):
         date_base = self.categories["dateBase"]
         current = datetime.utcnow()
         while 1:
-            subcat = current.stftime("%d %B %Y")
+            subcat = current.strftime("%d %B %Y")
             title = "/".join((date_base, subcat))
             yield self.site.get_category(title)
             current -= timedelta(1)  # Subtract one day from date

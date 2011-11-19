@@ -22,7 +22,7 @@ class Command(BaseCommand):
         conn = oursql.connect(**args)
         with conn.cursor() as cursor:
             cursor.execute("SELECT NOW() - MAX(rev_timestamp) FROM revision")
-            replag = cursor.fetchall()[0][0]
+            replag = int(cursor.fetchall()[0][0])
         conn.close()
 
         msg = "Replag on \x0302{0}\x0301 is \x02{1}\x0F seconds."
