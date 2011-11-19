@@ -78,7 +78,7 @@ class Task(BaseTask):
 
         dest = expanduser(self.destination)
         with open(dest, "wb") as fp:
-            fp.write(data)
+            fp.write(str(data))
         self.logger.info("Chart saved to {0}".format(dest))
 
     def backwards_cat_iterator(self):
