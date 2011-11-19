@@ -39,7 +39,7 @@ class Task(BaseTask):
         # Set some wiki-related attributes:
         self.pagename = cfg.get("page", "Template:AFC statistics")
         self.pending_cat = cfg.get("pending", "Pending AfC submissions")
-        self.ignore_list = cfg.get("ignore_list", [])
+        self.ignore_list = cfg.get("ignoreList", [])
         default_summary = "Updating statistics for [[WP:WPAFC|WikiProject Articles for creation]]."
         self.summary = self.make_summary(cfg.get("summary", default_summary))
 

@@ -3,6 +3,7 @@
 import re
 
 from classes import BaseCommand
+import tasks
 import wiki
 
 class Command(BaseCommand):
@@ -14,41 +15,50 @@ class Command(BaseCommand):
         self.site._maxlag = None
         self.data = data
 
+        try:
+            self.statistics = tasks.get("afc_statistics")
+        except KeyError:
+            e = "Cannot run command: requires afc_statistics task."
+            self.logger.error(e)
+            return
+
         if not data.args:
             msg = "what submission do you want me to give information about?"
             self.connection.reply(data, msg)
             return
 
-        title = ' '.join(data.args)
+        title = " ".join(data.args)
         title = title.replace("http://en.wikipedia.org/wiki/", "")
         title = title.replace("http://enwp.org/", "").strip()
 
         # Given '!report Foo', first try [[Foo]]:
-        if self.report(title):
-            return
+        page = self.get_page(title)
+        if page:
+            return self.report(page)
 
         # Then try [[Wikipedia:Articles for creation/Foo]]:
-        title2 = "".join(("Wikipedia:Articles for creation/", title))
-        if self.report(title2):
-            return
+        newtitle = "/".join(("Wikipedia:Articles for creation", title))
+        page = self.get_page(newtitle)
+        if page:
+            return self.report(page)
 
         # Then try [[Wikipedia talk:Articles for creation/Foo]]:
-        title3 = "".join(("Wikipedia talk:Articles for creation/", title))
-        if self.report(title3):
-            return
+        newtitle = "/".join(("Wikipedia talk:Articles for creation", title))
+        page = self.get_page(newtitle)
+        if page:
+            return self.report(page)
 
         msg = "submission \x0302{0}\x0301 not found.".format(title)
         self.connection.reply(data, msg)
 
-    def report(self, title):
-        data = self.data
+    def get_page(self, title):
         page = self.site.get_page(title, follow_redirects=False)
-        if not page.exists()[0]:
-            return
+        if page.exists()[0]:
+            return page
 
+    def report(self, page):
         url = page.url().replace("en.wikipedia.org/wiki", "enwp.org")
-        short = re.sub("wikipedia( talk)?\:articles for creation\/", "", title,
-                       flags=re.IGNORECASE)
+        short = self.statistics.get_short_title(page.title())
         status = self.get_status(page)
         user = self.site.get_user(page.creator())
         user_name = user.name()
@@ -60,31 +70,26 @@ class Command(BaseCommand):
         if status == "accepted":
             msg3 = "Reviewed by \x0302{0}\x0301 ({1})"
 
-        self.connection.reply(data, msg1.format(short, url))
-        self.connection.say(data.chan, msg2.format(status))
-        self.connection.say(data.chan, msg3.format(user_name, user_url))
-
-        return True
+        self.connection.reply(self.data, msg1.format(short, url))
+        self.connection.say(self.data.chan, msg2.format(status))
+        self.connection.say(self.data.chan, msg3.format(user_name, user_url))
 
     def get_status(self, page):
-        content = page.get()
-
         if page.is_redirect():
             target = page.get_redirect_target()
-            if self.site.get_page(target).namespace() == 0:
+            if self.site.get_page(target).namespace() == wiki.NS_MAIN:
                 return "accepted"
             return "redirect"
-        elif re.search("\{\{afc submission\|r\|(.*?)\}\}", content, re.I):
+
+        statuses = self.statistics.get_statuses(page.get())
+        if "R" in statuses:
             return "being reviewed"
-        elif re.search("\{\{afc submission\|h?\|(.*?)\}\}", content, re.I):
-            return "pending"
-        elif re.search("\{\{afc submission\|t\|(.*?)\}\}", content, re.I):
+        elif "H" in statuses:
+            return "pending draft"
+        elif "P" in statuses:
+            return "pending submission"
+        elif "T" in statuses:
             return "unsubmitted draft"
-        elif re.search("\{\{afc submission\|d\|(.*?)\}\}", content, re.I):
-            regex = "\{\{afc submission\|d\|(.*?)(\||\}\})"
-            try:
-                reason = re.findall(regex, content, re.I)[0][0]
-            except IndexError:
-                return "declined"
-            return "declined with reason \"{0}\"".format(reason)
+        elif "D" in statuses:
+            return "declined"
         return "unkown"

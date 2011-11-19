@@ -16,7 +16,7 @@ import time
 from classes import BaseTask
 import config
 
-__all__ = ["load", "schedule", "start", "get_all"]
+__all__ = ["load", "schedule", "start", "get", "get_all"]
 
 # Base directory when searching for tasks:
 base_dir = os.path.join(config.root_dir, "bot", "tasks")
@@ -77,7 +77,7 @@ def schedule(now=time.gmtime()):
     """Start all tasks that are supposed to be run at a given time."""
     # Get list of tasks to run this turn:
     tasks = config.schedule(now.tm_min, now.tm_hour, now.tm_mday, now.tm_mon,
-                            now.tm_wday) 
+                            now.tm_wday)
 
     for task in tasks:
         if isinstance(task, list):     # they've specified kwargs
@@ -105,6 +105,13 @@ def start(task_name, **kwargs):
     task_thread.daemon = True
 
     task_thread.start()
+
+def get(task_name):
+    """Return the class instance associated with a certain task name.
+
+    Will raise KeyError if the task is not found.
+    """
+    return _tasks[task_name]
 
 def get_all():
     """Return our dict of all loaded tasks."""
