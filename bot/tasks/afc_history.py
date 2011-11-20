@@ -204,4 +204,4 @@ class Task(BaseTask):
         fig.autofmt_xdate()
 
         ax = plt.gca()
-        ax.grid(True, axis="x")
+        ax.xaxis.grid(True)
