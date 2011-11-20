@@ -26,5 +26,8 @@ integration between bot parts, and easier maintenance.
 
 EarwigBot uses the MySQL library
 [oursql](http://packages.python.org/oursql/) (>= 0.9.2) for communicating with
-MediaWiki databases, and some tasks use their own tables for storage. It is not
-required.
+MediaWiki databases, and some tasks use their own tables for storage.
+Additionally, the afc_history task uses
+[matplotlib](http://matplotlib.sourceforge.net/) and
+[numpy](http://numpy.scipy.org/) for graphing AfC statistics. Neither of these
+modules are required for the main bot itself.

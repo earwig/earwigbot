@@ -1,10 +1,14 @@
 # -*- coding: utf-8  -*-
 
+from collections import OrderedDict
 from datetime import datetime, timedelta
+from itertools import count
 from os.path import expanduser
 from threading import Lock
 from time import sleep
 
+from matplotlib import pyplot as plt
+from numpy import arange
 import oursql
 
 from classes import BaseTask
@@ -26,15 +30,21 @@ class Task(BaseTask):
     submissions every day.
 
     This information is saved to a MySQL database ("u_earwig_afc_history") and
-    used to generate attractive graphs showing the number of AfC submissions
-    over time.
+    used to generate a graph showing the number of AfC submissions by date
+    with matplotlib and numpy. The chart is saved as a PNG to
+    config.tasks["afc_history"]["graph"]["dest"], which defaults to
+    "afc_history.png".
     """
     name = "afc_history"
 
     def __init__(self):
         cfg = config.tasks.get(self.name, {})
-        self.destination = cfg.get("destination", "afc_history.png")
+        self.num_days = cfg.get("days", 90)
         self.categories = cfg.get("categories", {})
+
+        # Graph stuff:
+        self.graph = cfg.get("graph", {})
+        self.dest = self.graph.get("dest", "afc_history.png")
 
         # Connection data for our SQL database:
         kwargs = cfg.get("sql", {})
@@ -49,7 +59,7 @@ class Task(BaseTask):
             
             action = kwargs.get("action")
             try:
-                num_days = int(kwargs.get("days", 90))
+                num_days = int(kwargs.get("days", self.num_days))
                 if action == "update":
                     self.update(num_days)
                 elif action == "generate":
@@ -69,7 +79,7 @@ class Task(BaseTask):
 
     def generate(self, num_days):
         self.logger.info("Generating chart for past {0} days".format(num_days))
-        data = {}
+        data = OrderedDict()
         generator = self.backwards_cat_iterator()
         for d in xrange(num_days):
             category = generator.next()
@@ -77,8 +87,8 @@ class Task(BaseTask):
             data[date] = self.get_date_counts(date)
 
         dest = expanduser(self.destination)
-        with open(dest, "wb") as fp:
-            fp.write(str(data))
+        self.generate_chart(reversed(data))
+        plt.savefig(dest)
         self.logger.info("Chart saved to {0}".format(dest))
 
     def backwards_cat_iterator(self):
@@ -155,3 +165,30 @@ class Task(BaseTask):
                 count = cursor.fetchall()[0][0]
                 counts[status] = count
         return counts
+
+    def generate_chart(self, data):
+        pends = [d[STATUS_PEND] for d in data.itervalues()]
+        declines = [d[STATUS_DECLINE] for d in data.itervalues()]
+        accepts = [d[STATUS_ACCEPT] for d in data.itervalues()]
+        ind = arange(len(data))
+        width = self.graph.get("width", 0.75)
+        xstep = self.graph.get("xAxisStep", 6)
+        xticks = arange(xstep-1, ind.size+xstep-1, xstep) + width/2.0
+        xlabels = [d for c, d in zip(count(1), data.keys()) if not c % xstep]
+        pcolor = self.graph.get("pendingColor", "y")
+        dcolor = self.graph.get("declinedColor", "r")
+        acolor = self.graph.get("acceptedColor", "g")
+
+        p1 = plt.bar(ind, pends, width, color=pcolor)
+        p2 = plt.bar(ind, declines, width, color=dcolor, bottom=pends)
+        p3 = plt.bar(ind, accepts, width, color=acolor, bottom=declines)
+
+        plt.title("AfC submissions per date")
+        plt.ylabel("Submissions")
+        plt.xlabel("Date")
+        plt.xticks(xticks, xlabels)
+        plt.legend((p1[0], p2[0], p3[0]), ("Pending", "Declined", "Accepted"))
+
+        fig = plt.gcf()
+        fig.set_size_inches(12, 9)  # 1200, 900
+        fig.autofmt_xdate()
