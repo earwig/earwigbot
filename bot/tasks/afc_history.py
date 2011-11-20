@@ -197,7 +197,7 @@ class Task(BaseTask):
 
         leg = plt.legend((p1[0], p2[0], p3[0]), ("Pending", "Declined",
                          "Accepted"), loc="upper left", fancybox=True)
-        leg.get_frame().set_alpha(0.5))
+        leg.get_frame().set_alpha(0.5)
 
         fig = plt.gcf()
         fig.set_size_inches(xsize/100, ysize/100)
