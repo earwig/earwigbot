@@ -172,24 +172,28 @@ class Task(BaseTask):
         declines = [d[STATUS_DECLINE] for d in data.itervalues()]
         accepts = [d[STATUS_ACCEPT] for d in data.itervalues()]
         ind = arange(len(data))
-        width = self.graph.get("width", 0.75)
+        xsize = self.graph.get("xsize", 1200)
+        ysize = self.graph.get("xsize", 900)
+        width = self.graph.get("width", 1)
         xstep = self.graph.get("xAxisStep", 6)
-        xticks = arange(xstep-1, ind.size+xstep-1, xstep) + width/2.0
-        xlabels = [d for c, d in zip(count(1), data.keys()) if not c % xstep]
         pcolor = self.graph.get("pendingColor", "y")
         dcolor = self.graph.get("declinedColor", "r")
         acolor = self.graph.get("acceptedColor", "g")
 
         p1 = plt.bar(ind, pends, width, color=pcolor)
         p2 = plt.bar(ind, declines, width, color=dcolor, bottom=pends)
-        p3 = plt.bar(ind, accepts, width, color=acolor, bottom=declines)
+        p3 = plt.bar(ind, accepts, width, color=acolor, bottom=pends+declines)
 
         plt.title("AfC submissions per date")
         plt.ylabel("Submissions")
         plt.xlabel("Date")
+        plt.legend((p1[0], p2[0], p3[0]), ("Pending", "Declined", "Accepted"),
+                   loc="upper left")
+
+        xticks = arange(xstep-1, ind.size+xstep-1, xstep) + width/2.0
+        xlabels = [d for c, d in zip(count(1), data.keys()) if not c % xstep]
         plt.xticks(xticks, xlabels)
-        plt.legend((p1[0], p2[0], p3[0]), ("Pending", "Declined", "Accepted"))
 
         fig = plt.gcf()
-        fig.set_size_inches(12, 9)  # 1200, 900
+        fig.set_size_inches(xsize/100, ysize/100)
         fig.autofmt_xdate()
