@@ -74,7 +74,7 @@ class Task(BaseTask):
             category = generator.next()
             date = category.title().split("/")[-1]
             self.update_date(date, category)
-            sleep(15)
+            sleep(10)
         self.logger.info("Update complete")
 
     def generate(self, num_days):
@@ -139,6 +139,7 @@ class Task(BaseTask):
 
         if ns == wiki.NS_TALK:
             new_page = page.toggle_talk()
+            sleep(2)
             if new_page.is_redirect():
                 return STATUS_NONE  # Ignore accepted AFC/R requests
             return STATUS_ACCEPT
@@ -181,9 +182,9 @@ class Task(BaseTask):
         ysize = self.graph.get("ysize", 900)
         width = self.graph.get("width", 1)
         xstep = self.graph.get("xAxisStep", 6)
-        pcolor = self.graph.get("pendingColor", "#f3eba3")
-        dcolor = self.graph.get("declinedColor", "#ffcdd5")
-        acolor = self.graph.get("acceptedColor", "#adfcad")
+        pcolor = self.graph.get("pendingColor", "#f0e460")
+        dcolor = self.graph.get("declinedColor", "#f291a6")
+        acolor = self.graph.get("acceptedColor", "#81fc4c")
 
         p1 = plt.bar(ind, pends, width, color=pcolor)
         p2 = plt.bar(ind, declines, width, color=dcolor, bottom=pends)
