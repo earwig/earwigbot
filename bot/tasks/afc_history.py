@@ -44,7 +44,7 @@ class Task(BaseTask):
 
         # Graph stuff:
         self.graph = cfg.get("graph", {})
-        self.dest = self.graph.get("dest", "afc_history.png")
+        self.destination = self.graph.get("dest", "afc_history.png")
 
         # Connection data for our SQL database:
         kwargs = cfg.get("sql", {})
