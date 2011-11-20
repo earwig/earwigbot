@@ -171,6 +171,7 @@ class Task(BaseTask):
         pends = [d[STATUS_PEND] for d in data.itervalues()]
         declines = [d[STATUS_DECLINE] for d in data.itervalues()]
         accepts = [d[STATUS_ACCEPT] for d in data.itervalues()]
+        pends_declines = [p + d for p, d in zip(pends, declines)]
         ind = arange(len(data))
         xsize = self.graph.get("xsize", 1200)
         ysize = self.graph.get("xsize", 900)
@@ -182,7 +183,7 @@ class Task(BaseTask):
 
         p1 = plt.bar(ind, pends, width, color=pcolor)
         p2 = plt.bar(ind, declines, width, color=dcolor, bottom=pends)
-        p3 = plt.bar(ind, accepts, width, color=acolor, bottom=pends+declines)
+        p3 = plt.bar(ind, accepts, width, color=acolor, bottom=pends_declines)
 
         plt.title("AfC submissions per date")
         plt.ylabel("Submissions")
