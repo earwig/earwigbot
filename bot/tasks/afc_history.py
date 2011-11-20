@@ -168,33 +168,40 @@ class Task(BaseTask):
         return counts
 
     def generate_chart(self, data):
+        plt.title(self.graph.get("title", "AfC submissions by date"))
+        plt.xlabel(self.graph.get("xaxis", "Date"))
+        plt.ylabel(self.graph.get("yaxis", "Submissions"))
+
         pends = [d[STATUS_PEND] for d in data.itervalues()]
         declines = [d[STATUS_DECLINE] for d in data.itervalues()]
         accepts = [d[STATUS_ACCEPT] for d in data.itervalues()]
         pends_declines = [p + d for p, d in zip(pends, declines)]
         ind = arange(len(data))
         xsize = self.graph.get("xsize", 1200)
-        ysize = self.graph.get("xsize", 900)
+        ysize = self.graph.get("ysize", 900)
         width = self.graph.get("width", 1)
         xstep = self.graph.get("xAxisStep", 6)
-        pcolor = self.graph.get("pendingColor", "y")
-        dcolor = self.graph.get("declinedColor", "r")
-        acolor = self.graph.get("acceptedColor", "g")
+        pcolor = self.graph.get("pendingColor", "#f3eba3")
+        dcolor = self.graph.get("declinedColor", "#ffcdd5")
+        acolor = self.graph.get("acceptedColor", "#adfcad")
 
         p1 = plt.bar(ind, pends, width, color=pcolor)
         p2 = plt.bar(ind, declines, width, color=dcolor, bottom=pends)
         p3 = plt.bar(ind, accepts, width, color=acolor, bottom=pends_declines)
 
-        plt.title("AfC submissions per date")
-        plt.ylabel("Submissions")
-        plt.xlabel("Date")
-        plt.legend((p1[0], p2[0], p3[0]), ("Pending", "Declined", "Accepted"),
-                   loc="upper left")
-
         xticks = arange(xstep-1, ind.size+xstep-1, xstep) + width/2.0
         xlabels = [d for c, d in zip(count(1), data.keys()) if not c % xstep]
         plt.xticks(xticks, xlabels)
+        plt.yticks(arange(0, plt.ylim()[1], 10))
+        plt.tick_params(direction="out")
+
+        leg = plt.legend((p1[0], p2[0], p3[0]), ("Pending", "Declined",
+                         "Accepted"), loc="upper left", fancybox=True)
+        leg.get_frame().set_alpha(0.5))
 
         fig = plt.gcf()
         fig.set_size_inches(xsize/100, ysize/100)
         fig.autofmt_xdate()
+
+        ax = plt.gca()
+        ax.grid(True, axis="x")
