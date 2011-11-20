@@ -86,8 +86,9 @@ class Task(BaseTask):
             date = category.title().split("/")[-1]
             data[date] = self.get_date_counts(date)
 
+        data = OrderedDict(reversed(data.items()))  # Oldest to most recent
+        self.generate_chart(data)
         dest = expanduser(self.destination)
-        self.generate_chart(reversed(data))
         plt.savefig(dest)
         self.logger.info("Chart saved to {0}".format(dest))
 
