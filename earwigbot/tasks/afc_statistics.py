@@ -166,10 +166,10 @@ class Task(BaseTask):
         row += "sr={page_special_user}|sh={page_special_hidden}|sd={page_special_time}|si={page_special_oldid}|"
         row += "mr={page_modify_user}|mh={page_modify_hidden}|md={page_modify_time}|mi={page_modify_oldid}"
 
-        page["page_special_time"] = self.format_time(page["page_special_time"])
-        page["page_modify_time"] = self.format_time(page["page_modify_time"])
         page["page_special_hidden"] = self.format_hidden(page["page_special_time"])
         page["page_modify_hidden"] = self.format_hidden(page["page_modify_time"])
+        page["page_special_time"] = self.format_time(page["page_special_time"])
+        page["page_modify_time"] = self.format_time(page["page_modify_time"])
 
         if page["page_notes"]:
             row += "|n=1{page_notes}"
