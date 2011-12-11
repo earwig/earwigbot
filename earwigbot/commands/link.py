@@ -30,9 +30,10 @@ class Command(BaseCommand):
     name = "link"
 
     def check(self, data):
-        if ((data.is_command and data.command == "link") or
-        (("[[" in data.msg and "]]" in data.msg) or
-        ("{{" in data.msg and "}}" in data.msg))):
+        # if ((data.is_command and data.command == "link") or
+        # (("[[" in data.msg and "]]" in data.msg) or
+        # ("{{" in data.msg and "}}" in data.msg))):
+        if data.is_command and data.command == "link":
             return True
         return False
 
