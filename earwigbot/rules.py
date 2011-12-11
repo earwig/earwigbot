@@ -51,36 +51,34 @@ def process(rc):
     chans = set()  # channels to report this message to
     page_name = rc.page.lower()
     comment = rc.comment.lower()
-    
+
     if "!earwigbot" in rc.msg.lower():
         chans.update(("##earwigbot", "#wikipedia-en-afc"))
-        
+
     if r_page.search(page_name):
-        #tasks.start("afc_copyvios", action="edit", page=rc.page)
+        tasks.start("afc_copyvios", page=rc.page)
         chans.add("#wikipedia-en-afc")
-        
+
     elif r_ffu.match(page_name):
         chans.add("#wikipedia-en-afc")
-        
+
     elif page_name.startswith("template:afc submission"):
         chans.add("#wikipedia-en-afc")
-    
+
     elif rc.flags == "move" and (r_move1.match(comment) or
                                  r_move2.match(comment)):
         p = r_moved_pages.findall(rc.comment)[0]
-        #tasks.start("afc_copyvios", action="move", page=p)
         chans.add("#wikipedia-en-afc")
-    
+
     elif rc.flags == "delete" and r_delete.match(comment):
         p = r_deleted_page.findall(rc.comment)[0]
-        #tasks.start("afc_copyvios", action="delete", page=p)
         chans.add("#wikipedia-en-afc")
-    
+
     elif rc.flags == "restore" and r_restore.match(comment):
         p = r_restored_page.findall(rc.comment)[0]
-        #tasks.start("afc_copyvios", action="restore", page=p)
+        tasks.start("afc_copyvios", page=p)
         chans.add("#wikipedia-en-afc")
-    
+
     elif rc.flags == "protect" and r_protect.match(comment):
         chans.add("#wikipedia-en-afc")
 

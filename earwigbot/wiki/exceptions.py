@@ -23,7 +23,29 @@
 """
 EarwigBot's Wiki Toolset: Exceptions
 
-This module contains all exceptions used by the wiki package. There are a lot.
+This module contains all exceptions used by the wiki package. There are a lot:
+
+-- WikiToolsetError
+        -- SiteNotFoundError
+        -- SiteAPIError
+        -- LoginError
+        -- NamespaceNotFoundError
+        -- PageNotFoundError
+        -- InvalidPageError
+        -- RedirectError
+        -- UserNotFoundError
+        -- EditError
+                -- PermissionsError
+                -- EditConflictError
+                -- NoContentError
+                -- ContentTooBigError
+                -- SpamDetectedError
+                -- FilteredError
+        -- SQLError
+        -- CopyvioCheckError
+                -- UnknownSearchEngineError
+                -- UnsupportedSearchEngineError
+                -- SearchQueryError
 """
 
 class WikiToolsetError(Exception):
@@ -87,3 +109,16 @@ class FilteredError(EditError):
 
 class SQLError(WikiToolsetError):
     """Some error involving SQL querying occurred."""
+
+class CopyvioCheckError(WikiToolsetError):
+    """An error occured when checking a page for copyright violations."""
+
+class UnknownSearchEngineError(CopyvioCheckError):
+    """CopyrightMixin().copyvio_check() called with an unknown engine."""
+
+class UnsupportedSearchEngineError(CopyvioCheckError):
+    """The engine requested is not available, e.g., because a required package
+    is missing."""
+
+class SearchQueryError(CopyvioCheckError):
+    """Some error ocurred while doing a search query."""

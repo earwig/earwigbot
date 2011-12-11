@@ -185,7 +185,7 @@ class Task(BaseTask):
 
         This is used by the template as a hidden sortkey.
         """
-        return (dt - datetime(1970, 1, 1)).total_seconds()
+        return int((dt - datetime(1970, 1, 1)).total_seconds())
 
     def sync(self, **kwargs):
         """Synchronize our local statistics database with the site.

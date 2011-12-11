@@ -1,4 +1,4 @@
-[EarwigBot](http://toolserver.org/~earwig/earwigbot/) is a
+[EarwigBot](http://en.wikipedia.org/wiki/User:EarwigBot) is a
 [Python](http://python.org/) robot that edits
 [Wikipedia](http://en.wikipedia.org/) and interacts with people over
 [IRC](http://en.wikipedia.org/wiki/Internet_Relay_Chat).
@@ -31,3 +31,9 @@ Additionally, the afc_history task uses
 [matplotlib](http://matplotlib.sourceforge.net/) and
 [numpy](http://numpy.scipy.org/) for graphing AfC statistics. Neither of these
 modules are required for the main bot itself.
+
+`earwigbot.wiki.copyright` requires access to a search engine for detecting
+copyright violations. Currently,
+[Yahoo! BOSS](http://developer.yahoo.com/search/boss/) is the only engine
+supported, and this requires
+[oauth2](https://github.com/simplegeo/python-oauth2).

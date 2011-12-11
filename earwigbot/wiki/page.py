@@ -25,9 +25,10 @@ import re
 from time import gmtime, strftime
 from urllib import quote
 
+from earwigbot.wiki.copyright import CopyrightMixin
 from earwigbot.wiki.exceptions import *
 
-class Page(object):
+class Page(CopyrightMixin):
     """
     EarwigBot's Wiki Toolset: Page Class
 
@@ -49,7 +50,8 @@ class Page(object):
     get                 -- returns page content
     get_redirect_target -- if the page is a redirect, returns its destination
     edit                -- replaces the page's content or creates a new page
-    add_section         -- add a new section at the bottom of the page
+    add_section         -- adds a new section at the bottom of the page
+    copyvio_check       -- checks the page for copyright violations
     """
 
     re_redirect = "^\s*\#\s*redirect\s*\[\[(.*?)\]\]"

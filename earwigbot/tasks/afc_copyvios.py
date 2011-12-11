@@ -20,6 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from os.path import expanduser
+from threading import Lock
+
+import oursql
+
+from earwigbot import wiki
 from earwigbot.classes import BaseTask
 from earwigbot.config import config
 
@@ -30,9 +36,75 @@ class Task(BaseTask):
     number = 1
 
     def __init__(self):
-        self.cfg = cfg = config.tasks.get(self.name, {})
         config.decrypt(config.tasks, self.name, "search", "credentials", "key")
         config.decrypt(config.tasks, self.name, "search", "credentials", "secret")
 
+        cfg = config.tasks.get(self.name, {})
+        self.template = cfg.get("template", "AfC suspected copyvio")
+        self.ignore_list = cfg.get("ignoreList", [])
+        default_summary = "Tagging suspected [[WP:COPYVIO|copyright violation]] of {url}"
+        self.summary = self.make_summary(cfg.get("summary", default_summary))
+
+        # Search API data:
+        search = cfg.get("search", {})
+        self.engine = search.get("engine")
+        self.credentials = search.get("credentials", {})
+
+        # Connection data for our SQL database:
+        kwargs = cfg.get("sql", {})
+        kwargs["read_default_file"] = expanduser("~/.my.cnf")
+        self.conn_data = kwargs
+        self.db_access_lock = Lock()
+
     def run(self, **kwargs):
-        pass
+        """Entry point for the bot task.
+
+        Takes a page title in kwargs and checks it for copyvios, adding
+        {{self.template}} at the top if a copyvio has been detected. A page is
+        only checked once (processed pages are stored by page_id in an SQL
+        database).
+        """
+        if self.shutoff_enabled():
+            return
+        title = kwargs["page"]
+        page = wiki.get_site().get_page(title)
+        with self.db_access_lock:
+            self.conn = oursql.connect(**self.conn_data)
+            self.process(page)
+
+    def process(self, page):
+        """Detect copyvios in 'page' and add a note if any are found."""
+        pageid = page.pageid()
+        if self.has_been_processed(pageid):
+            msg = "Skipping check on already processed page [[{0}]]"
+            self.logger.info(msg.format(page.title()))
+            return
+
+        self.logger.info("Checking [[{0}]]".format(page.title()))
+        content = page.get() 
+        result = page.copyvio_check(self.engine, self.credentials)
+        if result:
+            content = page.get()
+            template = "\{\{{0}|url={1}\}\}".format(self.template, result)
+            newtext = "\n".join((template, content))
+            page.edit(newtext, self.summary.format(url=result))
+            msg = "Found violation: [[{0}]] -> {1}"
+            self.logger.info(msg.format(page.title(), result))
+        else:
+            self.logger.debug("No violations detected")
+
+        self.log_processed(pageid)
+
+    def has_been_processed(self, pageid):
+        query = "SELECT 1 FROM processed WHERE page_id = ?"
+        with self.conn.cursor() as cursor:
+            cursor.execute(query, (pageid,))
+            results = cursor.fetchall()
+        if results:
+            return True
+        return False
+
+    def log_processed(self, pageid):
+        query = "INSERT INTO processed VALUES (?)"
+        with self.conn.cursor() as cursor:
+            cursor.execute(query, (pageid,))

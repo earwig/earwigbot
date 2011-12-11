@@ -54,7 +54,8 @@ def _load_config():
     is_encrypted = config.load()
     if is_encrypted:  # Passwords in the config file are encrypted
         key = getpass("Enter key to unencrypt bot passwords: ")
-        config.decrypt(key)
+        config._decryption_key = key
+        config.decrypt(config.wiki, "password")
 
 def _get_cookiejar():
     """Returns a LWPCookieJar object loaded from our .cookies file. The same
