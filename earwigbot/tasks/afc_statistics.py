@@ -163,20 +163,29 @@ class Task(BaseTask):
         table, where keys are column names and values are their cell contents.
         """
         row = "{0}|s={page_status}|t={page_title}|h={page_short}|z={page_size}|"
-        row += "sr={page_special_user}|sd={page_special_time}|si={page_special_oldid}|"
-        row += "mr={page_modify_user}|md={page_modify_time}|mi={page_modify_oldid}"
+        row += "sr={page_special_user}|sh={page_special_hidden}|sd={page_special_time}|si={page_special_oldid}|"
+        row += "mr={page_modify_user}|mh={page_modify_hidden}|md={page_modify_time}|mi={page_modify_oldid}"
 
         page["page_special_time"] = self.format_time(page["page_special_time"])
         page["page_modify_time"] = self.format_time(page["page_modify_time"])
+        page["page_special_hidden"] = self.format_hidden(page["page_special_time"])
+        page["page_modify_hidden"] = self.format_hidden(page["page_modify_time"])
 
         if page["page_notes"]:
             row += "|n=1{page_notes}"
 
         return "".join(("{{", row.format(self.tl_row, **page), "}}"))
 
-    def format_time(self, timestamp):
+    def format_time(self, dt):
         """Format a datetime into the standard MediaWiki timestamp format."""
-        return timestamp.strftime("%H:%M, %d %b %Y")
+        return dt.strftime("%H:%M, %d %b %Y")
+
+    def format_hidden(self, dt):
+        """Convert a datetime into seconds since the epoch.
+
+        This is used by the template as a hidden sortkey.
+        """
+        return (dt - datetime(1970, 1, 1)).total_seconds()
 
     def sync(self, **kwargs):
         """Synchronize our local statistics database with the site.
@@ -691,7 +700,7 @@ class Task(BaseTask):
             else:
                 notes += "|nu=1"  # Submission is completely unsourced
 
-        time_since_modify = (datetime.now() - m_time).seconds
+        time_since_modify = (datetime.now() - m_time).total_seconds()
         max_time = 4 * 24 * 60 * 60
         if time_since_modify > max_time:
             notes += "|no=1"  # Submission hasn't been touched in over 4 days
