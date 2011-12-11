@@ -23,8 +23,9 @@
 import unittest
 
 from earwigbot.commands.calc import Command
+from earwigbot.tests import CommandTestCase
 
-class TestCalc(support.CommandTestCase):
+class TestCalc(CommandTestCase):
 
     def setUp(self):
         super(TestCalc, self).setUp(Command)
