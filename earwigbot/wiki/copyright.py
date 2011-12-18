@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 from json import loads
+from time import sleep, time
 from urllib import quote_plus, urlencode
 
 try:
@@ -29,6 +30,17 @@ except ImportError:
     oauth = None
 
 from earwigbot.wiki.exceptions import *
+
+class CopyvioCheckResult(object):
+    def __init__(self, confidence, url, queries):
+        self.confidence = confidence
+        self.url = url
+        self.queries = queries
+
+    def __repr__(self):
+        r = "CopyvioCheckResult(confidence={0!r}, url={1!r}, queries={2|r})"
+        return r.format(self.confidence, self.url, self.queries)
+
 
 class CopyrightMixin(object):
     """
@@ -45,7 +57,8 @@ class CopyrightMixin(object):
         determined by Yahoo). Raises SearchQueryError() on errors.
         """
         base_url = "http://yboss.yahooapis.com/ysearch/web"
-        params = {"q": quote_plus(query), "style": "raw", "format": "json"}
+        query = quote_plus(query.join('"', '"'))
+        params = {"q": query, "style": "raw", "format": "json"}
         url = "{0}?{1}".format(base_url, urlencode(params))
 
         consumer = oauth.Consumer(key=cred["key"], secret=cred["secret"])
@@ -68,8 +81,40 @@ class CopyrightMixin(object):
             return []
         return [result["url"] for result in results]
 
-    def copyvio_check(self, engine, credentials, force=False):
-        """Check the page for copyright violations."""
+    def _copyvio_strip_content(self, content):
+        return content
+
+    def _copyvio_explode_content(self, content):
+        return content
+
+    def _copyvio_compare_content(self, content, url):
+        return 0
+
+    def copyvio_check(self, engine, credentials, min_confidence=0.5,
+                      max_queries=-1, interquery_sleep=1, force=False):
+        """Check the page for copyright violations.
+
+        Returns a CopyvioCheckResult object, with three useful attributes:
+        "confidence", "url", and "queries". "confidence" is a number between
+        0 and 1; if it is less than min_confidence, we could not find any
+        indication of a violation (so "url" will be None), otherwise it
+        indicates the relative faith in our results, and "url" will be the
+        place the article is suspected of being copied from. "queries" is the
+        number of queries used to determine the results.
+
+        "max_queries" is self-explanatory; we will never make more than this
+        number of queries in a given check. If it's less than 0, we will not
+        limit our number of queries.
+
+        "interquery_sleep" is the minimum amount of time we will sleep between
+        search engine queries, in seconds.
+
+        "force" is simply passed to page.get() - it has the same behavior there
+        as it does here.
+
+        Raises CopyvioCheckError or subclasses (UnknownSearchEngineError,
+        SearchQueryError, ...) on errors.
+        """
         if engine == "Yahoo! BOSS":
             if not oauth:
                 e = "The package 'oauth2' could not be imported"
@@ -77,5 +122,29 @@ class CopyrightMixin(object):
             querier = self._yahoo_boss_query
         else:
             raise UnknownSearchEngineError(engine)
+
+        handled_urls = []
+        best_confidence = 0
+        best_match = None
+        num_queries = 0
         content = self.get(force)
-        return querier(content, credentials)
+        clean = self._copyvio_strip_content(content)
+        fragments = self._copyvio_explode_content(clean)
+        last_query = time()
+
+        while (fragments and best_confidence < min_confidence and
+               (max_queries < 0 or num_queries < max_queries)):
+            urls = querier(fragments.pop(0), credentials)
+            urls = [url for url in urls if url not in handled_urls]
+            for url in urls:
+                confidence = self._copyvio_compare_content(content, url)
+                if confidence > best_confidence:
+                    best_confidence = confidence
+                    best_match = url
+            num_queries += 1
+            diff = time() - last_query
+            if diff < interquery_sleep:
+                sleep(interquery_sleep - diff)
+            last_query = time()
+
+        return CopyvioCheckResult(best_confidence, best_match, num_queries)

@@ -42,6 +42,8 @@ class Task(BaseTask):
         cfg = config.tasks.get(self.name, {})
         self.template = cfg.get("template", "AfC suspected copyvio")
         self.ignore_list = cfg.get("ignoreList", [])
+        self.min_confidence = cfg.get("minConfidence", 0.75)
+        self.max_queries = cfg.get("maxQueries", 10)
         default_summary = "Tagging suspected [[WP:COPYVIO|copyright violation]] of {url}"
         self.summary = self.make_summary(cfg.get("summary", default_summary))
 
@@ -74,28 +76,40 @@ class Task(BaseTask):
 
     def process(self, page):
         """Detect copyvios in 'page' and add a note if any are found."""
+        title = page.title()
+        if title in self.ignore_list:
+            msg = "Skipping page in ignore list: [[{0}]]"
+            self.logger.info(msg.format(title))
+            return
+
         pageid = page.pageid()
         if self.has_been_processed(pageid):
             msg = "Skipping check on already processed page [[{0}]]"
-            self.logger.info(msg.format(page.title()))
+            self.logger.info(msg.format(title))
             return
 
-        self.logger.info("Checking [[{0}]]".format(page.title()))
+        self.logger.info("Checking [[{0}]]".format(title))
         content = page.get() 
-        result = page.copyvio_check(self.engine, self.credentials)
-        if result:
+        result = page.copyvio_check(self.engine, self.credentials,
+                                    self.min_confidence, self.max_queries)
+        if result.url:
+            url = result.url
             content = page.get()
-            template = "\{\{{0}|url={1}\}\}".format(self.template, result)
+            template = "\{\{{0}|url={1}\}\}".format(self.template, url)
             newtext = "\n".join((template, content))
-            page.edit(newtext, self.summary.format(url=result))
+            if "{url}" in self.summary:
+                page.edit(newtext, self.summary.format(url=url))
+            else:
+                page.edit(newtext, self.summary)
             msg = "Found violation: [[{0}]] -> {1}"
-            self.logger.info(msg.format(page.title(), result))
+            self.logger.warn(msg.format(title, url))
         else:
             self.logger.debug("No violations detected")
 
         self.log_processed(pageid)
 
     def has_been_processed(self, pageid):
+        """Returns True if pageid was processed before, otherwise False."""
         query = "SELECT 1 FROM processed WHERE page_id = ?"
         with self.conn.cursor() as cursor:
             cursor.execute(query, (pageid,))
@@ -105,6 +119,10 @@ class Task(BaseTask):
         return False
 
     def log_processed(self, pageid):
+        """Adds pageid to our database of processed pages.
+
+        Raises an exception if the page has already been processed.
+        """
         query = "INSERT INTO processed VALUES (?)"
         with self.conn.cursor() as cursor:
             cursor.execute(query, (pageid,))
