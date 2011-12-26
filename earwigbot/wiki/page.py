@@ -69,6 +69,7 @@ class Page(CopyrightMixin):
         __init__ will not do any API queries, but it will use basic namespace
         logic to determine our namespace ID and if we are a talkpage.
         """
+        super(Page, self).__init__()
         self._site = site
         self._title = title.strip()
         self._follow_redirects = self._keep_following = follow_redirects

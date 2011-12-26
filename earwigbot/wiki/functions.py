@@ -37,6 +37,7 @@ from os import chmod, path
 import platform
 import stat
 
+import earwigbot
 from earwigbot.config import config
 from earwigbot.wiki.exceptions import SiteNotFoundError
 from earwigbot.wiki.site import Site
@@ -111,7 +112,8 @@ def _get_site_object_from_dict(name, d):
     maxlag = config.wiki.get("maxlag")
 
     if user_agent:
-        user_agent = user_agent.replace("$1", platform.python_version())
+        user_agent = user_agent.replace("$1", earwigbot.__version__)
+        user_agent = user_agent.replace("$2", platform.python_version())
 
     for key, value in namespaces.items():  # Convert string keys to integers
         del namespaces[key]

@@ -89,22 +89,25 @@ class Task(BaseTask):
             return
 
         self.logger.info("Checking [[{0}]]".format(title))
-        content = page.get() 
         result = page.copyvio_check(self.engine, self.credentials,
                                     self.min_confidence, self.max_queries)
-        if result.url:
-            url = result.url
+        url = result.url
+        confidence = "{0}%".format(round(result.confidence * 100, 2))
+
+        if result.violation:
             content = page.get()
-            template = "\{\{{0}|url={1}\}\}".format(self.template, url)
+            template = "\{\{{0}|url={1}|confidence={2}\}\}"
+            template = template.format(self.template, url, confidence)
             newtext = "\n".join((template, content))
             if "{url}" in self.summary:
                 page.edit(newtext, self.summary.format(url=url))
             else:
                 page.edit(newtext, self.summary)
-            msg = "Found violation: [[{0}]] -> {1}"
-            self.logger.warn(msg.format(title, url))
+            msg = "Found violation: [[{0}]] -> {1} ({2} confidence)"
+            self.logger.warn(msg.format(title, url, confidence))
         else:
-            self.logger.debug("No violations detected")
+            msg = "No violations detected (best: {1} at {2} confidence)"
+            self.logger.debug(msg.format(url, confidence))
 
         self.log_processed(pageid)
 

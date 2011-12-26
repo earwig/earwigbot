@@ -31,8 +31,9 @@ Import with `from earwigbot.wiki import constants` or `from earwigbot.wiki.const
 """
 
 # Default User Agent when making API queries:
+from earwigbot import __version__ as _v
 from platform import python_version as _p
-USER_AGENT = "EarwigBot/0.1-dev (Python/{0}; https://github.com/earwig/earwigbot)".format(_p())
+USER_AGENT = "EarwigBot/{0} (Python/{1}; https://github.com/earwig/earwigbot)".format(_v, _p())
 
 # Default namespace IDs:
 NS_MAIN = 0

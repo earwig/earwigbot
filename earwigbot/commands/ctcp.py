@@ -23,6 +23,7 @@
 import platform
 import time
 
+import earwigbot
 from earwigbot.classes import BaseCommand
 from earwigbot.config import config
 
@@ -61,7 +62,8 @@ class Command(BaseCommand):
             self.connection.notice(target, "\x01TIME {0}\x01".format(ts))
 
         elif command == "VERSION":
-            default = "EarwigBot - 0.1-dev - Python/$1 https://github.com/earwig/earwigbot"
+            default = "EarwigBot - $1 - Python/$2 https://github.com/earwig/earwigbot"
             vers = config.irc.get("version", default)
-            vers = vers.replace("$1", platform.python_version())
+            vers = vers.replace("$1", earwigbot.__version__)
+            vers = vers.replace("$2", platform.python_version())
             self.connection.notice(target, "\x01VERSION {0}\x01".format(vers))

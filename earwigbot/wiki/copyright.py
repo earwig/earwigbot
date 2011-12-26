@@ -20,9 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from functools import partial
+from gzip import GzipFile
 from json import loads
+from StringIO import StringIO
 from time import sleep, time
 from urllib import quote_plus, urlencode
+from urllib2 import build_opener, URLError
 
 try:
     import oauth2 as oauth
@@ -32,14 +36,15 @@ except ImportError:
 from earwigbot.wiki.exceptions import *
 
 class CopyvioCheckResult(object):
-    def __init__(self, confidence, url, queries):
+    def __init__(self, violation, confidence, url, queries):
+        self.violation = violation
         self.confidence = confidence
         self.url = url
         self.queries = queries
 
     def __repr__(self):
-        r = "CopyvioCheckResult(confidence={0!r}, url={1!r}, queries={2|r})"
-        return r.format(self.confidence, self.url, self.queries)
+        r = "CopyvioCheckResult(violation={0!r}, confidence={1!r}, url={2!r}, queries={3|r})"
+        return r.format(self.violation, self.confidence, self.url, self.queries)
 
 
 class CopyrightMixin(object):
@@ -50,7 +55,57 @@ class CopyrightMixin(object):
     checks the page for copyright violations using a search engine API. The
     API keys must be provided to the method as arguments.
     """
-    def _yahoo_boss_query(self, query, cred):
+    def __init__(self):
+        self._opener = build_opener()
+        self._opener.addheaders = self._site._opener.addheaders
+
+    def _open_url_ignoring_errors(self, url):
+        """Open a URL using self._opener and return its content, or None.
+
+        Will decompress the content if the headers contain "gzip" as its
+        content encoding, and will return None if URLError is raised while
+        opening the URL. IOErrors while gunzipping a compressed response are
+        ignored, and the original content is returned.
+        """
+        try:
+            response = self._opener.open(url)
+        except URLError:
+            return None
+        result = response.read()
+
+        if response.headers.get("Content-Encoding") == "gzip":
+            stream = StringIO(result)
+            gzipper = GzipFile(fileobj=stream)
+            try:
+                result = gzipper.read()
+            except IOError:
+                pass
+
+        return result
+
+    def _select_search_engine(self, engine, credentials):
+        """Return a function that can be called to do web searches.
+
+        The "function" is a functools.partial object that takes one argument, a
+        query, and returns a list of URLs, ranked by importance. The underlying
+        logic depends on the 'engine' argument; for example, if 'engine' is
+        "Yahoo! BOSS", we'll use self._yahoo_boss_query for querying.
+
+        Raises UnknownSearchEngineError if 'engine' is not known to us, and
+        UnsupportedSearchEngineError if we are missing a required package or
+        module, like oauth2 for "Yahoo! BOSS".
+        """
+        if engine == "Yahoo! BOSS":
+            if not oauth:
+                e = "The package 'oauth2' could not be imported"
+                raise UnsupportedSearchEngineError(e)
+            searcher = self._yahoo_boss_query
+        else:
+            raise UnknownSearchEngineError(engine)
+
+        return partial(searcher, credentials)
+
+    def _yahoo_boss_query(self, cred, query):
         """Do a Yahoo! BOSS web search for 'query' using 'cred' as credentials.
 
         Returns a list of URLs, no more than fifty, ranked by relevance (as
@@ -84,21 +139,27 @@ class CopyrightMixin(object):
     def _copyvio_strip_content(self, content):
         return content
 
-    def _copyvio_explode_content(self, content):
-        return content
+    def _copyvio_chunk_content(self, content):
+        return [content]
 
     def _copyvio_compare_content(self, content, url):
-        return 0
+        html = self._open_url_ignoring_errors(url)
+        if not html:
+            return 0
 
-    def copyvio_check(self, engine, credentials, min_confidence=0.5,
+        confidence = 0
+        return confidence
+
+    def copyvio_check(self, engine, credentials, min_confidence=0.75,
                       max_queries=-1, interquery_sleep=1, force=False):
         """Check the page for copyright violations.
 
-        Returns a CopyvioCheckResult object, with three useful attributes:
-        "confidence", "url", and "queries". "confidence" is a number between
-        0 and 1; if it is less than min_confidence, we could not find any
-        indication of a violation (so "url" will be None), otherwise it
-        indicates the relative faith in our results, and "url" will be the
+        Returns a CopyvioCheckResult object, with four useful attributes:
+        "violation", "confidence", "url", and "queries". "confidence" is a
+        number between 0 and 1; if it is less than "min_confidence", we could
+        not find any indication of a violation (so "violation" will be False
+        and "url" may or may not be None), otherwise it indicates the relative
+        faith in our results, "violation" will be True, and "url" will be the
         place the article is suspected of being copied from. "queries" is the
         number of queries used to determine the results.
 
@@ -115,26 +176,19 @@ class CopyrightMixin(object):
         Raises CopyvioCheckError or subclasses (UnknownSearchEngineError,
         SearchQueryError, ...) on errors.
         """
-        if engine == "Yahoo! BOSS":
-            if not oauth:
-                e = "The package 'oauth2' could not be imported"
-                raise UnsupportedSearchEngineError(e)
-            querier = self._yahoo_boss_query
-        else:
-            raise UnknownSearchEngineError(engine)
-
+        search = self._select_search_engine(engine, credentials)
         handled_urls = []
         best_confidence = 0
         best_match = None
         num_queries = 0
         content = self.get(force)
         clean = self._copyvio_strip_content(content)
-        fragments = self._copyvio_explode_content(clean)
+        chunks = self._copyvio_chunk_content(clean)
         last_query = time()
 
-        while (fragments and best_confidence < min_confidence and
+        while (chunks and best_confidence < min_confidence and
                (max_queries < 0 or num_queries < max_queries)):
-            urls = querier(fragments.pop(0), credentials)
+            urls = search(chunks.pop(0))
             urls = [url for url in urls if url not in handled_urls]
             for url in urls:
                 confidence = self._copyvio_compare_content(content, url)
@@ -147,4 +201,8 @@ class CopyrightMixin(object):
                 sleep(interquery_sleep - diff)
             last_query = time()
 
-        return CopyvioCheckResult(best_confidence, best_match, num_queries)
+        if best_confidence >= min_confidence:  # violation?
+            vi = True
+        else:
+            vi = False
+        return CopyvioCheckResult(vi, best_confidence, best_match, num_queries)
