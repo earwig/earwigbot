@@ -191,6 +191,7 @@ class CopyrightMixin(object):
             urls = search(chunks.pop(0))
             urls = [url for url in urls if url not in handled_urls]
             for url in urls:
+                handled_urls.append(url)
                 confidence = self._copyvio_compare_content(content, url)
                 if confidence > best_confidence:
                     best_confidence = confidence
