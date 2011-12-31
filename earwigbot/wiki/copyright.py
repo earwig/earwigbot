@@ -55,9 +55,9 @@ class CopyrightMixin(object):
     checks the page for copyright violations using a search engine API. The
     API keys must be provided to the method as arguments.
     """
-    def __init__(self):
+    def __init__(self, site):
         self._opener = build_opener()
-        self._opener.addheaders = self._site._opener.addheaders
+        self._opener.addheaders = site._opener.addheaders
 
     def _open_url_ignoring_errors(self, url):
         """Open a URL using self._opener and return its content, or None.
