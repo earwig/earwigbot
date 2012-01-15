@@ -3,7 +3,7 @@
 #
 # blowfish.py
 # Copyright (C) 2002 Michael Gilfix <mgilfix@eecs.tufts.edu>
-# Copyright (C) 2011 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2011, 2012 Ben Kurtovic <ben.kurtovic@verizon.net>
 #
 # This module is open source; you can redistribute it and/or
 # modify it under the terms of the GPL or Artistic License.
