@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from collections import defaultdict
 from functools import partial
 from gzip import GzipFile
 from json import loads
@@ -35,7 +36,7 @@ except ImportError:
 
 from earwigbot.wiki.exceptions import *
 
-class CopyvioCheckResult(object):
+class _CopyvioCheckResult(object):
     def __init__(self, violation, confidence, url, queries):
         self.violation = violation
         self.confidence = confidence
@@ -43,8 +44,45 @@ class CopyvioCheckResult(object):
         self.queries = queries
 
     def __repr__(self):
-        r = "CopyvioCheckResult(violation={0!r}, confidence={1!r}, url={2!r}, queries={3|r})"
+        r = "_CopyvioCheckResult(violation={0!r}, confidence={1!r}, url={2!r}, queries={3|r})"
         return r.format(self.violation, self.confidence, self.url, self.queries)
+
+
+class _MarkovChain(object):
+    START = "MRKV_CHAIN_START"
+    END = "MRKV_CHAIN_END"
+
+    def __init__(self, text):
+        self.text = text
+        self.chain = defaultdict(lambda: defaultdict(lambda: 0))
+        words = text.split()
+        prev = self.START
+        for word in words:
+            self.chain[prev][word] += 1
+            prev = word
+        self.chain[word][self.END] += 1
+
+    def size(self):
+        count = 0
+        for node in self.chain.itervalues():
+            for hits in node.itervalues():
+                count += hits
+        return count
+
+
+class _MarkovChainIntersection(_MarkovChain):
+    def __init__(self, mc1, mc2):
+        self.chain = defaultdict(lambda: defaultdict(lambda: 0))
+        c1 = mc1.chain
+        c2 = mc2.chain
+
+        for word, nodes1 in c1.iteritems():
+            if word in c2:
+                nodes2 = c2[word]
+                for node, count1 in nodes1.iteritems():
+                    if node in nodes2:
+                        count2 = nodes2[node]
+                        self.chain[word][node] = min(count1, count2)
 
 
 class CopyrightMixin(object):
@@ -136,10 +174,13 @@ class CopyrightMixin(object):
             return []
         return [result["url"] for result in results]
 
-    def _copyvio_strip_content(self, content):
+    def _copyvio_strip_html(self, html):
+        return html
+
+    def _copyvio_strip_article(self, content):
         return content
 
-    def _copyvio_chunk_content(self, content):
+    def _copyvio_chunk_article(self, content):
         return [content]
 
     def _copyvio_compare_content(self, content, url):
@@ -147,14 +188,17 @@ class CopyrightMixin(object):
         if not html:
             return 0
 
-        confidence = 0
-        return confidence
+        article = _MarkovChain(content)
+        source = _MarkovChain(self._copyvio_strip_html(html))
+        delta = _MarkovChainIntersection(article, source)
+
+        return delta.size() / min(article.size(), source.size())
 
     def copyvio_check(self, engine, credentials, min_confidence=0.75,
                       max_queries=-1, interquery_sleep=1, force=False):
         """Check the page for copyright violations.
 
-        Returns a CopyvioCheckResult object, with four useful attributes:
+        Returns a _CopyvioCheckResult object with four useful attributes:
         "violation", "confidence", "url", and "queries". "confidence" is a
         number between 0 and 1; if it is less than "min_confidence", we could
         not find any indication of a violation (so "violation" will be False
@@ -182,8 +226,8 @@ class CopyrightMixin(object):
         best_match = None
         num_queries = 0
         content = self.get(force)
-        clean = self._copyvio_strip_content(content)
-        chunks = self._copyvio_chunk_content(clean)
+        clean = self._copyvio_strip_article(content)
+        chunks = self._copyvio_chunk_article(clean)
         last_query = time()
 
         while (chunks and best_confidence < min_confidence and
@@ -192,7 +236,7 @@ class CopyrightMixin(object):
             urls = [url for url in urls if url not in handled_urls]
             for url in urls:
                 handled_urls.append(url)
-                confidence = self._copyvio_compare_content(content, url)
+                confidence = self._copyvio_compare_content(clean, url)
                 if confidence > best_confidence:
                     best_confidence = confidence
                     best_match = url
@@ -203,7 +247,7 @@ class CopyrightMixin(object):
             last_query = time()
 
         if best_confidence >= min_confidence:  # violation?
-            vi = True
+            v = True
         else:
-            vi = False
-        return CopyvioCheckResult(vi, best_confidence, best_match, num_queries)
+            v = False
+        return _CopyvioCheckResult(v, best_confidence, best_match, num_queries)
