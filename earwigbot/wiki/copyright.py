@@ -37,20 +37,27 @@ except ImportError:
 from earwigbot.wiki.exceptions import *
 
 class _CopyvioCheckResult(object):
-    def __init__(self, violation, confidence, url, queries):
+    def __init__(self, violation, confidence, url, queries, article, chains):
         self.violation = violation
         self.confidence = confidence
         self.url = url
         self.queries = queries
+        self.article_chain = article
+        self.source_chain = chains[0]
+        self.delta_chain = chains[1]
 
     def __repr__(self):
-        r = "_CopyvioCheckResult(violation={0!r}, confidence={1!r}, url={2!r}, queries={3|r})"
-        return r.format(self.violation, self.confidence, self.url, self.queries)
+        r = ", ".join(("_CopyvioCheckResult(violation={0!r}",
+                       "confidence={1!r}", "url={2!r}", "queries={3|r}",
+                       "article={4|r}", "chains={5!r})"))
+        return r.format(self.violation, self.confidence, self.url,
+                        self.queries, self.article_chain,
+                        (self.source_chain, self.delta_chain))
 
 
 class _MarkovChain(object):
-    START = "MRKV_CHAIN_START"
-    END = "MRKV_CHAIN_END"
+    START = -1
+    END = -2
 
     def __init__(self, text):
         self.text = text
@@ -60,7 +67,10 @@ class _MarkovChain(object):
         for word in words:
             self.chain[prev][word] += 1
             prev = word
-        self.chain[word][self.END] += 1
+        try:  # This won't work if the source text is completely blank
+            self.chain[word][self.END] += 1
+        except KeyError:
+            pass
 
     def size(self):
         count = 0
@@ -180,21 +190,19 @@ class CopyrightMixin(object):
     def _copyvio_strip_article(self, content):
         return content
 
-    def _copyvio_chunk_article(self, content):
+    def _copyvio_chunk_article(self, content, max_chunks):
         return [content]
 
-    def _copyvio_compare_content(self, content, url):
+    def _copyvio_compare_content(self, article, url):
         html = self._open_url_ignoring_errors(url)
         if not html:
             return 0
 
-        article = _MarkovChain(content)
         source = _MarkovChain(self._copyvio_strip_html(html))
         delta = _MarkovChainIntersection(article, source)
+        return delta.size() / article.size(), (source, delta)
 
-        return delta.size() / min(article.size(), source.size())
-
-    def copyvio_check(self, engine, credentials, min_confidence=0.75,
+    def copyvio_check(self, engine, credentials, min_confidence=0.5,
                       max_queries=-1, interquery_sleep=1, force=False):
         """Check the page for copyright violations.
 
@@ -225,9 +233,12 @@ class CopyrightMixin(object):
         best_confidence = 0
         best_match = None
         num_queries = 0
+        empty = _MarkovChain("")
+        best_chains = (empty, _MarkovChainIntersection(empty, empty))
         content = self.get(force)
         clean = self._copyvio_strip_article(content)
-        chunks = self._copyvio_chunk_article(clean)
+        chunks = self._copyvio_chunk_article(clean, max_queries)
+        article_chain = _MarkovChain(clean)
         last_query = time()
 
         while (chunks and best_confidence < min_confidence and
@@ -236,10 +247,11 @@ class CopyrightMixin(object):
             urls = [url for url in urls if url not in handled_urls]
             for url in urls:
                 handled_urls.append(url)
-                confidence = self._copyvio_compare_content(clean, url)
-                if confidence > best_confidence:
-                    best_confidence = confidence
+                conf, chains = self._copyvio_compare_content(article_chain, url)
+                if conf > best_confidence:
+                    best_confidence = conf
                     best_match = url
+                    best_chains = chains
             num_queries += 1
             diff = time() - last_query
             if diff < interquery_sleep:
@@ -250,4 +262,5 @@ class CopyrightMixin(object):
             v = True
         else:
             v = False
-        return _CopyvioCheckResult(v, best_confidence, best_match, num_queries)
+        return _CopyvioCheckResult(v, best_confidence, best_match, num_queries,
+                                   article_chain, best_chains)
