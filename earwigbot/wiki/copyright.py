@@ -200,7 +200,7 @@ class CopyrightMixin(object):
 
         source = _MarkovChain(self._copyvio_strip_html(html))
         delta = _MarkovChainIntersection(article, source)
-        return delta.size() / article.size(), (source, delta)
+        return float(delta.size()) / article.size(), (source, delta)
 
     def copyvio_check(self, engine, credentials, min_confidence=0.5,
                       max_queries=-1, interquery_sleep=1, force=False):
