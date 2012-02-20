@@ -24,6 +24,7 @@ from collections import defaultdict
 from functools import partial
 from gzip import GzipFile
 from json import loads
+from re import sub, UNICODE
 from StringIO import StringIO
 from time import sleep, time
 from urllib import quote_plus, urlencode
@@ -62,7 +63,7 @@ class _MarkovChain(object):
     def __init__(self, text):
         self.text = text
         self.chain = defaultdict(lambda: defaultdict(lambda: 0))
-        words = text.split()
+        words = sub("[^\w\s-]", "", text.lower(), flags=UNICODE).split()
         prev = self.START
         for word in words:
             self.chain[prev][word] += 1
@@ -185,15 +186,36 @@ class CopyrightMixin(object):
         return [result["url"] for result in results]
 
     def _copyvio_strip_html(self, html):
+        """
+        STUB
+        """
         return html
 
     def _copyvio_strip_article(self, content):
+        """Clean the page's raw text by removing templates and formatting.
+
+        Returns the page's text with all HTML and wikicode formatting removed,
+        including templates, tables, references, and the Bibliography/
+        References/Sources/See also section(s). It retains punctuation
+        (spacing, paragraphs, periods, commas, (semi)-colons, parentheses,
+        quotes) and original capitalization, but not brackets (square and
+        angular), abnormal spacing, nor anything else. HTML entities are
+        replaced by their unicode equivalents.
+
+        STUB
+        """
         return content
 
     def _copyvio_chunk_article(self, content, max_chunks):
+        """
+        STUB
+        """
         return [content]
 
     def _copyvio_compare_content(self, article, url):
+        """
+        DOCSTRING NEEDED
+        """
         html = self._open_url_ignoring_errors(url)
         if not html:
             return 0
