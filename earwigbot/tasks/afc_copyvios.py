@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from hashlib import sha256
 from os.path import expanduser
 from threading import Lock
 
@@ -42,8 +43,9 @@ class Task(BaseTask):
         cfg = config.tasks.get(self.name, {})
         self.template = cfg.get("template", "AfC suspected copyvio")
         self.ignore_list = cfg.get("ignoreList", [])
-        self.min_confidence = cfg.get("minConfidence", 0.75)
+        self.min_confidence = cfg.get("minConfidence", 0.5)
         self.max_queries = cfg.get("maxQueries", 10)
+        self.cache_results = cfg.get("cacheResults", False)
         default_summary = "Tagging suspected [[WP:COPYVIO|copyright violation]] of {url}"
         self.summary = self.make_summary(cfg.get("summary", default_summary))
 
@@ -110,6 +112,8 @@ class Task(BaseTask):
             self.logger.debug(msg.format(url, confidence))
 
         self.log_processed(pageid)
+        if self.cache_results:
+            self.cache_result(page, result)
 
     def has_been_processed(self, pageid):
         """Returns True if pageid was processed before, otherwise False."""
@@ -129,3 +133,32 @@ class Task(BaseTask):
         query = "INSERT INTO processed VALUES (?)"
         with self.conn.cursor() as cursor:
             cursor.execute(query, (pageid,))
+
+    def cache_result(self, page, result):
+        """Store the check's result in a cache table temporarily.
+
+        The cache contains the page's ID, a hash of its content, the URL of the
+        best match, the time of caching, and the number of queries used. It
+        will replace any existing cache entries for that page.
+
+        The cache is intended for EarwigBot's complementary Toolserver web
+        interface, in which copyvio checks can be done separately from the bot.
+        The cache saves time and money by saving the result of the web search
+        but neither the result of the comparison nor any actual text (which
+        could violate data retention policy). Cache entries are (intended to
+        be) retained for one day; this task does not remove old entries (that
+        is handled by the Toolserver component).
+
+        This will only be called if "cache_results" == True in the task's,
+        config, which is False by default.
+        """
+        pageid = page.pageid()
+        hash = sha256(page.get()).hexdigest()
+        query1 = "SELECT 1 FROM cache WHERE cache_id = ?"
+        query2 = "DELETE FROM cache WHERE cache_id = ?"
+        query3 = "INSERT INTO cache VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?)"
+        with self.conn.cursor() as cursor:
+            cursor.execute(query1, (pageid,))
+            if cursor.fetchall():
+                cursor.execute(query2, (pageid,))
+            cursor.execute(query3, (pageid, hash, result.url, result.queries, 0))
