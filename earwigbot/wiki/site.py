@@ -71,7 +71,8 @@ class Site(object):
     def __init__(self, name=None, project=None, lang=None, base_url=None,
                  article_path=None, script_path=None, sql=None,
                  namespaces=None, login=(None, None), cookiejar=None,
-                 user_agent=None, assert_edit=None, maxlag=None):
+                 user_agent=None, assert_edit=None, maxlag=None,
+                 search_config=(None, None)):
         """Constructor for new Site instances.
 
         This probably isn't necessary to call yourself unless you're building a
@@ -106,6 +107,9 @@ class Site(object):
         # Attributes used for SQL queries:
         self._sql_data = sql
         self._sql_conn = None
+
+        # Attribute used in copyright violation checks (see CopyrightMixin):
+        self._search_config = search_config
 
         # Set up cookiejar and URL opener for making API queries:
         if cookiejar is not None:

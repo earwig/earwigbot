@@ -48,12 +48,8 @@ class _CopyvioCheckResult(object):
         self.delta_chain = chains[1]
 
     def __repr__(self):
-        r = ", ".join(("_CopyvioCheckResult(violation={0!r}",
-                       "confidence={1!r}", "url={2!r}", "queries={3|r}",
-                       "article={4|r}", "chains={5!r})"))
-        return r.format(self.violation, self.confidence, self.url,
-                        self.queries, self.article_chain,
-                        (self.source_chain, self.delta_chain))
+        r = "_CopyvioCheckResult(violation={0!r}, confidence={1!r}, url={2!r}, queries={3|r})"
+        return r.format(self.violation, self.confidence, self.url, self.queries)
 
 
 class _MarkovChain(object):
@@ -100,9 +96,11 @@ class CopyrightMixin(object):
     """
     EarwigBot's Wiki Toolset: Copyright Violation Mixin
 
-    This is a mixin that provides one public method, copyvio_check(), which
-    checks the page for copyright violations using a search engine API. The
-    API keys must be provided to the method as arguments.
+    This is a mixin that provides two public methods, copyvio_check() and
+    copyvio_compare(). The former checks the page for copyright violations
+    using a search engine API, and the latter compares the page against a
+    specified URL. Credentials for the search engine API are stored in the
+    site's config.
     """
     def __init__(self, site):
         self._opener = build_opener()
@@ -132,7 +130,7 @@ class CopyrightMixin(object):
 
         return result
 
-    def _select_search_engine(self, engine, credentials):
+    def _select_search_engine(self):
         """Return a function that can be called to do web searches.
 
         The "function" is a functools.partial object that takes one argument, a
@@ -140,10 +138,12 @@ class CopyrightMixin(object):
         logic depends on the 'engine' argument; for example, if 'engine' is
         "Yahoo! BOSS", we'll use self._yahoo_boss_query for querying.
 
-        Raises UnknownSearchEngineError if 'engine' is not known to us, and
-        UnsupportedSearchEngineError if we are missing a required package or
-        module, like oauth2 for "Yahoo! BOSS".
+        Raises UnknownSearchEngineError if the 'engine' listed in our config is
+        unknown to us, and UnsupportedSearchEngineError if we are missing a
+        required package or module, like oauth2 for "Yahoo! BOSS".
         """
+        engine, credentials = self._site._search_config
+
         if engine == "Yahoo! BOSS":
             if not oauth:
                 e = "The package 'oauth2' could not be imported"
@@ -224,8 +224,8 @@ class CopyrightMixin(object):
         delta = _MarkovChainIntersection(article, source)
         return float(delta.size()) / article.size(), (source, delta)
 
-    def copyvio_check(self, engine, credentials, min_confidence=0.5,
-                      max_queries=-1, interquery_sleep=1, force=False):
+    def copyvio_check(self, min_confidence=0.5, max_queries=-1,
+                      interquery_sleep=1, force=False):
         """Check the page for copyright violations.
 
         Returns a _CopyvioCheckResult object with four useful attributes:
@@ -250,7 +250,7 @@ class CopyrightMixin(object):
         Raises CopyvioCheckError or subclasses (UnknownSearchEngineError,
         SearchQueryError, ...) on errors.
         """
-        search = self._select_search_engine(engine, credentials)
+        search = self._select_search_engine()
         handled_urls = []
         best_confidence = 0
         best_match = None
@@ -290,3 +290,35 @@ class CopyrightMixin(object):
             v = False
         return _CopyvioCheckResult(v, best_confidence, best_match, num_queries,
                                    article_chain, best_chains)
+
+    def copyvio_compare(self, url, min_confidence=0.5, force=False):
+        """Check the page like copyvio_check(), but against a specific URL.
+
+        This is essentially a reduced version of the above - a copyivo
+        comparison is made using Markov chains and the result is returned in a
+        _CopyvioCheckResult object - without using a search engine, as the
+        suspected "violated" URL is supplied from the start.
+        
+        Its primary use is to generate a result when the URL is retrieved from
+        a cache, like the one used in EarwigBot's Toolserver site. After a
+        search is done, the resulting URL is stored in a cache for 24 hours so
+        future checks against that page will not require another set of
+        time-and-money-consuming search engine queries. However, the comparison
+        itself (which includes the article's and the source's content) cannot
+        be stored for data retention reasons, so a fresh comparison is made
+        using this function.
+
+        Since no searching is done, neither UnknownSearchEngineError nor
+        SearchQueryError will be raised.
+        """
+        content = self.get(force)
+        clean = self._copyvio_strip_article(content)
+        article_chain = _MarkovChain(clean)
+        confidence, chains = self._copyvio_compare_content(article_chain, url)
+
+        if confidence >= min_confidence:
+            is_violation = True
+        else:
+            is_violation = False
+        return _CopyvioCheckResult(is_violation, confidence, url, 0,
+                                   article_chain, chains)

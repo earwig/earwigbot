@@ -50,6 +50,8 @@ def run():
     if is_encrypted:
         config._decryption_key = raw_input()
         config.decrypt(config.wiki, "password")
+        config.decrypt(config.wiki, "search", "credentials", "key")
+        config.decrypt(config.wiki, "search", "credentials", "secret")
         config.decrypt(config.irc, "frontend", "nickservPassword")
         config.decrypt(config.irc, "watcher", "nickservPassword")
 

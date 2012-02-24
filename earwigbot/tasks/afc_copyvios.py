@@ -37,9 +37,6 @@ class Task(BaseTask):
     number = 1
 
     def __init__(self):
-        config.decrypt(config.tasks, self.name, "search", "credentials", "key")
-        config.decrypt(config.tasks, self.name, "search", "credentials", "secret")
-
         cfg = config.tasks.get(self.name, {})
         self.template = cfg.get("template", "AfC suspected copyvio")
         self.ignore_list = cfg.get("ignoreList", [])
@@ -48,11 +45,6 @@ class Task(BaseTask):
         self.cache_results = cfg.get("cacheResults", False)
         default_summary = "Tagging suspected [[WP:COPYVIO|copyright violation]] of {url}"
         self.summary = self.make_summary(cfg.get("summary", default_summary))
-
-        # Search API data:
-        search = cfg.get("search", {})
-        self.engine = search.get("engine")
-        self.credentials = search.get("credentials", {})
 
         # Connection data for our SQL database:
         kwargs = cfg.get("sql", {})
@@ -91,8 +83,7 @@ class Task(BaseTask):
             return
 
         self.logger.info("Checking [[{0}]]".format(title))
-        result = page.copyvio_check(self.engine, self.credentials,
-                                    self.min_confidence, self.max_queries)
+        result = page.copyvio_check(self.min_confidence, self.max_queries)
         url = result.url
         confidence = "{0}%".format(round(result.confidence * 100, 2))
 

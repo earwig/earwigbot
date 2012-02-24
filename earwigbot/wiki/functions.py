@@ -110,6 +110,7 @@ def _get_site_object_from_dict(name, d):
     user_agent = config.wiki.get("userAgent")
     assert_edit = config.wiki.get("assert")
     maxlag = config.wiki.get("maxlag")
+    search_config = config.wiki.get("search")
 
     if user_agent:
         user_agent = user_agent.replace("$1", earwigbot.__version__)
@@ -126,7 +127,8 @@ def _get_site_object_from_dict(name, d):
     return Site(name=name, project=project, lang=lang, base_url=base_url,
                 article_path=article_path, script_path=script_path, sql=sql,
                 namespaces=namespaces, login=login, cookiejar=cookiejar,
-                user_agent=user_agent, assert_edit=assert_edit, maxlag=maxlag)
+                user_agent=user_agent, assert_edit=assert_edit, maxlag=maxlag,
+                search_config=search_config)
 
 def get_site(name=None, project=None, lang=None):
     """Returns a Site instance based on information from our config file.
