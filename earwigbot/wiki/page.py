@@ -1,17 +1,17 @@
 # -*- coding: utf-8  -*-
 #
 # Copyright (C) 2009-2012 by Ben Kurtovic <ben.kurtovic@verizon.net>
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is 
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,10 +25,10 @@ import re
 from time import gmtime, strftime
 from urllib import quote
 
-from earwigbot.wiki.copyright import CopyrightMixin
+from earwigbot.wiki.copyvios import CopyvioMixin
 from earwigbot.wiki.exceptions import *
 
-class Page(CopyrightMixin):
+class Page(CopyvioMixin):
     """
     EarwigBot's Wiki Toolset: Page Class
 
@@ -264,7 +264,7 @@ class Page(CopyrightMixin):
         If `params` is given, we'll use it as our API query parameters.
         Otherwise, we'll build params using the given kwargs via
         _build_edit_params().
-        
+
         We'll then try to do the API query, and catch any errors the API raises
         in _handle_edit_errors(). We'll then throw these back as subclasses of
         EditError.
@@ -275,7 +275,7 @@ class Page(CopyrightMixin):
         if not self._token:
             e = "You don't have permission to edit this page."
             raise PermissionsError(e)
-        
+
         # Weed out invalid pages before we get too far:
         self._force_validity()
 
@@ -336,7 +336,7 @@ class Page(CopyrightMixin):
                 # Page does not exist; don't edit if it already exists:
                 params["createonly"] = "true"
         else:
-            params["recreate"] = "true"            
+            params["recreate"] = "true"
 
         return params
 
