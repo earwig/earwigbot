@@ -89,9 +89,9 @@ class Task(BaseTask):
 
         if result.violation:
             content = page.get()
-            template = "\{\{{0}|url={1}|confidence={2}\}\}"
+            template = "\{\{{0}|url={1}|confidence={2}\}\}\n"
             template = template.format(self.template, url, confidence)
-            newtext = "\n".join((template, content))
+            newtext = template + content
             if "{url}" in self.summary:
                 page.edit(newtext, self.summary.format(url=url))
             else:
@@ -140,7 +140,7 @@ class Task(BaseTask):
         be) retained for one day; this task does not remove old entries (that
         is handled by the Toolserver component).
 
-        This will only be called if "cache_results" == True in the task's,
+        This will only be called if "cache_results" == True in the task's
         config, which is False by default.
         """
         pageid = page.pageid()
