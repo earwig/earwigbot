@@ -107,7 +107,7 @@ class Task(BaseTask):
         """
         self.logger.info("Saving chart")
         if kwargs.get("fromIRC"):
-            summary = " ".join((self.summary, "(!earwigbot)"))
+            summary = self.summary + " (!earwigbot)"
         else:
             if self.shutoff_enabled():
                 return
@@ -143,10 +143,10 @@ class Task(BaseTask):
         """Compile and return a single statistics chart."""
         chart_id, chart_title, special_title = chart_info
 
-        chart = "|".join((self.tl_header, chart_title))
+        chart = self.tl_header + "|" + chart_title
         if special_title:
-            chart += "".join(("|", special_title))
-        chart = "".join(("{{", chart, "}}"))
+            chart += "|" + special_title
+        chart = "{{" + chart + "}}"
 
         query = "SELECT * FROM page JOIN row ON page_id = row_id WHERE row_chart = ?"
         with self.conn.cursor(oursql.DictCursor) as cursor:
@@ -154,7 +154,7 @@ class Task(BaseTask):
             for page in cursor:
                 chart += "\n" + self.compile_chart_row(page).decode("utf8")
 
-        chart += "".join(("\n{{", self.tl_footer, "}}"))
+        chart += "\n{{" + self.tl_footer + "}}"
         return chart
 
     def compile_chart_row(self, page):
@@ -175,7 +175,7 @@ class Task(BaseTask):
         if page["page_notes"]:
             row += "|n=1{page_notes}"
 
-        return "".join(("{{", row.format(self.tl_row, **page), "}}"))
+        return "{{" + row.format(self.tl_row, **page) + "}}"
 
     def format_time(self, dt):
         """Format a datetime into the standard MediaWiki timestamp format."""
@@ -580,7 +580,7 @@ class Task(BaseTask):
         """
         short = re.sub("Wikipedia(\s*talk)?\:Articles\sfor\screation\/", "", title)
         if len(short) > 50:
-            short = "".join((short[:47], "..."))
+            short = short[:47] + "..."
         return short
 
     def get_size(self, content):
