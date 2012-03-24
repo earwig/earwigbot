@@ -102,9 +102,8 @@ def irc_frontend():
 
     frontend.loop()
 
-    if "irc_watcher" in config.components:
-        w_conn.close()
-    f_conn.close()
+    if  config.components.get("irc_watcher"):
+        watcher.is_running = False
 
 def main():
     if config.components.get("irc_frontend"):

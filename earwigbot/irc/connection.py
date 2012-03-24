@@ -137,4 +137,5 @@ class IRCConnection(object):
             for line in lines:
                 self._process_message(line)
             if not self.is_running:
+                self._close()
                 break
