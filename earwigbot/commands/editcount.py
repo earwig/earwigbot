@@ -22,8 +22,8 @@
 
 from urllib import quote_plus
 
-from earwigbot.classes import BaseCommand
 from earwigbot import wiki
+from earwigbot.commands import BaseCommand
 
 class Command(BaseCommand):
     """Return a user's edit count."""

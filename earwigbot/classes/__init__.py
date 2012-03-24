@@ -20,5 +20,4 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.classes.base_command import *
 from earwigbot.classes.base_task import *

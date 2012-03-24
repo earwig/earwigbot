@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.classes import BaseCommand
+from earwigbot.commands import BaseCommand
 from earwigbot.config import config
 
 class Command(BaseCommand):

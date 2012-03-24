@@ -23,7 +23,7 @@
 import threading
 import time
 
-from earwigbot.classes import BaseCommand
+from earwigbot.commands import BaseCommand
 
 class Command(BaseCommand):
     """Set a message to be repeated to you in a certain amount of time."""

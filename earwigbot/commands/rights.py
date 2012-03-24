@@ -20,8 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.classes import BaseCommand
 from earwigbot import wiki
+from earwigbot.commands import BaseCommand
 
 class Command(BaseCommand):
     """Retrieve a list of rights for a given username."""

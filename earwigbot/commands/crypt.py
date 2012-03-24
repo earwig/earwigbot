@@ -22,8 +22,8 @@
 
 import hashlib
 
-from earwigbot.classes import BaseCommand
 from earwigbot import blowfish
+from earwigbot.commands import BaseCommand
 
 class Command(BaseCommand):
     """Provides hash functions with !hash (!hash list for supported algorithms)

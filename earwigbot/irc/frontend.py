@@ -23,7 +23,7 @@
 import logging
 import re
 
-from earwigbot import  commands
+from earwigbot.commands import command_manager
 from earwigbot.irc import IRCConnection, Data, BrokenSocketException
 from earwigbot.config import config
 
@@ -47,7 +47,7 @@ class Frontend(IRCConnection):
         base = super(Frontend, self)
         base.__init__(cf["host"], cf["port"], cf["nick"], cf["ident"],
                       cf["realname"], self.logger)
-        commands.load(self)
+        command_manager.load(self)
         self._connect()
 
     def _process_message(self, line):
@@ -59,7 +59,7 @@ class Frontend(IRCConnection):
             data.nick, data.ident, data.host = self.sender_regex.findall(line[0])[0]
             data.chan = line[2]
             # Check for 'join' hooks in our commands:
-            commands.check("join", data)
+            command_manager.check("join", data)
 
         elif line[1] == "PRIVMSG":
             data.nick, data.ident, data.host = self.sender_regex.findall(line[0])[0]
@@ -70,13 +70,13 @@ class Frontend(IRCConnection):
                 # This is a privmsg to us, so set 'chan' as the nick of the
                 # sender, then check for private-only command hooks:
                 data.chan = data.nick
-                commands.check("msg_private", data)
+                command_manager.check("msg_private", data)
             else:
                 # Check for public-only command hooks:
-                commands.check("msg_public", data)
+                command_manager.check("msg_public", data)
 
             # Check for command hooks that apply to all messages:
-            commands.check("msg", data)
+            command_manager.check("msg", data)
 
         # If we are pinged, pong back:
         elif line[0] == "PING":

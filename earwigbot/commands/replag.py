@@ -24,7 +24,7 @@ from os.path import expanduser
 
 import oursql
 
-from earwigbot.classes import BaseCommand
+from earwigbot.commands import BaseCommand
 
 class Command(BaseCommand):
     """Return the replag for a specific database on the Toolserver."""

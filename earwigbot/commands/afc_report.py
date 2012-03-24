@@ -22,9 +22,9 @@
 
 import re
 
-from earwigbot.classes import BaseCommand
 from earwigbot import tasks
 from earwigbot import wiki
+from earwigbot.commands import BaseCommand
 
 class Command(BaseCommand):
     """Get information about an AFC submission by name."""

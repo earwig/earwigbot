@@ -24,7 +24,7 @@ import threading
 import re
 
 from earwigbot import tasks
-from earwigbot.classes import BaseCommand
+from earwigbot.commands import BaseCommand
 from earwigbot.config import config
 from earwigbot.irc import KwargParseException
 

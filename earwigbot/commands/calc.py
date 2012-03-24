@@ -23,7 +23,7 @@
 import re
 import urllib
 
-from earwigbot.classes import BaseCommand
+from earwigbot.commands import BaseCommand
 
 class Command(BaseCommand):
     """A somewhat advanced calculator: see http://futureboy.us/fsp/frink.fsp
