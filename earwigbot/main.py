@@ -88,7 +88,7 @@ def irc_frontend():
     logger.info("Starting IRC frontend")
     frontend = Frontend()
 
-    if "wiki_schedule" in config.components:
+    if config.components.get("wiki_schedule"):
         logger.info("Starting wiki scheduler")
         tasks.load()
         t_scheduler = threading.Thread(target=wiki_scheduler)
@@ -96,7 +96,7 @@ def irc_frontend():
         t_scheduler.daemon = True
         t_scheduler.start()
 
-    if "irc_watcher" in config.components:
+    if config.components.get("irc_watcher"):
         logger.info("Starting IRC watcher")
         t_watcher = threading.Thread(target=irc_watcher, args=(frontend,))
         t_watcher.name = "irc-watcher"
@@ -110,12 +110,12 @@ def irc_frontend():
     f_conn.close()
 
 def main():
-    if "irc_frontend" in config.components:
+    if config.components.get("irc_frontend"):
         # Make the frontend run on our primary thread if enabled, and enable
         # additional components through that function:
         irc_frontend()
 
-    elif "wiki_schedule" in config.components:
+    elif config.components.get("wiki_schedule"):
         # Run the scheduler on the main thread, but also run the IRC watcher on
         # another thread iff it is enabled:
         logger.info("Starting wiki scheduler")
@@ -128,7 +128,7 @@ def main():
             t_watcher.start()
         wiki_scheduler()
 
-    elif "irc_watcher" in config.components:
+    elif config.components.get("irc_watcher"):
         # The IRC watcher is our only enabled component, so run its function
         # only and don't worry about anything else:
         logger.info("Starting IRC watcher")
