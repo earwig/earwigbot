@@ -40,13 +40,13 @@ class Watcher(IRCConnection):
     """
 
     def __init__(self, frontend=None):
-        logger = logging.getLogger("earwigbot.watcher")
+        self.logger = logging.getLogger("earwigbot.watcher")
         cf = config.irc["watcher"]
         base = super(Frontend, self)
         base.__init__(cf["host"], cf["port"], cf["nick"], cf["ident"],
                       cf["realname"], self.logger)
-        self._connect()
         self.frontend = frontend
+        self._connect()
 
     def _process_message(self, line):
         """Process a single message from IRC."""

@@ -32,6 +32,6 @@ __version__ = "0.1.dev"
 __email__ = "ben.kurtovic@verizon.net"
 
 from earwigbot import (
-    blowfish, config, classes, commands, config, frontend, main, rules, tasks,
-    tests, watcher, wiki
+    blowfish, config, classes, commands, config, irc, main, rules, runner,
+    tasks, tests, wiki
 )
