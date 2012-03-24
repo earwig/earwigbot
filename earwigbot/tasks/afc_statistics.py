@@ -117,15 +117,16 @@ class Task(BaseTask):
 
         page = self.site.get_page(self.pagename)
         text = page.get().encode("utf8")
-        newtext = re.sub("(<!-- stat begin -->)(.*?)(<!-- stat end -->)",
-                         statistics.join(("\\1\n", "\n\\3")), text,
-                         flags=re.DOTALL)
+        newtext = re.sub("<!-- stat begin -->(.*?)<!-- stat end -->",
+                         "<!-- stat begin -->\n" + statistics + "\n<!-- stat end -->",
+                         text, flags=re.DOTALL)
         if newtext == text:
             self.logger.info("Chart unchanged; not saving")
             return  # Don't edit the page if we're not adding anything
 
-        newtext = re.sub("(<!-- sig begin -->)(.*?)(<!-- sig end -->)",
-                         "\\1~~~ at ~~~~~\\3", newtext)
+        newtext = re.sub("<!-- sig begin -->(.*?)<!-- sig end -->",
+                         "<!-- sig begin -->~~~ at ~~~~~<!-- sig end -->",
+                         newtext)
         page.edit(newtext, summary, minor=True, bot=True)
         self.logger.info("Chart saved to [[{0}]]".format(page.title()))
 
