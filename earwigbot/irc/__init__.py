@@ -20,5 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.classes.base_command import *
-from earwigbot.classes.base_task import *
+from earwigbot.irc.connection import *
+from earwigbot.irc.data import *
+from earwigbot.irc.frontend import *
+from earwigbot.irc.rc import *
+from earwigbot.irc.watcher import *
