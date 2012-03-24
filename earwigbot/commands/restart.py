@@ -20,8 +20,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.classes.base_command import *
-from earwigbot.classes.base_task import *
-from earwigbot.classes.connection import *
-from earwigbot.classes.data import *
-from earwigbot.classes.rc import *
+from earwigbot.commands import BaseCommand
+from earwigbot.config import config
+
+class Command(BaseCommand):
+    """Restart the bot. Only the owner can do this."""
+    name = "restart"
+
+    def process(self, data):
+        if data.host not in config.irc["permissions"]["owners"]:
+            msg = "you must be a bot owner to use this command."
+            self.connection.reply(data, msg)
+            return
+
+        self.connection.logger.info("Restarting bot per owner request")
+        self.connection.is_running = False

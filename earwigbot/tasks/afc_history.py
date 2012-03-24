@@ -32,8 +32,8 @@ from numpy import arange
 import oursql
 
 from earwigbot import wiki
-from earwigbot.classes import BaseTask
 from earwigbot.config import config
+from earwigbot.tasks import BaseTask
 
 # Valid submission statuses:
 STATUS_NONE = 0

@@ -34,18 +34,18 @@ instead of a socket for data.
 import re
 from unittest import TestCase
 
-from earwigbot.classes import Connection, Data
+from earwigbot.irc import IRCConnection, Data
 
 class CommandTestCase(TestCase):
     re_sender = re.compile(":(.*?)!(.*?)@(.*?)\Z")
 
     def setUp(self, command):
         self.connection = FakeConnection()
-        self.connection.connect()
+        self.connection._connect()
         self.command = command(self.connection)
 
     def get_single(self):
-        data = self.connection.get().split("\n")
+        data = self.connection._get().split("\n")
         line = data.pop(0)
         for remaining in data[1:]:
             self.connection.send(remaining)
@@ -92,16 +92,19 @@ class CommandTestCase(TestCase):
         line = ":Foo!bar@example.com JOIN :#channel".strip().split()
         return self.maker(line, line[2][1:])
 
-class FakeConnection(Connection):
-    def connect(self):
-        self._buffer = ""
-
-    def close(self):
+class FakeConnection(IRCConnection):
+    def __init__(self):
         pass
 
-    def get(self, size=4096):
+    def _connect(self):
+        self._buffer = ""
+
+    def _close(self):
+        pass
+
+    def _get(self, size=4096):
         data, self._buffer = self._buffer, ""
         return data
 
-    def send(self, msg):
+    def _send(self, msg):
         self._buffer += msg + "\n"

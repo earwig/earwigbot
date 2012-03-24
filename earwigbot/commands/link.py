@@ -23,7 +23,7 @@
 import re
 from urllib import quote
 
-from earwigbot.classes import BaseCommand
+from earwigbot.commands import BaseCommand
 
 class Command(BaseCommand):
     """Convert a Wikipedia page name into a URL."""

@@ -22,9 +22,9 @@
 
 import re
 
-from earwigbot.classes import BaseCommand
-from earwigbot import tasks
 from earwigbot import wiki
+from earwigbot.commands import BaseCommand
+from earwigbot.tasks import task_manager
 
 class Command(BaseCommand):
     """Get information about an AFC submission by name."""
@@ -36,7 +36,7 @@ class Command(BaseCommand):
         self.data = data
 
         try:
-            self.statistics = tasks.get("afc_statistics")
+            self.statistics = task_manager.get("afc_statistics")
         except KeyError:
             e = "Cannot run command: requires afc_statistics task."
             self.logger.error(e)

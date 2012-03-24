@@ -27,8 +27,8 @@ from threading import Lock
 import oursql
 
 from earwigbot import wiki
-from earwigbot.classes import BaseTask
 from earwigbot.config import config
+from earwigbot.tasks import BaseTask
 
 class Task(BaseTask):
     """A task to check newly-edited [[WP:AFC]] submissions for copyright

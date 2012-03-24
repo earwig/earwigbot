@@ -23,7 +23,7 @@
 import re
 
 from earwigbot import wiki
-from earwigbot.classes import BaseCommand
+from earwigbot.commands import BaseCommand
 from earwigbot.config import config
 
 class Command(BaseCommand):

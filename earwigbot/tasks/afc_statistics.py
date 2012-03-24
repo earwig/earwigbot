@@ -30,8 +30,8 @@ from time import sleep
 import oursql
 
 from earwigbot import wiki
-from earwigbot.classes import BaseTask
 from earwigbot.config import config
+from earwigbot.tasks import BaseTask
 
 # Chart status number constants:
 CHART_NONE = 0

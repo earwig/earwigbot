@@ -22,8 +22,8 @@
 
 import time
 
-from earwigbot.classes import BaseCommand
 from earwigbot import wiki
+from earwigbot.commands import BaseCommand
 
 class Command(BaseCommand):
     """Return when a user registered."""

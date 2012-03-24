@@ -22,7 +22,7 @@
 
 import random
 
-from earwigbot.classes import BaseCommand
+from earwigbot.commands import BaseCommand
 
 class Command(BaseCommand):
     """Praise people!"""

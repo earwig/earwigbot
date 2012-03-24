@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.classes import BaseTask
+from earwigbot.tasks import BaseTask
 
 class Task(BaseTask):
     """A task to add |blp=yes to {{WPB}} or {{WPBS}} when it is used along with

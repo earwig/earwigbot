@@ -66,7 +66,7 @@ class _ConfigNode(object):
         data = self.__dict__.copy()
         for key, val in data.iteritems():
             if isinstance(val, _ConfigNode):
-                data[key] = val.dump()
+                data[key] = val._dump()
         return data
 
     def _load(self, data):
