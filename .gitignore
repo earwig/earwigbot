@@ -3,6 +3,7 @@
 
 # Ignore bot-specific config file:
 config.json
+config.yml
 
 # Ignore logs directory:
 logs/
