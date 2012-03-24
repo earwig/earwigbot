@@ -110,7 +110,7 @@ class _BotConfig(object):
         filename = self._config_path
         with open(filename, 'r') as fp:
             try:
-                self._data = yml.load(fp)
+                self._data = yaml.load(fp)
             except yaml.YAMLError as error:
                 print "Error parsing config file {0}:".format(filename)
                 print error

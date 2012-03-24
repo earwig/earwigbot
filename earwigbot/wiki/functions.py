@@ -63,8 +63,8 @@ def _get_cookiejar():
     one is returned every time.
 
     The .cookies file is located in the project root, same directory as
-    config.json and earwigbot.py. If it doesn't exist, we will create the file
-    and set it to be readable and writeable only by us. If it exists but the
+    config.yml and bot.py. If it doesn't exist, we will create the file and set
+    it to be readable and writeable only by us. If it exists but the
     information inside is bogus, we will ignore it.
 
     This is normally called by _get_site_object_from_dict() (in turn called by
