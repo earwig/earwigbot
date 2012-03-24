@@ -56,13 +56,13 @@ class Frontend(IRCConnection):
         data = Data(line)  # New Data instance to store info about this line
 
         if line[1] == "JOIN":
-            data.nick, data.ident, data.host = sender_regex.findall(line[0])[0]
+            data.nick, data.ident, data.host = self.sender_regex.findall(line[0])[0]
             data.chan = line[2]
             # Check for 'join' hooks in our commands:
             commands.check("join", data)
 
         elif line[1] == "PRIVMSG":
-            data.nick, data.ident, data.host = sender_regex.findall(line[0])[0]
+            data.nick, data.ident, data.host = self.sender_regex.findall(line[0])[0]
             data.msg = " ".join(line[3:])[1:]
             data.chan = line[2]
 

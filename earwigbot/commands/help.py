@@ -22,8 +22,9 @@
 
 import re
 
-from earwigbot.classes import BaseCommand, Data
 from earwigbot import commands
+from earwigbot.classes import BaseCommand
+from earwigbot.irc import Data
 
 class Command(BaseCommand):
     """Displays help information."""

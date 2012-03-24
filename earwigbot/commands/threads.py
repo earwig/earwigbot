@@ -24,8 +24,9 @@ import threading
 import re
 
 from earwigbot import tasks
-from earwigbot.classes import BaseCommand, Data, KwargParseException
+from earwigbot.classes import BaseCommand
 from earwigbot.config import config
+from earwigbot.irc import KwargParseException
 
 class Command(BaseCommand):
     """Manage wiki tasks from IRC, and check on thread status."""

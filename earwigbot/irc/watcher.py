@@ -42,7 +42,7 @@ class Watcher(IRCConnection):
     def __init__(self, frontend=None):
         self.logger = logging.getLogger("earwigbot.watcher")
         cf = config.irc["watcher"]
-        base = super(Frontend, self)
+        base = super(Watcher, self)
         base.__init__(cf["host"], cf["port"], cf["nick"], cf["ident"],
                       cf["realname"], self.logger)
         self.frontend = frontend
