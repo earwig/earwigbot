@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.classes import BaseTask
+from earwigbot.tasks import BaseTask
 
 class Task(BaseTask):
     """A task to delink mainspace categories in declined [[WP:AFC]]

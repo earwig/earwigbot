@@ -49,9 +49,9 @@ import logging
 import threading
 import time
 
-from earwigbot import tasks
-from earwigbot.irc import Frontend, Watcher
 from earwigbot.config import config
+from earwigbot.irc import Frontend, Watcher
+from earwigbot.tasks import task_manager
 
 logger = logging.getLogger("earwigbot")
 
@@ -72,10 +72,7 @@ def wiki_scheduler():
     primary thread if the IRC frontend is not enabled."""
     while 1:
         time_start = time.time()
-        now = time.gmtime(time_start)
-
-        tasks.schedule(now)
-
+        task_manager.schedule()
         time_end = time.time()
         time_diff = time_start - time_end
         if time_diff < 60:  # Sleep until the next minute
@@ -90,7 +87,7 @@ def irc_frontend():
 
     if config.components.get("wiki_schedule"):
         logger.info("Starting wiki scheduler")
-        tasks.load()
+        task_manager.load()
         t_scheduler = threading.Thread(target=wiki_scheduler)
         t_scheduler.name = "wiki-scheduler"
         t_scheduler.daemon = True
@@ -119,7 +116,7 @@ def main():
         # Run the scheduler on the main thread, but also run the IRC watcher on
         # another thread iff it is enabled:
         logger.info("Starting wiki scheduler")
-        tasks.load()
+        task_manager.load()
         if "irc_watcher" in enabled:
             logger.info("Starting IRC watcher")
             t_watcher = threading.Thread(target=irc_watcher)

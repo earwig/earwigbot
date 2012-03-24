@@ -26,7 +26,7 @@ EarwigBot's IRC Command Manager
 This package provides the IRC "commands" used by the bot's front-end component.
 This module contains the BaseCommand class (import with
 `from earwigbot.commands import BaseCommand`) and an internal _CommandManager
-class. This can be accessed through the singleton `command_manager`.
+class. This can be accessed through the `command_manager` singleton.
 """
 
 import logging

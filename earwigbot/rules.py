@@ -29,7 +29,7 @@ recieves an event from IRC.
 
 import re
 
-from earwigbot import tasks
+from earwigbot.tasks import task_manager
 
 afc_prefix = "wikipedia( talk)?:(wikiproject )?articles for creation"
 
@@ -56,7 +56,7 @@ def process(rc):
         chans.update(("##earwigbot", "#wikipedia-en-afc-feed"))
 
     if r_page.search(page_name):
-        #tasks.start("afc_copyvios", page=rc.page)
+        #task_manager.start("afc_copyvios", page=rc.page)
         chans.add("#wikipedia-en-afc-feed")
 
     elif r_ffu.match(page_name):
@@ -76,7 +76,7 @@ def process(rc):
 
     elif rc.flags == "restore" and r_restore.match(comment):
         p = r_restored_page.findall(rc.comment)[0]
-        #tasks.start("afc_copyvios", page=p)
+        #task_manager.start("afc_copyvios", page=p)
         chans.add("#wikipedia-en-afc-feed")
 
     elif rc.flags == "protect" and r_protect.match(comment):
