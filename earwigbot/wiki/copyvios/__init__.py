@@ -20,12 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from functools import partial
 from gzip import GzipFile
-from json import loads
 from StringIO import StringIO
 from time import sleep, time
-from urllib import quote_plus, urlencode
 from urllib2 import build_opener, URLError
 
 try:
@@ -35,6 +32,7 @@ except ImportError:
 
 from earwigbot.wiki.exceptions import *
 from earwigbot.wiki.copyvios.markov import MarkovChain, MarkovChainIntersection
+from earwigbot.wiki.copyvios.search import YahooBOSSSearchEngine
 
 class CopyvioCheckResult(object):
     def __init__(self, violation, confidence, url, queries, article, chains):
@@ -107,42 +105,9 @@ class CopyvioMixin(object):
             if not oauth:
                 e = "The package 'oauth2' could not be imported"
                 raise UnsupportedSearchEngineError(e)
-            searcher = self._yahoo_boss_query
-        else:
-            raise UnknownSearchEngineError(engine)
+            return YahooBOSSSearchEngine(credentials)
 
-        return partial(searcher, credentials)
-
-    def _yahoo_boss_query(self, cred, query):
-        """Do a Yahoo! BOSS web search for 'query' using 'cred' as credentials.
-
-        Returns a list of URLs, no more than fifty, ranked by relevance (as
-        determined by Yahoo). Raises SearchQueryError() on errors.
-        """
-        base_url = "http://yboss.yahooapis.com/ysearch/web"
-        query = quote_plus(query.join('"', '"'))
-        params = {"q": query, "style": "raw", "format": "json"}
-        url = "{0}?{1}".format(base_url, urlencode(params))
-
-        consumer = oauth.Consumer(key=cred["key"], secret=cred["secret"])
-        client = oauth.Client(consumer)
-        headers, body = client.request(url, "GET")
-
-        if headers["status"] != "200":
-            e = "Yahoo! BOSS Error: got response code '{0}':\n{1}'"
-            raise SearchQueryError(e.format(headers["status"], body))
-
-        try:
-            res = loads(body)
-        except ValueError:
-            e = "Yahoo! BOSS Error: JSON could not be decoded"
-            raise SearchQueryError(e)
-
-        try:
-            results = res["bossresponse"]["web"]["results"]
-        except KeyError:
-            return []
-        return [result["url"] for result in results]
+        raise UnknownSearchEngineError(engine)
 
     def _copyvio_strip_html(self, html):
         """
@@ -209,7 +174,7 @@ class CopyvioMixin(object):
         Raises CopyvioCheckError or subclasses (UnknownSearchEngineError,
         SearchQueryError, ...) on errors.
         """
-        search = self._select_search_engine()
+        searcher = self._select_search_engine()
         handled_urls = []
         best_confidence = 0
         best_match = None
@@ -228,7 +193,7 @@ class CopyvioMixin(object):
 
         while (chunks and best_confidence < min_confidence and
                (max_queries < 0 or num_queries < max_queries)):
-            urls = search(chunks.pop(0))
+            urls = searcher.search(chunks.pop(0))
             urls = [url for url in urls if url not in handled_urls]
             for url in urls:
                 handled_urls.append(url)
