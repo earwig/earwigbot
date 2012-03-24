@@ -102,9 +102,6 @@ def irc_frontend():
 
     frontend.loop()
 
-    if  config.components.get("irc_watcher"):
-        watcher.is_running = False
-
 def main():
     if config.components.get("irc_frontend"):
         # Make the frontend run on our primary thread if enabled, and enable
