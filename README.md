@@ -22,18 +22,17 @@ integration between bot parts, and easier maintenance.
 
 # Installation
 
-## Dependencies
+## From stable
 
-EarwigBot uses the MySQL library
-[oursql](http://packages.python.org/oursql/) (>= 0.9.2) for communicating with
-MediaWiki databases, and some tasks use their own tables for storage.
-Additionally, the afc_history task uses
-[matplotlib](http://matplotlib.sourceforge.net/) and
-[numpy](http://numpy.scipy.org/) for graphing AfC statistics. Neither of these
-modules are required for the main bot itself.
+## From development
 
-`earwigbot.wiki.copyright` requires access to a search engine for detecting
-copyright violations. Currently,
-[Yahoo! BOSS](http://developer.yahoo.com/search/boss/) is the only engine
-supported, and this requires
-[oauth2](https://github.com/simplegeo/python-oauth2).
+# Setup
+
+It's recommended to run the bot's unit tests before installing. Run
+`python -m unittest discover tests` from the project's root directory.
+
+*Note:* some unit tests require an internet connection.
+
+# Customizing
+
+# Hacking
