@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 """
-EarwigBot's JSON Config File Parser
+EarwigBot's YAML Config File Parser
 
 This handles all tasks involving reading and writing to our config file,
 including encrypting and decrypting passwords and making a new config file from
@@ -45,10 +45,11 @@ Additionally, _BotConfig has some functions used in config loading:
                       variables; won't work if passwords aren't encrypted
 """
 
-import json
 import logging
 import logging.handlers
 from os import mkdir, path
+
+import yaml
 
 from earwigbot import blowfish
 
@@ -90,7 +91,7 @@ class _BotConfig(object):
     def __init__(self):
         self._script_dir = path.dirname(path.abspath(__file__))
         self._root_dir = path.split(self._script_dir)[0]
-        self._config_path = path.join(self._root_dir, "config.json")
+        self._config_path = path.join(self._root_dir, "config.yml")
         self._log_dir = path.join(self._root_dir, "logs")
         self._decryption_key = None
         self._data = None
@@ -105,12 +106,12 @@ class _BotConfig(object):
                        self._metadata]
 
     def _load(self):
-        """Load data from our JSON config file (config.json) into _config."""
+        """Load data from our JSON config file (config.yml) into _config."""
         filename = self._config_path
         with open(filename, 'r') as fp:
             try:
-                self._data = json.load(fp)
-            except ValueError as error:
+                self._data = yaml.load(fp)
+            except yaml.YAMLError as error:
                 print "Error parsing config file {0}:".format(filename)
                 print error
                 exit(1)
@@ -158,7 +159,7 @@ class _BotConfig(object):
 
     def _make_new(self):
         """Make a new config file based on the user's input."""
-        encrypt = raw_input("Would you like to encrypt passwords stored in config.json? [y/n] ")
+        encrypt = raw_input("Would you like to encrypt passwords stored in config.yml? [y/n] ")
         if encrypt.lower().startswith("y"):
             is_encrypted = True
         else:
@@ -181,6 +182,11 @@ class _BotConfig(object):
     @property
     def log_dir(self):
         return self._log_dir
+    
+    @property
+    def data(self):
+        """The entire config file."""
+        return self._data
 
     @property
     def components(self):

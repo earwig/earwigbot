@@ -44,7 +44,7 @@ def run():
     from earwigbot import main
 
     root_dir = raw_input()
-    config_path = path.join(root_dir, "config.json")
+    config_path = path.join(root_dir, "config.yml")
     log_dir = path.join(root_dir, "logs")
     is_encrypted = config.load(config_path, log_dir)
     if is_encrypted:

@@ -22,7 +22,6 @@
 
 import logging
 
-from earwigbot import rules
 from earwigbot.irc import IRCConnection, RC, BrokenSocketException
 from earwigbot.config import config
 
@@ -34,7 +33,7 @@ class Watcher(IRCConnection):
 
     The IRC watcher runs on a wiki recent-changes server and listens for
     edits. Users cannot interact with this part of the bot. When an event
-    occurs, we run it through rules.py's process() function, which can result
+    occurs, we run it through some rules stored in our config, which can result
     in wiki bot tasks being started (located in tasks/) or messages being sent
     to channels on the IRC frontend.
     """
@@ -46,6 +45,7 @@ class Watcher(IRCConnection):
         base.__init__(cf["host"], cf["port"], cf["nick"], cf["ident"],
                       cf["realname"], self.logger)
         self.frontend = frontend
+        self._prepare_process_hook()
         self._connect()
 
     def _process_message(self, line):
@@ -63,7 +63,7 @@ class Watcher(IRCConnection):
             msg = " ".join(line[3:])[1:]
             rc = RC(msg)  # New RC object to store this event's data
             rc.parse()  # Parse a message into pagenames, usernames, etc.
-            self._process_rc(rc)  # Report to frontend channels or start tasks
+            self._process_rc_event(rc)
 
         # If we are pinged, pong back:
         elif line[0] == "PING":
@@ -74,14 +74,40 @@ class Watcher(IRCConnection):
             for chan in config.irc["watcher"]["channels"]:
                 self.join(chan)
 
-    def _process_rc(self, rc):
+    def _prepare_process_hook(self):
+        """Create our RC event process hook from information in config.
+
+        This will get put in the function self._process_hook, which takes an RC
+        object and returns a list of frontend channels to report this event to.
+        """
+        # Default RC process hook does nothing:
+        self._process_hook = lambda rc: ()
+        try:
+            rules = config.data["rules"]
+        except KeyError:
+            return
+        try:
+            module = compile(rules, config.config_path, "exec")
+        except Exception:
+            e = "Could not compile config file's RC event rules"
+            self.logger.exception(e)
+            return
+        try:
+            self._process_hook = module.process
+        except AttributeError:
+            e = "RC event rules compiled correctly, but no process(rc) function was found"
+            self.logger.error(e)
+            return
+
+    def _process_rc_event(self, rc):
         """Process a recent change event from IRC (or, an RC object).
 
         The actual processing is configurable, so we don't have that hard-coded
-        here. We simply call rules's process() function and expect a list of
-        channels back, which we report the event data to.
+        here. We simply call our process hook (self._process_hook), created by
+        self._prepare_process_hook() from information in the "rules" section of
+        our config.
         """
-        chans = rules.process(rc)
+        chans = self._process_hook(rc)
         if chans and self.frontend:
             pretty = rc.prettify()
             for chan in chans:
