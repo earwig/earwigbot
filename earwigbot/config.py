@@ -182,6 +182,11 @@ class _BotConfig(object):
     @property
     def log_dir(self):
         return self._log_dir
+    
+    @property
+    def data(self):
+        """The entire config file."""
+        return self._data
 
     @property
     def components(self):
