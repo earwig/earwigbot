@@ -81,19 +81,20 @@ class Watcher(IRCConnection):
         This will get put in the function self._process_hook, which takes an RC
         object and returns a list of frontend channels to report this event to.
         """
-        # Default RC process hook does nothing:
+        # Set a default RC process hook that does nothing:
         self._process_hook = lambda rc: ()
         try:
             rules = config.data["rules"]
         except KeyError:
             return
-        module = imp.new_module("_rc_event_rules")
+        module = imp.new_module("_rc_event_processing_rules")
         try:
             exec compile(rules, config.config_path, "exec") in module.__dict__
         except Exception:
             e = "Could not compile config file's RC event rules"
             self.logger.exception(e)
             return
+        self._process_hook_module = module
         try:
             self._process_hook = module.process
         except AttributeError:
