@@ -78,11 +78,12 @@ class Site(object):
         This probably isn't necessary to call yourself unless you're building a
         Site that's not in your config and you don't want to add it - normally
         all you need is tools.get_site(name), which creates the Site for you
-        based on your config file. We accept a bunch of kwargs, but the only
-        ones you really "need" are `base_url` and `script_path` - this is
-        enough to figure out an API url. `login`, a tuple of
-        (username, password), is highly recommended. `cookiejar` will be used
-        to store cookies, and we'll use a normal CookieJar if none is given.
+        based on your config file and the sites database. We accept a bunch of
+        kwargs, but the only ones you really "need" are `base_url` and
+        `script_path` - this is enough to figure out an API url. `login`, a 
+        tuple of (username, password), is highly recommended. `cookiejar` will
+        be used to store cookies, and we'll use a normal CookieJar if none is
+        given.
 
         First, we'll store the given arguments as attributes, then set up our
         URL opener. We'll load any of the attributes that weren't given from
@@ -112,11 +113,11 @@ class Site(object):
         self._search_config = search_config
 
         # Set up cookiejar and URL opener for making API queries:
-        if cookiejar is not None:
+        if cookiejar:
             self._cookiejar = cookiejar
         else:
             self._cookiejar = CookieJar()
-        if user_agent is None:
+        if not user_agent:
             user_agent = USER_AGENT  # Set default UA from wiki.constants
         self._opener = build_opener(HTTPCookieProcessor(self._cookiejar))
         self._opener.addheaders = [("User-Agent", user_agent),
@@ -127,9 +128,9 @@ class Site(object):
 
         # If we have a name/pass and the API says we're not logged in, log in:
         self._login_info = name, password = login
-        if name is not None and password is not None:
+        if name and password:
             logged_in_as = self._get_username_from_cookies()
-            if logged_in_as is None or name != logged_in_as:
+            if not logged_in_as or name != logged_in_as:
                 self._login(login)
 
     def __repr__(self):
@@ -180,7 +181,7 @@ class Site(object):
         There's helpful MediaWiki API documentation at
         <http://www.mediawiki.org/wiki/API>.
         """
-        if self._base_url is None or self._script_path is None:
+        if not self._base_url or self._script_path is None:
             e = "Tried to do an API query, but no API URL is known."
             raise SiteAPIError(e)
 
@@ -332,15 +333,15 @@ class Site(object):
         name = ''.join((self._name, "Token"))
         cookie = self._get_cookie(name, domain)
 
-        if cookie is not None:
+        if cookie:
             name = ''.join((self._name, "UserName"))
             user_name = self._get_cookie(name, domain)
-            if user_name is not None:
+            if user_name:
                 return user_name.value
 
         name = "centralauth_Token"
         for cookie in self._cookiejar:            
-            if cookie.domain_initial_dot is False or cookie.is_expired():
+            if not cookie.domain_initial_dot or cookie.is_expired():
                 continue
             if cookie.name != name:
                 continue
@@ -348,7 +349,7 @@ class Site(object):
             search = ''.join(("(.*?)", re_escape(cookie.domain)))
             if re_match(search, domain):  # Test it against our site
                 user_name = self._get_cookie("centralauth_User", cookie.domain)
-                if user_name is not None:
+                if user_name:
                     return user_name.value
 
     def _get_username_from_api(self):
@@ -378,7 +379,7 @@ class Site(object):
         single API query for our username (or IP address) and return that.
         """
         name = self._get_username_from_cookies()
-        if name is not None:
+        if name:
             return name
         return self._get_username_from_api()
 
@@ -417,7 +418,7 @@ class Site(object):
         """
         name, password = login
         params = {"action": "login", "lgname": name, "lgpassword": password}
-        if token is not None:
+        if token:
             params["lgtoken"] = token
         result = self._api_query(params)
         res = result["login"]["result"]
@@ -455,10 +456,9 @@ class Site(object):
     def _sql_connect(self, **kwargs):
         """Attempt to establish a connection with this site's SQL database.
 
-        oursql.connect() will be called with self._sql_data as its kwargs,
-        which is usually config.wiki["sites"][self.name()]["sql"]. Any kwargs
-        given to this function will be passed to connect() and will have
-        precedence over the config file.
+        oursql.connect() will be called with self._sql_data as its kwargs.
+        Any kwargs given to this function will be passed to connect() and will
+        have precedence over the config file.
 
         Will raise SQLError() if the module "oursql" is not available. oursql
         may raise its own exceptions (e.g. oursql.InterfaceError) if it cannot
@@ -631,6 +631,6 @@ class Site(object):
         If `username` is left as None, then a User object representing the
         currently logged-in (or anonymous!) user is returned.
         """
-        if username is None:
+        if not username:
             username = self._get_username()
         return User(self, username)
