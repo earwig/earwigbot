@@ -116,14 +116,6 @@ def _get_site_object_from_dict(name, d):
         user_agent = user_agent.replace("$1", earwigbot.__version__)
         user_agent = user_agent.replace("$2", platform.python_version())
 
-    for key, value in namespaces.items():  # Convert string keys to integers
-        del namespaces[key]
-        try:
-            namespaces[int(key)] = value
-        except ValueError:  # Data is broken, ignore it
-            namespaces = None
-            break
-
     return Site(name=name, project=project, lang=lang, base_url=base_url,
                 article_path=article_path, script_path=script_path, sql=sql,
                 namespaces=namespaces, login=login, cookiejar=cookiejar,
