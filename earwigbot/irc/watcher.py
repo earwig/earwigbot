@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import imp
 import logging
 
 from earwigbot.irc import IRCConnection, RC, BrokenSocketException
@@ -86,8 +87,9 @@ class Watcher(IRCConnection):
             rules = config.data["rules"]
         except KeyError:
             return
+        module = imp.new_module("_rc_event_rules")
         try:
-            module = compile(rules, config.config_path, "exec")
+            exec compile(rules, config.config_path, "exec") in module.__dict__
         except Exception:
             e = "Could not compile config file's RC event rules"
             self.logger.exception(e)
