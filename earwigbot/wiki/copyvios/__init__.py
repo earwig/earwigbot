@@ -30,9 +30,10 @@ try:
 except ImportError:
     oauth = None
 
-from earwigbot.wiki.exceptions import *
 from earwigbot.wiki.copyvios.markov import MarkovChain, MarkovChainIntersection
+from earwigbot.wiki.copyvios.parsers import ArticleTextParser, HTMLTextParser
 from earwigbot.wiki.copyvios.search import YahooBOSSSearchEngine
+from earwigbot.wiki.exceptions import *
 
 class CopyvioCheckResult(object):
     def __init__(self, violation, confidence, url, queries, article, chains):
@@ -109,33 +110,6 @@ class CopyvioMixin(object):
 
         raise UnknownSearchEngineError(engine)
 
-    def _copyvio_strip_html(self, html):
-        """
-        STUB
-        """
-        return html
-
-    def _copyvio_strip_article(self, content):
-        """Clean the page's raw text by removing templates and formatting.
-
-        Returns the page's text with all HTML and wikicode formatting removed,
-        including templates, tables, references, and the Bibliography/
-        References/Sources/See also section(s). It retains punctuation
-        (spacing, paragraphs, periods, commas, (semi)-colons, parentheses,
-        quotes) and original capitalization, but not brackets (square and
-        angular), abnormal spacing, nor anything else. HTML entities are
-        replaced by their unicode equivalents.
-
-        STUB
-        """
-        return content
-
-    def _copyvio_chunk_article(self, content, max_chunks):
-        """
-        STUB
-        """
-        return [content]
-
     def _copyvio_compare_content(self, article, url):
         """
         DOCSTRING NEEDED
@@ -144,7 +118,7 @@ class CopyvioMixin(object):
         if not html:
             return 0
 
-        source = MarkovChain(self._copyvio_strip_html(html))
+        source = MarkovChain(HTMLTextParser(html).strip())
         delta = MarkovChainIntersection(article, source)
         return float(delta.size()) / article.size(), (source, delta)
 
@@ -182,8 +156,8 @@ class CopyvioMixin(object):
         empty = MarkovChain("")
         best_chains = (empty, MarkovChainIntersection(empty, empty))
         content = self.get(force)
-        clean = self._copyvio_strip_article(content)
-        chunks = self._copyvio_chunk_article(clean, max_queries)
+        clean = ArticleTextParser(content).strip()
+        chunks = ArticleTextParser(clean).chunk(max_queries)
         article_chain = MarkovChain(clean)
         last_query = time()
 
@@ -236,7 +210,7 @@ class CopyvioMixin(object):
         SearchQueryError will be raised.
         """
         content = self.get(force)
-        clean = self._copyvio_strip_article(content)
+        clean = ArticleTextParser(content).strip()
         article_chain = MarkovChain(clean)
         confidence, chains = self._copyvio_compare_content(article_chain, url)
 
