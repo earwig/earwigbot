@@ -176,7 +176,7 @@ class _BotConfig(object):
         return self._root_dir
 
     @property
-    def config_path(self):
+    def path(self):
         return self._config_path
 
     @property

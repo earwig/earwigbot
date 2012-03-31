@@ -89,7 +89,7 @@ class Watcher(IRCConnection):
             return
         module = imp.new_module("_rc_event_processing_rules")
         try:
-            exec compile(rules, config.config_path, "exec") in module.__dict__
+            exec compile(rules, config.path, "exec") in module.__dict__
         except Exception:
             e = "Could not compile config file's RC event rules"
             self.logger.exception(e)
