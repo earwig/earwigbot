@@ -71,8 +71,8 @@ class Site(object):
     def __init__(self, name=None, project=None, lang=None, base_url=None,
                  article_path=None, script_path=None, sql=None,
                  namespaces=None, login=(None, None), cookiejar=None,
-                 user_agent=None, assert_edit=None, maxlag=None,
-                 search_config=(None, None)):
+                 user_agent=None, use_https=False, assert_edit=None,
+                 maxlag=None, search_config=(None, None)):
         """Constructor for new Site instances.
 
         This probably isn't necessary to call yourself unless you're building a
@@ -100,7 +100,8 @@ class Site(object):
         self._script_path = script_path
         self._namespaces = namespaces
 
-        # Attributes used for API queries: 
+        # Attributes used for API queries:
+        self._use_https = use_https
         self._assert_edit = assert_edit
         self._maxlag = maxlag
         self._max_retries = 5
@@ -138,10 +139,10 @@ class Site(object):
         res = ", ".join((
             "Site(name={_name!r}", "project={_project!r}", "lang={_lang!r}",
             "base_url={_base_url!r}", "article_path={_article_path!r}",
-            "script_path={_script_path!r}", "assert_edit={_assert_edit!r}",
-            "maxlag={_maxlag!r}", "sql={_sql!r}", "login={0}",
-            "user_agent={2!r}", "cookiejar={1})"
-        ))
+            "script_path={_script_path!r}", "use_https={_use_https!r}",
+            "assert_edit={_assert_edit!r}", "maxlag={_maxlag!r}",
+            "sql={_sql_data!r}", "login={0}", "user_agent={2!r}",
+            "cookiejar={1})"))
         name, password = self._login_info
         login = "({0}, {1})".format(repr(name), "hidden" if password else None)
         cookies = self._cookiejar.__class__.__name__
@@ -163,7 +164,9 @@ class Site(object):
 
         This will first attempt to construct an API url from self._base_url and
         self._script_path. We need both of these, or else we'll raise
-        SiteAPIError.
+        SiteAPIError. If self._base_url is protocol-relative (introduced in
+        MediaWiki 1.18), we'll choose HTTPS if self._user_https is True,
+        otherwise HTTP.
 
         We'll encode the given params, adding format=json along the way, as
         well as &assert= and &maxlag= based on self._assert_edit and _maxlag.
@@ -185,7 +188,13 @@ class Site(object):
             e = "Tried to do an API query, but no API URL is known."
             raise SiteAPIError(e)
 
-        url = ''.join((self._base_url, self._script_path, "/api.php"))
+        base_url = self._base_url
+        if base_url.startswith("//"): # Protocol-relative URLs from 1.18
+            if self._use_https:
+                base_url = "https:" + base_url
+            else:
+                base_url = "http:" + base_url
+        url = ''.join((base_url, self._script_path, "/api.php"))
 
         params["format"] = "json"  # This is the only format we understand
         if self._assert_edit:  # If requested, ensure that we're logged in
@@ -194,7 +203,6 @@ class Site(object):
             params["maxlag"] = self._maxlag
 
         data = urlencode(params)
-
         logger.debug("{0} -> {1}".format(url, data))
 
         try:

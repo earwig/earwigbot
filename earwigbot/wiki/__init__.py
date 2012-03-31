@@ -36,9 +36,9 @@ logger.addHandler(_log.NullHandler())
 
 from earwigbot.wiki.constants import *
 from earwigbot.wiki.exceptions import *
-from earwigbot.wiki.functions import *
 
 from earwigbot.wiki.category import Category
 from earwigbot.wiki.page import Page
 from earwigbot.wiki.site import Site
+from earwigbot.wiki.sitesdb import get_site, add_site, remove_site
 from earwigbot.wiki.user import User

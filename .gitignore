@@ -1,19 +1,11 @@
+# Ignore bot-specific files:
+logs/
+config.yml
+sites.db
+.cookies
+
 # Ignore python bytecode:
 *.pyc
 
-# Ignore bot-specific config file:
-config.yml
-
-# Ignore logs directory:
-logs/
-
-# Ignore cookies file:
-.cookies
-
-# Ignore OS X's crud:
+# Ignore OS X's stuff:
 .DS_Store
-
-# Ignore pydev's nonsense:
-.project
-.pydevproject
-.settings/
