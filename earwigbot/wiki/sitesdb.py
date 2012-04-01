@@ -190,10 +190,10 @@ class SitesDBManager(object):
         If the site is not found, return None. An empty sitesdb will be created
         if none exists.
         """
-        query = "SELECT site_name FROM site WHERE site_project = ? and site_lang = ?"
+        query = "SELECT site_name FROM sites WHERE site_project = ? and site_lang = ?"
         with sqlite.connect(self._sitesdb) as conn:
             try:
-                return conn.execute(query, (project, lang)).fetchone()
+                return conn.execute(query, (project, lang)).fetchone()[0]
             except sqlite.OperationalError:
                 self._create_sitesdb()
 
