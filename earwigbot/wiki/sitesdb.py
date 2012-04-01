@@ -193,7 +193,8 @@ class SitesDBManager(object):
         query = "SELECT site_name FROM sites WHERE site_project = ? and site_lang = ?"
         with sqlite.connect(self._sitesdb) as conn:
             try:
-                return conn.execute(query, (project, lang)).fetchone()[0]
+                site = conn.execute(query, (project, lang)).fetchone()
+                return site[0] if site else None
             except sqlite.OperationalError:
                 self._create_sitesdb()
 
