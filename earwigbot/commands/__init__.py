@@ -25,17 +25,16 @@ EarwigBot's IRC Command Manager
 
 This package provides the IRC "commands" used by the bot's front-end component.
 This module contains the BaseCommand class (import with
-`from earwigbot.commands import BaseCommand`) and an internal _CommandManager
-class. This can be accessed through the `command_manager` singleton.
+`from earwigbot.commands import BaseCommand`) and an internal CommandManager
+class. This can be accessed through `bot.commands`.
 """
 
+import imp
 import logging
-import os
-import sys
+from os import listdir, path
+from re import sub
 
-from earwigbot.config import config
-
-__all__ = ["BaseCommand", "command_manager"]
+__all__ = ["BaseCommand", "CommandManager"]
 
 class BaseCommand(object):
     """A base class for commands on IRC.
@@ -88,32 +87,33 @@ class BaseCommand(object):
         pass
 
 
-class _CommandManager(object):
-    def __init__(self):
+class CommandManager(object):
+    def __init__(self, bot):
+        self.bot = bot
         self.logger = logging.getLogger("earwigbot.tasks")
-        self._base_dir = os.path.dirname(os.path.abspath(__file__))
-        self._connection = None
+        self._dirs = [path.dirname(__file__), bot.config.root_dir]
         self._commands = {}
 
-    def _load_command(self, filename):
-        """Load a specific command from a module, identified by filename.
+    def _load_command(self, name, path):
+        """Load a specific command from a module, identified by name and path.
 
-        Given a Connection object and a filename, we'll first try to import
-        it, and if that works, make an instance of the 'Command' class inside
-        (assuming it is an instance of BaseCommand), add it to self._commands,
-        and log the addition. Any problems along the way will either be
-        ignored or logged.
+        We'll first try to import it using imp magic, and if that works, make
+        an instance of the 'Command' class inside (assuming it is an instance
+        of BaseCommand), add it to self._commands, and log the addition. Any
+        problems along the way will either be ignored or logged.
         """
-        # Strip .py from the filename's end and join with our package name:
-        name = ".".join(("commands", filename[:-3]))
+        f, path, desc = imp.find_module(name, [path])
         try:
-             __import__(name)
-        except:
-            self.logger.exception("Couldn't load file {0}".format(filename))
+             module = imp.load_module(name, f, path, desc)
+        except Exception:
+            e = "Couldn't load module {0} from {1}"
+            self.logger.exception(e.format(name, path))
             return
+        finally:
+            f.close()
 
         try:
-            command = sys.modules[name].Command(self._connection)
+            command = module.Command(self.bot.frontend)
         except AttributeError:
             return  # No command in this module
         if not isinstance(command, BaseCommand):
@@ -122,20 +122,16 @@ class _CommandManager(object):
         self._commands[command.name] = command
         self.logger.debug("Added command {0}".format(command.name))
 
-    def load(self, connection):
-        """Load all valid commands into self._commands.
-
-        `connection` is a Connection object that is given to each command's
-        constructor.
-        """
-        self._connection = connection
-
-        files = os.listdir(self._base_dir)
-        files.sort()
-        for filename in files:
-            if filename.startswith("_") or not filename.endswith(".py"):
-                continue
-            self._load_command(filename)
+    def load(self):
+        """Load (or reload) all valid commands into self._commands."""
+        dirs = [path.join(path.dirname(__file__), "commands"),
+                path.join(bot.config.root_dir, "commands")]
+        for dir in dirs:
+            files = listdir(dir)
+            files = [sub("\.pyc?$", "", f) for f in files if f[0] != "_"]
+            files = list(set(files))  # Remove duplicates
+            for filename in sorted(files):
+                self._load_command(filename, dir)
 
         msg = "Found {0} commands: {1}"
         commands = ", ".join(self._commands.keys())
@@ -158,6 +154,3 @@ class _CommandManager(object):
                         e = "Error executing command '{0}'"
                         self.logger.exception(e.format(data.command))
                     break
-
-
-command_manager = _CommandManager()

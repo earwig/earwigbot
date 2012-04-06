@@ -38,14 +38,16 @@ class Watcher(IRCConnection):
     to channels on the IRC frontend.
     """
 
-    def __init__(self, config, frontend=None):
-        self.config = config
+    def __init__(self, bot):
+        self.bot = bot
+        self.config = bot.config
+        self.frontend = bot.frontend
         self.logger = logging.getLogger("earwigbot.watcher")
+
         cf = config.irc["watcher"]
         base = super(Watcher, self)
         base.__init__(cf["host"], cf["port"], cf["nick"], cf["ident"],
                       cf["realname"], self.logger)
-        self.frontend = frontend
         self._prepare_process_hook()
         self._connect()
 

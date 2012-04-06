@@ -36,12 +36,22 @@ class BotUtility(object):
         return __version__
 
     def run(self):
-        print "EarwigBot v{0}\n".format(self.version())
-
-    def main(self):
         root_dir = path.abspath(path.curdir())
         bot = Bot(root_dir)
-        bot.run()
+        try:
+            bot.run()
+        finally:
+            bot.stop()
+
+    def main(self):
+        print "EarwigBot v{0}\n".format(self.version())
+        parser = argparse.ArgumentParser(description=BotUtility.__doc__)
+
+        parser.add_argument("-V", "--version", action="version",
+                            version=self.version())
+
+        args = parser.parse_args()
+#        args.func(args)
 
 
 main = BotUtility().main

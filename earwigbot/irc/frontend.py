@@ -23,7 +23,6 @@
 import logging
 import re
 
-from earwigbot.commands import command_manager
 from earwigbot.irc import IRCConnection, Data, BrokenSocketException
 
 __all__ = ["Frontend"]
@@ -40,14 +39,15 @@ class Frontend(IRCConnection):
     """
     sender_regex = re.compile(":(.*?)!(.*?)@(.*?)\Z")
 
-    def __init__(self, config):
-        self.config = config
+    def __init__(self, bot):
+        self.bot = bot
+        self.config = bot.config
         self.logger = logging.getLogger("earwigbot.frontend")
+
         cf = config.irc["frontend"]
         base = super(Frontend, self)
         base.__init__(cf["host"], cf["port"], cf["nick"], cf["ident"],
                       cf["realname"], self.logger)
-        command_manager.load(self)
         self._connect()
 
     def _process_message(self, line):

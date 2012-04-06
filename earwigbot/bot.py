@@ -23,9 +23,12 @@
 import threading
 from time import sleep, time
 
+from earwigbot.commands import CommandManager
 from earwigbot.config import BotConfig
 from earwigbot.irc import Frontend, Watcher
 from earwigbot.tasks import task_manager
+
+__all__ = ["Bot"]
 
 class Bot(object):
     """
@@ -46,15 +49,13 @@ class Bot(object):
     def __init__(self, root_dir):
         self.config = BotConfig(root_dir)
         self.logger = logging.getLogger("earwigbot")
+        self.commands = CommandManager(self)
+        self.tasks = None
         self.frontend = None
         self.watcher = None
 
         self._keep_scheduling = True
         self._lock = threading.Lock()
-
-    def _start_thread(self, name, target):
-        thread = threading.Thread(name=name, target=target)
-        thread.start()
 
     def _wiki_scheduler(self):
         while self._keep_scheduling:
@@ -68,17 +69,18 @@ class Bot(object):
     def _start_components(self):
         if self.config.components.get("irc_frontend"):
             self.logger.info("Starting IRC frontend")
-            self.frontend = Frontend(self.config)
-            self._start_thread(name, self.frontend.loop)
+            self.frontend = Frontend(self)
+            self.commands.load()
+            threading.Thread(name=name, target=self.frontend.loop).start()
 
         if self.config.components.get("irc_watcher"):
             self.logger.info("Starting IRC watcher")
-            self.watcher = Watcher(self.config, self.frontend)
-            self._start_thread(name, self.watcher.loop)
+            self.watcher = Watcher(self)
+            threading.Thread(name=name, target=self.watcher.loop).start()
 
         if self.config.components.get("wiki_scheduler"):
             self.logger.info("Starting wiki scheduler")
-            self._start_thread(name, self._wiki_scheduler)
+            threading.Thread(name=name, target=self._wiki_scheduler).start()
 
     def _loop(self):
         while 1:
@@ -104,6 +106,7 @@ class Bot(object):
         with self._lock:
             self.config.load()
             #if self.config.components.get("irc_frontend"):
+            #   self.commands.load()
 
     def stop(self):
         if self.frontend:
@@ -111,3 +114,4 @@ class Bot(object):
         if self.watcher:
             self.watcher.stop()
         self._keep_scheduling = False
+        sleep(3)  # Give a few seconds to finish closing IRC connections

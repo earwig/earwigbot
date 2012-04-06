@@ -30,8 +30,10 @@ from setuptools import setup
 setup(
     name = "earwigbot",
     entry_points = {"console_scripts": ["earwigbot = earwigbot.util:main"]},
-    install_requires = ["PyYAML>=3.10", "oursql>=0.9.3", "oauth2>=1.5.211",
-                        "numpy>=1.6.1", "matplotlib>=1.1.0"],
+    install_requires = ["PyYAML>=3.10",
+                        "oursql>=0.9.3",
+                        "oauth2>=1.5.211",
+                        "matplotlib>=1.1.0"],
     version = "0.1.dev",
     author = "Ben Kurtovic",
     author_email = "ben.kurtovic@verizon.net",
