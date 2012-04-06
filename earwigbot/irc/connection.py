@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 import socket
-import threading
+from threading import Lock
 from time import sleep
 
 __all__ = ["BrokenSocketException", "IRCConnection"]
@@ -36,17 +36,16 @@ class BrokenSocketException(Exception):
 class IRCConnection(object):
     """A class to interface with IRC."""
 
-    def __init__(self, host, port, nick, ident, realname, logger):
+    def __init__(self, host, port, nick, ident, realname):
         self.host = host
         self.port = port
         self.nick = nick
         self.ident = ident
         self.realname = realname
-        self.logger = logger
         self._is_running = False
 
         # A lock to prevent us from sending two messages at once:
-        self._lock = threading.Lock()
+        self._send_lock = Lock()
 
     def _connect(self):
         """Connect to our IRC server."""
@@ -78,8 +77,7 @@ class IRCConnection(object):
 
     def _send(self, msg):
         """Send data to the server."""
-        # Ensure that we only send one message at a time with a blocking lock:
-        with self._lock:
+        with self._send_lock:
             self._sock.sendall(msg + "\r\n")
             self.logger.debug(msg)
 

@@ -30,9 +30,9 @@ class. This can be accessed through `bot.commands`.
 """
 
 import imp
-import logging
 from os import listdir, path
 from re import sub
+from threading import Lock
 
 __all__ = ["BaseCommand", "CommandManager"]
 
@@ -49,21 +49,24 @@ class BaseCommand(object):
     # command subclass:
     hooks = ["msg"]
 
-    def __init__(self, connection):
+    def __init__(self, bot):
         """Constructor for new commands.
 
         This is called once when the command is loaded (from
-        commands._load_command()). `connection` is a Connection object,
-        allowing us to do self.connection.say(), self.connection.send(), etc,
-        from within a method.
+        commands._load_command()). `bot` is out base Bot object. Generally you
+        shouldn't need to override this; if you do, call
+        super(Command, self).__init__() first.
         """
-        self.connection = connection
-        logger_name = ".".join(("earwigbot", "commands", self.name))
-        self.logger = logging.getLogger(logger_name)
-        self.logger.setLevel(logging.DEBUG)
+        self.bot = bot
+        self.logger = bot.commands.getLogger(self.name)
+
+    def _execute(self, data):
+        """Make a quick connection alias and then process() the message."""
+        self.connection = self.bot.frontend
+        self.process(data)
 
     def check(self, data):
-        """Returns whether this command should be called in response to 'data'.
+        """Return whether this command should be called in response to 'data'.
 
         Given a Data() instance, return True if we should respond to this
         activity, or False if we should ignore it or it doesn't apply to us.
@@ -72,17 +75,16 @@ class BaseCommand(object):
         return False. This is the default behavior of check(); you need only
         override it if you wish to change that.
         """
-        if data.is_command and data.command == self.name:
-            return True
-        return False
+        return data.is_command and data.command == self.name
 
     def process(self, data):
         """Main entry point for doing a command.
 
         Handle an activity (usually a message) on IRC. At this point, thanks
         to self.check() which is called automatically by the command handler,
-        we know this is something we should respond to, so (usually) something
-        like 'if data.command != "command_name": return' is unnecessary.
+        we know this is something we should respond to, so something like
+        `if data.command != "command_name": return` is usually unnecessary.
+        Note that 
         """
         pass
 
@@ -90,9 +92,9 @@ class BaseCommand(object):
 class CommandManager(object):
     def __init__(self, bot):
         self.bot = bot
-        self.logger = logging.getLogger("earwigbot.tasks")
-        self._dirs = [path.dirname(__file__), bot.config.root_dir]
+        self.logger = bot.logger.getLogger("commands")
         self._commands = {}
+        self._command_access_lock = Lock()
 
     def _load_command(self, name, path):
         """Load a specific command from a module, identified by name and path.
@@ -113,7 +115,7 @@ class CommandManager(object):
             f.close()
 
         try:
-            command = module.Command(self.bot.frontend)
+            command = module.Command(self.bot)
         except AttributeError:
             return  # No command in this module
         if not isinstance(command, BaseCommand):
@@ -124,14 +126,16 @@ class CommandManager(object):
 
     def load(self):
         """Load (or reload) all valid commands into self._commands."""
-        dirs = [path.join(path.dirname(__file__), "commands"),
-                path.join(bot.config.root_dir, "commands")]
-        for dir in dirs:
-            files = listdir(dir)
-            files = [sub("\.pyc?$", "", f) for f in files if f[0] != "_"]
-            files = list(set(files))  # Remove duplicates
-            for filename in sorted(files):
-                self._load_command(filename, dir)
+        self._commands = {}
+        with self._command_access_lock:
+            dirs = [path.join(path.dirname(__file__), "commands"),
+                    path.join(bot.config.root_dir, "commands")]
+            for dir in dirs:
+                files = listdir(dir)
+                files = [sub("\.pyc?$", "", f) for f in files if f[0] != "_"]
+                files = list(set(files))  # Remove duplicates
+                for filename in sorted(files):
+                    self._load_command(filename, dir)
 
         msg = "Found {0} commands: {1}"
         commands = ", ".join(self._commands.keys())
@@ -143,14 +147,13 @@ class CommandManager(object):
 
     def check(self, hook, data):
         """Given an IRC event, check if there's anything we can respond to."""
-        # Parse command arguments into data.command and data.args:
-        data.parse_args()
-        for command in self._commands.values():
-            if hook in command.hooks:
-                if command.check(data):
-                    try:
-                        command.process(data)
-                    except Exception:
-                        e = "Error executing command '{0}'"
-                        self.logger.exception(e.format(data.command))
-                    break
+        with self._command_access_lock:
+            for command in self._commands.values():
+                if hook in command.hooks:
+                    if command.check(data):
+                        try:
+                            command._execute(data)
+                        except Exception:
+                            e = "Error executing command '{0}':"
+                            self.logger.exception(e.format(data.command))
+                        break

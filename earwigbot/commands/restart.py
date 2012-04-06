@@ -27,11 +27,20 @@ class Command(BaseCommand):
     """Restart the bot. Only the owner can do this."""
     name = "restart"
 
+    def check(self, data):
+        commands = ["restart", "reload"]
+        return data.is_command and data.command in commands
+
     def process(self, data):
         if data.host not in config.irc["permissions"]["owners"]:
             msg = "you must be a bot owner to use this command."
             self.connection.reply(data, msg)
             return
 
-        self.connection.logger.info("Restarting bot per owner request")
-        self.connection.stop()
+        if data.command == "restart":
+            self.connection.logger.info("Restarting bot per owner request")
+            self.connection.bot.restart()
+
+        elif data.command == "reload":
+            self.connection.bot.commands.load()
+            self.connection.logger.info("IRC commands reloaded")

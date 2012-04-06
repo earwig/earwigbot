@@ -20,10 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import logging
 import re
 
-from earwigbot.irc import IRCConnection, Data, BrokenSocketException
+from earwigbot.irc import IRCConnection, Data
 
 __all__ = ["Frontend"]
 
@@ -41,13 +40,12 @@ class Frontend(IRCConnection):
 
     def __init__(self, bot):
         self.bot = bot
-        self.config = bot.config
-        self.logger = logging.getLogger("earwigbot.frontend")
+        self.logger = bot.logger.getLogger("frontend")
 
-        cf = config.irc["frontend"]
+        cf = bot.config.irc["frontend"]
         base = super(Frontend, self)
         base.__init__(cf["host"], cf["port"], cf["nick"], cf["ident"],
-                      cf["realname"], self.logger)
+                      cf["realname"])
         self._connect()
 
     def _process_message(self, line):
@@ -58,36 +56,35 @@ class Frontend(IRCConnection):
         if line[1] == "JOIN":
             data.nick, data.ident, data.host = self.sender_regex.findall(line[0])[0]
             data.chan = line[2]
-            # Check for 'join' hooks in our commands:
-            command_manager.check("join", data)
+            data.parse_args()
+            self.bot.commands.check("join", data)
 
         elif line[1] == "PRIVMSG":
             data.nick, data.ident, data.host = self.sender_regex.findall(line[0])[0]
             data.msg = " ".join(line[3:])[1:]
             data.chan = line[2]
+            data.parse_args()
 
-            if data.chan == self.config.irc["frontend"]["nick"]:
+            if data.chan == self.bot.config.irc["frontend"]["nick"]:
                 # This is a privmsg to us, so set 'chan' as the nick of the
                 # sender, then check for private-only command hooks:
                 data.chan = data.nick
-                command_manager.check("msg_private", data)
+                self.bot.commands.check("msg_private", data)
             else:
                 # Check for public-only command hooks:
-                command_manager.check("msg_public", data)
+                self.bot.commands.check("msg_public", data)
 
             # Check for command hooks that apply to all messages:
-            command_manager.check("msg", data)
+            self.bot.commands.check("msg", data)
 
-        # If we are pinged, pong back:
-        elif line[0] == "PING":
+        elif line[0] == "PING":  # If we are pinged, pong back
             self.pong(line[1])
 
-        # On successful connection to the server:
-        elif line[1] == "376":
+        elif line[1] == "376":  # On successful connection to the server
             # If we're supposed to auth to NickServ, do that:
             try:
-                username = self.config.irc["frontend"]["nickservUsername"]
-                password = self.config.irc["frontend"]["nickservPassword"]
+                username = self.bot.config.irc["frontend"]["nickservUsername"]
+                password = self.bot.config.irc["frontend"]["nickservPassword"]
             except KeyError:
                 pass
             else:
@@ -95,5 +92,5 @@ class Frontend(IRCConnection):
                 self.say("NickServ", msg)
 
             # Join all of our startup channels:
-            for chan in self.config.irc["frontend"]["channels"]:
+            for chan in self.bot.config.irc["frontend"]["channels"]:
                 self.join(chan)

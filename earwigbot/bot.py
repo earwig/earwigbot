@@ -54,23 +54,13 @@ class Bot(object):
         self.frontend = None
         self.watcher = None
 
-        self._keep_scheduling = True
-        self._lock = threading.Lock()
+        self.component_lock = threading.Lock()
+        self._keep_looping = True
 
-    def _wiki_scheduler(self):
-        while self._keep_scheduling:
-            time_start = time()
-            task_manager.schedule()
-            time_end = time()
-            time_diff = time_start - time_end
-            if time_diff < 60:  # Sleep until the next minute
-                sleep(60 - time_diff)    
-
-    def _start_components(self):
+    def _start_irc_components(self):
         if self.config.components.get("irc_frontend"):
             self.logger.info("Starting IRC frontend")
             self.frontend = Frontend(self)
-            self.commands.load()
             threading.Thread(name=name, target=self.frontend.loop).start()
 
         if self.config.components.get("irc_watcher"):
@@ -78,17 +68,35 @@ class Bot(object):
             self.watcher = Watcher(self)
             threading.Thread(name=name, target=self.watcher.loop).start()
 
+    def _start_wiki_scheduler(self):
+        def wiki_scheduler():
+            while self._keep_looping:
+                time_start = time()
+                task_manager.schedule()
+                time_end = time()
+                time_diff = time_start - time_end
+                if time_diff < 60:  # Sleep until the next minute
+                    sleep(60 - time_diff)
+
         if self.config.components.get("wiki_scheduler"):
             self.logger.info("Starting wiki scheduler")
-            threading.Thread(name=name, target=self._wiki_scheduler).start()
+            threading.Thread(name=name, target=wiki_scheduler).start()
+
+    def _stop_irc_components(self):
+        if self.frontend:
+            self.frontend.stop()
+        if self.watcher:
+            self.watcher.stop()
 
     def _loop(self):
-        while 1:
-            with self._lock:
+        while self._keep_looping:
+            with self.component_lock:
                 if self.frontend and self.frontend.is_stopped():
-                    self.frontend._connect()
+                    self.frontend = Frontend(self)
+                    threading.Thread(name=name, target=self.frontend.loop).start()
                 if self.watcher and self.watcher.is_stopped():
-                    self.watcher._connect()
+                    self.watcher = Watcher(self)
+                    threading.Thread(name=name, target=self.watcher.loop).start()
             sleep(5)
 
     def run(self):
@@ -97,21 +105,20 @@ class Bot(object):
         self.config.decrypt(config.wiki, "search", "credentials", "key")
         self.config.decrypt(config.wiki, "search", "credentials", "secret")
         self.config.decrypt(config.irc, "frontend", "nickservPassword")
-        self.config.decrypt(config.irc, "watcher", "nickservPassword")            
-        self._start_components()
+        self.config.decrypt(config.irc, "watcher", "nickservPassword")       
+        self.commands.load()     
+        self._start_irc_components()
+        self._start_wiki_scheduler()
         self._loop()
 
-    def reload(self):
-        #components = self.config.components
-        with self._lock:
+    def restart(self):
+        with self.component_lock:
+            self._stop_irc_components()
             self.config.load()
-            #if self.config.components.get("irc_frontend"):
-            #   self.commands.load()
+            self.commands.load()
+            self._start_irc_components()
 
     def stop(self):
-        if self.frontend:
-            self.frontend.stop()
-        if self.watcher:
-            self.watcher.stop()
-        self._keep_scheduling = False
+        self._stop_irc_components()
+        self._keep_looping = False
         sleep(3)  # Give a few seconds to finish closing IRC connections
