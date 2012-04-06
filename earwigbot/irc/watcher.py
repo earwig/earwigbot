@@ -33,8 +33,8 @@ class Watcher(IRCConnection):
     The IRC watcher runs on a wiki recent-changes server and listens for
     edits. Users cannot interact with this part of the bot. When an event
     occurs, we run it through some rules stored in our config, which can result
-    in wiki bot tasks being started (located in tasks/) or messages being sent
-    to channels on the IRC frontend.
+    in wiki bot tasks being started or messages being sent to channels on the
+    IRC frontend.
     """
 
     def __init__(self, bot):
@@ -77,8 +77,9 @@ class Watcher(IRCConnection):
     def _prepare_process_hook(self):
         """Create our RC event process hook from information in config.
 
-        This will get put in the function self._process_hook, which takes an RC
-        object and returns a list of frontend channels to report this event to.
+        This will get put in the function self._process_hook, which takes the
+        Bot object and an RC object and returns a list of frontend channels to
+        report this event to.
         """
         # Set a default RC process hook that does nothing:
         self._process_hook = lambda rc: ()
@@ -98,7 +99,7 @@ class Watcher(IRCConnection):
         try:
             self._process_hook = module.process
         except AttributeError:
-            e = "RC event rules compiled correctly, but no process(rc) function was found"
+            e = "RC event rules compiled correctly, but no process(bot, rc) function was found"
             self.logger.error(e)
             return
 
@@ -110,7 +111,7 @@ class Watcher(IRCConnection):
         self._prepare_process_hook() from information in the "rules" section of
         our config.
         """
-        chans = self._process_hook(rc)
+        chans = self._process_hook(self.bot, rc)
         with self.bot.component_lock:
             frontend = self.bot.frontend
             if chans and frontend and not frontend.is_stopped():

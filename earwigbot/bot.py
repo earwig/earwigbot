@@ -34,8 +34,7 @@ __all__ = ["Bot"]
 class Bot(object):
     """
     The Bot class is the core of EarwigBot, essentially responsible for
-    starting the various bot components and making sure they are all happy. An
-    explanation of the different components follows:
+    starting the various bot components and making sure they are all happy.
 
     EarwigBot has three components that can run independently of each other: an
     IRC front-end, an IRC watcher, and a wiki scheduler.
@@ -45,6 +44,12 @@ class Bot(object):
       edits. Users cannot interact with this part of the bot.
     * The wiki scheduler runs wiki-editing bot tasks in separate threads at
       user-defined times through a cron-like interface.
+ 
+    The Bot() object is accessable from within commands and tasks as self.bot.
+    This is the primary way to access data from other components of the bot.
+    For example, our BotConfig object is accessable from bot.config, tasks
+    can be started with bot.tasks.start(), and sites can be loaded from the
+    wiki toolset with bot.wiki.get_site().
     """
 
     def __init__(self, root_dir):
