@@ -30,7 +30,6 @@ class Command(BaseCommand):
     name = "help"
 
     def process(self, data):
-        self.cmnds = self.bot.commands.get_all()
         if not data.args:
             self.do_main_help(data)
         else:
@@ -39,7 +38,7 @@ class Command(BaseCommand):
     def do_main_help(self, data):
         """Give the user a general help message with a list of all commands."""
         msg = "Hi, I'm a bot! I have {0} commands loaded: {1}. You can get help for any command with '!help <command>'."
-        cmnds = sorted(self.cmnds.keys())
+        cmnds = sorted(self.bot.commands)
         msg = msg.format(len(cmnds), ', '.join(cmnds))
         self.connection.reply(data, msg)
 
@@ -53,13 +52,14 @@ class Command(BaseCommand):
         dummy.command = command.lower()
         dummy.is_command = True
 
-        for cmnd in self.cmnds.values():
+        for cmnd_name in self.bot.commands:
+            cmnd = self.bot.commands.get(cmnd_name)
             if not cmnd.check(dummy):
                 continue
             if cmnd.__doc__:
                 doc = cmnd.__doc__.replace("\n", "")
                 doc = re.sub("\s\s+", " ", doc)
-                msg = "info for command \x0303{0}\x0301: \"{1}\""
+                msg = "help for command \x0303{0}\x0301: \"{1}\""
                 self.connection.reply(data, msg.format(command, doc))
                 return
             break

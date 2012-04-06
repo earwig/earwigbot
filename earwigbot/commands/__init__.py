@@ -71,6 +71,8 @@ class BaseCommand(object):
 
         Given a Data() instance, return True if we should respond to this
         activity, or False if we should ignore it or it doesn't apply to us.
+        Be aware that since this is called for each message sent on IRC, it
+        should not be cheap to execute and unlikely to throw exceptions.
 
         Most commands return True if data.command == self.name, otherwise they
         return False. This is the default behavior of check(); you need only
@@ -96,6 +98,10 @@ class CommandManager(object):
         self.logger = bot.logger.getLogger("commands")
         self._commands = {}
         self._command_access_lock = Lock()
+
+    def __iter__(self):
+        for name in self._commands:
+            yield name
 
     def _load_command(self, name, path):
         """Load a specific command from a module, identified by name and path.
@@ -148,10 +154,6 @@ class CommandManager(object):
         commands = ", ".join(self._commands.keys())
         self.logger.info(msg.format(len(self._commands), commands))
 
-    def get_all(self):
-        """Return our dict of all loaded commands."""
-        return self._commands
-
     def check(self, hook, data):
         """Given an IRC event, check if there's anything we can respond to."""
         with self._command_access_lock:
@@ -164,3 +166,10 @@ class CommandManager(object):
                             e = "Error executing command '{0}':"
                             self.logger.exception(e.format(data.command))
                         break
+
+    def get(self, command_name):
+        """Return the class instance associated with a certain command name.
+
+        Will raise KeyError if the command is not found.
+        """
+        return self._command[command_name]

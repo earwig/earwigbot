@@ -139,6 +139,10 @@ class TaskManager(object):
         self._tasks = {}
         self._task_access_lock = Lock()
 
+    def __iter__(self):
+        for name in self._tasks:
+            yield name
+
     def _wrapper(self, task, **kwargs):
         """Wrapper for task classes: run the task and catch any errors."""
         try:
@@ -239,7 +243,3 @@ class TaskManager(object):
         Will raise KeyError if the task is not found.
         """
         return self._tasks[task_name]
-
-    def get_all(self):
-        """Return our dict of all loaded tasks."""
-        return self._tasks

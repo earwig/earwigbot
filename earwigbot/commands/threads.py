@@ -103,13 +103,9 @@ class Command(BaseCommand):
     def do_listall(self):
         """With !tasks listall or !tasks all, list all loaded tasks, and report
         whether they are currently running or idle."""
-        all_tasks = self.bot.tasks.get_all().keys()
         threads = threading.enumerate()
         tasklist = []
-
-        all_tasks.sort()
-
-        for task in all_tasks:
+        for task in sorted(self.bot.tasks):
             threadlist = [t for t in threads if t.name.startswith(task)]
             ids = [str(t.ident) for t in threadlist]
             if not ids:
@@ -144,9 +140,9 @@ class Command(BaseCommand):
             self.connection.reply(data, msg)
             return
 
-        if task_name not in self.bot.tasks.get_all().keys():
+        if task_name not in self.bot.tasks:
             # This task does not exist or hasn't been loaded:
-            msg = "task could not be found; either tasks/{0}.py doesn't exist, or it wasn't loaded correctly."
+            msg = "task could not be found; either it doesn't exist, or it wasn't loaded correctly."
             self.connection.reply(data, msg.format(task_name))
             return
 
