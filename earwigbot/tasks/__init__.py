@@ -213,10 +213,6 @@ class _TaskManager(object):
         task_thread = threading.Thread(target=func)
         start_time = time.strftime("%b %d %H:%M:%S")
         task_thread.name = "{0} ({1})".format(task_name, start_time)
-
-        # Stop bot task threads automagically if the main bot stops:
-        task_thread.daemon = True
-
         task_thread.start()
 
     def get(self, task_name):

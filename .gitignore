@@ -1,9 +1,3 @@
-# Ignore bot-specific files:
-logs/
-config.yml
-sites.db
-.cookies
-
 # Ignore python bytecode:
 *.pyc
 

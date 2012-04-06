@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 # -*- coding: utf-8  -*-
 #
 # Copyright (C) 2009-2012 by Ben Kurtovic <ben.kurtovic@verizon.net>
@@ -20,18 +21,30 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.commands import BaseCommand
-from earwigbot.config import config
+import argparse
+from os import path
 
-class Command(BaseCommand):
-    """Restart the bot. Only the owner can do this."""
-    name = "restart"
+from earwigbot import __version__
+from earwigbot.bot import Bot
 
-    def process(self, data):
-        if data.host not in config.irc["permissions"]["owners"]:
-            msg = "you must be a bot owner to use this command."
-            self.connection.reply(data, msg)
-            return
+class BotUtility(object):
+    """
+    DOCSTRING NEEDED
+    """
 
-        self.connection.logger.info("Restarting bot per owner request")
-        self.connection.stop()
+    def version(self):
+        return __version__
+
+    def run(self):
+        print "EarwigBot v{0}\n".format(self.version())
+
+    def main(self):
+        root_dir = path.abspath(path.curdir())
+        bot = Bot(root_dir)
+        bot.run()
+
+
+main = BotUtility().main
+
+if __name__ == "__main__":
+    main()

@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 # -*- coding: utf-8  -*-
 #
 # Copyright (C) 2009-2012 by Ben Kurtovic <ben.kurtovic@verizon.net>
@@ -20,18 +21,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.commands import BaseCommand
-from earwigbot.config import config
+"""
+DOCSTRING NEEDED
+"""
 
-class Command(BaseCommand):
-    """Restart the bot. Only the owner can do this."""
-    name = "restart"
+from setuptools import setup
 
-    def process(self, data):
-        if data.host not in config.irc["permissions"]["owners"]:
-            msg = "you must be a bot owner to use this command."
-            self.connection.reply(data, msg)
-            return
-
-        self.connection.logger.info("Restarting bot per owner request")
-        self.connection.stop()
+setup(
+    name = "earwigbot",
+    entry_points = {"console_scripts": ["earwigbot = earwigbot.util:main"]},
+    install_requires = ["PyYAML>=3.10", "oursql>=0.9.3", "oauth2>=1.5.211",
+                        "numpy>=1.6.1", "matplotlib>=1.1.0"],
+    version = "0.1.dev",
+    author = "Ben Kurtovic",
+    author_email = "ben.kurtovic@verizon.net",
+    license = "MIT License",
+    url = "https://github.com/earwig/earwigbot",
+)

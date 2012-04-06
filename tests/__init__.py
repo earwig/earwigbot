@@ -23,7 +23,7 @@
 """
 EarwigBot's Unit Tests
 
-This module __init__ file provides some support code for unit tests.
+This package __init__ file provides some support code for unit tests.
 
 CommandTestCase is a subclass of unittest.TestCase that provides setUp() for
 creating a fake connection and some other helpful methods. It uses 
@@ -91,6 +91,7 @@ class CommandTestCase(TestCase):
     def make_join(self):
         line = ":Foo!bar@example.com JOIN :#channel".strip().split()
         return self.maker(line, line[2][1:])
+
 
 class FakeConnection(IRCConnection):
     def __init__(self):

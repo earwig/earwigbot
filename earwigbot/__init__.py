@@ -31,6 +31,4 @@ __license__ = "MIT License"
 __version__ = "0.1.dev"
 __email__ = "ben.kurtovic@verizon.net"
 
-from earwigbot import (
-    blowfish, commands, config, irc, main, runner, tasks, tests, wiki
-)
+from earwigbot import blowfish, bot, commands, config, irc, tasks, util, wiki

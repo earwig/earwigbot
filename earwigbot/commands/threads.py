@@ -78,10 +78,9 @@ class Command(BaseCommand):
         for thread in threads:
             tname = thread.name
             if tname == "MainThread":
-                tname = self.get_main_thread_name()
-                t = "\x0302{0}\x0301 (as main thread, id {1})"
-                normal_threads.append(t.format(tname, thread.ident))
-            elif tname in ["irc-frontend", "irc-watcher", "wiki-scheduler"]:
+                t = "\x0302MainThread\x0301 (id {1})"
+                normal_threads.append(t.format(thread.ident))
+            elif tname in config.components:
                 t = "\x0302{0}\x0301 (id {1})"
                 normal_threads.append(t.format(tname, thread.ident))
             elif tname.startswith("reminder"):
@@ -157,12 +156,3 @@ class Command(BaseCommand):
         task_manager.start(task_name, **data.kwargs)
         msg = "task \x0302{0}\x0301 started.".format(task_name)
         self.connection.reply(data, msg)
-
-    def get_main_thread_name(self):
-        """Return the "proper" name of the MainThread."""
-        if "irc_frontend" in config.components:
-            return "irc-frontend"
-        elif "wiki_schedule" in config.components:
-            return "wiki-scheduler"
-        else:
-            return "irc-watcher"

@@ -24,7 +24,6 @@ import imp
 import logging
 
 from earwigbot.irc import IRCConnection, RC, BrokenSocketException
-from earwigbot.config import config
 
 __all__ = ["Watcher"]
 
@@ -39,7 +38,8 @@ class Watcher(IRCConnection):
     to channels on the IRC frontend.
     """
 
-    def __init__(self, frontend=None):
+    def __init__(self, config, frontend=None):
+        self.config = config
         self.logger = logging.getLogger("earwigbot.watcher")
         cf = config.irc["watcher"]
         base = super(Watcher, self)
@@ -58,7 +58,7 @@ class Watcher(IRCConnection):
 
             # Ignore messages originating from channels not in our list, to
             # prevent someone PMing us false data:
-            if chan not in config.irc["watcher"]["channels"]:
+            if chan not in self.config.irc["watcher"]["channels"]:
                 return
 
             msg = " ".join(line[3:])[1:]
@@ -72,7 +72,7 @@ class Watcher(IRCConnection):
 
         # When we've finished starting up, join all watcher channels:
         elif line[1] == "376":
-            for chan in config.irc["watcher"]["channels"]:
+            for chan in self.config.irc["watcher"]["channels"]:
                 self.join(chan)
 
     def _prepare_process_hook(self):
@@ -84,12 +84,12 @@ class Watcher(IRCConnection):
         # Set a default RC process hook that does nothing:
         self._process_hook = lambda rc: ()
         try:
-            rules = config.data["rules"]
+            rules = self.config.data["rules"]
         except KeyError:
             return
         module = imp.new_module("_rc_event_processing_rules")
         try:
-            exec compile(rules, config.path, "exec") in module.__dict__
+            exec compile(rules, self.config.path, "exec") in module.__dict__
         except Exception:
             e = "Could not compile config file's RC event rules"
             self.logger.exception(e)

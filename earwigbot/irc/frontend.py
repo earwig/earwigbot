@@ -25,7 +25,6 @@ import re
 
 from earwigbot.commands import command_manager
 from earwigbot.irc import IRCConnection, Data, BrokenSocketException
-from earwigbot.config import config
 
 __all__ = ["Frontend"]
 
@@ -41,7 +40,8 @@ class Frontend(IRCConnection):
     """
     sender_regex = re.compile(":(.*?)!(.*?)@(.*?)\Z")
 
-    def __init__(self):
+    def __init__(self, config):
+        self.config = config
         self.logger = logging.getLogger("earwigbot.frontend")
         cf = config.irc["frontend"]
         base = super(Frontend, self)
@@ -66,7 +66,7 @@ class Frontend(IRCConnection):
             data.msg = " ".join(line[3:])[1:]
             data.chan = line[2]
 
-            if data.chan == config.irc["frontend"]["nick"]:
+            if data.chan == self.config.irc["frontend"]["nick"]:
                 # This is a privmsg to us, so set 'chan' as the nick of the
                 # sender, then check for private-only command hooks:
                 data.chan = data.nick
@@ -86,8 +86,8 @@ class Frontend(IRCConnection):
         elif line[1] == "376":
             # If we're supposed to auth to NickServ, do that:
             try:
-                username = config.irc["frontend"]["nickservUsername"]
-                password = config.irc["frontend"]["nickservPassword"]
+                username = self.config.irc["frontend"]["nickservUsername"]
+                password = self.config.irc["frontend"]["nickservPassword"]
             except KeyError:
                 pass
             else:
@@ -95,5 +95,5 @@ class Frontend(IRCConnection):
                 self.say("NickServ", msg)
 
             # Join all of our startup channels:
-            for chan in config.irc["frontend"]["channels"]:
+            for chan in self.config.irc["frontend"]["channels"]:
                 self.join(chan)

@@ -20,31 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""
-EarwigBot's YAML Config File Parser
-
-This handles all tasks involving reading and writing to our config file,
-including encrypting and decrypting passwords and making a new config file from
-scratch at the inital bot run.
-
-Usually you'll just want to do "from earwigbot.config import config", which
-returns a singleton _BotConfig object, with data accessible from various
-attributes and functions:
-
-* config.components  - enabled components
-* config.wiki        - information about wiki-editing
-* config.tasks       - information for bot tasks
-* config.irc         - information about IRC
-* config.metadata    - miscellaneous information
-* config.schedule()  - tasks scheduled to run at a given time
-
-Additionally, _BotConfig has some functions used in config loading:
-* config.load()     - loads and parses our config file, returning True if
-                      passwords are stored encrypted or False otherwise
-* config.decrypt()  - given a key, decrypts passwords inside our config
-                      variables; won't work if passwords aren't encrypted
-"""
-
+from getpass import getpass
 import logging
 import logging.handlers
 from os import mkdir, path
@@ -53,44 +29,36 @@ import yaml
 
 from earwigbot import blowfish
 
-__all__ = ["config"]
+class BotConfig(object):
+    """
+    EarwigBot's YAML Config File Manager
 
-class _ConfigNode(object):
-    def __iter__(self):
-        for key in self.__dict__.iterkeys():
-            yield key
+    This handles all tasks involving reading and writing to our config file,
+    including encrypting and decrypting passwords and making a new config file
+    from scratch at the inital bot run.
 
-    def __getitem__(self, item):
-        return self.__dict__.__getitem__(item)
+    BotConfig has a few properties and functions, including the following:
+    * config.root_dir    - bot's working directory; contains config.yml, logs/
+    * config.path        - path to the bot's config file
+    * config.components  - enabled components
+    * config.wiki        - information about wiki-editing
+    * config.tasks       - information for bot tasks
+    * config.irc         - information about IRC
+    * config.metadata    - miscellaneous information
+    * config.schedule()  - tasks scheduled to run at a given time
 
-    def _dump(self):
-        data = self.__dict__.copy()
-        for key, val in data.iteritems():
-            if isinstance(val, _ConfigNode):
-                data[key] = val._dump()
-        return data
+    BotConfig also has some functions used in config loading:
+    * config.load()     - loads and parses our config file, returning True if
+                          passwords are stored encrypted or False otherwise;
+                          can also be used to easily reload config
+    * config.decrypt()  - given a key, decrypts passwords inside our config
+                          variables, and remembers to decrypt the password if
+                          config is reloaded; won't do anything if passwords
+                          aren't encrypted
+    """
 
-    def _load(self, data):
-        self.__dict__ = data.copy()
-
-    def _decrypt(self, key, intermediates, item):
-        base = self.__dict__
-        try:
-            for inter in intermediates:
-                base = base[inter]
-        except KeyError:
-            return
-        if item in base:
-            base[item] = blowfish.decrypt(key, base[item])
-
-    def get(self, *args, **kwargs):
-        return self.__dict__.get(*args, **kwargs)
-
-
-class _BotConfig(object):
-    def __init__(self):
-        self._script_dir = path.dirname(path.abspath(__file__))
-        self._root_dir = path.split(self._script_dir)[0]
+    def __init__(self, root_dir):
+        self._root_dir = root_dir
         self._config_path = path.join(self._root_dir, "config.yml")
         self._log_dir = path.join(self._root_dir, "logs")
         self._decryption_key = None
@@ -104,17 +72,17 @@ class _BotConfig(object):
 
         self._nodes = [self._components, self._wiki, self._tasks, self._irc,
                        self._metadata]
+        self._decryptable_nodes = []
 
     def _load(self):
-        """Load data from our JSON config file (config.yml) into _config."""
+        """Load data from our JSON config file (config.yml) into self._data."""
         filename = self._config_path
         with open(filename, 'r') as fp:
             try:
                 self._data = yaml.load(fp)
             except yaml.YAMLError as error:
                 print "Error parsing config file {0}:".format(filename)
-                print error
-                exit(1)
+                raise
 
     def _setup_logging(self):
         """Configures the logging module so it works the way we want it to."""
@@ -135,7 +103,7 @@ class _BotConfig(object):
                 else:
                     msg = "log_dir ({0}) exists but is not a directory!"
                     print msg.format(log_dir)
-                    exit(1)
+                    return
 
             main_handler = hand(logfile("bot.log"), "midnight", 1, 7)
             error_handler = hand(logfile("error.log"), "W6", 1, 4)
@@ -149,27 +117,29 @@ class _BotConfig(object):
                 h.setFormatter(formatter)
                 logger.addHandler(h)
 
-            stream_handler = logging.StreamHandler()
-            stream_handler.setLevel(logging.DEBUG)
-            stream_handler.setFormatter(color_formatter)
-            logger.addHandler(stream_handler)
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.DEBUG)
+        stream_handler.setFormatter(color_formatter)
+        logger.addHandler(stream_handler)
 
-        else:
-            logger.addHandler(logging.NullHandler())
+    def _decrypt(self, node, nodes):
+        """Try to decrypt the contents of a config node. Use self.decrypt()."""
+        try:
+            node._decrypt(self._decryption_key, nodes[:-1], nodes[-1])
+        except blowfish.BlowfishError as error:
+            print "Error decrypting passwords:"
+            raise
 
     def _make_new(self):
         """Make a new config file based on the user's input."""
-        encrypt = raw_input("Would you like to encrypt passwords stored in config.yml? [y/n] ")
-        if encrypt.lower().startswith("y"):
-            is_encrypted = True
-        else:
-            is_encrypted = False
-
-        return is_encrypted
-
-    @property
-    def script_dir(self):
-        return self._script_dir
+        #m = "Would you like to encrypt passwords stored in config.yml? [y/n] "
+        #encrypt = raw_input(m)
+        #if encrypt.lower().startswith("y"):
+        #    is_encrypted = True
+        #else:
+        #    is_encrypted = False
+        raise NotImplementedError()
+        # yaml.dumps()
 
     @property
     def root_dir(self):
@@ -182,7 +152,7 @@ class _BotConfig(object):
     @property
     def log_dir(self):
         return self._log_dir
-    
+
     @property
     def data(self):
         """The entire config file."""
@@ -221,7 +191,7 @@ class _BotConfig(object):
         """Return True if passwords are encrypted, otherwise False."""
         return self.metadata.get("encryptPasswords", False)
 
-    def load(self, config_path=None, log_dir=None):
+    def load(self):
         """Load, or reload, our config file.
 
         First, check if we have a valid config file, and if not, notify the
@@ -232,19 +202,14 @@ class _BotConfig(object):
         wiki, tasks, irc, metadata) for easy access (as well as the internal
         _data variable).
 
-        If everything goes well, return True if stored passwords are
-        encrypted in the file, or False if they are not.
+        If config is being reloaded, encrypted items will be automatically
+        decrypted if they were decrypted beforehand.
         """
-        if config_path:
-            self._config_path = config_path
-        if log_dir:
-            self._log_dir = log_dir
-
         if not path.exists(self._config_path):
             print "You haven't configured the bot yet!"
             choice = raw_input("Would you like to do this now? [y/n] ")
             if choice.lower().startswith("y"):
-                return self._make_new()
+                self._make_new()
             else:
                 exit(1)
 
@@ -257,25 +222,28 @@ class _BotConfig(object):
         self.metadata._load(data.get("metadata", {}))
 
         self._setup_logging()
-        return self.is_encrypted()
+        if self.is_encrypted():
+            if not self._decryption_key:
+                key = getpass("Enter key to decrypt bot passwords: ")
+                self._decryption_key = key
+            for node, nodes in self._decryptable_nodes:
+                self._decrypt(node, nodes)
 
     def decrypt(self, node, *nodes):
         """Use self._decryption_key to decrypt an object in our config tree.
 
         If this is called when passwords are not encrypted (check with
-        config.is_encrypted()), nothing will happen.
+        config.is_encrypted()), nothing will happen. We'll also keep track of
+        this node if config.load() is called again (i.e. to reload) and
+        automatically decrypt it.
 
-        An example usage would be:
+        Example usage:
         config.decrypt(config.irc, "frontend", "nickservPassword")
+        -> decrypts config.irc["frontend"]["nickservPassword"]
         """
-        if not self.is_encrypted():
-            return
-        try:
-            node._decrypt(self._decryption_key, nodes[:-1], nodes[-1])
-        except blowfish.BlowfishError as error:
-            print "\nError decrypting passwords:"
-            print "{0}: {1}.".format(error.__class__.__name__, error)
-            exit(1)
+        self._decryptable_nodes.append((node, nodes))
+        if self.is_encrypted():
+            self._decrypt(node, nodes)
 
     def schedule(self, minute, hour, month_day, month, week_day):
         """Return a list of tasks scheduled to run at the specified time.
@@ -311,6 +279,38 @@ class _BotConfig(object):
         return tasks
 
 
+class _ConfigNode(object):
+    def __iter__(self):
+        for key in self.__dict__.iterkeys():
+            yield key
+
+    def __getitem__(self, item):
+        return self.__dict__.__getitem__(item)
+
+    def _dump(self):
+        data = self.__dict__.copy()
+        for key, val in data.iteritems():
+            if isinstance(val, _ConfigNode):
+                data[key] = val._dump()
+        return data
+
+    def _load(self, data):
+        self.__dict__ = data.copy()
+
+    def _decrypt(self, key, intermediates, item):
+        base = self.__dict__
+        try:
+            for inter in intermediates:
+                base = base[inter]
+        except KeyError:
+            return
+        if item in base:
+            base[item] = blowfish.decrypt(key, base[item])
+
+    def get(self, *args, **kwargs):
+        return self.__dict__.get(*args, **kwargs)
+
+
 class _BotFormatter(logging.Formatter):
     def __init__(self, color=False):
         self._format = super(_BotFormatter, self).format
@@ -336,6 +336,3 @@ class _BotFormatter(logging.Formatter):
         if record.levelno == logging.CRITICAL:
             record.lvl = l.join(("\x1b[1m\x1b[31m", "\x1b[0m"))  # Bold red
         return record
-
-
-config = _BotConfig()
