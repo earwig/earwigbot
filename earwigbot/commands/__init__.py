@@ -126,8 +126,8 @@ class CommandManager(object):
 
     def load(self):
         """Load (or reload) all valid commands into self._commands."""
-        self._commands = {}
         with self._command_access_lock:
+            self._commands.clear()
             dirs = [path.join(path.dirname(__file__), "commands"),
                     path.join(bot.config.root_dir, "commands")]
             for dir in dirs:
