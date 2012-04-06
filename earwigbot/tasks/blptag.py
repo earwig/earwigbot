@@ -27,7 +27,7 @@ class Task(BaseTask):
     {{WP Biography}}."""
     name = "blptag"
 
-    def __init__(self):
+    def setup(self):
         pass
 
     def run(self, **kwargs):

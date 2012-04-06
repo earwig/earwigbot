@@ -53,7 +53,7 @@ class Task(BaseTask):
     name = "afc_statistics"
     number = 2
 
-    def __init__(self):
+    def setup(self):
         self.cfg = cfg = config.tasks.get(self.name, {})
 
         # Set some wiki-related attributes:

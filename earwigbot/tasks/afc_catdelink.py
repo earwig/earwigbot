@@ -27,7 +27,7 @@ class Task(BaseTask):
     submissions."""
     name = "afc_catdelink"
 
-    def __init__(self):
+    def setup(self):
         pass
 
     def run(self, **kwargs):

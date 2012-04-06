@@ -27,7 +27,7 @@ class Task(BaseTask):
     type."""
     name = "wrongmime"
 
-    def __init__(self):
+    def setup(self):
         pass
 
     def run(self, **kwargs):

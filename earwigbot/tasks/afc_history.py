@@ -57,7 +57,7 @@ class Task(BaseTask):
     """
     name = "afc_history"
 
-    def __init__(self):
+    def setup(self):
         cfg = config.tasks.get(self.name, {})
         self.num_days = cfg.get("days", 90)
         self.categories = cfg.get("categories", {})

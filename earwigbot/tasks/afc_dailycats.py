@@ -27,7 +27,7 @@ class Task(BaseTask):
     name = "afc_dailycats"
     number = 3
 
-    def __init__(self):
+    def setup(self):
         pass
 
     def run(self, **kwargs):

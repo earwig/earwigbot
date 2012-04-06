@@ -36,7 +36,7 @@ class Task(BaseTask):
     name = "afc_copyvios"
     number = 1
 
-    def __init__(self):
+    def setup(self):
         cfg = config.tasks.get(self.name, {})
         self.template = cfg.get("template", "AfC suspected copyvio")
         self.ignore_list = cfg.get("ignoreList", [])

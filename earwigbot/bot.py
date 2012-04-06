@@ -20,13 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import threading
+from threading import Lock, Thread
 from time import sleep, time
 
 from earwigbot.commands import CommandManager
 from earwigbot.config import BotConfig
 from earwigbot.irc import Frontend, Watcher
-from earwigbot.tasks import task_manager
+from earwigbot.tasks import TaskManager
 
 __all__ = ["Bot"]
 
@@ -50,29 +50,29 @@ class Bot(object):
         self.config = BotConfig(root_dir)
         self.logger = logging.getLogger("earwigbot")
         self.commands = CommandManager(self)
-        self.tasks = None
+        self.tasks = TaskManager(self)
         self.frontend = None
         self.watcher = None
 
-        self.component_lock = threading.Lock()
+        self.component_lock = Lock()
         self._keep_looping = True
 
     def _start_irc_components(self):
         if self.config.components.get("irc_frontend"):
             self.logger.info("Starting IRC frontend")
             self.frontend = Frontend(self)
-            threading.Thread(name=name, target=self.frontend.loop).start()
+            Thread(name=name, target=self.frontend.loop).start()
 
         if self.config.components.get("irc_watcher"):
             self.logger.info("Starting IRC watcher")
             self.watcher = Watcher(self)
-            threading.Thread(name=name, target=self.watcher.loop).start()
+            Thread(name=name, target=self.watcher.loop).start()
 
     def _start_wiki_scheduler(self):
         def wiki_scheduler():
             while self._keep_looping:
                 time_start = time()
-                task_manager.schedule()
+                self.tasks.schedule()
                 time_end = time()
                 time_diff = time_start - time_end
                 if time_diff < 60:  # Sleep until the next minute
@@ -80,7 +80,7 @@ class Bot(object):
 
         if self.config.components.get("wiki_scheduler"):
             self.logger.info("Starting wiki scheduler")
-            threading.Thread(name=name, target=wiki_scheduler).start()
+            Thread(name=name, target=wiki_scheduler).start()
 
     def _stop_irc_components(self):
         if self.frontend:
@@ -93,10 +93,10 @@ class Bot(object):
             with self.component_lock:
                 if self.frontend and self.frontend.is_stopped():
                     self.frontend = Frontend(self)
-                    threading.Thread(name=name, target=self.frontend.loop).start()
+                    Thread(name=name, target=self.frontend.loop).start()
                 if self.watcher and self.watcher.is_stopped():
                     self.watcher = Watcher(self)
-                    threading.Thread(name=name, target=self.watcher.loop).start()
+                    Thread(name=name, target=self.watcher.loop).start()
             sleep(5)
 
     def run(self):
@@ -106,7 +106,8 @@ class Bot(object):
         self.config.decrypt(config.wiki, "search", "credentials", "secret")
         self.config.decrypt(config.irc, "frontend", "nickservPassword")
         self.config.decrypt(config.irc, "watcher", "nickservPassword")       
-        self.commands.load()     
+        self.commands.load()
+        self.tasks.load()
         self._start_irc_components()
         self._start_wiki_scheduler()
         self._loop()
@@ -116,6 +117,7 @@ class Bot(object):
             self._stop_irc_components()
             self.config.load()
             self.commands.load()
+            self.tasks.load()
             self._start_irc_components()
 
     def stop(self):

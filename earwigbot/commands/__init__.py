@@ -115,9 +115,15 @@ class CommandManager(object):
             f.close()
 
         try:
-            command = module.Command(self.bot)
+            command_class = module.Command
         except AttributeError:
             return  # No command in this module
+        try:
+            command = command_class(self.bot)
+        except Exception:
+            e = "Error initializing Command() class in {0} (from {1})"
+            self.logger.exception(e.format(name, path))
+            return
         if not isinstance(command, BaseCommand):
             return
 
@@ -129,7 +135,7 @@ class CommandManager(object):
         with self._command_access_lock:
             self._commands.clear()
             dirs = [path.join(path.dirname(__file__), "commands"),
-                    path.join(bot.config.root_dir, "commands")]
+                    path.join(self.bot.config.root_dir, "commands")]
             for dir in dirs:
                 files = listdir(dir)
                 files = [sub("\.pyc?$", "", f) for f in files if f[0] != "_"]
