@@ -22,7 +22,7 @@
 
 import re
 
-from earwigbot.commands import BaseCommand, command_manager
+from earwigbot.commands import BaseCommand
 from earwigbot.irc import Data
 
 class Command(BaseCommand):
@@ -30,7 +30,7 @@ class Command(BaseCommand):
     name = "help"
 
     def process(self, data):
-        self.cmnds = command_manager.get_all()
+        self.cmnds = self.bot.commands.get_all()
         if not data.args:
             self.do_main_help(data)
         else:

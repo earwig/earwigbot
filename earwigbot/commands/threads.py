@@ -25,7 +25,6 @@ import re
 
 from earwigbot.commands import BaseCommand
 from earwigbot.irc import KwargParseException
-from earwigbot.tasks import task_manager
 
 class Command(BaseCommand):
     """Manage wiki tasks from IRC, and check on thread status."""
@@ -104,7 +103,7 @@ class Command(BaseCommand):
     def do_listall(self):
         """With !tasks listall or !tasks all, list all loaded tasks, and report
         whether they are currently running or idle."""
-        all_tasks = task_manager.get_all().keys()
+        all_tasks = self.bot.tasks.get_all().keys()
         threads = threading.enumerate()
         tasklist = []
 
@@ -145,13 +144,13 @@ class Command(BaseCommand):
             self.connection.reply(data, msg)
             return
 
-        if task_name not in task_manager.get_all().keys():
+        if task_name not in self.bot.tasks.get_all().keys():
             # This task does not exist or hasn't been loaded:
             msg = "task could not be found; either tasks/{0}.py doesn't exist, or it wasn't loaded correctly."
             self.connection.reply(data, msg.format(task_name))
             return
 
         data.kwargs["fromIRC"] = True
-        task_manager.start(task_name, **data.kwargs)
+        self.bot.tasks.start(task_name, **data.kwargs)
         msg = "task \x0302{0}\x0301 started.".format(task_name)
         self.connection.reply(data, msg)
