@@ -32,7 +32,6 @@ from numpy import arange
 import oursql
 
 from earwigbot import wiki
-from earwigbot.config import config
 from earwigbot.tasks import BaseTask
 
 # Valid submission statuses:
@@ -58,7 +57,7 @@ class Task(BaseTask):
     name = "afc_history"
 
     def setup(self):
-        cfg = config.tasks.get(self.name, {})
+        cfg = self.config.tasks.get(self.name, {})
         self.num_days = cfg.get("days", 90)
         self.categories = cfg.get("categories", {})
 

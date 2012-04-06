@@ -24,7 +24,6 @@ import re
 
 from earwigbot import wiki
 from earwigbot.commands import BaseCommand
-from earwigbot.config import config
 
 class Command(BaseCommand):
     """Get the number of pending AfC submissions, open redirect requests, and
@@ -39,7 +38,7 @@ class Command(BaseCommand):
 
         try:
             if data.line[1] == "JOIN" and data.chan == "#wikipedia-en-afc":
-                if data.nick != config.irc["frontend"]["nick"]:
+                if data.nick != self.config.irc["frontend"]["nick"]:
                     return True
         except IndexError:
             pass

@@ -21,7 +21,6 @@
 # SOFTWARE.
 
 from earwigbot.commands import BaseCommand
-from earwigbot.config import config
 
 class Command(BaseCommand):
     """Voice, devoice, op, or deop users in the channel."""
@@ -39,7 +38,7 @@ class Command(BaseCommand):
             self.connection.reply(data, msg)
             return
 
-        if data.host not in config.irc["permissions"]["admins"]:
+        if data.host not in self.config.irc["permissions"]["admins"]:
             msg = "you must be a bot admin to use this command."
             self.connection.reply(data, msg)
             return

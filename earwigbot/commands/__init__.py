@@ -58,9 +58,10 @@ class BaseCommand(object):
         super(Command, self).__init__() first.
         """
         self.bot = bot
+        self.config = bot.config
         self.logger = bot.commands.getLogger(self.name)
 
-    def _execute(self, data):
+    def _wrap_process(self, data):
         """Make a quick connection alias and then process() the message."""
         self.connection = self.bot.frontend
         self.process(data)
@@ -158,7 +159,7 @@ class CommandManager(object):
                 if hook in command.hooks:
                     if command.check(data):
                         try:
-                            command._execute(data)
+                            command._wrap_process(data)
                         except Exception:
                             e = "Error executing command '{0}':"
                             self.logger.exception(e.format(data.command))

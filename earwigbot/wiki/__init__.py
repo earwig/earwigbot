@@ -27,7 +27,11 @@ This is a collection of classes and functions to read from and write to
 Wikipedia and other wiki sites. No connection whatsoever to python-wikitools
 written by Mr.Z-man, other than a similar purpose. We share no code.
 
-Import the toolset with `from earwigbot import wiki`.
+Import the toolset directly with `from earwigbot import wiki`. If using the
+built-in integration with the rest of the bot, that's usually not necessary:
+Bot() objects contain a `wiki` attribute containing a SitesDBManager object
+tied to the sites.db file located in the same directory as config.yml. That
+object has the principal methods get_site, add_site, and remove_site.
 """
 
 import logging as _log
@@ -40,5 +44,5 @@ from earwigbot.wiki.exceptions import *
 from earwigbot.wiki.category import Category
 from earwigbot.wiki.page import Page
 from earwigbot.wiki.site import Site
-from earwigbot.wiki.sitesdb import get_site, add_site, remove_site
+from earwigbot.wiki.sitesdb import SitesDBManager
 from earwigbot.wiki.user import User

@@ -29,11 +29,10 @@ import stat
 import sqlite3 as sqlite
 
 from earwigbot import __version__
-from earwigbot.config import config
 from earwigbot.wiki.exceptions import SiteNotFoundError
 from earwigbot.wiki.site import Site
 
-__all__ = ["SitesDBManager", "get_site", "add_site", "remove_site"]
+__all__ = ["SitesDBManager"]
 
 class SitesDBManager(object):
     """
@@ -47,31 +46,19 @@ class SitesDBManager(object):
     remove_site     -- removes a site from the database, given its name
 
     There's usually no need to use this class directly. All public methods
-    here are available as earwigbot.wiki.get_site(), earwigbot.wiki.add_site(),
-    and earwigbot.wiki.remove_site(), which use a sites.db file located in the
-    same directory as our config.yml file. Lower-level access can be achieved
+    here are available as bot.wiki.get_site(), bot.wiki.add_site(), and
+    bot.wiki.remove_site(), which use a sites.db file located in the same
+    directory as our config.yml file. Lower-level access can be achieved
     by importing the manager class
-    (`from earwigbot.wiki.sitesdb import SitesDBManager`).
+    (`from earwigbot.wiki import SitesDBManager`).
     """
 
-    def __init__(self, db_file):
-        """Set up the manager with an attribute for the sitesdb filename."""
+    def __init__(self, config):
+        """Set up the manager with an attribute for the BotConfig object."""
+        self.config = config
+        self._sitesdb = path.join(config.root_dir, "sitesdb")
+        self._cookie_file = path.join(config.root_dir, ".cookies")
         self._cookiejar = None
-        self._sitesdb = db_file
-
-    def _load_config(self):
-        """Load the bot's config.
-
-        Called by a config-requiring function, such as get_site(), when config
-        has not been loaded. This will usually happen only if we're running
-        code directly from Python's interpreter and not the bot itself, because
-        bot.py and earwigbot.runner will already call these functions.
-        """
-        is_encrypted = config.load()
-        if is_encrypted:  # Passwords in the config file are encrypted
-            key = getpass("Enter key to unencrypt bot passwords: ")
-            config._decryption_key = key
-            config.decrypt(config.wiki, "password")
 
     def _get_cookiejar(self):
         """Return a LWPCookieJar object loaded from our .cookies file.
@@ -89,8 +76,7 @@ class SitesDBManager(object):
         if self._cookiejar:
             return self._cookiejar
 
-        cookie_file = path.join(config.root_dir, ".cookies")
-        self._cookiejar = LWPCookieJar(cookie_file)
+        self._cookiejar = LWPCookieJar(self._cookie_file)
 
         try:
             self._cookiejar.load()
@@ -163,10 +149,12 @@ class SitesDBManager(object):
         This calls _load_site_from_sitesdb(), so SiteNotFoundError will be
         raised if the site is not in our sitesdb.
         """
+        cookiejar = self._get_cookiejar()
         (name, project, lang, base_url, article_path, script_path, sql,
          namespaces) = self._load_site_from_sitesdb(name)
+
+        config = self.config
         login = (config.wiki.get("username"), config.wiki.get("password"))
-        cookiejar = self._get_cookiejar()
         user_agent = config.wiki.get("userAgent")
         use_https = config.wiki.get("useHTTPS", False)
         assert_edit = config.wiki.get("assert")
@@ -265,9 +253,6 @@ class SitesDBManager(object):
         cannot be found in the sitesdb, SiteNotFoundError will be raised. An
         empty sitesdb will be created if none is found.
         """
-        if not config.is_loaded():
-            self._load_config()
-
         # Someone specified a project without a lang, or vice versa:
         if (project and not lang) or (not project and lang):
             e = "Keyword arguments 'lang' and 'project' must be specified together."
@@ -276,7 +261,7 @@ class SitesDBManager(object):
         # No args given, so return our default site:
         if not name and not project and not lang:
             try:
-                default = config.wiki["defaultSite"]
+                default = self.config.wiki["defaultSite"]
             except KeyError:
                 e = "Default site is not specified in config."
                 raise SiteNotFoundError(e)
@@ -322,17 +307,15 @@ class SitesDBManager(object):
         site info). Raises SiteNotFoundError if not enough information has
         been provided to identify the site (e.g. a project but not a lang).
         """
-        if not config.is_loaded():
-            self._load_config()
-
         if not base_url:
             if not project or not lang:
                 e = "Without a base_url, both a project and a lang must be given."
                 raise SiteNotFoundError(e)
             base_url = "//{0}.{1}.org".format(lang, project)
-
-        login = (config.wiki.get("username"), config.wiki.get("password"))
         cookiejar = self._get_cookiejar()
+
+        config = self.config
+        login = (config.wiki.get("username"), config.wiki.get("password"))
         user_agent = config.wiki.get("userAgent")
         use_https = config.wiki.get("useHTTPS", False)
         assert_edit = config.wiki.get("assert")
@@ -358,9 +341,6 @@ class SitesDBManager(object):
         was given but not a language, or vice versa. Will create an empty
         sitesdb if none was found.
         """
-        if not config.is_loaded():
-            self._load_config()
-
         # Someone specified a project without a lang, or vice versa:
         if (project and not lang) or (not project and lang):
             e = "Keyword arguments 'lang' and 'project' must be specified together."
@@ -381,12 +361,3 @@ class SitesDBManager(object):
                 return self._remove_site_from_sitesdb(name)
 
         return False
-
-_root = path.split(path.split(path.dirname(path.abspath(__file__)))[0])[0]
-_dbfile = path.join(_root, "sites.db")
-_manager = SitesDBManager(_dbfile)
-del _root, _dbfile
-
-get_site = _manager.get_site
-add_site = _manager.add_site
-remove_site = _manager.remove_site

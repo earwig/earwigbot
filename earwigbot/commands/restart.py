@@ -21,7 +21,6 @@
 # SOFTWARE.
 
 from earwigbot.commands import BaseCommand
-from earwigbot.config import config
 
 class Command(BaseCommand):
     """Restart the bot. Only the owner can do this."""
@@ -32,7 +31,7 @@ class Command(BaseCommand):
         return data.is_command and data.command in commands
 
     def process(self, data):
-        if data.host not in config.irc["permissions"]["owners"]:
+        if data.host not in self.config.irc["permissions"]["owners"]:
             msg = "you must be a bot owner to use this command."
             self.connection.reply(data, msg)
             return

@@ -27,6 +27,7 @@ from earwigbot.commands import CommandManager
 from earwigbot.config import BotConfig
 from earwigbot.irc import Frontend, Watcher
 from earwigbot.tasks import TaskManager
+from earwigbot.wiki import SitesDBManager
 
 __all__ = ["Bot"]
 
@@ -51,6 +52,7 @@ class Bot(object):
         self.logger = logging.getLogger("earwigbot")
         self.commands = CommandManager(self)
         self.tasks = TaskManager(self)
+        self.wiki = SitesDBManager(self.config)
         self.frontend = None
         self.watcher = None
 
@@ -100,12 +102,13 @@ class Bot(object):
             sleep(5)
 
     def run(self):
-        self.config.load()
-        self.config.decrypt(config.wiki, "password")
-        self.config.decrypt(config.wiki, "search", "credentials", "key")
-        self.config.decrypt(config.wiki, "search", "credentials", "secret")
-        self.config.decrypt(config.irc, "frontend", "nickservPassword")
-        self.config.decrypt(config.irc, "watcher", "nickservPassword")       
+        config = self.config
+        config.load()
+        config.decrypt(config.wiki, "password")
+        config.decrypt(config.wiki, "search", "credentials", "key")
+        config.decrypt(config.wiki, "search", "credentials", "secret")
+        config.decrypt(config.irc, "frontend", "nickservPassword")
+        config.decrypt(config.irc, "watcher", "nickservPassword")
         self.commands.load()
         self.tasks.load()
         self._start_irc_components()
@@ -121,6 +124,7 @@ class Bot(object):
             self._start_irc_components()
 
     def stop(self):
-        self._stop_irc_components()
+        with self.component_lock:
+            self._stop_irc_components()
         self._keep_looping = False
         sleep(3)  # Give a few seconds to finish closing IRC connections

@@ -27,7 +27,6 @@ from threading import Lock
 import oursql
 
 from earwigbot import wiki
-from earwigbot.config import config
 from earwigbot.tasks import BaseTask
 
 class Task(BaseTask):
@@ -37,7 +36,7 @@ class Task(BaseTask):
     number = 1
 
     def setup(self):
-        cfg = config.tasks.get(self.name, {})
+        cfg = self.config.tasks.get(self.name, {})
         self.template = cfg.get("template", "AfC suspected copyvio")
         self.ignore_list = cfg.get("ignoreList", [])
         self.min_confidence = cfg.get("minConfidence", 0.5)

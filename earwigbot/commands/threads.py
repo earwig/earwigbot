@@ -24,7 +24,6 @@ import threading
 import re
 
 from earwigbot.commands import BaseCommand
-from earwigbot.config import config
 from earwigbot.irc import KwargParseException
 from earwigbot.tasks import task_manager
 
@@ -40,7 +39,7 @@ class Command(BaseCommand):
 
     def process(self, data):
         self.data = data
-        if data.host not in config.irc["permissions"]["owners"]:
+        if data.host not in self.config.irc["permissions"]["owners"]:
             msg = "you must be a bot owner to use this command."
             self.connection.reply(data, msg)
             return
@@ -80,7 +79,7 @@ class Command(BaseCommand):
             if tname == "MainThread":
                 t = "\x0302MainThread\x0301 (id {1})"
                 normal_threads.append(t.format(thread.ident))
-            elif tname in config.components:
+            elif tname in self.config.components:
                 t = "\x0302{0}\x0301 (id {1})"
                 normal_threads.append(t.format(tname, thread.ident))
             elif tname.startswith("reminder"):

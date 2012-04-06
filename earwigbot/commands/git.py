@@ -25,7 +25,6 @@ import subprocess
 import re
 
 from earwigbot.commands import BaseCommand
-from earwigbot.config import config
 
 class Command(BaseCommand):
     """Commands to interface with the bot's git repository; use '!git' for a
@@ -34,7 +33,7 @@ class Command(BaseCommand):
 
     def process(self, data):
         self.data = data
-        if data.host not in config.irc["permissions"]["owners"]:
+        if data.host not in self.config.irc["permissions"]["owners"]:
             msg = "you must be a bot owner to use this command."
             self.connection.reply(data, msg)
             return

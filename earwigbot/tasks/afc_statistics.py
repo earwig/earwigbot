@@ -30,7 +30,6 @@ from time import sleep
 import oursql
 
 from earwigbot import wiki
-from earwigbot.config import config
 from earwigbot.tasks import BaseTask
 
 # Chart status number constants:
@@ -54,7 +53,7 @@ class Task(BaseTask):
     number = 2
 
     def setup(self):
-        self.cfg = cfg = config.tasks.get(self.name, {})
+        self.cfg = cfg = self.config.tasks.get(self.name, {})
 
         # Set some wiki-related attributes:
         self.pagename = cfg.get("page", "Template:AFC statistics")

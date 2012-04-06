@@ -50,6 +50,7 @@ class BaseTask(object):
         (or if you do, remember super(Task, self).__init()) - use setup().
         """
         self.bot = bot
+        self.config = bot.config
         self.logger = bot.tasks.logger.getLogger(self.name)
         self.setup()
 
