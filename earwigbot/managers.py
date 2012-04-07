@@ -32,7 +32,24 @@ from earwigbot.tasks import BaseTask
 
 __all__ = ["CommandManager", "TaskManager"]
 
-class _BaseManager(object):
+class _ResourceManager(object):
+    """
+    EarwigBot's Base Resource Manager
+
+    Resources are essentially objects dynamically loaded by the bot, both
+    packaged with it (built-in resources) and created by users (plugins, aka
+    custom resources). Currently, the only two types of resources are IRC
+    commands and bot tasks. These are both loaded from two locations: the
+    earwigbot.commands and earwigbot.tasks packages, and the commands/ and
+    tasks/ directories within the bot's working directory.
+
+    This class handles the low-level tasks of (re)loading resources via load(),
+    retrieving specific resources via get(), and iterating over all resources
+    via __iter__(). If iterating over resources, it is recommended to acquire
+    self.lock beforehand and release it afterwards (alternatively, wrap your
+    code in a `with` statement) so an attempt at reloading resources in another
+    thread won't disrupt your iteration.
+    """
     def __init__(self, bot, name, attribute, base):
         self.bot = bot
         self.logger = bot.logger.getChild(name)
@@ -42,6 +59,10 @@ class _BaseManager(object):
         self._resource_attribute = attribute  # e.g. "Command" or "Task"
         self._resource_base = base  # e.g. BaseCommand or BaseTask
         self._resource_access_lock = Lock()
+
+    @property
+    def lock(self):
+        return self._resource_access_lock
 
     def __iter__(self):
         for name in self._resources:
@@ -97,7 +118,7 @@ class _BaseManager(object):
     def load(self):
         """Load (or reload) all valid resources into self._resources."""
         name = self._resource_name  # e.g. "commands" or "tasks"
-        with self._resource_access_lock:
+        with self.lock:
             self._resources.clear()
             builtin_dir = path.join(path.dirname(__file__), name)
             plugins_dir = path.join(self.bot.config.root_dir, name)
@@ -116,15 +137,20 @@ class _BaseManager(object):
         return self._resources[key]
 
 
-class CommandManager(_BaseManager):
+class CommandManager(_ResourceManager):
+    """
+    EarwigBot's IRC Command Manager
+
+    Manages (i.e., loads, reloads, and calls) IRC commands.
+    """
     def __init__(self, bot):
-        super(CommandManager, self).__init__(bot, "commands", "Command",
-                                             BaseCommand)
+        base = super(CommandManager, self)
+        base.__init__(bot, "commands", "Command", BaseCommand)
 
     def check(self, hook, data):
         """Given an IRC event, check if there's anything we can respond to."""
-        with self._resource_access_lock:
-            for command in self._resources.values():
+        with self.lock:
+            for command in self._resources.itervalues():
                 if hook in command.hooks:
                     if command.check(data):
                         try:
@@ -135,7 +161,12 @@ class CommandManager(_BaseManager):
                         break
 
 
-class TaskManager(_BaseManager):
+class TaskManager(_ResourceManager):
+    """
+    EarwigBot's Bot Task Manager
+
+    Manages (i.e., loads, reloads, schedules, and runs) wiki bot tasks.
+    """
     def __init__(self, bot):
         super(TaskManager, self).__init__(bot, "tasks", "Task", BaseTask)
 
@@ -155,13 +186,12 @@ class TaskManager(_BaseManager):
         msg = "Starting task '{0}' in a new thread"
         self.logger.info(msg.format(task_name))
 
-        with self._resource_access_lock:
-            try:
-                task = self._resources[task_name]
-            except KeyError:
-                e = "Couldn't find task '{0}':"
-                self.logger.error(e.format(task_name))
-                return
+        try:
+            task = self.get(task_name)
+        except KeyError:
+            e = "Couldn't find task '{0}':"
+            self.logger.error(e.format(task_name))
+            return
 
         task_thread = Thread(target=self._wrapper, args=(task,), kwargs=kwargs)
         start_time = strftime("%b %d %H:%M:%S")
