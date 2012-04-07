@@ -21,7 +21,9 @@
 # SOFTWARE.
 
 """
-EarwigBot - http://earwig.github.com/earwig/earwigbot
+EarwigBot is a Python robot that edits Wikipedia and interacts with people over
+IRC. - http://earwig.github.com/earwig/earwigbot
+
 See README.md for a basic overview, or the docs/ directory for details.
 """
 

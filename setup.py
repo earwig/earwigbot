@@ -21,22 +21,39 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""
-DOCSTRING NEEDED
-"""
-
 from setuptools import setup
+
+from earwigbot import __version__
+
+with open("README.rst") as fp:
+    long_docs = fp.read()
 
 setup(
     name = "earwigbot",
+    packages = ["earwigbot"],
     entry_points = {"console_scripts": ["earwigbot = earwigbot.util:main"]},
-    install_requires = ["PyYAML>=3.10",
-                        "oursql>=0.9.3",
-                        "oauth2>=1.5.211",
-                        "matplotlib>=1.1.0"],
-    version = "0.1.dev",
+    install_requires = ["PyYAML >= 3.10",  # Config parsing
+                        "oursql >= 0.9.3",  # Talking with MediaWiki databases
+                        "oauth2 >= 1.5.211"],  # Talking with Yahoo BOSS Search
+    test_suite = "tests",
+    version = __version__,
     author = "Ben Kurtovic",
     author_email = "ben.kurtovic@verizon.net",
-    license = "MIT License",
     url = "https://github.com/earwig/earwigbot",
+    description = "EarwigBot is a Python robot that edits Wikipedia and interacts with people over IRC.",
+    long_description = long_docs,
+    download_url = "https://github.com/earwig/earwigbot/tarball/{0}".format(__version__),
+    keywords = "earwig earwigbot irc wikipedia wiki mediawiki",
+    license = "MIT License",
+    classifiers = [
+        "Development Status :: 3 - Alpha",
+        "Environment :: Console",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: MIT License",
+        "Natural Language :: English",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 2.7",
+        "Topic :: Communications :: Chat :: Internet Relay Chat",
+        "Topic :: Internet :: WWW/HTTP"
+    ],
 )
