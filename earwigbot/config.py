@@ -208,8 +208,8 @@ class BotConfig(object):
         decrypted if they were decrypted beforehand.
         """
         if not path.exists(self._config_path):
-            print "You haven't configured the bot yet!"
-            choice = raw_input("Would you like to do this now? [y/n] ")
+            print "Config file not found:", self._config_path
+            choice = raw_input("Would you like to create a config file now? [y/n] ")
             if choice.lower().startswith("y"):
                 self._make_new()
             else:

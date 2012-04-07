@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import logging
 from threading import Lock, Thread
 from time import sleep, time
 
@@ -99,9 +100,11 @@ class Bot(object):
         while self._keep_looping:
             with self.component_lock:
                 if self.frontend and self.frontend.is_stopped():
+                    self.logger.warn("IRC frontend has stopped; restarting")
                     self.frontend = Frontend(self)
                     Thread(name=name, target=self.frontend.loop).start()
                 if self.watcher and self.watcher.is_stopped():
+                    self.logger.warn("IRC watcher has stopped; restarting")
                     self.watcher = Watcher(self)
                     Thread(name=name, target=self.watcher.loop).start()
             sleep(5)
@@ -121,6 +124,7 @@ class Bot(object):
         self._loop()
 
     def restart(self):
+        self.logger.info("Restarting bot per request from owner")
         with self.component_lock:
             self._stop_irc_components()
             self.config.load()
@@ -129,6 +133,7 @@ class Bot(object):
             self._start_irc_components()
 
     def stop(self):
+        self.logger.info("Shutting down bot")
         with self.component_lock:
             self._stop_irc_components()
         self._keep_looping = False

@@ -34,7 +34,9 @@ setup(
     entry_points = {"console_scripts": ["earwigbot = earwigbot.util:main"]},
     install_requires = ["PyYAML >= 3.10",  # Config parsing
                         "oursql >= 0.9.3",  # Talking with MediaWiki databases
-                        "oauth2 >= 1.5.211"],  # Talking with Yahoo BOSS Search
+                        "oauth2 >= 1.5.211",  # Talking with Yahoo BOSS Search
+                        "GitPython >= 0.3.2.RC1",  # Interfacing with git
+                        ],
     test_suite = "tests",
     version = __version__,
     author = "Ben Kurtovic",

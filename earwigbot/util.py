@@ -31,29 +31,33 @@ __all__ = ["BotUtility", "main"]
 
 class BotUtility(object):
     """
-    DOCSTRING NEEDED
+    This is a command-line utility for EarwigBot that enables you to easily
+    start the bot without writing generally unnecessary three-line bootstrap
+    scripts. It supports starting the bot from any directory, as well as
+    starting individual tasks instead of the entire bot.
     """
 
     def version(self):
-        return __version__
+        return "EarwigBot v{0}".format(__version__)
 
-    def run(self):
-        root_dir = path.abspath(path.curdir())
+    def run(self, root_dir):
         bot = Bot(root_dir)
-        try:
-            bot.run()
-        finally:
-            bot.stop()
+        print self.version()
+        #try:
+        #    bot.run()
+        #finally:
+        #    bot.stop()
 
     def main(self):
-        print "EarwigBot v{0}\n".format(self.version())
         parser = argparse.ArgumentParser(description=BotUtility.__doc__)
 
-        parser.add_argument("-V", "--version", action="version",
+        parser.add_argument("-v", "--version", action="version",
                             version=self.version())
-
+        parser.add_argument("root_dir", metavar="path", nargs="?", default=path.curdir)
         args = parser.parse_args()
-#        args.func(args)
+
+        root_dir = path.abspath(args.root_dir)
+        self.run(root_dir)
 
 
 main = BotUtility().main
