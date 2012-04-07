@@ -30,6 +30,8 @@ except ImportError:
 
 from earwigbot.wiki.exceptions import SearchQueryError
 
+__all__ = ["BaseSearchEngine", "YahooBOSSSearchEngine"]
+
 class BaseSearchEngine(object):
     def __init__(self, cred):
         """Store credentials 'cred' for searching later on."""

@@ -23,6 +23,8 @@
 from collections import defaultdict
 from re import sub, UNICODE
 
+__all__ = ["MarkovChain", "MarkovChainIntersection"]
+
 class MarkovChain(object):
     START = -1
     END = -2

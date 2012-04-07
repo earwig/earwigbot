@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+__all__ = ["BaseTextParser", "ArticleTextParser", "HTMLTextParser"]
+
 class BaseTextParser(object):
     def __init__(self, text):
         self.text = text

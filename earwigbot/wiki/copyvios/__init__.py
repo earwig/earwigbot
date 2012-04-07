@@ -30,10 +30,12 @@ try:
 except ImportError:
     oauth = None
 
-from earwigbot.wiki.copyvios.markov import MarkovChain, MarkovChainIntersection
-from earwigbot.wiki.copyvios.parsers import ArticleTextParser, HTMLTextParser
-from earwigbot.wiki.copyvios.search import YahooBOSSSearchEngine
+from earwigbot.wiki.copyvios.markov import *
+from earwigbot.wiki.copyvios.parsers import *
+from earwigbot.wiki.copyvios.search import *
 from earwigbot.wiki.exceptions import *
+
+__all__ = ["CopyvioCheckResult", "CopyvioMixin"]
 
 class CopyvioCheckResult(object):
     def __init__(self, violation, confidence, url, queries, article, chains):
