@@ -55,7 +55,7 @@ class SitesDB(object):
     def __init__(self, config):
         """Set up the manager with an attribute for the BotConfig object."""
         self.config = config
-        self._sitesdb = path.join(config.root_dir, "sitesdb")
+        self._sitesdb = path.join(config.root_dir, "sites.db")
         self._cookie_file = path.join(config.root_dir, ".cookies")
         self._cookiejar = None
 
