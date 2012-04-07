@@ -135,22 +135,31 @@ class CommandManager(object):
             return
 
         self._commands[command.name] = command
-        self.logger.debug("Added command {0}".format(command.name))
+        self.logger.debug("Loaded command {0}".format(command.name))
+
+    def _load_directory(self, dir):
+        """Load all valid commands in a given directory."""
+        processed = []
+        for name in listdir(dir):
+            if not name.endswith(".py") and not name.endswith(".pyc"):
+                continue
+            if name.startswith("_") or name.startswith("."):
+                continue
+            modname = sub("\.pyc?$", "", name)  # Remove extension
+            if modname not in processed:
+                self._load_command(modname, dir)
+                processed.append(modname)
 
     def load(self):
         """Load (or reload) all valid commands into self._commands."""
         with self._command_access_lock:
             self._commands.clear()
-            dirs = [path.join(path.dirname(__file__), "commands"),
-                    path.join(self.bot.config.root_dir, "commands")]
-            for dir in dirs:
-                files = listdir(dir)
-                files = [sub("\.pyc?$", "", f) for f in files if f[0] != "_"]
-                files = list(set(files))  # Remove duplicates
-                for filename in sorted(files):
-                    self._load_command(filename, dir)
+            builtin_dir = path.dirname(__file__)
+            plugins_dir = path.join(self.bot.config.root_dir, "commands")
+            self._load_directory(builtin_dir)  # Built-in commands
+            self._load_directory(plugins_dir)  # Custom commands, aka plugins
 
-        msg = "Found {0} commands: {1}"
+        msg = "Loaded {0} commands: {1}"
         commands = ", ".join(self._commands.keys())
         self.logger.info(msg.format(len(self._commands), commands))
 

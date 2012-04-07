@@ -53,8 +53,8 @@ class Bot(object):
     wiki toolset with bot.wiki.get_site().
     """
 
-    def __init__(self, root_dir):
-        self.config = BotConfig(root_dir)
+    def __init__(self, root_dir, level=logging.INFO):
+        self.config = BotConfig(root_dir, level)
         self.logger = logging.getLogger("earwigbot")
         self.commands = CommandManager(self)
         self.tasks = TaskManager(self)
@@ -64,6 +64,10 @@ class Bot(object):
 
         self.component_lock = Lock()
         self._keep_looping = True
+
+        self.config.load()
+        self.commands.load()
+        self.tasks.load()
 
     def _start_irc_components(self):
         if self.config.components.get("irc_frontend"):
@@ -107,18 +111,10 @@ class Bot(object):
                     self.logger.warn("IRC watcher has stopped; restarting")
                     self.watcher = Watcher(self)
                     Thread(name=name, target=self.watcher.loop).start()
-            sleep(5)
+            sleep(3)
 
     def run(self):
-        config = self.config
-        config.load()
-        config.decrypt(config.wiki, "password")
-        config.decrypt(config.wiki, "search", "credentials", "key")
-        config.decrypt(config.wiki, "search", "credentials", "secret")
-        config.decrypt(config.irc, "frontend", "nickservPassword")
-        config.decrypt(config.irc, "watcher", "nickservPassword")
-        self.commands.load()
-        self.tasks.load()
+        self.logger.info("Starting bot")
         self._start_irc_components()
         self._start_wiki_scheduler()
         self._loop()
@@ -137,4 +133,3 @@ class Bot(object):
         with self.component_lock:
             self._stop_irc_components()
         self._keep_looping = False
-        sleep(3)  # Give a few seconds to finish closing IRC connections

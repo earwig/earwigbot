@@ -59,8 +59,9 @@ class BotConfig(object):
                           aren't encrypted
     """
 
-    def __init__(self, root_dir):
+    def __init__(self, root_dir, level):
         self._root_dir = root_dir
+        self._logging_level = level
         self._config_path = path.join(self._root_dir, "config.yml")
         self._log_dir = path.join(self._root_dir, "logs")
         self._decryption_key = None
@@ -74,7 +75,14 @@ class BotConfig(object):
 
         self._nodes = [self._components, self._wiki, self._tasks, self._irc,
                        self._metadata]
-        self._decryptable_nodes = []
+
+        self._decryptable_nodes = [  # Default nodes to decrypt
+            (self._wiki, ("password")),
+            (self._wiki, ("search", "credentials", "key")),
+            (self._wiki, ("search", "credentials", "secret")),
+            (self._irc, ("frontend", "nickservPassword")),
+            (self._irc, ("watcher", "nickservPassword")),
+        ]
 
     def _load(self):
         """Load data from our JSON config file (config.yml) into self._data."""
@@ -119,10 +127,10 @@ class BotConfig(object):
                 h.setFormatter(formatter)
                 logger.addHandler(h)
 
-        stream_handler = logging.StreamHandler()
-        stream_handler.setLevel(logging.DEBUG)
-        stream_handler.setFormatter(color_formatter)
-        logger.addHandler(stream_handler)
+        self._stream_handler = stream = logging.StreamHandler()
+        stream.setLevel(self._logging_level)
+        stream.setFormatter(color_formatter)
+        logger.addHandler(stream)
 
     def _decrypt(self, node, nodes):
         """Try to decrypt the contents of a config node. Use self.decrypt()."""
@@ -146,6 +154,15 @@ class BotConfig(object):
     @property
     def root_dir(self):
         return self._root_dir
+
+    @property
+    def logging_level(self):
+        return self._logging_level
+
+    @logging_level.setter
+    def logging_level(self, level):
+        self._logging_level = level
+        self._stream_handler.setLevel(level)
 
     @property
     def path(self):
@@ -213,7 +230,7 @@ class BotConfig(object):
             if choice.lower().startswith("y"):
                 self._make_new()
             else:
-                exit(1)
+                exit(1)                                                                     # TODO: raise an exception instead
 
         self._load()
         data = self._data

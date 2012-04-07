@@ -30,6 +30,7 @@ internal TaskManager class.  This can be accessed through `bot.tasks`.
 
 import imp
 from os import listdir, path
+from re import sub
 from threading import Lock, Thread
 from time import gmtime, strftime
 
@@ -186,22 +187,31 @@ class TaskManager(object):
             return
 
         self._tasks[task.name] = task
-        self.logger.debug("Added task {0}".format(task.name))
+        self.logger.debug("Loaded task {0}".format(task.name))
+
+    def _load_directory(self, dir):
+        """Load all valid tasks in a given directory."""
+        processed = []
+        for name in listdir(dir):
+            if not name.endswith(".py") and not name.endswith(".pyc"):
+                continue
+            if name.startswith("_") or name.startswith("."):
+                continue
+            modname = sub("\.pyc?$", "", name)  # Remove extension
+            if modname not in processed:
+                self._load_task(modname, dir)
+                processed.append(modname)
 
     def load(self):
         """Load (or reload) all valid tasks into self._tasks."""
         with self._task_access_lock:
             self._tasks.clear()
-            dirs = [path.join(path.dirname(__file__), "tasks"),
-                    path.join(self.bot.config.root_dir, "tasks")]
-            for dir in dirs:
-                files = listdir(dir)
-                files = [sub("\.pyc?$", "", f) for f in files if f[0] != "_"]
-                files = list(set(files))  # Remove duplicates
-                for filename in sorted(files):
-                    self._load_task(filename)
+            builtin_dir = path.dirname(__file__)
+            plugins_dir = path.join(self.bot.config.root_dir, "tasks")
+            self._load_directory(builtin_dir)  # Built-in tasks
+            self._load_directory(plugins_dir)  # Custom tasks, aka plugins
 
-        msg = "Found {0} tasks: {1}"
+        msg = "Loaded {0} tasks: {1}"
         tasks = ', '.join(self._tasks.keys())
         self.logger.info(msg.format(len(self._tasks), tasks))
 

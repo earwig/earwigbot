@@ -21,46 +21,54 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+"""
+This is EarwigBot's command-line utility, enabling you to easily start the
+bot or run specific tasks.
+"""
+
 import argparse
+import logging
 from os import path
 
 from earwigbot import __version__
 from earwigbot.bot import Bot
 
-__all__ = ["BotUtility", "main"]
+__all__ = ["main"]
 
-class BotUtility(object):
-    """
-    This is a command-line utility for EarwigBot that enables you to easily
-    start the bot without writing generally unnecessary three-line bootstrap
-    scripts. It supports starting the bot from any directory, as well as
-    starting individual tasks instead of the entire bot.
-    """
+def main():
+    version = "EarwigBot v{0}".format(__version__)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("path", nargs="?", metavar="PATH", default=path.curdir,
+                        help="path to the bot's working directory, which will be created if it doesn't exist; current directory assumed if not specified")
+    parser.add_argument("-v", "--version", action="version", version=version)
+    parser.add_argument("-d", "--debug", action="store_true",
+                        help="print all logs, including DEBUG-level messages")
+    parser.add_argument("-q", "--quiet", action="store_true",
+                        help="don't print any logs except warnings and errors")
+    parser.add_argument("-t", "--task", metavar="NAME",
+                        help="given the name of a task, the bot will run it instead of the main bot and then exit")
 
-    def version(self):
-        return "EarwigBot v{0}".format(__version__)
+    args = parser.parse_args()
+    if args.debug and args.quiet:
+        parser.print_usage()
+        print "earwigbot: error: cannot show debug messages and be quiet at the same time"
+        return
+    level = logging.INFO
+    if args.debug:
+        level = logging.DEBUG
+    elif args.quiet:
+        level = logging.WARNING
 
-    def run(self, root_dir):
-        bot = Bot(root_dir)
-        print self.version()
-        #try:
-        #    bot.run()
-        #finally:
-        #    bot.stop()
-
-    def main(self):
-        parser = argparse.ArgumentParser(description=BotUtility.__doc__)
-
-        parser.add_argument("-v", "--version", action="version",
-                            version=self.version())
-        parser.add_argument("root_dir", metavar="path", nargs="?", default=path.curdir)
-        args = parser.parse_args()
-
-        root_dir = path.abspath(args.root_dir)
-        self.run(root_dir)
-
-
-main = BotUtility().main
+    print version
+    print
+    bot = Bot(path.abspath(args.path), level=level)
+    try:
+        if args.task:
+            bot.tasks.start(args.task)
+        else:
+            bot.run()
+    finally:
+        bot.stop()
 
 if __name__ == "__main__":
     main()
