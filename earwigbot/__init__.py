@@ -48,4 +48,5 @@ if not __release__:
     finally:
         del _add_git_commit_id_to_version
 
-from earwigbot import blowfish, bot, commands, config, irc, tasks, util, wiki
+from earwigbot import (blowfish, bot, commands, config, irc, managers, tasks,
+                       util, wiki)

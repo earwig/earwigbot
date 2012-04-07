@@ -32,9 +32,9 @@ from earwigbot import __version__
 from earwigbot.wiki.exceptions import SiteNotFoundError
 from earwigbot.wiki.site import Site
 
-__all__ = ["SitesDBManager"]
+__all__ = ["SitesDB"]
 
-class SitesDBManager(object):
+class SitesDB(object):
     """
     EarwigBot's Wiki Toolset: Sites Database Manager
 
@@ -49,8 +49,7 @@ class SitesDBManager(object):
     here are available as bot.wiki.get_site(), bot.wiki.add_site(), and
     bot.wiki.remove_site(), which use a sites.db file located in the same
     directory as our config.yml file. Lower-level access can be achieved
-    by importing the manager class
-    (`from earwigbot.wiki import SitesDBManager`).
+    by importing the manager class (`from earwigbot.wiki import SitesDB`).
     """
 
     def __init__(self, config):

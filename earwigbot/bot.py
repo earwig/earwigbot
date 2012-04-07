@@ -24,11 +24,10 @@ import logging
 from threading import Lock, Thread
 from time import sleep, time
 
-from earwigbot.commands import CommandManager
 from earwigbot.config import BotConfig
 from earwigbot.irc import Frontend, Watcher
-from earwigbot.tasks import TaskManager
-from earwigbot.wiki import SitesDBManager
+from earwigbot.managers import CommandManager, TaskManager
+from earwigbot.wiki import SitesDB
 
 __all__ = ["Bot"]
 
@@ -58,7 +57,7 @@ class Bot(object):
         self.logger = logging.getLogger("earwigbot")
         self.commands = CommandManager(self)
         self.tasks = TaskManager(self)
-        self.wiki = SitesDBManager(self.config)
+        self.wiki = SitesDB(self.config)
         self.frontend = None
         self.watcher = None
 
@@ -73,12 +72,12 @@ class Bot(object):
         if self.config.components.get("irc_frontend"):
             self.logger.info("Starting IRC frontend")
             self.frontend = Frontend(self)
-            Thread(name=name, target=self.frontend.loop).start()
+            Thread(name="irc_frontend", target=self.frontend.loop).start()
 
         if self.config.components.get("irc_watcher"):
             self.logger.info("Starting IRC watcher")
             self.watcher = Watcher(self)
-            Thread(name=name, target=self.watcher.loop).start()
+            Thread(name="irc_watcher", target=self.watcher.loop).start()
 
     def _start_wiki_scheduler(self):
         def wiki_scheduler():
@@ -92,7 +91,7 @@ class Bot(object):
 
         if self.config.components.get("wiki_scheduler"):
             self.logger.info("Starting wiki scheduler")
-            Thread(name=name, target=wiki_scheduler).start()
+            Thread(name="wiki_scheduler", target=wiki_scheduler).start()
 
     def _stop_irc_components(self):
         if self.frontend:

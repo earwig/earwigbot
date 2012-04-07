@@ -21,20 +21,16 @@
 # SOFTWARE.
 
 """
-EarwigBot's IRC Command Manager
+EarwigBot's IRC Commands
 
 This package provides the IRC "commands" used by the bot's front-end component.
 This module contains the BaseCommand class (import with
-`from earwigbot.commands import BaseCommand`) and an internal CommandManager
-class. This can be accessed through `bot.commands`.
+`from earwigbot.commands import BaseCommand`), whereas the package contains
+various built-in commands. Additional commands can be installed as plugins in
+the bot's working directory.
 """
 
-import imp
-from os import listdir, path
-from re import sub
-from threading import Lock
-
-__all__ = ["BaseCommand", "CommandManager"]
+__all__ = ["BaseCommand"]
 
 class BaseCommand(object):
     """A base class for commands on IRC.
@@ -90,95 +86,3 @@ class BaseCommand(object):
         Note that 
         """
         pass
-
-
-class CommandManager(object):
-    def __init__(self, bot):
-        self.bot = bot
-        self.logger = bot.logger.getChild("commands")
-        self._commands = {}
-        self._command_access_lock = Lock()
-
-    def __iter__(self):
-        for name in self._commands:
-            yield name
-
-    def _load_command(self, name, path):
-        """Load a specific command from a module, identified by name and path.
-
-        We'll first try to import it using imp magic, and if that works, make
-        an instance of the 'Command' class inside (assuming it is an instance
-        of BaseCommand), add it to self._commands, and log the addition. Any
-        problems along the way will either be ignored or logged.
-        """
-        f, path, desc = imp.find_module(name, [path])
-        try:
-             module = imp.load_module(name, f, path, desc)
-        except Exception:
-            e = "Couldn't load module {0} from {1}"
-            self.logger.exception(e.format(name, path))
-            return
-        finally:
-            f.close()
-
-        try:
-            command_class = module.Command
-        except AttributeError:
-            return  # No command in this module
-        try:
-            command = command_class(self.bot)
-        except Exception:
-            e = "Error initializing Command() class in {0} (from {1})"
-            self.logger.exception(e.format(name, path))
-            return
-        if not isinstance(command, BaseCommand):
-            return
-
-        self._commands[command.name] = command
-        self.logger.debug("Loaded command {0}".format(command.name))
-
-    def _load_directory(self, dir):
-        """Load all valid commands in a given directory."""
-        processed = []
-        for name in listdir(dir):
-            if not name.endswith(".py") and not name.endswith(".pyc"):
-                continue
-            if name.startswith("_") or name.startswith("."):
-                continue
-            modname = sub("\.pyc?$", "", name)  # Remove extension
-            if modname not in processed:
-                self._load_command(modname, dir)
-                processed.append(modname)
-
-    def load(self):
-        """Load (or reload) all valid commands into self._commands."""
-        with self._command_access_lock:
-            self._commands.clear()
-            builtin_dir = path.dirname(__file__)
-            plugins_dir = path.join(self.bot.config.root_dir, "commands")
-            self._load_directory(builtin_dir)  # Built-in commands
-            self._load_directory(plugins_dir)  # Custom commands, aka plugins
-
-        msg = "Loaded {0} commands: {1}"
-        commands = ", ".join(self._commands.keys())
-        self.logger.info(msg.format(len(self._commands), commands))
-
-    def check(self, hook, data):
-        """Given an IRC event, check if there's anything we can respond to."""
-        with self._command_access_lock:
-            for command in self._commands.values():
-                if hook in command.hooks:
-                    if command.check(data):
-                        try:
-                            command._wrap_process(data)
-                        except Exception:
-                            e = "Error executing command '{0}':"
-                            self.logger.exception(e.format(data.command))
-                        break
-
-    def get(self, command_name):
-        """Return the class instance associated with a certain command name.
-
-        Will raise KeyError if the command is not found.
-        """
-        return self._command[command_name]
