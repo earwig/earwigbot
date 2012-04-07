@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 from earwigbot import __version__
 
@@ -30,7 +30,7 @@ with open("README.rst") as fp:
 
 setup(
     name = "earwigbot",
-    packages = ["earwigbot"],
+    packages = find_packages(exclude=("tests",)),
     entry_points = {"console_scripts": ["earwigbot = earwigbot.util:main"]},
     install_requires = ["PyYAML >= 3.10",  # Config parsing
                         "oursql >= 0.9.3",  # Talking with MediaWiki databases

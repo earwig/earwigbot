@@ -40,7 +40,7 @@ class Frontend(IRCConnection):
 
     def __init__(self, bot):
         self.bot = bot
-        self.logger = bot.logger.getLogger("frontend")
+        self.logger = bot.logger.getChild("frontend")
 
         cf = bot.config.irc["frontend"]
         base = super(Frontend, self)

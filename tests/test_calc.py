@@ -23,7 +23,7 @@
 import unittest
 
 from earwigbot.commands.calc import Command
-from earwigbot.tests import CommandTestCase
+from tests import CommandTestCase
 
 class TestCalc(CommandTestCase):
 

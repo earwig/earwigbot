@@ -51,7 +51,7 @@ class BaseTask(object):
         """
         self.bot = bot
         self.config = bot.config
-        self.logger = bot.tasks.logger.getLogger(self.name)
+        self.logger = bot.tasks.logger.getChild(self.name)
         self.setup()
 
     def setup(self):
@@ -135,7 +135,7 @@ class BaseTask(object):
 class TaskManager(object):
     def __init__(self, bot):
         self.bot = bot
-        self.logger = bot.logger.getLogger("tasks")
+        self.logger = bot.logger.getChild("tasks")
         self._tasks = {}
         self._task_access_lock = Lock()
 

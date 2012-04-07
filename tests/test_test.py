@@ -23,7 +23,7 @@
 import unittest
 
 from earwigbot.commands.test import Command
-from earwigbot.tests import CommandTestCase
+from tests import CommandTestCase
 
 class TestTest(CommandTestCase):
 
@@ -38,12 +38,12 @@ class TestTest(CommandTestCase):
         self.assertTrue(self.command.check(self.make_msg("TEST", "foo")))
 
     def test_process(self):
-        def _test():
+        def test():
             self.command.process(self.make_msg("test"))
             self.assertSaidIn(["Hey \x02Foo\x0F!", "'sup \x02Foo\x0F?"])
 
         for i in xrange(64):
-            _test()
+            test()
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

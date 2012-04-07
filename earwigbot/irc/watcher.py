@@ -39,7 +39,7 @@ class Watcher(IRCConnection):
 
     def __init__(self, bot):
         self.bot = bot
-        self.logger = bot.logger.getLogger("watcher")
+        self.logger = bot.logger.getChild("watcher")
 
         cf = bot.config.irc["watcher"]
         base = super(Watcher, self)

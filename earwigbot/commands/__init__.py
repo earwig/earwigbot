@@ -59,7 +59,7 @@ class BaseCommand(object):
         """
         self.bot = bot
         self.config = bot.config
-        self.logger = bot.commands.getLogger(self.name)
+        self.logger = bot.commands.logger.getChild(self.name)
 
     def _wrap_process(self, data):
         """Make a quick connection alias and then process() the message."""
@@ -95,7 +95,7 @@ class BaseCommand(object):
 class CommandManager(object):
     def __init__(self, bot):
         self.bot = bot
-        self.logger = bot.logger.getLogger("commands")
+        self.logger = bot.logger.getChild("commands")
         self._commands = {}
         self._command_access_lock = Lock()
 

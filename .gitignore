@@ -1,5 +1,3 @@
-# Ignore python bytecode:
 *.pyc
-
-# Ignore OS X's stuff:
+*.egg-info
 .DS_Store
