@@ -22,7 +22,6 @@
 
 import re
 
-from earwigbot import wiki
 from earwigbot.commands import BaseCommand
 
 class Command(BaseCommand):
@@ -45,7 +44,7 @@ class Command(BaseCommand):
         return False
 
     def process(self, data):
-        self.site = wiki.get_site()
+        self.site = self.bot.wiki.get_site()
         self.site._maxlag = None
 
         if data.line[1] == "JOIN":

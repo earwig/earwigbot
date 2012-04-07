@@ -110,10 +110,10 @@ class BaseTask(object):
             try:
                 site = self.site
             except AttributeError:
-                site = wiki.get_site()
+                site = self.bot.wiki.get_site()
 
         try:
-            cfg = self.bot.config.wiki["shutoff"]
+            cfg = self.config.wiki["shutoff"]
         except KeyError:
             return False
         title = cfg.get("page", "User:$1/Shutoff/Task $2")

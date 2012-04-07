@@ -22,6 +22,8 @@
 
 from earwigbot.tasks import BaseTask
 
+__all__ = ["Task"]
+
 class Task(BaseTask):
     """A task to create daily categories for [[WP:FEED]]."""
     name = "feed_dailycats"

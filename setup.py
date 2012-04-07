@@ -42,7 +42,7 @@ setup(
     url = "https://github.com/earwig/earwigbot",
     description = "EarwigBot is a Python robot that edits Wikipedia and interacts with people over IRC.",
     long_description = long_docs,
-    download_url = "https://github.com/earwig/earwigbot/tarball/{0}".format(__version__),
+    download_url = "https://github.com/earwig/earwigbot/tarball/v{0}".format(__version__),
     keywords = "earwig earwigbot irc wikipedia wiki mediawiki",
     license = "MIT License",
     classifiers = [

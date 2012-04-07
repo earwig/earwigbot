@@ -29,6 +29,8 @@ import yaml
 
 from earwigbot import blowfish
 
+__all__ = ["BotConfig"]
+
 class BotConfig(object):
     """
     EarwigBot's YAML Config File Manager

@@ -43,6 +43,8 @@ from earwigbot.wiki.exceptions import *
 from earwigbot.wiki.page import Page
 from earwigbot.wiki.user import User
 
+__all__ = ["Site"]
+
 class Site(object):
     """
     EarwigBot's Wiki Toolset: Site Class

@@ -41,7 +41,7 @@ class Command(BaseCommand):
         else:
             name = ' '.join(data.args)
 
-        site = wiki.get_site()
+        site = self.bot.wiki.get_site()
         site._maxlag = None
         user = site.get_user(name)
 

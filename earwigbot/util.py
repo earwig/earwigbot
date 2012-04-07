@@ -27,6 +27,8 @@ from os import path
 from earwigbot import __version__
 from earwigbot.bot import Bot
 
+__all__ = ["BotUtility", "main"]
+
 class BotUtility(object):
     """
     DOCSTRING NEEDED

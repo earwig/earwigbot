@@ -1,5 +1,5 @@
 # -*- coding: utf-8  -*-
-# 
+#
 # Copyright (C) 2009-2012 by Ben Kurtovic <ben.kurtovic@verizon.net>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,17 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""
-EarwigBot is a Python robot that edits Wikipedia and interacts with people over
-IRC. - http://earwig.github.com/earwig/earwigbot
+from earwigbot.tasks import BaseTask
 
-See README.md for a basic overview, or the docs/ directory for details.
-"""
+__all__ = ["Task"]
 
-__author__ = "Ben Kurtovic"
-__copyright__ = "Copyright (C) 2009, 2010, 2011, 2012 by Ben Kurtovic"
-__license__ = "MIT License"
-__version__ = "0.1.dev"
-__email__ = "ben.kurtovic@verizon.net"
+class Task(BaseTask):
+    """A task to tag talk pages with WikiProject Banners."""
+    name = "wikiproject_tagger"
 
-from earwigbot import blowfish, bot, commands, config, irc, tasks, util, wiki
+    def setup(self):
+        pass
+
+    def run(self, **kwargs):
+        pass

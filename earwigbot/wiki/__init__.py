@@ -28,21 +28,21 @@ Wikipedia and other wiki sites. No connection whatsoever to python-wikitools
 written by Mr.Z-man, other than a similar purpose. We share no code.
 
 Import the toolset directly with `from earwigbot import wiki`. If using the
-built-in integration with the rest of the bot, that's usually not necessary:
-Bot() objects contain a `wiki` attribute containing a SitesDBManager object
-tied to the sites.db file located in the same directory as config.yml. That
-object has the principal methods get_site, add_site, and remove_site.
+built-in integration with the rest of the bot, Bot() objects contain a `wiki`
+attribute, which is a SitesDBManager object tied to the sites.db file located
+in the same directory as config.yml. That object has the principal methods
+get_site, add_site, and remove_site that should handle all of your Site (and
+thus, Page, Category, and User) needs.
 """
 
 import logging as _log
 logger = _log.getLogger("earwigbot.wiki")
 logger.addHandler(_log.NullHandler())
 
+from earwigbot.wiki.category import *
 from earwigbot.wiki.constants import *
 from earwigbot.wiki.exceptions import *
-
-from earwigbot.wiki.category import Category
-from earwigbot.wiki.page import Page
-from earwigbot.wiki.site import Site
-from earwigbot.wiki.sitesdb import SitesDBManager
-from earwigbot.wiki.user import User
+from earwigbot.wiki.page import *
+from earwigbot.wiki.site import *
+from earwigbot.wiki.sitesdb import *
+from earwigbot.wiki.user import *

@@ -30,7 +30,7 @@ class Command(BaseCommand):
     name = "report"
 
     def process(self, data):
-        self.site = wiki.get_site()
+        self.site = self.bot.wiki.get_site()
         self.site._maxlag = None
         self.data = data
 
