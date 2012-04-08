@@ -47,31 +47,31 @@ def main():
                         help="don't print any logs except warnings and errors")
     parser.add_argument("-t", "--task", metavar="NAME",
                         help="given the name of a task, the bot will run it instead of the main bot and then exit")
-
     args = parser.parse_args()
+
+    level = logging.INFO
     if args.debug and args.quiet:
         parser.print_usage()
         print "earwigbot: error: cannot show debug messages and be quiet at the same time"
         return
-    level = logging.INFO
     if args.debug:
         level = logging.DEBUG
     elif args.quiet:
         level = logging.WARNING
-
     print version
     print
+
     bot = Bot(path.abspath(args.path), level=level)
-    try:
-        if args.task:
-            bot.tasks.start(args.task)
-        else:
+    if args.task:
+        bot.tasks.start(args.task)
+    else:
+        try:
             bot.run()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        if bot._keep_looping:  # Indicates bot hasn't already been stopped
-            bot.stop()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            if bot._keep_looping:  # Indicates bot hasn't already been stopped
+                bot.stop()
 
 if __name__ == "__main__":
     main()
