@@ -27,8 +27,8 @@ from earwigbot import __version__
 from earwigbot.commands import BaseCommand
 
 class Command(BaseCommand):
-    """Not an actual command, this module is used to respond to the CTCP
-    commands PING, TIME, and VERSION."""
+    """Not an actual command; this module implements responses to the CTCP
+    requests PING, TIME, and VERSION."""
     name = "ctcp"
     hooks = ["msg_private"]
 

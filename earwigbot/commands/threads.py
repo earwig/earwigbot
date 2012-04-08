@@ -117,9 +117,9 @@ class Command(BaseCommand):
                 t = "\x0302{0}\x0301 (\x02active\x0F as ids {1})"
                 tasklist.append(t.format(task, ', '.join(ids)))
 
-        tasklist = ", ".join(tasklist)
+        tasks = ", ".join(tasklist)
 
-        msg = "{0} tasks loaded: {1}.".format(len(all_tasks), tasklist)
+        msg = "{0} tasks loaded: {1}.".format(len(tasklist), tasks)
         self.connection.reply(self.data, msg)
 
     def do_start(self):

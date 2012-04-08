@@ -67,8 +67,11 @@ def main():
             bot.tasks.start(args.task)
         else:
             bot.run()
+    except KeyboardInterrupt:
+        pass
     finally:
-        bot.stop()
+        if not bot._keep_looping:  # Indicates bot has already been stopped
+            bot.stop()
 
 if __name__ == "__main__":
     main()

@@ -98,6 +98,7 @@ class BotConfig(object):
         """Configures the logging module so it works the way we want it to."""
         log_dir = self._log_dir
         logger = logging.getLogger("earwigbot")
+        logger.handlers = []  # Remove any handlers already attached to us
         logger.setLevel(logging.DEBUG)
 
         if self.metadata.get("enableLogging"):

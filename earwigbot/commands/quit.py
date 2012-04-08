@@ -23,11 +23,12 @@
 from earwigbot.commands import BaseCommand
 
 class Command(BaseCommand):
-    """Restart the bot. Only the owner can do this."""
-    name = "restart"
+    """Quit, restart, or reload components from the bot. Only the owners can
+    run this command."""
+    name = "quit"
 
     def check(self, data):
-        commands = ["restart", "reload"]
+        commands = ["quit", "restart", "reload"]
         return data.is_command and data.command in commands
 
     def process(self, data):
@@ -35,17 +36,34 @@ class Command(BaseCommand):
             msg = "you must be a bot owner to use this command."
             self.connection.reply(data, msg)
             return
+        if data.command == "quit":
+            self.do_quit(data)
+        elif data.command == "restart":
+            self.do_restart(data)
+        else:
+            self.do_reload(data)
 
-        if data.command == "restart":
-            self.logger.info("Restarting bot per owner request")
-            if data.args:
-                self.bot.restart(" ".join(data.args))
-            else:
-                self.bot.restart()
+    def do_quit(self, data):
+        nick = self.config.irc.frontend["nick"]
+        if not data.args or data.args[0].lower() != nick.lower():
+            self.connection.reply(data, "to confirm this action, the first argument must be my nickname.")
+            return
+        if data.args[1:]:
+            msg = " ".join(data.args[1:])
+            self.bot.stop("Stopped by {0}: {1}".format(data.nick, msg))
+        else:
+            self.bot.stop("Stopped by {0}".format(data.nick))
 
-        elif data.command == "reload":
-            self.logger.info("Reloading IRC commands")
-            self.bot.commands.load()
-            self.logger.info("Reloading bot tasks")
-            self.bot.tasks.load()
-            self.connection.reply("IRC commands and bot tasks reloaded.")
+    def do_restart(self, data):
+        self.logger.info("Restarting bot per owner request")
+        if data.args:
+            msg = " ".join(data.args)
+            self.bot.restart("Restarted by {0}: {1}".format(data.nick, msg))
+        else:
+            self.bot.restart("Restarted by {0}".format(data.nick))
+
+    def do_reload(self, data):
+        self.logger.info("Reloading IRC commands and bot tasks")
+        self.bot.commands.load()
+        self.bot.tasks.load()
+        self.connection.reply(data, "IRC commands and bot tasks reloaded.")

@@ -81,6 +81,13 @@ class IRCConnection(object):
             self._sock.sendall(msg + "\r\n")
             self.logger.debug(msg)
 
+    def _quit(self, msg=None):
+        """Issue a quit message to the server."""
+        if msg:
+            self._send("QUIT :{0}".format(msg))
+        else:
+            self._send("QUIT")
+
     def say(self, target, msg):
         """Send a private message to a target on the server."""
         msg = "PRIVMSG {0} :{1}".format(target, msg)
@@ -121,13 +128,6 @@ class IRCConnection(object):
         msg = "PONG {0}".format(target)
         self._send(msg)
 
-    def quit(self, msg=None):
-        """Issue a quit message to the server."""
-        if msg:
-            self._send("QUIT :{0}".format(msg))
-        else:
-            self._send("QUIT")
-
     def loop(self):
         """Main loop for the IRC connection."""
         self._is_running = True
@@ -150,7 +150,7 @@ class IRCConnection(object):
     def stop(self, msg=None):
         """Request the IRC connection to close at earliest convenience."""
         if self._is_running:
-            self.quit(msg)
+            self._quit(msg)
             self._is_running = False
 
     def is_stopped(self):
