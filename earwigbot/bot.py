@@ -69,6 +69,7 @@ class Bot(object):
         self.tasks.load()
 
     def _start_irc_components(self):
+        """Start the IRC frontend/watcher in separate threads if enabled."""
         if self.config.components.get("irc_frontend"):
             self.logger.info("Starting IRC frontend")
             self.frontend = Frontend(self)
@@ -80,6 +81,7 @@ class Bot(object):
             Thread(name="irc_watcher", target=self.watcher.loop).start()
 
     def _start_wiki_scheduler(self):
+        """Start the wiki scheduler in a separate thread if enabled."""
         def wiki_scheduler():
             while self._keep_looping:
                 time_start = time()
@@ -91,15 +93,27 @@ class Bot(object):
 
         if self.config.components.get("wiki_scheduler"):
             self.logger.info("Starting wiki scheduler")
-            Thread(name="wiki_scheduler", target=wiki_scheduler).start()
+            thread = Thread(name="wiki_scheduler", target=wiki_scheduler)
+            thread.daemon = True  # Stop if other threads stop
+            thread.start()
 
     def _stop_irc_components(self):
+        """Request the IRC frontend and watcher to stop if enabled."""
         if self.frontend:
             self.frontend.stop()
         if self.watcher:
             self.watcher.stop()
 
-    def _loop(self):
+    def run(self):
+        """Main entry point into running the bot.
+
+        Starts all config-enabled components and then enters an idle loop,
+        ensuring that all components remain online and restarting components
+        that get disconnected from their servers.
+        """
+        self.logger.info("Starting bot")
+        self._start_irc_components()
+        self._start_wiki_scheduler()
         while self._keep_looping:
             with self.component_lock:
                 if self.frontend and self.frontend.is_stopped():
@@ -110,15 +124,17 @@ class Bot(object):
                     self.logger.warn("IRC watcher has stopped; restarting")
                     self.watcher = Watcher(self)
                     Thread(name=name, target=self.watcher.loop).start()
-            sleep(3)
-
-    def run(self):
-        self.logger.info("Starting bot")
-        self._start_irc_components()
-        self._start_wiki_scheduler()
-        self._loop()
+            sleep(2)
 
     def restart(self):
+        """Reload config, commands, tasks, and safely restart IRC components.
+
+        This is thread-safe, and it will gracefully stop IRC components before
+        reloading anything. Note that you can safely reload commands or tasks
+        without restarting the bot with bot.commands.load() or
+        bot.tasks.load(). These should not interfere with running components
+        or tasks.
+        """
         self.logger.info("Restarting bot per request from owner")
         with self.component_lock:
             self._stop_irc_components()
@@ -128,6 +144,7 @@ class Bot(object):
             self._start_irc_components()
 
     def stop(self):
+        """Gracefully stop all bot components."""
         self.logger.info("Shutting down bot")
         with self.component_lock:
             self._stop_irc_components()

@@ -147,10 +147,10 @@ class IRCConnection(object):
                 self._close()
                 break
 
-    def stop(self):
+    def stop(self, msg=None):
         """Request the IRC connection to close at earliest convenience."""
         if self._is_running:
-            self.quit()
+            self.quit(msg)
             self._is_running = False
 
     def is_stopped(self):
