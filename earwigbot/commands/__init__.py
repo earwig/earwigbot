@@ -57,10 +57,22 @@ class BaseCommand(object):
         self.config = bot.config
         self.logger = bot.commands.logger.getChild(self.name)
 
+    def _wrap_check(self, data):
+        """Check whether this command should be called, catching errors."""
+        try:
+            return self.check(data)
+        except Exception:
+            e = "Error checking command '{0}' with data: {1}:"
+            self.logger.exception(e.format(self.name, data))
+
     def _wrap_process(self, data):
-        """Make a quick connection alias and then process() the message."""
+        """Make a connection alias, process() the message, and catch errors."""
         self.connection = self.bot.frontend
-        self.process(data)
+        try:
+            self.process(data)
+        except Exception:
+            e = "Error executing command '{0}':"
+            self.logger.exception(e.format(data.command))
 
     def check(self, data):
         """Return whether this command should be called in response to 'data'.

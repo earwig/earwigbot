@@ -149,16 +149,13 @@ class CommandManager(_ResourceManager):
 
     def check(self, hook, data):
         """Given an IRC event, check if there's anything we can respond to."""
-        with self.lock:
-            for command in self._resources.itervalues():
-                if hook in command.hooks:
-                    if command.check(data):
-                        try:
-                            command._wrap_process(data)
-                        except Exception:
-                            e = "Error executing command '{0}':"
-                            self.logger.exception(e.format(data.command))
-                        break
+        self.lock.acquire()
+        for command in self._resources.itervalues():
+            if hook in command.hooks and command._wrap_check(data):
+                self.lock.release()
+                command._wrap_process(data)
+                return
+        self.lock.release()
 
 
 class TaskManager(_ResourceManager):
