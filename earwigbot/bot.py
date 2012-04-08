@@ -137,7 +137,10 @@ class Bot(object):
 
         If given, 'msg' will be used as our quit message.
         """
-        self.logger.info("Restarting bot per request from owner")
+        if msg:
+            self.logger.info('Restarting bot ("{0}")'.format(msg))
+        else:
+            self.logger.info("Restarting bot")
         with self.component_lock:
             self._stop_irc_components(msg)
             self.config.load()
@@ -150,7 +153,10 @@ class Bot(object):
 
         If given, 'msg' will be used as our quit message.
         """
-        self.logger.info("Stopping bot")
+        if msg:
+            self.logger.info('Stopping bot ("{0}")'.format(msg))
+        else:
+            self.logger.info("Stopping bot")
         with self.component_lock:
             self._stop_irc_components(msg)
         self._keep_looping = False

@@ -54,7 +54,6 @@ class Command(BaseCommand):
             self.bot.stop("Stopped by {0}".format(data.nick))
 
     def do_restart(self, data):
-        self.logger.info("Restarting bot per owner request")
         if data.args:
             msg = " ".join(data.args)
             self.bot.restart("Restarted by {0}: {1}".format(data.nick, msg))
@@ -62,7 +61,7 @@ class Command(BaseCommand):
             self.bot.restart("Restarted by {0}".format(data.nick))
 
     def do_reload(self, data):
-        self.logger.info("Reloading IRC commands and bot tasks")
+        self.logger.info("{0} requested command/task reload".format(data.nick))
         self.bot.commands.load()
         self.bot.tasks.load()
         self.reply(data, "IRC commands and bot tasks reloaded.")

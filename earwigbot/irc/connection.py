@@ -113,10 +113,12 @@ class IRCConnection(object):
         msg = "JOIN {0}".format(chan)
         self._send(msg)
 
-    def part(self, chan):
-        """Part from a channel on the server."""
-        msg = "PART {0}".format(chan)
-        self._send(msg)
+    def part(self, chan, msg=None):
+        """Part from a channel on the server, optionally using an message."""
+        if msg:
+            self._send("PART {0} :{1}".format(chan, msg))
+        else:
+            self._send("PART {0}".format(chan))
 
     def mode(self, target, level, msg):
         """Send a mode message to the server."""

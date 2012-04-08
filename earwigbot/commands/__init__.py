@@ -63,7 +63,7 @@ class BaseCommand(object):
         self.action = lambda target, msg: self.bot.frontend.action(target, msg)
         self.notice = lambda target, msg: self.bot.frontend.notice(target, msg)
         self.join = lambda chan: self.bot.frontend.join(chan)
-        self.part = lambda chan: self.bot.frontend.part(chan)
+        self.part = lambda chan, msg=None: self.bot.frontend.part(chan, msg)
         self.mode = lambda t, level, msg: self.bot.frontend.mode(t, level, msg)
         self.pong = lambda target: self.bot.frontend.pong(target)
 
