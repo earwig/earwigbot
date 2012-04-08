@@ -32,7 +32,7 @@ class Command(BaseCommand):
 
     def process(self, data):
         if not data.args:
-            self.connection.reply(data, "what do you want me to calculate?")
+            self.reply(data, "what do you want me to calculate?")
             return
 
         query = ' '.join(data.args)
@@ -47,7 +47,7 @@ class Command(BaseCommand):
 
         match = r_result.search(result)
         if not match:
-            self.connection.reply(data, "Calculation error.")
+            self.reply(data, "Calculation error.")
             return
 
         result = match.group(1)
@@ -62,7 +62,7 @@ class Command(BaseCommand):
             result += " " + query.split(" in ", 1)[1]
 
         res = "%s = %s" % (query, result)
-        self.connection.reply(data, res)
+        self.reply(data, res)
 
     def cleanup(self, query):
         fixes = [

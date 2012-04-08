@@ -29,8 +29,9 @@ class Command(BaseCommand):
     name = "test"
 
     def process(self, data):
+        user = "\x02{0}\x0F".format(data.nick)
         hey = random.randint(0, 1)
         if hey:
-            self.connection.say(data.chan, "Hey \x02%s\x0F!" % data.nick)
+            self.say(data.chan, "Hey {0}!".format(user))
         else:
-            self.connection.say(data.chan, "'sup \x02%s\x0F?" % data.nick)
+            self.say(data.chan, "'sup {0}?".format(user))

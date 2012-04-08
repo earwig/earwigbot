@@ -26,9 +26,9 @@ from threading import Lock
 
 import oursql
 
-from earwigbot import wiki
-from earwigbot.config import config
 from earwigbot.tasks import BaseTask
+
+__all__ = ["Task"]
 
 class Task(BaseTask):
     """A task to check newly-edited [[WP:AFC]] submissions for copyright
@@ -36,8 +36,8 @@ class Task(BaseTask):
     name = "afc_copyvios"
     number = 1
 
-    def __init__(self):
-        cfg = config.tasks.get(self.name, {})
+    def setup(self):
+        cfg = self.config.tasks.get(self.name, {})
         self.template = cfg.get("template", "AfC suspected copyvio")
         self.ignore_list = cfg.get("ignoreList", [])
         self.min_confidence = cfg.get("minConfidence", 0.5)
@@ -63,7 +63,7 @@ class Task(BaseTask):
         if self.shutoff_enabled():
             return
         title = kwargs["page"]
-        page = wiki.get_site().get_page(title)
+        page = self.bot.wiki.get_site().get_page(title)
         with self.db_access_lock:
             self.conn = oursql.connect(**self.conn_data)
             self.process(page)

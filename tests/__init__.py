@@ -23,26 +23,41 @@
 """
 EarwigBot's Unit Tests
 
-This module __init__ file provides some support code for unit tests.
+This __init__ file provides some support code for unit tests.
 
-CommandTestCase is a subclass of unittest.TestCase that provides setUp() for
-creating a fake connection and some other helpful methods. It uses 
-FakeConnection, a subclass of classes.Connection, but with an internal string
-instead of a socket for data.
+Test cases:
+  -- CommandTestCase provides setUp() for creating a fake connection, plus
+     some other helpful methods for testing IRC commands.
+
+Fake objects:
+  -- FakeBot implements Bot, using the Fake* equivalents of all objects
+     whenever possible.
+  -- FakeBotConfig implements BotConfig with silent logging.
+  -- FakeIRCConnection implements IRCConnection, using an internal string
+     buffer for data instead of sending it over a socket.
+
 """
 
+import logging
+from os import path
 import re
+from threading import Lock
 from unittest import TestCase
 
+from earwigbot.bot import Bot
+from earwigbot.commands import CommandManager
+from earwigbot.config import BotConfig
 from earwigbot.irc import IRCConnection, Data
+from earwigbot.tasks import TaskManager
+from earwigbot.wiki import SitesDBManager
 
 class CommandTestCase(TestCase):
     re_sender = re.compile(":(.*?)!(.*?)@(.*?)\Z")
 
     def setUp(self, command):
-        self.connection = FakeConnection()
-        self.connection._connect()
-        self.command = command(self.connection)
+        self.bot = FakeBot(path.dirname(__file__))
+        self.command = command(self.bot)
+        self.command.connection = self.connection = self.bot.frontend
 
     def get_single(self):
         data = self.connection._get().split("\n")
@@ -92,15 +107,38 @@ class CommandTestCase(TestCase):
         line = ":Foo!bar@example.com JOIN :#channel".strip().split()
         return self.maker(line, line[2][1:])
 
-class FakeConnection(IRCConnection):
-    def __init__(self):
-        pass
+
+class FakeBot(Bot):
+    def __init__(self, root_dir):
+        self.config = FakeBotConfig(root_dir)
+        self.logger = logging.getLogger("earwigbot")
+        self.commands = CommandManager(self)
+        self.tasks = TaskManager(self)
+        self.wiki = SitesDBManager(self.config)
+        self.frontend = FakeIRCConnection(self)
+        self.watcher = FakeIRCConnection(self)
+
+        self.component_lock = Lock()
+        self._keep_looping = True
+
+
+class FakeBotConfig(BotConfig):
+    def _setup_logging(self):
+        logger = logging.getLogger("earwigbot")
+        logger.addHandler(logging.NullHandler())
+
+
+class FakeIRCConnection(IRCConnection):
+    def __init__(self, bot):
+        self.bot = bot
+        self._is_running = False
+        self._connect()
 
     def _connect(self):
         self._buffer = ""
 
     def _close(self):
-        pass
+        self._buffer = ""
 
     def _get(self, size=4096):
         data, self._buffer = self._buffer, ""

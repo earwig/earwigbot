@@ -47,4 +47,4 @@ class Command(BaseCommand):
         conn.close()
 
         msg = "Replag on \x0302{0}\x0301 is \x02{1}\x0F seconds."
-        self.connection.reply(data, msg.format(args["db"], replag))
+        self.reply(data, msg.format(args["db"], replag))

@@ -28,6 +28,8 @@ from urllib import quote
 from earwigbot.wiki.copyright import CopyrightMixin
 from earwigbot.wiki.exceptions import *
 
+__all__ = ["Page"]
+
 class Page(CopyrightMixin):
     """
     EarwigBot's Wiki Toolset: Page Class
@@ -174,7 +176,7 @@ class Page(CopyrightMixin):
 
         Assuming the API is sound, this should not raise any exceptions.
         """
-        if result is None:
+        if not result:
             params = {"action": "query", "rvprop": "user", "intoken": "edit",
                       "prop": "info|revisions", "rvlimit": 1, "rvdir": "newer",
                       "titles": self._title, "inprop": "protection|url"}
@@ -240,7 +242,7 @@ class Page(CopyrightMixin):
         Don't call this directly, ever - use .get(force=True) if you want to
         force content reloading.
         """
-        if result is None:
+        if not result:
             params = {"action": "query", "prop": "revisions", "rvlimit": 1,
                       "rvprop": "content|timestamp", "titles": self._title}
             result = self._site._api_query(params)
@@ -471,7 +473,7 @@ class Page(CopyrightMixin):
         """
         if force:
             self._load_wrapper()
-        if self._fullurl is not None:
+        if self._fullurl:
             return self._fullurl
         else:
             slug = quote(self._title.replace(" ", "_"), safe="/:")

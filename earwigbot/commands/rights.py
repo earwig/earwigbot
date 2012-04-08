@@ -39,7 +39,7 @@ class Command(BaseCommand):
         else:
             name = ' '.join(data.args)
 
-        site = wiki.get_site()
+        site = self.bot.wiki.get_site()
         site._maxlag = None
         user = site.get_user(name)
 
@@ -47,7 +47,7 @@ class Command(BaseCommand):
             rights = user.groups()
         except wiki.UserNotFoundError:
             msg = "the user \x0302{0}\x0301 does not exist."
-            self.connection.reply(data, msg.format(name))
+            self.reply(data, msg.format(name))
             return
 
         try:
@@ -55,4 +55,4 @@ class Command(BaseCommand):
         except ValueError:
             pass
         msg = "the rights for \x0302{0}\x0301 are {1}."
-        self.connection.reply(data, msg.format(name, ', '.join(rights)))
+        self.reply(data, msg.format(name, ', '.join(rights)))

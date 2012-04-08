@@ -30,17 +30,9 @@ from time import sleep
 import oursql
 
 from earwigbot import wiki
-from earwigbot.config import config
 from earwigbot.tasks import BaseTask
 
-# Chart status number constants:
-CHART_NONE = 0
-CHART_PEND = 1
-CHART_DRAFT = 2
-CHART_REVIEW = 3
-CHART_ACCEPT = 4
-CHART_DECLINE = 5
-CHART_MISPLACE = 6
+__all__ = ["Task"]
 
 class Task(BaseTask):
     """A task to generate statistics for WikiProject Articles for Creation.
@@ -53,8 +45,17 @@ class Task(BaseTask):
     name = "afc_statistics"
     number = 2
 
-    def __init__(self):
-        self.cfg = cfg = config.tasks.get(self.name, {})
+    # Chart status number constants:
+    CHART_NONE = 0
+    CHART_PEND = 1
+    CHART_DRAFT = 2
+    CHART_REVIEW = 3
+    CHART_ACCEPT = 4
+    CHART_DECLINE = 5
+    CHART_MISPLACE = 6
+
+    def setup(self):
+        self.cfg = cfg = self.config.tasks.get(self.name, {})
 
         # Set some wiki-related attributes:
         self.pagename = cfg.get("page", "Template:AFC statistics")
@@ -83,7 +84,7 @@ class Task(BaseTask):
         (self.save()). We will additionally create an SQL connection with our
         local database.
         """
-        self.site = wiki.get_site()
+        self.site = self.bot.wiki.get_site()
         with self.db_access_lock:
             self.conn = oursql.connect(**self.conn_data)
 
@@ -206,7 +207,7 @@ class Task(BaseTask):
         replag = self.site.get_replag()
         self.logger.debug("Server replag is {0}".format(replag))
         if replag > 600 and not kwargs.get("ignore_replag"):
-            msg = "Sync canceled as replag ({0} secs) is greater than ten minutes."
+            msg = "Sync canceled as replag ({0} secs) is greater than ten minutes"
             self.logger.warn(msg.format(replag))
             return
 
@@ -286,7 +287,7 @@ class Task(BaseTask):
         query = """DELETE FROM page, row USING page JOIN row
                    ON page_id = row_id WHERE row_chart IN (?, ?)
                    AND ADDTIME(page_special_time, '36:00:00') < NOW()"""
-        cursor.execute(query, (CHART_ACCEPT, CHART_DECLINE))
+        cursor.execute(query, (self.CHART_ACCEPT, self.CHART_DECLINE))
 
     def update(self, **kwargs):
         """Update a page by name, regardless of whether anything has changed.
@@ -333,7 +334,7 @@ class Task(BaseTask):
 
         namespace = self.site.get_page(title).namespace()
         status, chart = self.get_status_and_chart(content, namespace)
-        if chart == CHART_NONE:
+        if chart == self.CHART_NONE:
             msg = "Could not find a status for [[{0}]]".format(title)
             self.logger.warn(msg)
             return
@@ -367,7 +368,7 @@ class Task(BaseTask):
 
         namespace = self.site.get_page(title).namespace()
         status, chart = self.get_status_and_chart(content, namespace)
-        if chart == CHART_NONE:
+        if chart == self.CHART_NONE:
             self.untrack_page(cursor, pageid)
             return
 
@@ -499,23 +500,23 @@ class Task(BaseTask):
         statuses = self.get_statuses(content)
 
         if "R" in statuses:
-            status, chart = "r", CHART_REVIEW
+            status, chart = "r", self.CHART_REVIEW
         elif "H" in statuses:
-            status, chart = "p", CHART_DRAFT
+            status, chart = "p", self.CHART_DRAFT
         elif "P" in statuses:
-            status, chart = "p", CHART_PEND
+            status, chart = "p", self.CHART_PEND
         elif "T" in statuses:
-            status, chart = None, CHART_NONE
+            status, chart = None, self.CHART_NONE
         elif "D" in statuses:
-            status, chart = "d", CHART_DECLINE
+            status, chart = "d", self.CHART_DECLINE
         else:
-            status, chart = None, CHART_NONE
+            status, chart = None, self.CHART_NONE
 
         if namespace == wiki.NS_MAIN:
             if not statuses:
-                status, chart = "a", CHART_ACCEPT
+                status, chart = "a", self.CHART_ACCEPT
             else:
-                status, chart = None, CHART_MISPLACE
+                status, chart = None, self.CHART_MISPLACE
 
         return status, chart
 
@@ -614,23 +615,23 @@ class Task(BaseTask):
         returned if we cannot determine when the page was "special"-ed, or if
         it was "special"-ed more than 250 edits ago.
         """
-        if chart ==CHART_NONE:
+        if chart ==self.CHART_NONE:
             return None, None, None
-        elif chart == CHART_MISPLACE:
+        elif chart == self.CHART_MISPLACE:
             return self.get_create(pageid)
-        elif chart == CHART_ACCEPT:
+        elif chart == self.CHART_ACCEPT:
             search_for = None
             search_not = ["R", "H", "P", "T", "D"]
-        elif chart == CHART_DRAFT:
+        elif chart == self.CHART_DRAFT:
             search_for = "H"
             search_not = []
-        elif chart == CHART_PEND:
+        elif chart == self.CHART_PEND:
             search_for = "P"
             search_not = []
-        elif chart == CHART_REVIEW:
+        elif chart == self.CHART_REVIEW:
             search_for = "R"
             search_not = []
-        elif chart == CHART_DECLINE:
+        elif chart == self.CHART_DECLINE:
             search_for = "D"
             search_not = ["R", "H", "P", "T"]
 
@@ -684,12 +685,12 @@ class Task(BaseTask):
         """
         notes = ""
 
-        ignored_charts = [CHART_NONE, CHART_ACCEPT, CHART_DECLINE]
+        ignored_charts = [self.CHART_NONE, self.CHART_ACCEPT, self.CHART_DECLINE]
         if chart in ignored_charts:
             return notes
 
         statuses = self.get_statuses(content)
-        if "D" in statuses and chart != CHART_MISPLACE:
+        if "D" in statuses and chart != self.CHART_MISPLACE:
             notes += "|nr=1"  # Submission was resubmitted
 
         if len(content) < 500:
@@ -706,7 +707,7 @@ class Task(BaseTask):
         if time_since_modify > max_time:
             notes += "|no=1"  # Submission hasn't been touched in over 4 days
 
-        if chart in [CHART_PEND, CHART_DRAFT]:
+        if chart in [self.CHART_PEND, self.CHART_DRAFT]:
             submitter = self.site.get_user(s_user)
             try:
                 if submitter.blockinfo():

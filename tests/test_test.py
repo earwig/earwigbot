@@ -22,38 +22,28 @@
 
 import unittest
 
-from earwigbot.commands.calc import Command
-from earwigbot.tests import CommandTestCase
+from earwigbot.commands.test import Command
+from tests import CommandTestCase
 
-class TestCalc(CommandTestCase):
+class TestTest(CommandTestCase):
 
     def setUp(self):
-        super(TestCalc, self).setUp(Command)
+        super(TestTest, self).setUp(Command)
 
     def test_check(self):
         self.assertFalse(self.command.check(self.make_msg("bloop")))
         self.assertFalse(self.command.check(self.make_join()))
 
-        self.assertTrue(self.command.check(self.make_msg("calc")))
-        self.assertTrue(self.command.check(self.make_msg("CALC", "foo")))
+        self.assertTrue(self.command.check(self.make_msg("test")))
+        self.assertTrue(self.command.check(self.make_msg("TEST", "foo")))
 
-    def test_ignore_empty(self):
-        self.command.process(self.make_msg("calc"))
-        self.assertReply("what do you want me to calculate?")
+    def test_process(self):
+        def test():
+            self.command.process(self.make_msg("test"))
+            self.assertSaidIn(["Hey \x02Foo\x0F!", "'sup \x02Foo\x0F?"])
 
-    def test_maths(self):
-        tests = [
-            ("2 + 2", "2 + 2 = 4"),
-            ("13 * 5", "13 * 5 = 65"),
-            ("80 / 42", "80 / 42 = 40/21 (approx. 1.9047619047619047)"),
-            ("2/0", "2/0 = undef"),
-            ("π", "π = 3.141592653589793238"),
-        ]
-
-        for test in tests:
-            q = test[0].strip().split()
-            self.command.process(self.make_msg("calc", *q))
-            self.assertReply(test[1])
+        for i in xrange(64):
+            test()
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

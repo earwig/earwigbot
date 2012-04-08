@@ -20,18 +20,40 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.commands import BaseCommand
-from earwigbot.config import config
+import unittest
 
-class Command(BaseCommand):
-    """Restart the bot. Only the owner can do this."""
-    name = "restart"
+from earwigbot.commands.calc import Command
+from tests import CommandTestCase
 
-    def process(self, data):
-        if data.host not in config.irc["permissions"]["owners"]:
-            msg = "you must be a bot owner to use this command."
-            self.connection.reply(data, msg)
-            return
+class TestCalc(CommandTestCase):
 
-        self.connection.logger.info("Restarting bot per owner request")
-        self.connection.is_running = False
+    def setUp(self):
+        super(TestCalc, self).setUp(Command)
+
+    def test_check(self):
+        self.assertFalse(self.command.check(self.make_msg("bloop")))
+        self.assertFalse(self.command.check(self.make_join()))
+
+        self.assertTrue(self.command.check(self.make_msg("calc")))
+        self.assertTrue(self.command.check(self.make_msg("CALC", "foo")))
+
+    def test_ignore_empty(self):
+        self.command.process(self.make_msg("calc"))
+        self.assertReply("what do you want me to calculate?")
+
+    def test_maths(self):
+        tests = [
+            ("2 + 2", "2 + 2 = 4"),
+            ("13 * 5", "13 * 5 = 65"),
+            ("80 / 42", "80 / 42 = 40/21 (approx. 1.9047619047619047)"),
+            ("2/0", "2/0 = undef"),
+            ("π", "π = 3.141592653589793238"),
+        ]
+
+        for test in tests:
+            q = test[0].strip().split()
+            self.command.process(self.make_msg("calc", *q))
+            self.assertReply(test[1])
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

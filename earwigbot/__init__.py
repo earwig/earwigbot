@@ -21,16 +21,32 @@
 # SOFTWARE.
 
 """
-EarwigBot - http://earwig.github.com/earwig/earwigbot
+EarwigBot is a Python robot that edits Wikipedia and interacts with people over
+IRC. - http://earwig.github.com/earwig/earwigbot
+
 See README.md for a basic overview, or the docs/ directory for details.
 """
 
 __author__ = "Ben Kurtovic"
-__copyright__ = "Copyright (C) 2009, 2010, 2011 by Ben Kurtovic"
+__copyright__ = "Copyright (C) 2009, 2010, 2011, 2012 by Ben Kurtovic"
 __license__ = "MIT License"
 __version__ = "0.1.dev"
 __email__ = "ben.kurtovic@verizon.net"
+__release__ = False
 
-from earwigbot import (
-    blowfish, commands, config, irc, main, runner, tasks, tests, wiki
-)
+if not __release__:
+    def _add_git_commit_id_to_version(version):
+        from git import Repo
+        from os.path import split, dirname
+        path = split(dirname(__file__))[0]
+        commit_id = Repo(path).head.object.hexsha
+        return version + ".git+" + commit_id[:8]
+    try:
+        __version__ = _add_git_commit_id_to_version(__version__)
+    except Exception:
+        pass
+    finally:
+        del _add_git_commit_id_to_version
+
+from earwigbot import (blowfish, bot, commands, config, irc, managers, tasks,
+                       util, wiki)

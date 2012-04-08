@@ -21,7 +21,8 @@
 # SOFTWARE.
 
 import socket
-import threading
+from threading import Lock
+from time import sleep
 
 __all__ = ["BrokenSocketException", "IRCConnection"]
 
@@ -35,17 +36,16 @@ class BrokenSocketException(Exception):
 class IRCConnection(object):
     """A class to interface with IRC."""
 
-    def __init__(self, host, port, nick, ident, realname, logger):
+    def __init__(self, host, port, nick, ident, realname):
         self.host = host
         self.port = port
         self.nick = nick
         self.ident = ident
         self.realname = realname
-        self.logger = logger
-        self.is_running = False
+        self._is_running = False
 
         # A lock to prevent us from sending two messages at once:
-        self._lock = threading.Lock()
+        self._send_lock = Lock()
 
     def _connect(self):
         """Connect to our IRC server."""
@@ -53,8 +53,9 @@ class IRCConnection(object):
         try:
             self._sock.connect((self.host, self.port))
         except socket.error:
-            self.logger.critical("Couldn't connect to IRC server", exc_info=1)
-            exit(1)
+            self.logger.exception("Couldn't connect to IRC server; retrying")
+            sleep(8)
+            self._connect()
         self._send("NICK {0}".format(self.nick))
         self._send("USER {0} {1} * :{2}".format(self.ident, self.host, self.realname))
 
@@ -68,7 +69,7 @@ class IRCConnection(object):
 
     def _get(self, size=4096):
         """Receive (i.e. get) data from the server."""
-        data = self._sock.recv(4096)
+        data = self._sock.recv(size)
         if not data:
             # Socket isn't giving us any data, so it is dead or broken:
             raise BrokenSocketException()
@@ -76,10 +77,16 @@ class IRCConnection(object):
 
     def _send(self, msg):
         """Send data to the server."""
-        # Ensure that we only send one message at a time with a blocking lock:
-        with self._lock:
+        with self._send_lock:
             self._sock.sendall(msg + "\r\n")
             self.logger.debug(msg)
+
+    def _quit(self, msg=None):
+        """Issue a quit message to the server."""
+        if msg:
+            self._send("QUIT :{0}".format(msg))
+        else:
+            self._send("QUIT")
 
     def say(self, target, msg):
         """Send a private message to a target on the server."""
@@ -106,14 +113,16 @@ class IRCConnection(object):
         msg = "JOIN {0}".format(chan)
         self._send(msg)
 
-    def part(self, chan):
-        """Part from a channel on the server."""
-        msg = "PART {0}".format(chan)
-        self._send(msg)
+    def part(self, chan, msg=None):
+        """Part from a channel on the server, optionally using an message."""
+        if msg:
+            self._send("PART {0} :{1}".format(chan, msg))
+        else:
+            self._send("PART {0}".format(chan))
 
-    def mode(self, chan, level, msg):
+    def mode(self, target, level, msg):
         """Send a mode message to the server."""
-        msg = "MODE {0} {1} {2}".format(chan, level, msg)
+        msg = "MODE {0} {1} {2}".format(target, level, msg)
         self._send(msg)
 
     def pong(self, target):
@@ -123,19 +132,29 @@ class IRCConnection(object):
 
     def loop(self):
         """Main loop for the IRC connection."""
-        self.is_running = True
+        self._is_running = True
         read_buffer = ""
         while 1:
             try:
                 read_buffer += self._get()
             except BrokenSocketException:
-                self.is_running = False
+                self._is_running = False
                 break
 
             lines = read_buffer.split("\n")
             read_buffer = lines.pop()
             for line in lines:
                 self._process_message(line)
-            if not self.is_running:
+            if self.is_stopped():
                 self._close()
                 break
+
+    def stop(self, msg=None):
+        """Request the IRC connection to close at earliest convenience."""
+        if self._is_running:
+            self._quit(msg)
+            self._is_running = False
+
+    def is_stopped(self):
+        """Return whether the IRC connection has been (or is to be) closed."""
+        return not self._is_running

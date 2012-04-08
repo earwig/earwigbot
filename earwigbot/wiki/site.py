@@ -43,6 +43,8 @@ from earwigbot.wiki.exceptions import *
 from earwigbot.wiki.page import Page
 from earwigbot.wiki.user import User
 
+__all__ = ["Site"]
+
 class Site(object):
     """
     EarwigBot's Wiki Toolset: Site Class
@@ -71,18 +73,19 @@ class Site(object):
     def __init__(self, name=None, project=None, lang=None, base_url=None,
                  article_path=None, script_path=None, sql=None,
                  namespaces=None, login=(None, None), cookiejar=None,
-                 user_agent=None, assert_edit=None, maxlag=None,
-                 search_config=(None, None)):
+                 user_agent=None, use_https=False, assert_edit=None,
+                 maxlag=None, search_config=(None, None)):
         """Constructor for new Site instances.
 
         This probably isn't necessary to call yourself unless you're building a
         Site that's not in your config and you don't want to add it - normally
         all you need is tools.get_site(name), which creates the Site for you
-        based on your config file. We accept a bunch of kwargs, but the only
-        ones you really "need" are `base_url` and `script_path` - this is
-        enough to figure out an API url. `login`, a tuple of
-        (username, password), is highly recommended. `cookiejar` will be used
-        to store cookies, and we'll use a normal CookieJar if none is given.
+        based on your config file and the sites database. We accept a bunch of
+        kwargs, but the only ones you really "need" are `base_url` and
+        `script_path` - this is enough to figure out an API url. `login`, a 
+        tuple of (username, password), is highly recommended. `cookiejar` will
+        be used to store cookies, and we'll use a normal CookieJar if none is
+        given.
 
         First, we'll store the given arguments as attributes, then set up our
         URL opener. We'll load any of the attributes that weren't given from
@@ -99,7 +102,8 @@ class Site(object):
         self._script_path = script_path
         self._namespaces = namespaces
 
-        # Attributes used for API queries: 
+        # Attributes used for API queries:
+        self._use_https = use_https
         self._assert_edit = assert_edit
         self._maxlag = maxlag
         self._max_retries = 5
@@ -112,11 +116,11 @@ class Site(object):
         self._search_config = search_config
 
         # Set up cookiejar and URL opener for making API queries:
-        if cookiejar is not None:
+        if cookiejar:
             self._cookiejar = cookiejar
         else:
             self._cookiejar = CookieJar()
-        if user_agent is None:
+        if not user_agent:
             user_agent = USER_AGENT  # Set default UA from wiki.constants
         self._opener = build_opener(HTTPCookieProcessor(self._cookiejar))
         self._opener.addheaders = [("User-Agent", user_agent),
@@ -127,9 +131,9 @@ class Site(object):
 
         # If we have a name/pass and the API says we're not logged in, log in:
         self._login_info = name, password = login
-        if name is not None and password is not None:
+        if name and password:
             logged_in_as = self._get_username_from_cookies()
-            if logged_in_as is None or name != logged_in_as:
+            if not logged_in_as or name != logged_in_as:
                 self._login(login)
 
     def __repr__(self):
@@ -137,10 +141,10 @@ class Site(object):
         res = ", ".join((
             "Site(name={_name!r}", "project={_project!r}", "lang={_lang!r}",
             "base_url={_base_url!r}", "article_path={_article_path!r}",
-            "script_path={_script_path!r}", "assert_edit={_assert_edit!r}",
-            "maxlag={_maxlag!r}", "sql={_sql!r}", "login={0}",
-            "user_agent={2!r}", "cookiejar={1})"
-        ))
+            "script_path={_script_path!r}", "use_https={_use_https!r}",
+            "assert_edit={_assert_edit!r}", "maxlag={_maxlag!r}",
+            "sql={_sql_data!r}", "login={0}", "user_agent={2!r}",
+            "cookiejar={1})"))
         name, password = self._login_info
         login = "({0}, {1})".format(repr(name), "hidden" if password else None)
         cookies = self._cookiejar.__class__.__name__
@@ -162,7 +166,9 @@ class Site(object):
 
         This will first attempt to construct an API url from self._base_url and
         self._script_path. We need both of these, or else we'll raise
-        SiteAPIError.
+        SiteAPIError. If self._base_url is protocol-relative (introduced in
+        MediaWiki 1.18), we'll choose HTTPS if self._user_https is True,
+        otherwise HTTP.
 
         We'll encode the given params, adding format=json along the way, as
         well as &assert= and &maxlag= based on self._assert_edit and _maxlag.
@@ -180,11 +186,17 @@ class Site(object):
         There's helpful MediaWiki API documentation at
         <http://www.mediawiki.org/wiki/API>.
         """
-        if self._base_url is None or self._script_path is None:
+        if not self._base_url or self._script_path is None:
             e = "Tried to do an API query, but no API URL is known."
             raise SiteAPIError(e)
 
-        url = ''.join((self._base_url, self._script_path, "/api.php"))
+        base_url = self._base_url
+        if base_url.startswith("//"): # Protocol-relative URLs from 1.18
+            if self._use_https:
+                base_url = "https:" + base_url
+            else:
+                base_url = "http:" + base_url
+        url = ''.join((base_url, self._script_path, "/api.php"))
 
         params["format"] = "json"  # This is the only format we understand
         if self._assert_edit:  # If requested, ensure that we're logged in
@@ -193,7 +205,6 @@ class Site(object):
             params["maxlag"] = self._maxlag
 
         data = urlencode(params)
-
         logger.debug("{0} -> {1}".format(url, data))
 
         try:
@@ -231,7 +242,7 @@ class Site(object):
                 e = "Maximum number of retries reached ({0})."
                 raise SiteAPIError(e.format(self._max_retries))
             tries += 1
-            msg = 'Server says: "{0}". Retrying in {1} seconds ({2}/{3}).'
+            msg = 'Server says "{0}"; retrying in {1} seconds ({2}/{3})'
             logger.info(msg.format(info, wait, tries, self._max_retries))
             sleep(wait)
             return self._api_query(params, tries=tries, wait=wait*3)
@@ -332,15 +343,15 @@ class Site(object):
         name = ''.join((self._name, "Token"))
         cookie = self._get_cookie(name, domain)
 
-        if cookie is not None:
+        if cookie:
             name = ''.join((self._name, "UserName"))
             user_name = self._get_cookie(name, domain)
-            if user_name is not None:
+            if user_name:
                 return user_name.value
 
         name = "centralauth_Token"
         for cookie in self._cookiejar:            
-            if cookie.domain_initial_dot is False or cookie.is_expired():
+            if not cookie.domain_initial_dot or cookie.is_expired():
                 continue
             if cookie.name != name:
                 continue
@@ -348,7 +359,7 @@ class Site(object):
             search = ''.join(("(.*?)", re_escape(cookie.domain)))
             if re_match(search, domain):  # Test it against our site
                 user_name = self._get_cookie("centralauth_User", cookie.domain)
-                if user_name is not None:
+                if user_name:
                     return user_name.value
 
     def _get_username_from_api(self):
@@ -378,7 +389,7 @@ class Site(object):
         single API query for our username (or IP address) and return that.
         """
         name = self._get_username_from_cookies()
-        if name is not None:
+        if name:
             return name
         return self._get_username_from_api()
 
@@ -417,7 +428,7 @@ class Site(object):
         """
         name, password = login
         params = {"action": "login", "lgname": name, "lgpassword": password}
-        if token is not None:
+        if token:
             params["lgtoken"] = token
         result = self._api_query(params)
         res = result["login"]["result"]
@@ -455,10 +466,9 @@ class Site(object):
     def _sql_connect(self, **kwargs):
         """Attempt to establish a connection with this site's SQL database.
 
-        oursql.connect() will be called with self._sql_data as its kwargs,
-        which is usually config.wiki["sites"][self.name()]["sql"]. Any kwargs
-        given to this function will be passed to connect() and will have
-        precedence over the config file.
+        oursql.connect() will be called with self._sql_data as its kwargs.
+        Any kwargs given to this function will be passed to connect() and will
+        have precedence over the config file.
 
         Will raise SQLError() if the module "oursql" is not available. oursql
         may raise its own exceptions (e.g. oursql.InterfaceError) if it cannot
@@ -631,6 +641,6 @@ class Site(object):
         If `username` is left as None, then a User object representing the
         currently logged-in (or anonymous!) user is returned.
         """
-        if username is None:
+        if not username:
             username = self._get_username()
         return User(self, username)

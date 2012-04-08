@@ -41,7 +41,7 @@ class Command(BaseCommand):
         else:
             name = ' '.join(data.args)
 
-        site = wiki.get_site()
+        site = self.bot.wiki.get_site()
         site._maxlag = None
         user = site.get_user(name)
 
@@ -49,10 +49,10 @@ class Command(BaseCommand):
             count = user.editcount()
         except wiki.UserNotFoundError:
             msg = "the user \x0302{0}\x0301 does not exist."
-            self.connection.reply(data, msg.format(name))
+            self.reply(data, msg.format(name))
             return
 
         safe = quote_plus(user.name())
         url = "http://toolserver.org/~tparis/pcount/index.php?name={0}&lang=en&wiki=wikipedia"
         msg = "\x0302{0}\x0301 has {1} edits ({2})."
-        self.connection.reply(data, msg.format(name, count, url.format(safe)))
+        self.reply(data, msg.format(name, count, url.format(safe)))

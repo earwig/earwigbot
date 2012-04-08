@@ -43,15 +43,15 @@ class Command(BaseCommand):
         if re.search("(\[\[(.*?)\]\])|(\{\{(.*?)\}\})", msg):
             links = self.parse_line(msg)
             links = " , ".join(links)
-            self.connection.reply(data, links)
+            self.reply(data, links)
 
         elif data.command == "link":
             if not data.args:
-                self.connection.reply(data, "what do you want me to link to?")
+                self.reply(data, "what do you want me to link to?")
                 return
             pagename = ' '.join(data.args)
             link = self.parse_link(pagename)
-            self.connection.reply(data, link)
+            self.reply(data, link)
 
     def parse_line(self, line):
         results = []
