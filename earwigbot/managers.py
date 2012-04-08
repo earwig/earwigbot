@@ -179,21 +179,27 @@ class TaskManager(_ResourceManager):
             self.logger.info(msg.format(task.name))
 
     def start(self, task_name, **kwargs):
-        """Start a given task in a new thread. kwargs are passed to task.run"""
+        """Start a given task in a new daemon thread, and return the thread.
+
+        kwargs are passed to task.run(). If the task is not found, None will be
+        returned.
+        """
         msg = "Starting task '{0}' in a new thread"
         self.logger.info(msg.format(task_name))
 
         try:
             task = self.get(task_name)
         except KeyError:
-            e = "Couldn't find task '{0}':"
+            e = "Couldn't find task '{0}'"
             self.logger.error(e.format(task_name))
             return
 
         task_thread = Thread(target=self._wrapper, args=(task,), kwargs=kwargs)
         start_time = strftime("%b %d %H:%M:%S")
         task_thread.name = "{0} ({1})".format(task_name, start_time)
+        task_thread.daemon = True
         task_thread.start()
+        return task_thread
 
     def schedule(self, now=None):
         """Start all tasks that are supposed to be run at a given time."""

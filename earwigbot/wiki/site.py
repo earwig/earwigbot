@@ -242,7 +242,7 @@ class Site(object):
                 e = "Maximum number of retries reached ({0})."
                 raise SiteAPIError(e.format(self._max_retries))
             tries += 1
-            msg = 'Server says: "{0}". Retrying in {1} seconds ({2}/{3}).'
+            msg = 'Server says "{0}"; retrying in {1} seconds ({2}/{3})'
             logger.info(msg.format(info, wait, tries, self._max_retries))
             sleep(wait)
             return self._api_query(params, tries=tries, wait=wait*3)

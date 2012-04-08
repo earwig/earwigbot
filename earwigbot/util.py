@@ -26,9 +26,10 @@ This is EarwigBot's command-line utility, enabling you to easily start the
 bot or run specific tasks.
 """
 
-import argparse
+from argparse import ArgumentParser
 import logging
 from os import path
+from time import sleep
 
 from earwigbot import __version__
 from earwigbot.bot import Bot
@@ -37,7 +38,7 @@ __all__ = ["main"]
 
 def main():
     version = "EarwigBot v{0}".format(__version__)
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = ArgumentParser(description=__doc__)
     parser.add_argument("path", nargs="?", metavar="PATH", default=path.curdir,
                         help="path to the bot's working directory, which will be created if it doesn't exist; current directory assumed if not specified")
     parser.add_argument("-v", "--version", action="version", version=version)
@@ -63,7 +64,17 @@ def main():
 
     bot = Bot(path.abspath(args.path), level=level)
     if args.task:
-        bot.tasks.start(args.task)
+        thread = bot.tasks.start(args.task)
+        if not thread:
+            return
+        try:
+            while thread.is_alive():  # Keep it alive; it's a daemon
+                sleep(1)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            if thread.is_alive():
+                bot.tasks.logger.warn("The task is will be killed")
     else:
         try:
             bot.run()

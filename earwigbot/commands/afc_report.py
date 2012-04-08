@@ -37,8 +37,10 @@ class Command(BaseCommand):
         try:
             self.statistics = self.bot.tasks.get("afc_statistics")
         except KeyError:
-            e = "Cannot run command: requires afc_statistics task (from earwigbot_plugins)."
+            e = "Cannot run command: requires afc_statistics task (from earwigbot_plugins)"
             self.logger.error(e)
+            msg = "command requires afc_statistics task (from earwigbot_plugins)"
+            self.reply(data, msg)
             return
 
         if not data.args:

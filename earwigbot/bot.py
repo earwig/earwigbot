@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 import logging
-from threading import Lock, Thread
+from threading import Lock, Thread, enumerate as enumerate_threads
 from time import sleep, time
 
 from earwigbot.config import BotConfig
@@ -104,6 +104,31 @@ class Bot(object):
         if self.watcher:
             self.watcher.stop(msg)
 
+    def _stop_task_threads(self):
+        """Notify the user of which task threads are going to be killed.
+
+        Unfortunately, there is no method right now of stopping task threads
+        safely. This is because there is no way to tell them to stop like the
+        IRC components can be told; furthermore, they are run as daemons, and
+        daemon threads automatically stop without calling any __exit__ or
+        try/finally code when all non-daemon threads stop. They were originally
+        implemented as regular non-daemon threads, but this meant there was no
+        way to completely stop the bot if tasks were running, because all other
+        threads would exit and threading would absorb KeyboardInterrupts.
+
+        The advantage of this is that stopping the bot is truly guarenteed to
+        *stop* the bot, while the disadvantage is that the tasks are given no
+        advance warning of their forced shutdown.
+        """
+        tasks = []
+        non_tasks = self.config.components.keys() + ["MainThread", "reminder"]
+        for thread in enumerate_threads():
+            if thread.name not in non_tasks and thread.is_alive():
+                tasks.append(thread.name)
+        if tasks:
+            log = "The following tasks will be killed: {0}"
+            self.logger.warn(log.format(" ".join(tasks)))
+
     def run(self):
         """Main entry point into running the bot.
 
@@ -160,3 +185,4 @@ class Bot(object):
         with self.component_lock:
             self._stop_irc_components(msg)
         self._keep_looping = False
+        self._stop_task_threads()

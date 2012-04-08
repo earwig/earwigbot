@@ -53,7 +53,7 @@ class IRCConnection(object):
         try:
             self._sock.connect((self.host, self.port))
         except socket.error:
-            self.logger.exception("Couldn't connect to IRC server")
+            self.logger.exception("Couldn't connect to IRC server; retrying")
             sleep(8)
             self._connect()
         self._send("NICK {0}".format(self.nick))

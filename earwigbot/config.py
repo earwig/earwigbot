@@ -301,7 +301,7 @@ class BotConfig(object):
 
 class _ConfigNode(object):
     def __iter__(self):
-        for key in self.__dict__.iterkeys():
+        for key in self.__dict__:
             yield key
 
     def __getitem__(self, item):
@@ -329,6 +329,24 @@ class _ConfigNode(object):
 
     def get(self, *args, **kwargs):
         return self.__dict__.get(*args, **kwargs)
+
+    def keys(self):
+        return self.__dict__.keys()
+
+    def values(self):
+        return self.__dict__.values()
+        
+    def items(self):
+        return self.__dict__.items()
+
+    def iterkeys(self):
+        return self.__dict__.iterkeys()
+
+    def itervalues(self):
+        return self.__dict__.itervalues()
+
+    def iteritems(self):
+        return self.__dict__.iteritems()
 
 
 class _BotFormatter(logging.Formatter):

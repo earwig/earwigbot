@@ -207,7 +207,7 @@ class Task(BaseTask):
         replag = self.site.get_replag()
         self.logger.debug("Server replag is {0}".format(replag))
         if replag > 600 and not kwargs.get("ignore_replag"):
-            msg = "Sync canceled as replag ({0} secs) is greater than ten minutes."
+            msg = "Sync canceled as replag ({0} secs) is greater than ten minutes"
             self.logger.warn(msg.format(replag))
             return
 
