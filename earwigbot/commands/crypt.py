@@ -39,12 +39,12 @@ class Command(BaseCommand):
     def process(self, data):
         if data.command == "crypt":
             msg = "available commands are !hash, !encrypt, and !decrypt."
-            self.connection.reply(data, msg)
+            self.reply(data, msg)
             return
 
         if not data.args:
             msg = "what do you want me to {0}?".format(data.command)
-            self.connection.reply(data, msg)
+            self.reply(data, msg)
             return
 
         if data.command == "hash":
@@ -52,14 +52,14 @@ class Command(BaseCommand):
             if algo == "list":
                 algos = ', '.join(hashlib.algorithms)
                 msg = algos.join(("supported algorithms: ", "."))
-                self.connection.reply(data, msg)
+                self.reply(data, msg)
             elif algo in hashlib.algorithms:
                 string = ' '.join(data.args[1:])
                 result = getattr(hashlib, algo)(string).hexdigest()
-                self.connection.reply(data, result)
+                self.reply(data, result)
             else:
                 msg = "unknown algorithm: '{0}'.".format(algo)
-                self.connection.reply(data, msg)
+                self.reply(data, msg)
 
         else:
             key = data.args[0]
@@ -67,14 +67,14 @@ class Command(BaseCommand):
 
             if not text:
                 msg = "a key was provided, but text to {0} was not."
-                self.connection.reply(data, msg.format(data.command))
+                self.reply(data, msg.format(data.command))
                 return
 
             try:
                 if data.command == "encrypt":
-                    self.connection.reply(data, blowfish.encrypt(key, text))
+                    self.reply(data, blowfish.encrypt(key, text))
                 else:
-                    self.connection.reply(data, blowfish.decrypt(key, text))
+                    self.reply(data, blowfish.decrypt(key, text))
             except blowfish.BlowfishError as error:
                 msg = "{0}: {1}.".format(error.__class__.__name__, error)
-                self.connection.reply(data, msg)
+                self.reply(data, msg)

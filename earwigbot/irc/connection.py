@@ -118,9 +118,9 @@ class IRCConnection(object):
         msg = "PART {0}".format(chan)
         self._send(msg)
 
-    def mode(self, chan, level, msg):
+    def mode(self, target, level, msg):
         """Send a mode message to the server."""
-        msg = "MODE {0} {1} {2}".format(chan, level, msg)
+        msg = "MODE {0} {1} {2}".format(target, level, msg)
         self._send(msg)
 
     def pong(self, target):

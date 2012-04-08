@@ -33,8 +33,7 @@ class Command(BaseCommand):
 
     def process(self, data):
         if data.host not in self.config.irc["permissions"]["owners"]:
-            msg = "you must be a bot owner to use this command."
-            self.connection.reply(data, msg)
+            self.reply(data, "you must be a bot owner to use this command.")
             return
         if data.command == "quit":
             self.do_quit(data)
@@ -46,7 +45,7 @@ class Command(BaseCommand):
     def do_quit(self, data):
         nick = self.config.irc.frontend["nick"]
         if not data.args or data.args[0].lower() != nick.lower():
-            self.connection.reply(data, "to confirm this action, the first argument must be my nickname.")
+            self.reply(data, "to confirm this action, the first argument must be my nickname.")
             return
         if data.args[1:]:
             msg = " ".join(data.args[1:])
@@ -66,4 +65,4 @@ class Command(BaseCommand):
         self.logger.info("Reloading IRC commands and bot tasks")
         self.bot.commands.load()
         self.bot.tasks.load()
-        self.connection.reply(data, "IRC commands and bot tasks reloaded.")
+        self.reply(data, "IRC commands and bot tasks reloaded.")

@@ -40,7 +40,7 @@ class Command(BaseCommand):
         msg = "Hi, I'm a bot! I have {0} commands loaded: {1}. You can get help for any command with '!help <command>'."
         cmnds = sorted(self.bot.commands)
         msg = msg.format(len(cmnds), ', '.join(cmnds))
-        self.connection.reply(data, msg)
+        self.reply(data, msg)
 
     def do_command_help(self, data):
         """Give the user help for a specific command."""
@@ -60,9 +60,9 @@ class Command(BaseCommand):
                 doc = cmnd.__doc__.replace("\n", "")
                 doc = re.sub("\s\s+", " ", doc)
                 msg = "help for command \x0303{0}\x0301: \"{1}\""
-                self.connection.reply(data, msg.format(command, doc))
+                self.reply(data, msg.format(command, doc))
                 return
             break
 
         msg = "sorry, no help for \x0303{0}\x0301.".format(command)
-        self.connection.reply(data, msg)
+        self.reply(data, msg)

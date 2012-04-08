@@ -57,6 +57,16 @@ class BaseCommand(object):
         self.config = bot.config
         self.logger = bot.commands.logger.getChild(self.name)
 
+        # Convenience functions:
+        self.say = lambda target, msg: self.bot.frontend.say(target, msg)
+        self.reply = lambda data, msg: self.bot.frontend.reply(data, msg)
+        self.action = lambda target, msg: self.bot.frontend.action(target, msg)
+        self.notice = lambda target, msg: self.bot.frontend.notice(target, msg)
+        self.join = lambda chan: self.bot.frontend.join(chan)
+        self.part = lambda chan: self.bot.frontend.part(chan)
+        self.mode = lambda t, level, msg: self.bot.frontend.mode(t, level, msg)
+        self.pong = lambda target: self.bot.frontend.pong(target)
+
     def _wrap_check(self, data):
         """Check whether this command should be called, catching errors."""
         try:
@@ -66,8 +76,7 @@ class BaseCommand(object):
             self.logger.exception(e.format(self.name, data))
 
     def _wrap_process(self, data):
-        """Make a connection alias, process() the message, and catch errors."""
-        self.connection = self.bot.frontend
+        """process() the message, catching and reporting any errors."""
         try:
             self.process(data)
         except Exception:

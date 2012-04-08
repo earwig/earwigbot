@@ -52,17 +52,17 @@ class Command(BaseCommand):
         if command == "PING":
             msg = " ".join(data.line[4:])
             if msg:
-                self.connection.notice(target, "\x01PING {0}\x01".format(msg))
+                self.notice(target, "\x01PING {0}\x01".format(msg))
             else:
-                self.connection.notice(target, "\x01PING\x01")
+                self.notice(target, "\x01PING\x01")
 
         elif command == "TIME":
             ts = time.strftime("%a, %d %b %Y %H:%M:%S %Z", time.localtime())
-            self.connection.notice(target, "\x01TIME {0}\x01".format(ts))
+            self.notice(target, "\x01TIME {0}\x01".format(ts))
 
         elif command == "VERSION":
             default = "EarwigBot - $1 - Python/$2 https://github.com/earwig/earwigbot"
             vers = self.config.irc.get("version", default)
             vers = vers.replace("$1", __version__)
             vers = vers.replace("$2", platform.python_version())
-            self.connection.notice(target, "\x01VERSION {0}\x01".format(vers))
+            self.notice(target, "\x01VERSION {0}\x01".format(vers))

@@ -43,7 +43,7 @@ class Command(BaseCommand):
 
         if not data.args:
             msg = "what submission do you want me to give information about?"
-            self.connection.reply(data, msg)
+            self.reply(data, msg)
             return
 
         title = " ".join(data.args)
@@ -67,8 +67,7 @@ class Command(BaseCommand):
         if page:
             return self.report(page)
 
-        msg = "submission \x0302{0}\x0301 not found.".format(title)
-        self.connection.reply(data, msg)
+        self.reply(data, "submission \x0302{0}\x0301 not found.".format(title))
 
     def get_page(self, title):
         page = self.site.get_page(title, follow_redirects=False)
@@ -89,9 +88,9 @@ class Command(BaseCommand):
         if status == "accepted":
             msg3 = "Reviewed by \x0302{0}\x0301 ({1})"
 
-        self.connection.reply(self.data, msg1.format(short, url))
-        self.connection.say(self.data.chan, msg2.format(status))
-        self.connection.say(self.data.chan, msg3.format(user_name, user_url))
+        self.reply(self.data, msg1.format(short, url))
+        self.say(self.data.chan, msg2.format(status))
+        self.say(self.data.chan, msg3.format(user_name, user_url))
 
     def get_status(self, page):
         if page.is_redirect():

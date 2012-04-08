@@ -30,7 +30,7 @@ class Command(BaseCommand):
     name = "registration"
 
     def check(self, data):
-        commands = ["registration", "age"]
+        commands = ["registration", "reg", "age"]
         if data.is_command and data.command in commands:
             return True
         return False
@@ -49,7 +49,7 @@ class Command(BaseCommand):
             reg = user.registration()
         except wiki.UserNotFoundError:
             msg = "the user \x0302{0}\x0301 does not exist."
-            self.connection.reply(data, msg.format(name))
+            self.reply(data, msg.format(name))
             return
 
         date = time.strftime("%b %d, %Y at %H:%M:%S UTC", reg)
@@ -64,7 +64,7 @@ class Command(BaseCommand):
             gender = "They're"
         
         msg = "\x0302{0}\x0301 registered on {1}. {2} {3} old."
-        self.connection.reply(data, msg.format(name, date, gender, age))
+        self.reply(data, msg.format(name, date, gender, age))
 
     def get_diff(self, t1, t2):
         parts = {"years": 31536000, "days": 86400, "hours": 3600,
