@@ -124,7 +124,7 @@ class IRCConnection(object):
     def quit(self, msg=None):
         """Issue a quit message to the server."""
         if msg:
-            self._send("QUIT {0}".format(msg))
+            self._send("QUIT :{0}".format(msg))
         else:
             self._send("QUIT")
 

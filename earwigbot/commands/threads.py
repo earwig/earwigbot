@@ -76,7 +76,7 @@ class Command(BaseCommand):
         for thread in threads:
             tname = thread.name
             if tname == "MainThread":
-                t = "\x0302MainThread\x0301 (id {1})"
+                t = "\x0302MainThread\x0301 (id {0})"
                 normal_threads.append(t.format(thread.ident))
             elif tname in self.config.components:
                 t = "\x0302{0}\x0301 (id {1})"

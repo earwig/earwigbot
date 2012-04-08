@@ -97,12 +97,12 @@ class Bot(object):
             thread.daemon = True  # Stop if other threads stop
             thread.start()
 
-    def _stop_irc_components(self):
+    def _stop_irc_components(self, msg):
         """Request the IRC frontend and watcher to stop if enabled."""
         if self.frontend:
-            self.frontend.stop()
+            self.frontend.stop(msg)
         if self.watcher:
-            self.watcher.stop()
+            self.watcher.stop(msg)
 
     def run(self):
         """Main entry point into running the bot.
@@ -126,7 +126,7 @@ class Bot(object):
                     Thread(name=name, target=self.watcher.loop).start()
             sleep(2)
 
-    def restart(self):
+    def restart(self, msg=None):
         """Reload config, commands, tasks, and safely restart IRC components.
 
         This is thread-safe, and it will gracefully stop IRC components before
@@ -134,18 +134,23 @@ class Bot(object):
         without restarting the bot with bot.commands.load() or
         bot.tasks.load(). These should not interfere with running components
         or tasks.
+
+        If given, 'msg' will be used as our quit message.
         """
         self.logger.info("Restarting bot per request from owner")
         with self.component_lock:
-            self._stop_irc_components()
+            self._stop_irc_components(msg)
             self.config.load()
             self.commands.load()
             self.tasks.load()
             self._start_irc_components()
 
-    def stop(self):
-        """Gracefully stop all bot components."""
+    def stop(self, msg=None):
+        """Gracefully stop all bot components.
+
+        If given, 'msg' will be used as our quit message.
+        """
         self.logger.info("Shutting down bot")
         with self.component_lock:
-            self._stop_irc_components()
+            self._stop_irc_components(msg)
         self._keep_looping = False

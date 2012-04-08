@@ -38,9 +38,14 @@ class Command(BaseCommand):
 
         if data.command == "restart":
             self.logger.info("Restarting bot per owner request")
-            self.bot.restart()
+            if data.args:
+                self.bot.restart(" ".join(data.args))
+            else:
+                self.bot.restart()
 
         elif data.command == "reload":
             self.logger.info("Reloading IRC commands")
             self.bot.commands.load()
-            self.connection.reply("IRC commands reloaded.")
+            self.logger.info("Reloading bot tasks")
+            self.bot.tasks.load()
+            self.connection.reply("IRC commands and bot tasks reloaded.")
