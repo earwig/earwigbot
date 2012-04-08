@@ -45,7 +45,7 @@ class Command(BaseCommand):
                 msg = "You use this command to praise certain people. Who they are is a secret."
             else:
                 msg = "You're doing it wrong."
-            self.connection.reply(data, msg)
+            self.reply(data, msg)
             return
 
-        self.connection.say(data.chan, msg)
+        self.say(data.chan, msg)

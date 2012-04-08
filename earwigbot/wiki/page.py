@@ -28,6 +28,8 @@ from urllib import quote
 from earwigbot.wiki.copyright import CopyrightMixin
 from earwigbot.wiki.exceptions import *
 
+__all__ = ["Page"]
+
 class Page(CopyrightMixin):
     """
     EarwigBot's Wiki Toolset: Page Class

@@ -26,6 +26,8 @@ from earwigbot.wiki.constants import *
 from earwigbot.wiki.exceptions import UserNotFoundError
 from earwigbot.wiki.page import Page
 
+__all__ = ["User"]
+
 class User(object):
     """
     EarwigBot's Wiki Toolset: User Class

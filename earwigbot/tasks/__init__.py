@@ -21,43 +21,44 @@
 # SOFTWARE.
 
 """
-EarwigBot's Wiki Task Manager
+EarwigBot's Bot Tasks
 
 This package provides the wiki bot "tasks" EarwigBot runs. This module contains
-the BaseTask class (import with `from earwigbot.tasks import BaseTask`) and an
-internal _TaskManager class. This can be accessed through the `task_manager`
-singleton.
+the BaseTask class (import with `from earwigbot.tasks import BaseTask`),
+whereas the package contains various built-in tasks. Additional tasks can be
+installed as plugins in the bot's working directory.
+
+To run a task, use bot.tasks.start(name, **kwargs). **kwargs get passed to the
+Task's run() function.
 """
 
-import logging
-import os
-import sys
-import threading
-import time
-
 from earwigbot import wiki
-from earwigbot.config import config
 
-__all__ = ["BaseTask", "task_manager"]
+__all__ = ["BaseTask"]
 
 class BaseTask(object):
     """A base class for bot tasks that edit Wikipedia."""
     name = None
     number = 0
 
-    def __init__(self):
+    def __init__(self, bot):
         """Constructor for new tasks.
 
         This is called once immediately after the task class is loaded by
-        the task manager (in tasks._load_task()).
+        the task manager (in tasks._load_task()). Don't override this directly
+        (or if you do, remember super(Task, self).__init()) - use setup().
+        """
+        self.bot = bot
+        self.config = bot.config
+        self.logger = bot.tasks.logger.getChild(self.name)
+        self.setup()
+
+    def setup(self):
+        """Hook called immediately after the task is loaded.
+
+        Does nothing by default; feel free to override.
         """
         pass
-
-    def _setup_logger(self):
-        """Set up a basic module-level logger."""
-        logger_name = ".".join(("earwigbot", "tasks", self.name))
-        self.logger = logging.getLogger(logger_name)
-        self.logger.setLevel(logging.DEBUG)
 
     def run(self, **kwargs):
         """Main entry point to run a given task.
@@ -83,7 +84,7 @@ class BaseTask(object):
         If the config value is not found, we just return the arg as-is.
         """
         try:
-            summary = config.wiki["summary"]
+            summary = self.bot.config.wiki["summary"]
         except KeyError:
             return comment
         return summary.replace("$1", str(self.number)).replace("$2", comment)
@@ -108,10 +109,10 @@ class BaseTask(object):
             try:
                 site = self.site
             except AttributeError:
-                site = wiki.get_site()
+                site = self.bot.wiki.get_site()
 
         try:
-            cfg = config.wiki["shutoff"]
+            cfg = self.config.wiki["shutoff"]
         except KeyError:
             return False
         title = cfg.get("page", "User:$1/Shutoff/Task $2")
@@ -128,106 +129,3 @@ class BaseTask(object):
 
         self.logger.warn("Emergency task shutoff has been enabled!")
         return True
-
-
-class _TaskManager(object):
-    def __init__(self):
-        self.logger = logging.getLogger("earwigbot.commands")
-        self._base_dir = os.path.dirname(os.path.abspath(__file__))
-        self._tasks = {}
-
-    def _load_task(self, filename):
-        """Load a specific task from a module, identified by file name."""
-        # Strip .py from the filename's end and join with our package name:
-        name = ".".join(("tasks", filename[:-3]))
-        try:
-             __import__(name)
-        except:
-            self.logger.exception("Couldn't load file {0}:".format(filename))
-            return
-
-        try:
-            task = sys.modules[name].Task()
-        except AttributeError:
-            return  # No task in this module
-        if not isinstance(task, BaseTask):
-            return
-        task._setup_logger()
-
-        self._tasks[task.name] = task
-        self.logger.debug("Added task {0}".format(task.name))
-
-    def _wrapper(self, task, **kwargs):
-        """Wrapper for task classes: run the task and catch any errors."""
-        try:
-            task.run(**kwargs)
-        except:
-            msg = "Task '{0}' raised an exception and had to stop"
-            self.logger.exception(msg.format(task.name))
-        else:
-            msg = "Task '{0}' finished without error"
-            self.logger.info(msg.format(task.name))
-
-    def load(self):
-        """Load all valid tasks from tasks/ into self._tasks."""
-        files = os.listdir(self._base_dir)
-        files.sort()
-
-        for filename in files:
-            if filename.startswith("_") or not filename.endswith(".py"):
-                continue
-            self._load_task(filename)
-
-        msg = "Found {0} tasks: {1}"
-        tasks = ', '.join(self._tasks.keys())
-        self.logger.info(msg.format(len(self._tasks), tasks))
-
-    def schedule(self, now=None):
-        """Start all tasks that are supposed to be run at a given time."""
-        if not now:
-            now = time.gmtime()
-        # Get list of tasks to run this turn:
-        tasks = config.schedule(now.tm_min, now.tm_hour, now.tm_mday,
-                                now.tm_mon, now.tm_wday)
-
-        for task in tasks:
-            if isinstance(task, list):          # They've specified kwargs,
-                self.start(task[0], **task[1])  # so pass those to start_task
-            else:  # Otherwise, just pass task_name
-                self.start(task)
-
-    def start(self, task_name, **kwargs):
-        """Start a given task in a new thread. Pass args to the task's run()
-        function."""
-        msg = "Starting task '{0}' in a new thread"
-        self.logger.info(msg.format(task_name))
-
-        try:
-            task = self._tasks[task_name]
-        except KeyError:
-            e = "Couldn't find task '{0}': bot/tasks/{0}.py does not exist"
-            self.logger.error(e.format(task_name))
-            return
-
-        func = lambda: self._wrapper(task, **kwargs)
-        task_thread = threading.Thread(target=func)
-        start_time = time.strftime("%b %d %H:%M:%S")
-        task_thread.name = "{0} ({1})".format(task_name, start_time)
-
-        # Stop bot task threads automagically if the main bot stops:
-        task_thread.daemon = True
-
-        task_thread.start()
-
-    def get(self, task_name):
-        """Return the class instance associated with a certain task name.
-
-        Will raise KeyError if the task is not found.
-        """
-        return self._tasks[task_name]
-
-    def get_all(self):
-        """Return our dict of all loaded tasks."""
-        return self._tasks
-
-task_manager = _TaskManager()

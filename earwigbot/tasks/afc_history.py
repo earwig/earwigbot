@@ -32,14 +32,9 @@ from numpy import arange
 import oursql
 
 from earwigbot import wiki
-from earwigbot.config import config
 from earwigbot.tasks import BaseTask
 
-# Valid submission statuses:
-STATUS_NONE = 0
-STATUS_PEND = 1
-STATUS_DECLINE = 2
-STATUS_ACCEPT = 3
+__all__ = ["Task"]
 
 class Task(BaseTask):
     """A task to generate charts about AfC submissions over time.
@@ -57,8 +52,14 @@ class Task(BaseTask):
     """
     name = "afc_history"
 
-    def __init__(self):
-        cfg = config.tasks.get(self.name, {})
+    # Valid submission statuses:
+    STATUS_NONE = 0
+    STATUS_PEND = 1
+    STATUS_DECLINE = 2
+    STATUS_ACCEPT = 3
+
+    def setup(self):
+        cfg = self.config.tasks.get(self.name, {})
         self.num_days = cfg.get("days", 90)
         self.categories = cfg.get("categories", {})
 
@@ -73,7 +74,7 @@ class Task(BaseTask):
         self.db_access_lock = Lock()
 
     def run(self, **kwargs):
-        self.site = wiki.get_site()
+        self.site = self.bot.wiki.get_site()
         with self.db_access_lock:
             self.conn = oursql.connect(**self.conn_data)
             
@@ -137,7 +138,7 @@ class Task(BaseTask):
                 stored = cursor.fetchall()
                 status = self.get_status(title, pageid)
 
-                if status == STATUS_NONE:
+                if status == self.STATUS_NONE:
                     if stored:
                         cursor.execute(q_delete, (pageid,))
                     continue
@@ -155,14 +156,14 @@ class Task(BaseTask):
         ns = page.namespace()
 
         if ns == wiki.NS_FILE_TALK:  # Ignore accepted FFU requests
-            return STATUS_NONE
+            return self.STATUS_NONE
 
         if ns == wiki.NS_TALK:
             new_page = page.toggle_talk()
             sleep(2)
             if new_page.is_redirect():
-                return STATUS_NONE  # Ignore accepted AFC/R requests
-            return STATUS_ACCEPT
+                return self.STATUS_NONE  # Ignore accepted AFC/R requests
+            return self.STATUS_ACCEPT
 
         cats = self.categories
         sq = self.site.sql_query
@@ -170,16 +171,16 @@ class Task(BaseTask):
         match = lambda cat: list(sq(query, (cat.replace(" ", "_"), pageid)))
 
         if match(cats["pending"]):
-            return STATUS_PEND
+            return self.STATUS_PEND
         elif match(cats["unsubmitted"]):
-            return STATUS_NONE
+            return self.STATUS_NONE
         elif match(cats["declined"]):
-            return STATUS_DECLINE
-        return STATUS_NONE
+            return self.STATUS_DECLINE
+        return self.STATUS_NONE
 
     def get_date_counts(self, date):
         query = "SELECT COUNT(*) FROM page WHERE page_date = ? AND page_status = ?"
-        statuses = [STATUS_PEND, STATUS_DECLINE, STATUS_ACCEPT]
+        statuses = [self.STATUS_PEND, self.STATUS_DECLINE, self.STATUS_ACCEPT]
         counts = {}
         with self.conn.cursor() as cursor:
             for status in statuses:
@@ -193,9 +194,9 @@ class Task(BaseTask):
         plt.xlabel(self.graph.get("xaxis", "Date"))
         plt.ylabel(self.graph.get("yaxis", "Submissions"))
 
-        pends = [d[STATUS_PEND] for d in data.itervalues()]
-        declines = [d[STATUS_DECLINE] for d in data.itervalues()]
-        accepts = [d[STATUS_ACCEPT] for d in data.itervalues()]
+        pends = [d[self.STATUS_PEND] for d in data.itervalues()]
+        declines = [d[self.STATUS_DECLINE] for d in data.itervalues()]
+        accepts = [d[self.STATUS_ACCEPT] for d in data.itervalues()]
         pends_declines = [p + d for p, d in zip(pends, declines)]
         ind = arange(len(data))
         xsize = self.graph.get("xsize", 1200)

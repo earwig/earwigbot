@@ -22,9 +22,7 @@
 
 import re
 
-from earwigbot import wiki
 from earwigbot.commands import BaseCommand
-from earwigbot.config import config
 
 class Command(BaseCommand):
     """Get the number of pending AfC submissions, open redirect requests, and
@@ -39,19 +37,19 @@ class Command(BaseCommand):
 
         try:
             if data.line[1] == "JOIN" and data.chan == "#wikipedia-en-afc":
-                if data.nick != config.irc["frontend"]["nick"]:
+                if data.nick != self.config.irc["frontend"]["nick"]:
                     return True
         except IndexError:
             pass
         return False
 
     def process(self, data):
-        self.site = wiki.get_site()
+        self.site = self.bot.wiki.get_site()
         self.site._maxlag = None
 
         if data.line[1] == "JOIN":
             status = " ".join(("\x02Current status:\x0F", self.get_status()))
-            self.connection.notice(data.nick, status)
+            self.notice(data.nick, status)
             return
 
         if data.args:
@@ -59,17 +57,17 @@ class Command(BaseCommand):
             if action.startswith("sub") or action == "s":
                 subs = self.count_submissions()
                 msg = "there are \x0305{0}\x0301 pending AfC submissions (\x0302WP:AFC\x0301)."
-                self.connection.reply(data, msg.format(subs))
+                self.reply(data, msg.format(subs))
 
             elif action.startswith("redir") or action == "r":
                 redirs = self.count_redirects()
                 msg = "there are \x0305{0}\x0301 open redirect requests (\x0302WP:AFC/R\x0301)."
-                self.connection.reply(data, msg.format(redirs))
+                self.reply(data, msg.format(redirs))
 
             elif action.startswith("file") or action == "f":
                 files = self.count_redirects()
                 msg = "there are \x0305{0}\x0301 open file upload requests (\x0302WP:FFU\x0301)."
-                self.connection.reply(data, msg.format(files))
+                self.reply(data, msg.format(files))
 
             elif action.startswith("agg") or action == "a":
                 try:
@@ -80,21 +78,21 @@ class Command(BaseCommand):
                     agg_num = self.get_aggregate_number(agg_data)
                 except ValueError:
                     msg = "\x0303{0}\x0301 isn't a number!"
-                    self.connection.reply(data, msg.format(data.args[1]))
+                    self.reply(data, msg.format(data.args[1]))
                     return
                 aggregate = self.get_aggregate(agg_num)
                 msg = "aggregate is \x0305{0}\x0301 (AfC {1})."
-                self.connection.reply(data, msg.format(agg_num, aggregate))
+                self.reply(data, msg.format(agg_num, aggregate))
 
             elif action.startswith("nocolor") or action == "n":
-                self.connection.reply(data, self.get_status(color=False))
+                self.reply(data, self.get_status(color=False))
 
             else:
                 msg = "unknown argument: \x0303{0}\x0301. Valid args are 'subs', 'redirs', 'files', 'agg', 'nocolor'."
-                self.connection.reply(data, msg.format(data.args[0]))
+                self.reply(data, msg.format(data.args[0]))
 
         else:
-            self.connection.reply(data, self.get_status())
+            self.reply(data, self.get_status())
 
     def get_status(self, color=True):
         subs = self.count_submissions()

@@ -21,21 +21,16 @@
 # SOFTWARE.
 
 """
-EarwigBot's IRC Command Manager
+EarwigBot's IRC Commands
 
 This package provides the IRC "commands" used by the bot's front-end component.
 This module contains the BaseCommand class (import with
-`from earwigbot.commands import BaseCommand`) and an internal _CommandManager
-class. This can be accessed through the `command_manager` singleton.
+`from earwigbot.commands import BaseCommand`), whereas the package contains
+various built-in commands. Additional commands can be installed as plugins in
+the bot's working directory.
 """
 
-import logging
-import os
-import sys
-
-from earwigbot.config import config
-
-__all__ = ["BaseCommand", "command_manager"]
+__all__ = ["BaseCommand"]
 
 class BaseCommand(object):
     """A base class for commands on IRC.
@@ -50,114 +45,65 @@ class BaseCommand(object):
     # command subclass:
     hooks = ["msg"]
 
-    def __init__(self, connection):
+    def __init__(self, bot):
         """Constructor for new commands.
 
         This is called once when the command is loaded (from
-        commands._load_command()). `connection` is a Connection object,
-        allowing us to do self.connection.say(), self.connection.send(), etc,
-        from within a method.
+        commands._load_command()). `bot` is out base Bot object. Generally you
+        shouldn't need to override this; if you do, call
+        super(Command, self).__init__() first.
         """
-        self.connection = connection
-        logger_name = ".".join(("earwigbot", "commands", self.name))
-        self.logger = logging.getLogger(logger_name)
-        self.logger.setLevel(logging.DEBUG)
+        self.bot = bot
+        self.config = bot.config
+        self.logger = bot.commands.logger.getChild(self.name)
+
+        # Convenience functions:
+        self.say = lambda target, msg: self.bot.frontend.say(target, msg)
+        self.reply = lambda data, msg: self.bot.frontend.reply(data, msg)
+        self.action = lambda target, msg: self.bot.frontend.action(target, msg)
+        self.notice = lambda target, msg: self.bot.frontend.notice(target, msg)
+        self.join = lambda chan: self.bot.frontend.join(chan)
+        self.part = lambda chan, msg=None: self.bot.frontend.part(chan, msg)
+        self.mode = lambda t, level, msg: self.bot.frontend.mode(t, level, msg)
+        self.pong = lambda target: self.bot.frontend.pong(target)
+
+    def _wrap_check(self, data):
+        """Check whether this command should be called, catching errors."""
+        try:
+            return self.check(data)
+        except Exception:
+            e = "Error checking command '{0}' with data: {1}:"
+            self.logger.exception(e.format(self.name, data))
+
+    def _wrap_process(self, data):
+        """process() the message, catching and reporting any errors."""
+        try:
+            self.process(data)
+        except Exception:
+            e = "Error executing command '{0}':"
+            self.logger.exception(e.format(data.command))
 
     def check(self, data):
-        """Returns whether this command should be called in response to 'data'.
+        """Return whether this command should be called in response to 'data'.
 
         Given a Data() instance, return True if we should respond to this
         activity, or False if we should ignore it or it doesn't apply to us.
+        Be aware that since this is called for each message sent on IRC, it
+        should not be cheap to execute and unlikely to throw exceptions.
 
         Most commands return True if data.command == self.name, otherwise they
         return False. This is the default behavior of check(); you need only
         override it if you wish to change that.
         """
-        if data.is_command and data.command == self.name:
-            return True
-        return False
+        return data.is_command and data.command == self.name
 
     def process(self, data):
         """Main entry point for doing a command.
 
         Handle an activity (usually a message) on IRC. At this point, thanks
         to self.check() which is called automatically by the command handler,
-        we know this is something we should respond to, so (usually) something
-        like 'if data.command != "command_name": return' is unnecessary.
+        we know this is something we should respond to, so something like
+        `if data.command != "command_name": return` is usually unnecessary.
+        Note that 
         """
         pass
-
-
-class _CommandManager(object):
-    def __init__(self):
-        self.logger = logging.getLogger("earwigbot.tasks")
-        self._base_dir = os.path.dirname(os.path.abspath(__file__))
-        self._connection = None
-        self._commands = {}
-
-    def _load_command(self, filename):
-        """Load a specific command from a module, identified by filename.
-
-        Given a Connection object and a filename, we'll first try to import
-        it, and if that works, make an instance of the 'Command' class inside
-        (assuming it is an instance of BaseCommand), add it to self._commands,
-        and log the addition. Any problems along the way will either be
-        ignored or logged.
-        """
-        # Strip .py from the filename's end and join with our package name:
-        name = ".".join(("commands", filename[:-3]))
-        try:
-             __import__(name)
-        except:
-            self.logger.exception("Couldn't load file {0}".format(filename))
-            return
-
-        try:
-            command = sys.modules[name].Command(self._connection)
-        except AttributeError:
-            return  # No command in this module
-        if not isinstance(command, BaseCommand):
-            return
-
-        self._commands[command.name] = command
-        self.logger.debug("Added command {0}".format(command.name))
-
-    def load(self, connection):
-        """Load all valid commands into self._commands.
-
-        `connection` is a Connection object that is given to each command's
-        constructor.
-        """
-        self._connection = connection
-
-        files = os.listdir(self._base_dir)
-        files.sort()
-        for filename in files:
-            if filename.startswith("_") or not filename.endswith(".py"):
-                continue
-            self._load_command(filename)
-
-        msg = "Found {0} commands: {1}"
-        commands = ", ".join(self._commands.keys())
-        self.logger.info(msg.format(len(self._commands), commands))
-
-    def get_all(self):
-        """Return our dict of all loaded commands."""
-        return self._commands
-
-    def check(self, hook, data):
-        """Given an IRC event, check if there's anything we can respond to."""
-        # Parse command arguments into data.command and data.args:
-        data.parse_args()
-        for command in self._commands.values():
-            if hook in command.hooks:
-                if command.check(data):
-                    try:
-                        command.process(data)
-                    except Exception:
-                        e = "Error executing command '{0}'"
-                        self.logger.exception(e.format(data.command))
-                    break
-
-
-command_manager = _CommandManager()

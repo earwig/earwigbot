@@ -22,11 +22,13 @@
 
 from earwigbot.tasks import BaseTask
 
+__all__ = ["Task"]
+
 class Task(BaseTask):
     """A task to clear [[Category:Undated AfC submissions]]."""
     name = "afc_undated"
 
-    def __init__(self):
+    def setup(self):
         pass
 
     def run(self, **kwargs):

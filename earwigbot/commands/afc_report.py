@@ -24,27 +24,28 @@ import re
 
 from earwigbot import wiki
 from earwigbot.commands import BaseCommand
-from earwigbot.tasks import task_manager
 
 class Command(BaseCommand):
     """Get information about an AFC submission by name."""
     name = "report"
 
     def process(self, data):
-        self.site = wiki.get_site()
+        self.site = self.bot.wiki.get_site()
         self.site._maxlag = None
         self.data = data
 
         try:
-            self.statistics = task_manager.get("afc_statistics")
+            self.statistics = self.bot.tasks.get("afc_statistics")
         except KeyError:
-            e = "Cannot run command: requires afc_statistics task."
+            e = "Cannot run command: requires afc_statistics task (from earwigbot_plugins)"
             self.logger.error(e)
+            msg = "command requires afc_statistics task (from earwigbot_plugins)"
+            self.reply(data, msg)
             return
 
         if not data.args:
             msg = "what submission do you want me to give information about?"
-            self.connection.reply(data, msg)
+            self.reply(data, msg)
             return
 
         title = " ".join(data.args)
@@ -68,8 +69,7 @@ class Command(BaseCommand):
         if page:
             return self.report(page)
 
-        msg = "submission \x0302{0}\x0301 not found.".format(title)
-        self.connection.reply(data, msg)
+        self.reply(data, "submission \x0302{0}\x0301 not found.".format(title))
 
     def get_page(self, title):
         page = self.site.get_page(title, follow_redirects=False)
@@ -90,9 +90,9 @@ class Command(BaseCommand):
         if status == "accepted":
             msg3 = "Reviewed by \x0302{0}\x0301 ({1})"
 
-        self.connection.reply(self.data, msg1.format(short, url))
-        self.connection.say(self.data.chan, msg2.format(status))
-        self.connection.say(self.data.chan, msg3.format(user_name, user_url))
+        self.reply(self.data, msg1.format(short, url))
+        self.say(self.data.chan, msg2.format(status))
+        self.say(self.data.chan, msg3.format(user_name, user_url))
 
     def get_status(self, page):
         if page.is_redirect():

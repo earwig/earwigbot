@@ -24,9 +24,7 @@ import threading
 import re
 
 from earwigbot.commands import BaseCommand
-from earwigbot.config import config
 from earwigbot.irc import KwargParseException
-from earwigbot.tasks import task_manager
 
 class Command(BaseCommand):
     """Manage wiki tasks from IRC, and check on thread status."""
@@ -40,9 +38,9 @@ class Command(BaseCommand):
 
     def process(self, data):
         self.data = data
-        if data.host not in config.irc["permissions"]["owners"]:
+        if data.host not in self.config.irc["permissions"]["owners"]:
             msg = "you must be a bot owner to use this command."
-            self.connection.reply(data, msg)
+            self.reply(data, msg)
             return
 
         if not data.args:
@@ -50,7 +48,7 @@ class Command(BaseCommand):
                 self.do_list()
             else:
                 msg = "no arguments provided. Maybe you wanted '!{0} list', '!{0} start', or '!{0} listall'?"
-                self.connection.reply(data, msg.format(data.command))
+                self.reply(data, msg.format(data.command))
             return
 
         if data.args[0] == "list":
@@ -64,7 +62,7 @@ class Command(BaseCommand):
 
         else:  # They asked us to do something we don't know
             msg = "unknown argument: \x0303{0}\x0301.".format(data.args[0])
-            self.connection.reply(data, msg)
+            self.reply(data, msg)
 
     def do_list(self):
         """With !tasks list (or abbreviation !tasklist), list all running
@@ -78,10 +76,9 @@ class Command(BaseCommand):
         for thread in threads:
             tname = thread.name
             if tname == "MainThread":
-                tname = self.get_main_thread_name()
-                t = "\x0302{0}\x0301 (as main thread, id {1})"
-                normal_threads.append(t.format(tname, thread.ident))
-            elif tname in ["irc-frontend", "irc-watcher", "wiki-scheduler"]:
+                t = "\x0302MainThread\x0301 (id {0})"
+                normal_threads.append(t.format(thread.ident))
+            elif tname in self.config.components:
                 t = "\x0302{0}\x0301 (id {1})"
                 normal_threads.append(t.format(tname, thread.ident))
             elif tname.startswith("reminder"):
@@ -101,18 +98,14 @@ class Command(BaseCommand):
             msg = "\x02{0}\x0F threads active: {1}, and \x020\x0F task threads."
             msg = msg.format(len(threads), ', '.join(normal_threads))
 
-        self.connection.reply(self.data, msg)
+        self.reply(self.data, msg)
 
     def do_listall(self):
         """With !tasks listall or !tasks all, list all loaded tasks, and report
         whether they are currently running or idle."""
-        all_tasks = task_manager.get_all().keys()
         threads = threading.enumerate()
         tasklist = []
-
-        all_tasks.sort()
-
-        for task in all_tasks:
+        for task in sorted(self.bot.tasks):
             threadlist = [t for t in threads if t.name.startswith(task)]
             ids = [str(t.ident) for t in threadlist]
             if not ids:
@@ -124,10 +117,10 @@ class Command(BaseCommand):
                 t = "\x0302{0}\x0301 (\x02active\x0F as ids {1})"
                 tasklist.append(t.format(task, ', '.join(ids)))
 
-        tasklist = ", ".join(tasklist)
+        tasks = ", ".join(tasklist)
 
-        msg = "{0} tasks loaded: {1}.".format(len(all_tasks), tasklist)
-        self.connection.reply(self.data, msg)
+        msg = "{0} tasks loaded: {1}.".format(len(tasklist), tasks)
+        self.reply(self.data, msg)
 
     def do_start(self):
         """With !tasks start, start any loaded task by name with or without
@@ -137,32 +130,23 @@ class Command(BaseCommand):
         try:
             task_name = data.args[1]
         except IndexError:  # No task name given
-            self.connection.reply(data, "what task do you want me to start?")
+            self.reply(data, "what task do you want me to start?")
             return
 
         try:
             data.parse_kwargs()
         except KwargParseException, arg:
             msg = "error parsing argument: \x0303{0}\x0301.".format(arg)
-            self.connection.reply(data, msg)
+            self.reply(data, msg)
             return
 
-        if task_name not in task_manager.get_all().keys():
+        if task_name not in self.bot.tasks:
             # This task does not exist or hasn't been loaded:
-            msg = "task could not be found; either tasks/{0}.py doesn't exist, or it wasn't loaded correctly."
-            self.connection.reply(data, msg.format(task_name))
+            msg = "task could not be found; either it doesn't exist, or it wasn't loaded correctly."
+            self.reply(data, msg.format(task_name))
             return
 
         data.kwargs["fromIRC"] = True
-        task_manager.start(task_name, **data.kwargs)
+        self.bot.tasks.start(task_name, **data.kwargs)
         msg = "task \x0302{0}\x0301 started.".format(task_name)
-        self.connection.reply(data, msg)
-
-    def get_main_thread_name(self):
-        """Return the "proper" name of the MainThread."""
-        if "irc_frontend" in config.components:
-            return "irc-frontend"
-        elif "wiki_schedule" in config.components:
-            return "wiki-scheduler"
-        else:
-            return "irc-watcher"
+        self.reply(data, msg)

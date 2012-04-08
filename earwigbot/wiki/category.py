@@ -22,6 +22,8 @@
 
 from earwigbot.wiki.page import Page
 
+__all__ = ["Category"]
+
 class Category(Page):
     """
     EarwigBot's Wiki Toolset: Category Class

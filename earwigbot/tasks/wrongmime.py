@@ -22,12 +22,14 @@
 
 from earwigbot.tasks import BaseTask
 
+__all__ = ["Task"]
+
 class Task(BaseTask):
     """A task to tag files whose extensions do not agree with their MIME
     type."""
     name = "wrongmime"
 
-    def __init__(self):
+    def setup(self):
         pass
 
     def run(self, **kwargs):
