@@ -150,7 +150,7 @@ class Bot(object):
 
         If given, 'msg' will be used as our quit message.
         """
-        self.logger.info("Shutting down bot")
+        self.logger.info("Stopping bot")
         with self.component_lock:
             self._stop_irc_components(msg)
         self._keep_looping = False

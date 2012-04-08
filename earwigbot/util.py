@@ -70,7 +70,7 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
-        if not bot._keep_looping:  # Indicates bot has already been stopped
+        if bot._keep_looping:  # Indicates bot hasn't already been stopped
             bot.stop()
 
 if __name__ == "__main__":
