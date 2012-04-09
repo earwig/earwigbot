@@ -158,6 +158,7 @@ class SitesDB(object):
         use_https = config.wiki.get("useHTTPS", False)
         assert_edit = config.wiki.get("assert")
         maxlag = config.wiki.get("maxlag")
+        wait_between_queries = config.wiki.get("waitTime", 5)
         search_config = config.wiki.get("search")
 
         if user_agent:
@@ -169,7 +170,8 @@ class SitesDB(object):
                     sql=sql, namespaces=namespaces, login=login,
                     cookiejar=cookiejar, user_agent=user_agent,
                     use_https=use_https, assert_edit=assert_edit,
-                    maxlag=maxlag, search_config=search_config)
+                    maxlag=maxlag, wait_between_queries=wait_between_queries,
+                    search_config=search_config)
 
     def _get_site_name_from_sitesdb(self, project, lang):
         """Return the name of the first site with the given project and lang.
@@ -320,13 +322,15 @@ class SitesDB(object):
         use_https = config.wiki.get("useHTTPS", False)
         assert_edit = config.wiki.get("assert")
         maxlag = config.wiki.get("maxlag")
+        wait_between_queries = config.wiki.get("waitTime", 5)
         search_config = config.wiki.get("search")
 
-        # Create a temp Site object to log in and load the other attributes:
+        # Create a Site object to log in and load the other attributes:
         site = Site(base_url=base_url, script_path=script_path, sql=sql,
                     login=login, cookiejar=cookiejar, user_agent=user_agent,
                     use_https=use_https, assert_edit=assert_edit,
-                    maxlag=maxlag, search_config=search_config)
+                    maxlag=maxlag, wait_between_queries=wait_between_queries,
+                    search_config=search_config)
 
         self._add_site_to_sitesdb(site)
         return site

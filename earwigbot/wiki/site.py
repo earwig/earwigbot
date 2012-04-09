@@ -26,7 +26,7 @@ from json import loads
 from os.path import expanduser
 from re import escape as re_escape, match as re_match
 from StringIO import StringIO
-from time import sleep
+from time import sleep, time
 from urllib import unquote_plus, urlencode
 from urllib2 import build_opener, HTTPCookieProcessor, URLError
 from urlparse import urlparse
@@ -74,7 +74,8 @@ class Site(object):
                  article_path=None, script_path=None, sql=None,
                  namespaces=None, login=(None, None), cookiejar=None,
                  user_agent=None, use_https=False, assert_edit=None,
-                 maxlag=None, search_config=(None, None)):
+                 maxlag=None, wait_between_queries=5,
+                 search_config=(None, None)):
         """Constructor for new Site instances.
 
         This probably isn't necessary to call yourself unless you're building a
@@ -106,7 +107,9 @@ class Site(object):
         self._use_https = use_https
         self._assert_edit = assert_edit
         self._maxlag = maxlag
+        self._wait_between_queries = wait_between_queries
         self._max_retries = 5
+        self._last_query_time = 0
 
         # Attributes used for SQL queries:
         self._sql_data = sql
@@ -172,9 +175,10 @@ class Site(object):
 
         We'll encode the given params, adding format=json along the way, as
         well as &assert= and &maxlag= based on self._assert_edit and _maxlag.
-        We make the request through self._opener, which has built-in cookie
-        support via self._cookiejar, a User-Agent (wiki.constants.USER_AGENT),
-        and Accept-Encoding set to "gzip".
+        Additionally, we'll sleep a bit if the last query was made less than
+        self._wait_between_queries seconds ago. The request is made through
+        self._opener, which has cookie support (self._cookiejar), a User-Agent
+        (wiki.constants.USER_AGENT), and Accept-Encoding set to "gzip".
 
         Assuming everything went well, we'll gunzip the data (if compressed),
         load it as a JSON object, and return it.
@@ -203,6 +207,13 @@ class Site(object):
             params["assert"] = self._assert_edit
         if self._maxlag:  # If requested, don't overload the servers
             params["maxlag"] = self._maxlag
+
+        since_last_query = time() - self._last_query_time  # Throttling support
+        if since_last_query < self._wait_between_queries:
+            wait_time = self._wait_between_queries - since_last_query
+            logger.debug("Throttled: waiting {0} seconds".format(wait_time))
+            sleep(wait_time)
+        self._last_query_time = time()
 
         data = urlencode(params)
         logger.debug("{0} -> {1}".format(url, data))
