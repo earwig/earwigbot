@@ -250,7 +250,7 @@ class Task(BaseTask):
                 base = result[0][1].replace("_", " ")
                 ns = self.site.namespace_id_to_name(result[0][2])
                 if ns:
-                    real_title = u":".join(ns, base))
+                    real_title = u":".join((ns, base))
                 else:
                     real_title = base
                 self.update_page(cursor, pageid, real_title)
