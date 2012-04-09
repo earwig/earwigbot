@@ -152,7 +152,7 @@ class Command(BaseCommand):
             self.reply(self.data, msg)
         else:
             ref.checkout()
-            ms = "switched from branch \x0302{1}\x0301 to \x0302{1}\x0301."
+            ms = "switched from branch \x0302{0}\x0301 to \x0302{1}\x0301."
             msg = ms.format(current_branch, target)
             self.reply(self.data, msg)
             log = "{0} checked out branch {1} of {2}"
