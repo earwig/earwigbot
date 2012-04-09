@@ -20,9 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import shlex
-import subprocess
-import re
+import time
+
+import git
 
 from earwigbot.commands import BaseCommand
 
@@ -30,6 +30,10 @@ class Command(BaseCommand):
     """Commands to interface with the bot's git repository; use '!git' for a
     sub-command list."""
     name = "git"
+    repos = {
+        "core": "/home/earwig/git/earwigbot",
+        "plugins": "/home/earwig/git/earwigbot-plugins",
+    }
 
     def process(self, data):
         self.data = data
@@ -37,43 +41,66 @@ class Command(BaseCommand):
             msg = "you must be a bot owner to use this command."
             self.reply(data, msg)
             return
-
-        if not data.args:
+        if not data.args or data.args[0] == "help":
             self.do_help()
             return
 
-        if data.args[0] == "help":
-            self.do_help()
+        command = data.args[0]
+        try:
+            repo_name = data.args[1]
+        except IndexError:
+            repos = self.get_repos()
+            msg = "which repo do you want to work with (options are {0})?"
+            self.reply(data, msg.format(repos))
+            return
+        if repo_name not in self.repos:
+            repos = self.get_repos()
+            msg = "repository must be one of the following: {0}"
+            self.reply(data, msg.format(repos))
+            return
+        self.repo = git.Repo(self.repos[repo_name])
 
-        elif data.args[0] == "branch":
+        if command == "branch":
             self.do_branch()
-
-        elif data.args[0] == "branches":
+        elif command == "branches":
             self.do_branches()
-
-        elif data.args[0] == "checkout":
+        elif command == "checkout":
             self.do_checkout()
-
-        elif data.args[0] == "delete":
+        elif command == "delete":
             self.do_delete()
-
-        elif data.args[0] == "pull":
+        elif command == "pull":
             self.do_pull()
-
-        elif data.args[0] == "status":
+        elif command == "status":
             self.do_status()
-
         else:  # They asked us to do something we don't know
             msg = "unknown argument: \x0303{0}\x0301.".format(data.args[0])
             self.reply(data, msg)
 
-    def exec_shell(self, command):
-        """Execute a shell command and get the output."""
-        command = shlex.split(command)
-        result = subprocess.check_output(command, stderr=subprocess.STDOUT)
-        if result:
-            result = result[:-1]  # Strip newline
-        return result
+    def get_repos(self):
+        data = self.repos.iteritems()
+        repos = ["\x0302{0}\x0301 ({1})".format(k, v) for k, v in data]
+        return ", ".join(repos)
+
+    def get_remote(self):
+        try:
+            remote_name = self.data.args[2]
+        except IndexError:
+            remote_name = "origin"
+        try:
+            return getattr(self.repo.remotes, remote_name)
+        except AttributeError:
+            msg = "unknown remote: \x0302{0}\x0301".format(remote_name)
+            self.reply(self.data, msg)
+
+    def get_time_since(self, date):
+        diff = time.mktime(time.gmtime()) - date
+        if diff < 60:
+            return "{0} seconds".format(int(diff))
+        if diff < 60 * 60:
+            return "{0} minutes".format(int(diff / 60))
+        if diff < 60 * 60 * 24:
+            return "{0} hours".format(int(diff / 60 / 60))
+        return "{0} days".format(int(diff / 60 / 60 / 24))
 
     def do_help(self):
         """Display all commands."""
@@ -85,110 +112,124 @@ class Command(BaseCommand):
             "pull": "update everything from the remote server",
             "status": "check if we are up-to-date",
         }
-        msg = ""
+        subcommands = ""
         for key in sorted(help.keys()):
-            msg += "\x0303{0}\x0301 ({1}), ".format(key, help[key])
-        msg = msg[:-2]  # Trim last comma and space
-        self.reply(self.data, "sub-commands are: {0}.".format(msg))
+            subcommands += "\x0303{0}\x0301 ({1}), ".format(key, help[key])
+        subcommands = subcommands[:-2]  # Trim last comma and space
+        msg = "sub-commands are: {0}; repos are: {1}. Syntax: !git \x0303subcommand\x0301 \x0302repo\x0301."
+        self.reply(self.data, msg.format(subcommands, self.get_repos()))
 
     def do_branch(self):
         """Get our current branch."""
-        branch = self.exec_shell("git name-rev --name-only HEAD")
+        branch = self.repo.active_branch.name
         msg = "currently on branch \x0302{0}\x0301.".format(branch)
         self.reply(self.data, msg)
 
     def do_branches(self):
         """Get a list of branches."""
-        branches = self.exec_shell("git branch")
-        # Remove extraneous characters:
-        branches = branches.replace('\n* ', ', ')
-        branches = branches.replace('* ', ' ')
-        branches = branches.replace('\n  ', ', ')
-        branches = branches.strip()
-        msg = "branches: \x0302{0}\x0301.".format(branches)
+        branches = [branch.name for branch in self.repo.branches]
+        msg = "branches: \x0302{0}\x0301.".format(", ".join(branches))
         self.reply(self.data, msg)
 
     def do_checkout(self):
         """Switch branches."""
         try:
-            branch = self.data.args[1]
-        except IndexError: # no branch name provided
+            target = self.data.args[2]
+        except IndexError:  # No branch name provided
             self.reply(self.data, "switch to which branch?")
             return
 
-        current_branch = self.exec_shell("git name-rev --name-only HEAD")
+        current_branch = self.repo.active_branch.name
+        if target == current_branch:
+            msg = "already on \x0302{0}\x0301!".format(target)
+            self.reply(self.data, msg)
+            return
 
         try:
-            result = self.exec_shell("git checkout %s" % branch)
-            if "Already on" in result:
-                msg = "already on \x0302{0}\x0301!".format(branch)
-                self.reply(self.data, msg)
-            else:
-                ms = "switched from branch \x0302{1}\x0301 to \x0302{1}\x0301."
-                msg = ms.format(current_branch, branch)
-                self.reply(self.data, msg)
-
-        except subprocess.CalledProcessError:
-            # Git couldn't switch branches; assume the branch doesn't exist:
-            msg = "branch \x0302{0}\x0301 doesn't exist!".format(branch)
+            ref = getattr(self.repo.branches, target)
+        except AttributeError:
+            msg = "branch \x0302{0}\x0301 doesn't exist!".format(target)
             self.reply(self.data, msg)
+        else:
+            ref.checkout()
+            ms = "switched from branch \x0302{1}\x0301 to \x0302{1}\x0301."
+            msg = ms.format(current_branch, target)
+            self.reply(self.data, msg)
+            log = "{0} checked out branch {1} of {2}"
+            logmsg = log.format(self.data.nick, target, self.repo.working_dir)
+            self.logger.info(logmsg)
 
     def do_delete(self):
         """Delete a branch, while making sure that we are not already on it."""
         try:
-            delete_branch = self.data.args[1]
-        except IndexError: # no branch name provided
+            target = self.data.args[2]
+        except IndexError:  # No branch name provided
             self.reply(self.data, "delete which branch?")
             return
 
-        current_branch = self.exec_shell("git name-rev --name-only HEAD")
-
-        if current_branch == delete_branch:
+        current_branch = self.repo.active_branch.name
+        if current_branch == target:
             msg = "you're currently on this branch; please checkout to a different branch before deleting."
             self.reply(self.data, msg)
             return
 
         try:
-            self.exec_shell("git branch -d %s" % delete_branch)
-            msg = "branch \x0302{0}\x0301 has been deleted locally."
-            self.reply(self.data, msg.format(delete_branch))
-        except subprocess.CalledProcessError:
-            # Git couldn't switch branches; assume the branch doesn't exist:
-            msg = "branch \x0302{0}\x0301 doesn't exist!".format(delete_branch)
+            ref = getattr(self.repo.branches, target)
+        except AttributeError:
+            msg = "branch \x0302{0}\x0301 doesn't exist!".format(target)
             self.reply(self.data, msg)
+        else:
+            self.repo.git.branch("-d", ref)
+            msg = "branch \x0302{0}\x0301 has been deleted locally."
+            self.reply(self.data, msg.format(target))
+            log = "{0} deleted branch {1} of {2}"
+            logmsg = log.format(self.data.nick, target, self.repo.working_dir)
+            self.logger.info(logmsg)
 
     def do_pull(self):
         """Pull from our remote repository."""
-        branch = self.exec_shell("git name-rev --name-only HEAD")
+        branch = self.repo.active_branch.name
         msg = "pulling from remote (currently on \x0302{0}\x0301)..."
         self.reply(self.data, msg.format(branch))
 
-        result = self.exec_shell("git pull")
+        remote = self.get_remote()
+        if not remote:
+            return
+        result = remote.pull()
+        updated = [info for info in result if info.flags != info.HEAD_UPTODATE]
 
-        if "Already up-to-date." in result:
-            self.reply(self.data, "done; no new changes.")
+        if updated:
+            branches = ", ".join([info.ref.remote_head for info in updated])
+            msg = "done; updates to \x0302{0}\x0301 (from {1})."
+            self.reply(self.data, msg.format(branches, remote.url))
+            log = "{0} pulled {1} of {2} (updates to {3})"
+            self.logger.info(log.format(self.data.nick, remote.name,
+                                        self.repo.working_dir, branches))
         else:
-            regex = "\s*((.*?)\sfile(.*?)tions?\(-\))"
-            changes = re.findall(regex, result)[0][0]
-            try:
-                cmnd_remt = "git config --get branch.{0}.remote".format(branch)
-                remote = self.exec_shell(cmnd_remt)
-                cmnd_url = "git config --get remote.{0}.url".format(remote)
-                url = self.exec_shell(cmnd_url)
-                msg = "done; {0} [from {1}].".format(changes, url)
-                self.reply(self.data, msg)
-            except subprocess.CalledProcessError:
-                # Something in .git/config is not specified correctly, so we
-                # cannot get the remote's URL. However, pull was a success:
-                self.reply(self.data, "done; %s." % changes)
+            self.reply(self.data, "done; no new changes.")
+            log = "{0} pulled {1} of {2} (no updates)"
+            self.logger.info(log.format(self.data.nick, remote.name,
+                                        self.repo.working_dir))
 
     def do_status(self):
-        """Check whether we have anything to pull."""
-        last = self.exec_shell('git log -n 1 --pretty="%ar"')
-        result = self.exec_shell("git fetch --dry-run")
-        if not result:  # Nothing was fetched, so remote and local are equal
-            msg = "last commit was {0}. Local copy is \x02up-to-date\x0F with remote."
-            self.reply(self.data, msg.format(last))
+        """Check if we have anything to pull."""
+        remote = self.get_remote()
+        if not remote:
+            return
+        since = self.get_time_since(self.repo.head.object.committed_date)
+        result = remote.fetch(dry_run=True)
+        updated = [info for info in result if info.flags != info.HEAD_UPTODATE]
+
+        if updated:
+            branches = ", ".join([info.ref.remote_head for info in updated])
+            msg = "last local commit was \x02{0}\x0F ago; updates to \x0302{1}\x0301."
+            self.reply(self.data, msg.format(since, branches))
+            log = "{0} got status of {1} of {2} (updates to {3})"
+            self.logger.info(log.format(self.data.nick, remote.name,
+                                        self.repo.working_dir, branches))
         else:
-            msg = "last local commit was {0}. Remote is \x02ahead\x0F of local copy."
-            self.reply(self.data, msg.format(last))
+            msg = "last commit was \x02{0}\x0F ago. Local copy is up-to-date with remote."
+            self.reply(self.data, msg.format(since))
+            log = "{0} pulled {1} of {2} (no updates)"
+            self.logger.info(log.format(self.data.nick, remote.name,
+                                        self.repo.working_dir))
