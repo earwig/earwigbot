@@ -155,6 +155,9 @@ class Command(BaseCommand):
             ms = "switched from branch \x0302{1}\x0301 to \x0302{1}\x0301."
             msg = ms.format(current_branch, target)
             self.reply(self.data, msg)
+            log = "{0} checked out branch {1} of {2}"
+            logmsg = log.format(self.data.nick, target, self.repo.working_dir)
+            self.logger.info(logmsg)
 
     def do_delete(self):
         """Delete a branch, while making sure that we are not already on it."""
@@ -179,10 +182,13 @@ class Command(BaseCommand):
             self.repo.git.branch("-d", ref)
             msg = "branch \x0302{0}\x0301 has been deleted locally."
             self.reply(self.data, msg.format(target))
+            log = "{0} deleted branch {1} of {2}"
+            logmsg = log.format(self.data.nick, target, self.repo.working_dir)
+            self.logger.info(logmsg)
 
     def do_pull(self):
         """Pull from our remote repository."""
-        branch = current_branch = self.repo.active_branch.name
+        branch = self.repo.active_branch.name
         msg = "pulling from remote (currently on \x0302{0}\x0301)..."
         self.reply(self.data, msg.format(branch))
 
@@ -196,8 +202,14 @@ class Command(BaseCommand):
             branches = ", ".join([info.ref.remote_head for info in updated])
             msg = "done; updates to \x0302{0}\x0301 (from {1})."
             self.reply(self.data, msg.format(branches, remote.url))
+            log = "{0} pulled {1} of {2} (updates to {3})"
+            self.logger.info(log.format(self.data.nick, remote.name,
+                                        self.repo.working_dir, branches))
         else:
             self.reply(self.data, "done; no new changes.")
+            log = "{0} pulled {1} of {2} (no updates)"
+            self.logger.info(log.format(self.data.nick, remote.name,
+                                        self.repo.working_dir))
 
     def do_status(self):
         """Check if we have anything to pull."""
@@ -212,6 +224,12 @@ class Command(BaseCommand):
             branches = ", ".join([info.ref.remote_head for info in updated])
             msg = "last local commit was \x02{0}\x0F ago; updates to \x0302{1}\x0301."
             self.reply(self.data, msg.format(since, branches))
+            log = "{0} got status of {1} of {2} (updates to {3})"
+            self.logger.info(log.format(self.data.nick, remote.name,
+                                        self.repo.working_dir, branches))
         else:
             msg = "last commit was \x02{0}\x0F ago. Local copy is up-to-date with remote."
             self.reply(self.data, msg.format(since))
+            log = "{0} pulled {1} of {2} (no updates)"
+            self.logger.info(log.format(self.data.nick, remote.name,
+                                        self.repo.working_dir))
