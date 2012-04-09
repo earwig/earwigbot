@@ -49,12 +49,12 @@ class Command(BaseCommand):
         try:
             repo_name = data.args[1]
         except IndexError:
-            repos = "\x0302" + "\x0301, \x0301".join(self.repos)  + "\x0301"
+            repos = self.get_repos()
             msg = "which repo do you want to work with (options are {0})?"
             self.reply(data, msg.format(repos))
             return
         if repo_name not in self.repos:
-            repos = "\x0302" + "\x0301, \x0301".join(self.repos)  + "\x0301"
+            repos = self.get_repos()
             msg = "repository must be one of the following: {0}"
             self.reply(data, msg.format(repos))
             return
@@ -76,6 +76,22 @@ class Command(BaseCommand):
             msg = "unknown argument: \x0303{0}\x0301.".format(data.args[0])
             self.reply(data, msg)
 
+    def get_repos(self):
+        data = self.repos.iteritems()
+        repos = ["\x0302{0}\x0301 ({1})".format(k, v) for k, v in data]
+        return ", ".join(repos)
+
+    def get_remote(self):
+        try:
+            remote_name = self.data.args[2]
+        except IndexError:
+            remote_name = "origin"
+        try:
+            return getattr(self.repo.remotes, remote_name)
+        except AttributeError:
+            msg = "unknown remote: \x0302{0}\x0301".format(remote_name)
+            self.reply(self.data, msg)
+
     def do_help(self):
         """Display all commands."""
         help = {
@@ -86,11 +102,12 @@ class Command(BaseCommand):
             "pull": "update everything from the remote server",
             "status": "check if we are up-to-date",
         }
-        msg = ""
+        subcommands = ""
         for key in sorted(help.keys()):
-            msg += "\x0303{0}\x0301 ({1}), ".format(key, help[key])
-        msg = msg[:-2]  # Trim last comma and space
-        self.reply(self.data, "sub-commands are: {0}.".format(msg))
+            subcommands += "\x0303{0}\x0301 ({1}), ".format(key, help[key])
+        subcommands = subcommands[:-2]  # Trim last comma and space
+        msg = "sub-commands are: {0}; repos are: {1}. Syntax: !git \x0303subcommand\x0301 \x0302repo\x0301"
+        self.reply(self.data, msg.format(subcommands, get_repos()))
 
     def do_branch(self):
         """Get our current branch."""
@@ -152,17 +169,6 @@ class Command(BaseCommand):
             self.repo.git.branch("-d", ref)
             msg = "branch \x0302{0}\x0301 has been deleted locally."
             self.reply(self.data, msg.format(target))
-
-    def get_remote(self):
-        try:
-            remote_name = self.data.args[2]
-        except IndexError:
-            remote_name = "origin"
-        try:
-            return getattr(self.repo.remotes, remote_name)
-        except AttributeError:
-            msg = "unknown remote: \x0302{0}\x0301".format(remote_name)
-            self.reply(self.data, msg)
 
     def do_pull(self):
         """Pull from our remote repository."""
