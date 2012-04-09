@@ -57,8 +57,8 @@ class SitesDB(object):
         self.config = bot.config
         self._logger = bot.logger.getChild("wiki")
         self._sites = {}  # Internal site cache
-        self._sitesdb = path.join(config.root_dir, "sites.db")
-        self._cookie_file = path.join(config.root_dir, ".cookies")
+        self._sitesdb = path.join(bot.config.root_dir, "sites.db")
+        self._cookie_file = path.join(bot.config.root_dir, ".cookies")
         self._cookiejar = None
 
     def _get_cookiejar(self):
