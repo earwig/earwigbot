@@ -92,6 +92,16 @@ class Command(BaseCommand):
             msg = "unknown remote: \x0302{0}\x0301".format(remote_name)
             self.reply(self.data, msg)
 
+    def get_time_since(self, date):
+        diff = time.mktime(time.gmtime()) - date
+        if diff < 60:
+            return "{0} seconds".format(diff)
+        if diff < 60 * 60:
+            return "{0} minutes".format(int(diff / 60))
+        if diff < 60 * 60 * 24:
+            return "{0} hours".format(int(diff / 60 / 60))
+        return "{0} days".format(int(diff / 60 / 60 / 24))
+
     def do_help(self):
         """Display all commands."""
         help = {
@@ -106,7 +116,7 @@ class Command(BaseCommand):
         for key in sorted(help.keys()):
             subcommands += "\x0303{0}\x0301 ({1}), ".format(key, help[key])
         subcommands = subcommands[:-2]  # Trim last comma and space
-        msg = "sub-commands are: {0}; repos are: {1}. Syntax: !git \x0303subcommand\x0301 \x0302repo\x0301"
+        msg = "sub-commands are: {0}; repos are: {1}. Syntax: !git \x0303subcommand\x0301 \x0302repo\x0301."
         self.reply(self.data, msg.format(subcommands, self.get_repos()))
 
     def do_branch(self):
@@ -191,25 +201,18 @@ class Command(BaseCommand):
 
     def do_status(self):
         """Check whether we have anything to pull."""
-        last = self.repo.head.object.committed_date
-        diff = time.mktime(time.gmtime()) - last
-        if diff < 60:
-            since = "{0} seconds".format(diff)
-        elif diff < 60 * 60:
-            since = "{0} minutes".format(int(diff / 60))
-        elif diff < 60 * 60 * 24:
-            since = "{0} hours".format(int(diff / 60 / 60))
-        else:
-            since = "{0} days".format(int(diff / 60 / 60 / 24))
-
         remote = self.get_remote()
         if not remote:
             return
+        since = self.get_time_since(self.repo.head.object.committed_date)
         result = remote.fetch(dry_run=True)
+        updated = [info for info in result if info.flags != info.HEAD_UPTODATE]
 
-        if [info for info in result if info.flags != info.HEAD_UPTODATE]:
-            msg = "last local commit was {0}. Remote is \x02ahead\x0F of local copy."
-            self.reply(self.data, msg.format(since))
-        else:    
-            msg = "last commit was {0} ago. Local copy is \x02up-to-date\x0F with remote."
+        if updated:
+            latest = max([info.commit.committed_date for info in updated])
+            remote_since = self.get_time_since(latest)
+            msg = "last local commit was \x02{0}\x0F ago; last remote commit was \x02{1}\x0F ago."
+            self.reply(self.data, msg.format(since, remote_since))
+        else:
+            msg = "last commit was \x02{0}\x0F ago. Local copy is up-to-date with remote."
             self.reply(self.data, msg.format(since))
