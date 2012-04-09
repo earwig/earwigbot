@@ -130,7 +130,7 @@ class Task(BaseTask):
         q_delete = "DELETE FROM page WHERE page_id = ?"
         q_update = "UPDATE page SET page_date = ?, page_status = ? WHERE page_id = ?"
         q_insert = "INSERT INTO page VALUES (?, ?, ?)"
-        members = category.members(use_sql=True)
+        members = category.get_members(use_sql=True)
 
         with self.conn.cursor() as cursor:
             for title, pageid in members:

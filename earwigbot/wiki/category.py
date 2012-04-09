@@ -35,7 +35,7 @@ class Category(Page):
     because it accepts category names without the namespace prefix.
 
     Public methods:
-    members -- returns a list of page titles in the category
+    get_members -- returns a list of page titles in the category
     """
 
     def __repr__(self):
@@ -47,37 +47,54 @@ class Category(Page):
         """Returns a nice string representation of the Category."""
         return '<Category "{0}" of {1}>'.format(self.title(), str(self._site))
 
-    def members(self, limit=50, use_sql=False):
+    def _get_members_via_sql(self, limit):
+        """Return a list of tuples of (title, pageid) in the category."""
+        query = """SELECT page_title, page_namespace, page_id FROM page
+                   JOIN categorylinks ON page_id = cl_from
+                   WHERE cl_to = ?"""
+        title = self.title().replace(" ", "_").split(":", 1)[1]
+
+        if limit:
+            query += " LIMIT = ?"
+            result = self._site.sql_query(query, (title, limit))
+        else:
+            result = self._site.sql_query(query, (title,))
+
+        members = []
+        for row in result:
+            base = row[0].replace("_", " ").decode("utf8")
+            namespace = self._site.namespace_id_to_name(row[1])
+            if namespace:
+                title = u":".join((namespace, base))
+            else:  # Avoid doing a silly (albeit valid) ":Pagename" thing
+                title = base
+            members.append((title, row[2]))
+        return members
+
+    def _get_members_via_api(self, limit):
+        """Return a list of page titles in the category using the API."""
+        params = {"action": "query", "list": "categorymembers",
+                  "cmlimit": limit, "cmtitle": self._title}
+        if not limit:
+            params["cmlimit"] = 50  # Default value
+
+        result = self._site._api_query(params)
+        members = result['query']['categorymembers']
+        return [member["title"] for member in members]
+
+    def get_members(self, use_sql=False, limit=None):
         """Returns a list of page titles in the category.
 
-        If `limit` is provided, we will provide this many titles, or less if
-        the category is too small. `limit` defaults to 50; normal users can go
-        up to 500, and bots can go up to 5,000 on a single API query.
+        If `use_sql` is True, we will use a SQL query instead of the API. Pages
+        will be returned as tuples of (title, pageid) instead of just titles.
 
-        If `use_sql` is True, we will use a SQL query instead of the API. The
-        limit argument will be ignored, and pages will be returned as tuples
-        of (title, pageid) instead of just titles.
+        If `limit` is provided, we will provide this many titles, or less if
+        the category is smaller. `limit` defaults to 50 for API queries; normal
+        users can go up to 500, and bots can go up to 5,000 on a single API
+        query. If we're using SQL, the limit is None by default (returning all
+        pages in the category), but an arbitrary limit can still be chosen.
         """
         if use_sql:
-            query = """SELECT page_title, page_namespace, page_id FROM page
-                       JOIN categorylinks ON page_id = cl_from
-                       WHERE cl_to = ?"""
-            title = self.title().replace(" ", "_").split(":", 1)[1]
-            result = self._site.sql_query(query, (title,))
-            members = []
-            for row in result:
-                body = row[0].replace("_", " ")
-                namespace = self._site.namespace_id_to_name(row[1])
-                if namespace:
-                    title = ":".join((str(namespace), body))
-                else:  # Avoid doing a silly (albeit valid) ":Pagename" thing
-                    title = body
-                members.append((title, row[2]))
-            return members
-
+            return self._get_members_via_sql(limit)
         else:
-            params = {"action": "query", "list": "categorymembers",
-                "cmlimit": limit, "cmtitle": self._title}
-            result = self._site._api_query(params)
-            members = result['query']['categorymembers']
-            return [member["title"] for member in members]
+            return self._get_members_via_api(limit)
