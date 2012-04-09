@@ -107,7 +107,7 @@ class Command(BaseCommand):
             subcommands += "\x0303{0}\x0301 ({1}), ".format(key, help[key])
         subcommands = subcommands[:-2]  # Trim last comma and space
         msg = "sub-commands are: {0}; repos are: {1}. Syntax: !git \x0303subcommand\x0301 \x0302repo\x0301"
-        self.reply(self.data, msg.format(subcommands, get_repos()))
+        self.reply(self.data, msg.format(subcommands, self.get_repos()))
 
     def do_branch(self):
         """Get our current branch."""
@@ -184,7 +184,7 @@ class Command(BaseCommand):
 
         if updated:
             update = ", ".join([info.ref.remote_head for info in updated])
-            msg = "done; updates to {1} (from {2}).".format(update, remote.url)
+            msg = "done; updates to {0} (from {1}).".format(update, remote.url)
             self.reply(self.data, msg)
         else:
             self.reply(self.data, "done; no new changes.")
