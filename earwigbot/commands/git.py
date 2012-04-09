@@ -95,7 +95,7 @@ class Command(BaseCommand):
     def get_time_since(self, date):
         diff = time.mktime(time.gmtime()) - date
         if diff < 60:
-            return "{0} seconds".format(diff)
+            return "{0} seconds".format(int(diff))
         if diff < 60 * 60:
             return "{0} minutes".format(int(diff / 60))
         if diff < 60 * 60 * 24:
@@ -194,8 +194,8 @@ class Command(BaseCommand):
 
         if updated:
             update = ", ".join([info.ref.remote_head for info in updated])
-            msg = "done; updates to {0} (from {1}).".format(update, remote.url)
-            self.reply(self.data, msg)
+            msg = "done; updates to \x0302{0}\x0301 (from {1})."
+            self.reply(self.data, msg.format(update, remote.url))
         else:
             self.reply(self.data, "done; no new changes.")
 
