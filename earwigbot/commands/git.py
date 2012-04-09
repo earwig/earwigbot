@@ -193,14 +193,14 @@ class Command(BaseCommand):
         updated = [info for info in result if info.flags != info.HEAD_UPTODATE]
 
         if updated:
-            update = ", ".join([info.ref.remote_head for info in updated])
+            branches = ", ".join([info.ref.remote_head for info in updated])
             msg = "done; updates to \x0302{0}\x0301 (from {1})."
-            self.reply(self.data, msg.format(update, remote.url))
+            self.reply(self.data, msg.format(branches, remote.url))
         else:
             self.reply(self.data, "done; no new changes.")
 
     def do_status(self):
-        """Check whether we have anything to pull."""
+        """Check if we have anything to pull."""
         remote = self.get_remote()
         if not remote:
             return
@@ -209,10 +209,9 @@ class Command(BaseCommand):
         updated = [info for info in result if info.flags != info.HEAD_UPTODATE]
 
         if updated:
-            latest = max([info.commit.committed_date for info in updated])
-            remote_since = self.get_time_since(latest)
-            msg = "last local commit was \x02{0}\x0F ago; last remote commit was \x02{1}\x0F ago."
-            self.reply(self.data, msg.format(since, remote_since))
+            branches = ", ".join([info.ref.remote_head for info in updated])
+            msg = "last local commit was \x02{0}\x0F ago; updates to \x0302{1}\x0301."
+            self.reply(self.data, msg.format(since, branches))
         else:
             msg = "last commit was \x02{0}\x0F ago. Local copy is up-to-date with remote."
             self.reply(self.data, msg.format(since))
