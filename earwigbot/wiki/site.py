@@ -190,24 +190,6 @@ class Site(object):
         There's helpful MediaWiki API documentation at
         <http://www.mediawiki.org/wiki/API>.
         """
-        if not self._base_url or self._script_path is None:
-            e = "Tried to do an API query, but no API URL is known."
-            raise SiteAPIError(e)
-
-        base_url = self._base_url
-        if base_url.startswith("//"): # Protocol-relative URLs from 1.18
-            if self._use_https:
-                base_url = "https:" + base_url
-            else:
-                base_url = "http:" + base_url
-        url = ''.join((base_url, self._script_path, "/api.php"))
-
-        params["format"] = "json"  # This is the only format we understand
-        if self._assert_edit:  # If requested, ensure that we're logged in
-            params["assert"] = self._assert_edit
-        if self._maxlag:  # If requested, don't overload the servers
-            params["maxlag"] = self._maxlag
-
         since_last_query = time() - self._last_query_time  # Throttling support
         if since_last_query < self._wait_between_queries:
             wait_time = self._wait_between_queries - since_last_query
@@ -215,7 +197,7 @@ class Site(object):
             sleep(wait_time)
         self._last_query_time = time()
 
-        data = urlencode(params)
+        url, data = self._build_api_query(params)
         logger.debug("{0} -> {1}".format(url, data))
 
         try:
@@ -236,8 +218,35 @@ class Site(object):
             gzipper = GzipFile(fileobj=stream)
             result = gzipper.read()
 
+        return self._handle_api_query_result(result, params, tries, wait)
+
+    def _build_api_query(self, params):
+        """Given API query params, return the URL to query and POST data."""
+        if not self._base_url or self._script_path is None:
+            e = "Tried to do an API query, but no API URL is known."
+            raise SiteAPIError(e)
+
+        base_url = self._base_url
+        if base_url.startswith("//"): # Protocol-relative URLs from 1.18
+            if self._use_https:
+                base_url = "https:" + base_url
+            else:
+                base_url = "http:" + base_url
+        url = ''.join((base_url, self._script_path, "/api.php"))
+
+        params["format"] = "json"  # This is the only format we understand
+        if self._assert_edit:  # If requested, ensure that we're logged in
+            params["assert"] = self._assert_edit
+        if self._maxlag:  # If requested, don't overload the servers
+            params["maxlag"] = self._maxlag
+
+        data = urlencode(params)
+        return url, data
+
+    def _handle_api_query_result(self, result, params, tries, wait):
+        """Given the result of an API query, attempt to return useful data."""
         try:
-            res = loads(result)  # Parse as a JSON object
+            res = loads(result)  # Try to parse as a JSON object
         except ValueError:
             e = "API query failed: JSON could not be decoded."
             raise SiteAPIError(e)
@@ -245,10 +254,10 @@ class Site(object):
         try:
             code = res["error"]["code"]
             info = res["error"]["info"]
-        except (TypeError, KeyError):
-            return res
+        except (TypeError, KeyError):  # Having these keys indicates a problem
+            return res  # All is well; return the decoded JSON
 
-        if code == "maxlag":
+        if code == "maxlag":  # We've been throttled by the server
             if tries >= self._max_retries:
                 e = "Maximum number of retries reached ({0})."
                 raise SiteAPIError(e.format(self._max_retries))
@@ -257,7 +266,7 @@ class Site(object):
             logger.info(msg.format(info, wait, tries, self._max_retries))
             sleep(wait)
             return self._api_query(params, tries=tries, wait=wait*3)
-        else:
+        else:  # Some unknown error occurred
             e = 'API query failed: got error "{0}"; server says: "{1}".'
             error = SiteAPIError(e.format(code, info))
             error.code, error.info = code, info
