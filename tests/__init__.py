@@ -49,7 +49,7 @@ from earwigbot.commands import CommandManager
 from earwigbot.config import BotConfig
 from earwigbot.irc import IRCConnection, Data
 from earwigbot.tasks import TaskManager
-from earwigbot.wiki import SitesDBManager
+from earwigbot.wiki import SitesDB
 
 class CommandTestCase(TestCase):
     re_sender = re.compile(":(.*?)!(.*?)@(.*?)\Z")
@@ -114,7 +114,7 @@ class FakeBot(Bot):
         self.logger = logging.getLogger("earwigbot")
         self.commands = CommandManager(self)
         self.tasks = TaskManager(self)
-        self.wiki = SitesDBManager(self.config)
+        self.wiki = SitesDB(self)
         self.frontend = FakeIRCConnection(self)
         self.watcher = FakeIRCConnection(self)
 

@@ -35,10 +35,6 @@ add_site, and remove_site that should handle all of your Site (and thus, Page,
 Category, and User) needs.
 """
 
-import logging as _log
-logger = _log.getLogger("earwigbot.wiki")
-logger.addHandler(_log.NullHandler())
-
 from earwigbot.wiki.category import *
 from earwigbot.wiki.constants import *
 from earwigbot.wiki.exceptions import *

@@ -52,9 +52,10 @@ class SitesDB(object):
     by importing the manager class (`from earwigbot.wiki import SitesDB`).
     """
 
-    def __init__(self, config):
-        """Set up the manager with an attribute for the BotConfig object."""
-        self.config = config
+    def __init__(self, bot):
+        """Set up the manager with an attribute for the base Bot object."""
+        self.config = bot.config
+        self._logger = bot.logger.getChild("wiki")
         self._sites = {}  # Internal site cache
         self._sitesdb = path.join(config.root_dir, "sites.db")
         self._cookie_file = path.join(config.root_dir, ".cookies")
@@ -173,6 +174,7 @@ class SitesDB(object):
         assert_edit = config.wiki.get("assert")
         maxlag = config.wiki.get("maxlag")
         wait_between_queries = config.wiki.get("waitTime", 5)
+        logger = self._logger.getChild(name)
         search_config = config.wiki.get("search")
 
         if user_agent:
@@ -185,7 +187,7 @@ class SitesDB(object):
                     cookiejar=cookiejar, user_agent=user_agent,
                     use_https=use_https, assert_edit=assert_edit,
                     maxlag=maxlag, wait_between_queries=wait_between_queries,
-                    search_config=search_config)
+                    logger=logger, search_config=search_config)
 
     def _get_site_name_from_sitesdb(self, project, lang):
         """Return the name of the first site with the given project and lang.
@@ -342,6 +344,7 @@ class SitesDB(object):
         assert_edit = config.wiki.get("assert")
         maxlag = config.wiki.get("maxlag")
         wait_between_queries = config.wiki.get("waitTime", 5)
+        logger = self._logger.getChild(name)
         search_config = config.wiki.get("search")
 
         # Create a Site object to log in and load the other attributes:
@@ -349,7 +352,7 @@ class SitesDB(object):
                     login=login, cookiejar=cookiejar, user_agent=user_agent,
                     use_https=use_https, assert_edit=assert_edit,
                     maxlag=maxlag, wait_between_queries=wait_between_queries,
-                    search_config=search_config)
+                    logger=logger, search_config=search_config)
 
         self._add_site_to_sitesdb(site)
         self._sites[site.name()] = site

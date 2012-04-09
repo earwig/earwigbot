@@ -23,6 +23,7 @@
 from cookielib import CookieJar
 from gzip import GzipFile
 from json import loads
+from logging import getLogger, NullHandler
 from os.path import expanduser
 from re import escape as re_escape, match as re_match
 from StringIO import StringIO
@@ -36,7 +37,6 @@ try:
 except ImportError:
     oursql = None
 
-from earwigbot.wiki import logger
 from earwigbot.wiki.category import Category
 from earwigbot.wiki.constants import *
 from earwigbot.wiki.exceptions import *
@@ -74,7 +74,7 @@ class Site(object):
                  article_path=None, script_path=None, sql=None,
                  namespaces=None, login=(None, None), cookiejar=None,
                  user_agent=None, use_https=False, assert_edit=None,
-                 maxlag=None, wait_between_queries=5,
+                 maxlag=None, wait_between_queries=5, logger=None,
                  search_config=(None, None)):
         """Constructor for new Site instances.
 
@@ -131,6 +131,13 @@ class Site(object):
 
         # Get all of the above attributes that were not specified as arguments:
         self._load_attributes()
+
+        # Set up our internal logger:
+        if logger:
+            self._logger = logger
+        else:  # Just set up a null logger to eat up our messages:
+            self._logger = getLogger("earwigbot.wiki").getChild(self._name)
+            self._logger.addHandler(NullHandler())
 
         # If we have a name/pass and the API says we're not logged in, log in:
         self._login_info = name, password = login
@@ -193,12 +200,13 @@ class Site(object):
         since_last_query = time() - self._last_query_time  # Throttling support
         if since_last_query < self._wait_between_queries:
             wait_time = self._wait_between_queries - since_last_query
-            logger.debug("Throttled: waiting {0} seconds".format(wait_time))
+            log = "Throttled: waiting {0} seconds".format(wait_time)
+            self._logger.debug(log)
             sleep(wait_time)
         self._last_query_time = time()
 
         url, data = self._build_api_query(params)
-        logger.debug("{0} -> {1}".format(url, data))
+        self._logger.debug("{0} -> {1}".format(url, data))
 
         try:
             response = self._opener.open(url, data)
@@ -263,7 +271,7 @@ class Site(object):
                 raise SiteAPIError(e.format(self._max_retries))
             tries += 1
             msg = 'Server says "{0}"; retrying in {1} seconds ({2}/{3})'
-            logger.info(msg.format(info, wait, tries, self._max_retries))
+            self._logger.info(msg.format(info, wait, tries, self._max_retries))
             sleep(wait)
             return self._api_query(params, tries=tries, wait=wait*3)
         else:  # Some unknown error occurred

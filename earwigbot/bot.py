@@ -57,7 +57,7 @@ class Bot(object):
         self.logger = logging.getLogger("earwigbot")
         self.commands = CommandManager(self)
         self.tasks = TaskManager(self)
-        self.wiki = SitesDB(self.config)
+        self.wiki = SitesDB(self)
         self.frontend = None
         self.watcher = None
 
