@@ -45,7 +45,6 @@ class Command(BaseCommand):
 
     def process(self, data):
         self.site = self.bot.wiki.get_site()
-        self.site._maxlag = None
 
         if data.line[1] == "JOIN":
             status = " ".join(("\x02Current status:\x0F", self.get_status()))

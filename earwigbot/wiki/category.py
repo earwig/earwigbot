@@ -78,7 +78,7 @@ class Category(Page):
         if not limit:
             params["cmlimit"] = 50  # Default value
 
-        result = self._site._api_query(params)
+        result = self._site.api_query(**params)
         members = result['query']['categorymembers']
         return [member["title"] for member in members]
 
