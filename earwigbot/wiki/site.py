@@ -200,7 +200,7 @@ class Site(object):
         since_last_query = time() - self._last_query_time  # Throttling support
         if since_last_query < self._wait_between_queries:
             wait_time = self._wait_between_queries - since_last_query
-            log = "Throttled: waiting {0} seconds".format(wait_time)
+            log = "Throttled: waiting {0} seconds".format(round(wait_time, 2))
             self._logger.debug(log)
             sleep(wait_time)
         self._last_query_time = time()

@@ -175,7 +175,7 @@ class TaskManager(_ResourceManager):
             msg = "Task '{0}' raised an exception and had to stop:"
             self.logger.exception(msg.format(task.name))
         else:
-            msg = "Task '{0}' finished without error"
+            msg = "Task '{0}' finished successfully"
             self.logger.info(msg.format(task.name))
 
     def start(self, task_name, **kwargs):
