@@ -247,7 +247,7 @@ class Task(BaseTask):
                 msg = u"Updating page [[{0}]] (id: {1}) @ {2}"
                 self.logger.debug(msg.format(title, pageid, oldid))
                 self.logger.debug("  {0} -> {1}".format(oldid, real_oldid))
-                base = result[0][1].replace("_", " ")
+                base = result[0][1].decode("utf8").replace("_", " ")
                 ns = self.site.namespace_id_to_name(result[0][2])
                 if ns:
                     real_title = u":".join((ns, base))
