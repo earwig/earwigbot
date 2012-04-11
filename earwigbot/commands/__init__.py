@@ -20,20 +20,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""
-EarwigBot's IRC Commands
-
-This package provides the IRC "commands" used by the bot's front-end component.
-This module contains the BaseCommand class (import with
-`from earwigbot.commands import BaseCommand`), whereas the package contains
-various built-in commands. Additional commands can be installed as plugins in
-the bot's working directory.
-"""
-
 __all__ = ["BaseCommand"]
 
 class BaseCommand(object):
-    """A base class for commands on IRC.
+    """
+    EarwigBot's Base IRC Command
+
+    This package provides built-in IRC "commands" used by the bot's front-end
+    component. Additional commands can be installed as plugins in the bot's
+    working directory.
+
+    This class (import with `from earwigbot.commands import BaseCommand`),
+    can be subclassed to create custom IRC commands.
 
     This docstring is reported to the user when they use !help <command>.
     """

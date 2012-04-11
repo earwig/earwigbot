@@ -150,7 +150,10 @@ class BotConfig(object):
         #else:
         #    is_encrypted = False
         raise NotImplementedError()
-        # yaml.dumps()
+        # yaml.dumps() config.yml file (self._config_path)
+        # Create root_dir/, root_dir/commands/, root_dir/tasks/
+        # Give a reasonable message after config has been created regarding
+        # what to do next...
 
     @property
     def root_dir(self):

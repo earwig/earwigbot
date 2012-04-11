@@ -29,9 +29,7 @@ class Command(BaseCommand):
 
     def check(self, data):
         cmnds = ["chanops", "voice", "devoice", "op", "deop", "join", "part"]
-        if data.is_command and data.command in cmnds:
-            return True
-        return False
+        return data.is_command and data.command in cmnds
 
     def process(self, data):
         if data.command == "chanops":
@@ -77,11 +75,11 @@ class Command(BaseCommand):
         reason = None
         if data.args:
             if data.args[0].startswith("#"):
-                # !part #channel reason for parting
+                # "!part #channel reason for parting"
                 channel = data.args[0]
                 if data.args[1:]:
                     reason = " ".join(data.args[1:])
-            else:  # !part reason for parting; assume current channel
+            else:  # "!part reason for parting"; assume current channel
                 reason = " ".join(data.args)
 
         msg = "Requested by {0}".format(data.nick)
