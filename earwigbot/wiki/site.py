@@ -513,6 +513,12 @@ class Site(object):
         if "read_default_file" not in args and "user" not in args and "passwd" not in args:
             args["read_default_file"] = expanduser("~/.my.cnf")
 
+        if "autoping" not in args:
+            args["autoping"] = True
+
+        if "autoreconnect" not in args:
+            args["autoreconnect"] = True
+
         self._sql_conn = oursql.connect(**args)
 
     def name(self):
