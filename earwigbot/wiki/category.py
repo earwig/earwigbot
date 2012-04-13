@@ -55,7 +55,7 @@ class Category(Page):
         title = self.title().replace(" ", "_").split(":", 1)[1]
 
         if limit:
-            query += " LIMIT = ?"
+            query += " LIMIT ?"
             result = self._site.sql_query(query, (title, limit))
         else:
             result = self._site.sql_query(query, (title,))

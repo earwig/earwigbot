@@ -194,19 +194,17 @@ class Page(CopyrightMixin):
         else:
             self._is_redirect = True
 
-        self._pageid = result["query"]["pages"].keys()[0]
-        if int(self._pageid) < 0:
-            try:
-                res["missing"]
-            except KeyError:
+        self._pageid = int(result["query"]["pages"].keys()[0])
+        if self._pageid < 0:
+            if "missing" in res:
+                # If it has a negative ID and it's missing; we can still get
+                # data like the namespace, protection, and URL:
+                self._exists = 2
+            else:
                 # If it has a negative ID and it's invalid, then break here,
                 # because there's no other data for us to get:
                 self._exists = 1
                 return
-            else:
-                # If it has a negative ID and it's missing; we can still get
-                # data like the namespace, protection, and URL:
-                self._exists = 2
         else:
             self._exists = 3
 

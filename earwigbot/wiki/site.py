@@ -27,6 +27,7 @@ from logging import getLogger, NullHandler
 from os.path import expanduser
 from re import escape as re_escape, match as re_match
 from StringIO import StringIO
+from threading import Lock
 from time import sleep, time
 from urllib import unquote_plus, urlencode
 from urllib2 import build_opener, HTTPCookieProcessor, URLError
@@ -114,6 +115,7 @@ class Site(object):
         # Attributes used for SQL queries:
         self._sql_data = sql
         self._sql_conn = None
+        self._sql_lock = Lock()
 
         # Attribute used in copyright violation checks (see CopyrightMixin):
         self._search_config = search_config
@@ -577,19 +579,20 @@ class Site(object):
         (oursql.ProgrammingError, oursql.InterfaceError, ...) if there were
         problems with the query.
         """
-        if not self._sql_conn:
-            self._sql_connect()
-
         if not cursor_class:
             if dict_cursor:
                 cursor_class = oursql.DictCursor
             else:
                 cursor_class = oursql.Cursor
+        klass = cursor_class
 
-        with self._sql_conn.cursor(cursor_class, show_table=show_table) as cur:
-            cur.execute(query, params, plain_query)
-            for result in cur:
-                yield result
+        with self._sql_lock:
+            if not self._sql_conn:
+                self._sql_connect()
+            with self._sql_conn.cursor(klass, show_table=show_table) as cur:
+                cur.execute(query, params, plain_query)
+                for result in cur:
+                    yield result
 
     def get_replag(self):
         """Return the estimated database replication lag in seconds.
