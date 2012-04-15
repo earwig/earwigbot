@@ -253,7 +253,11 @@ class Task(BaseTask):
                     real_title = u":".join((ns, base))
                 else:
                     real_title = base
-                self.update_page(cursor, pageid, real_title)
+                try:
+                    self.update_page(cursor, pageid, real_title)
+                except Exception:
+                    e = "Error updating page [[{0}]] (id: {1})"
+                    self.logger.exception(e.format(real_title, pageid))
 
     def add_untracked(self, cursor):
         """Add pending submissions that are not yet tracked.
@@ -276,7 +280,11 @@ class Task(BaseTask):
             if pageid not in tracked:
                 msg = u"Tracking page [[{0}]] (id: {1})".format(title, pageid)
                 self.logger.debug(msg)
-                self.track_page(cursor, pageid, title)
+                try:
+                    self.track_page(cursor, pageid, title)
+                except Exception:
+                    e = "Error tracking page [[{0}]] (id: {1})"
+                    self.logger.exception(e.format(title, pageid))
 
     def delete_old(self, cursor):
         """Remove old submissions from the database.
