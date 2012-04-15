@@ -614,7 +614,7 @@ class Task(BaseTask):
         returned if we cannot determine when the page was "special"-ed, or if
         it was "special"-ed more than 100 edits ago.
         """
-        if chart ==self.CHART_NONE:
+        if chart == self.CHART_NONE:
             return None, None, None
         elif chart == self.CHART_MISPLACE:
             return self.get_create(pageid)

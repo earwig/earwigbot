@@ -29,7 +29,7 @@ from re import escape as re_escape, match as re_match
 from StringIO import StringIO
 from threading import Lock
 from time import sleep, time
-from urllib import unquote_plus, urlencode
+from urllib import quote_plus
 from urllib2 import build_opener, HTTPCookieProcessor, URLError
 from urlparse import urlparse
 
@@ -173,6 +173,16 @@ class Site(object):
         return res.format(self.name(), self.project(), self.lang(),
                           self.domain())
 
+    def _urlencode_utf8(self, params):
+        """Implement urllib.urlencode(params) with support for unicode input."""
+        enc = lambda s: s.encode("utf8") if isinstance(s, unicode) else str(s)
+        args = []
+        for key, val in params.iteritems():
+            key = quote_plus(enc(key))
+            val = quote_plus(enc(val))
+            args.append(key + "=" + val)
+        return "&".join(args)
+
     def _api_query(self, params, tries=0, wait=5):
         """Do an API query with `params` as a dict of parameters.
 
@@ -250,7 +260,7 @@ class Site(object):
         if self._maxlag:  # If requested, don't overload the servers
             params["maxlag"] = self._maxlag
 
-        data = urlencode(params)
+        data = self._urlencode_utf8(params)
         return url, data
 
     def _handle_api_query_result(self, result, params, tries, wait):
