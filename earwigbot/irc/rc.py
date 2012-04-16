@@ -25,10 +25,13 @@ import re
 __all__ = ["RC"]
 
 class RC(object):
-    """A class to store data on an event received from our IRC watcher."""
+    """A class to store data from an event received from our IRC watcher."""
     re_color = re.compile("\x03([0-9]{1,2}(,[0-9]{1,2})?)?")
     re_edit = re.compile("\A\[\[(.*?)\]\]\s(.*?)\s(http://.*?)\s\*\s(.*?)\s\*\s(.*?)\Z")
     re_log = re.compile("\A\[\[(.*?)\]\]\s(.*?)\s\*\s(.*?)\s\*\s(.*?)\Z")
+
+    pretty_edit = "\x02New {0}\x0F: \x0314[[\x0307{1}\x0314]]\x0306 * \x0303{2}\x0306 * \x0302{3}\x0306 * \x0310{4}"
+    pretty_log = "\x02New {0}\x0F: \x0303{1}\x0306 * \x0302{2}\x0306 * \x0310{3}"
 
     def __init__(self, msg):
         self.msg = msg
@@ -77,19 +80,14 @@ class RC(object):
             event_type = "edit"  # "New edit:"
             if "B" in flags:
                 # "New bot edit:"
-                event_type = "bot {}".format(event_type)
+                event_type = "bot " + event_type
             if "M" in flags:
                 # "New minor edit:" OR "New minor bot edit:"
-                event_type = "minor {}".format(event_type)
+                event_type = "minor " + event_type
 
-        # Example formatting:
-        # New edit: [[Page title]] * User name * http://en... * edit summary
         if self.is_edit:
-            return "".join(("\x02New ", event_type, "\x0F: \x0314[[\x0307",
-                            self.page, "\x0314]]\x0306 *\x0303 ", self.user,
-                            "\x0306 *\x0302 ", self.url, "\x0306 *\x0310 ",
-                            self.comment))
-
-        return "".join(("\x02New ", event_type, "\x0F: \x0303", self.user,
-                        "\x0306 *\x0302 ", self.url, "\x0306 *\x0310 ",
-                        self.comment))
+            return self.pretty_edit.format(event_type, self.page, self.user,
+                                           self.url, self.comment)
+        else:
+            return self.pretty_log.format(event_type, self.user, self.url,
+                                          self.comment)

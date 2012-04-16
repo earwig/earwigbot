@@ -24,6 +24,7 @@ import logging
 from threading import Lock, Thread, enumerate as enumerate_threads
 from time import sleep, time
 
+from earwigbot import __version__
 from earwigbot.config import BotConfig
 from earwigbot.irc import Frontend, Watcher
 from earwigbot.managers import CommandManager, TaskManager
@@ -136,16 +137,18 @@ class Bot(object):
         ensuring that all components remain online and restarting components
         that get disconnected from their servers.
         """
-        self.logger.info("Starting bot")
+        self.logger.info("Starting bot (EarwigBot {0})".format(__version__))
         self._start_irc_components()
         self._start_wiki_scheduler()
         while self._keep_looping:
             with self.component_lock:
                 if self.frontend and self.frontend.is_stopped():
+                    name = "irc_frontend"
                     self.logger.warn("IRC frontend has stopped; restarting")
                     self.frontend = Frontend(self)
                     Thread(name=name, target=self.frontend.loop).start()
                 if self.watcher and self.watcher.is_stopped():
+                    name = "irc_watcher"
                     self.logger.warn("IRC watcher has stopped; restarting")
                     self.watcher = Watcher(self)
                     Thread(name=name, target=self.watcher.loop).start()

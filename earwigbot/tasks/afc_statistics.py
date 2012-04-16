@@ -1,17 +1,17 @@
 # -*- coding: utf-8  -*-
 #
 # Copyright (C) 2009-2012 by Ben Kurtovic <ben.kurtovic@verizon.net>
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is 
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,7 +21,6 @@
 # SOFTWARE.
 
 from datetime import datetime
-import logging
 import re
 from os.path import expanduser
 from threading import Lock
@@ -33,6 +32,7 @@ from earwigbot import wiki
 from earwigbot.tasks import BaseTask
 
 __all__ = ["Task"]
+
 
 class Task(BaseTask):
     """A task to generate statistics for WikiProject Articles for Creation.
@@ -386,18 +386,25 @@ class Task(BaseTask):
 
         size = self.get_size(content)
         m_user, m_time, m_id = self.get_modify(pageid)
-        notes = self.get_notes(chart, content, m_time,
-                               result["page_special_user"].decode("utf8"))
 
         if title != result["page_title"].decode("utf8"):
             self.update_page_title(cursor, result, pageid, title)
 
         if m_id != result["page_modify_oldid"]:
-            self.update_page_modify(cursor, result, pageid, size, m_user, m_time, m_id)
+            self.update_page_modify(cursor, result, pageid, size, m_user,
+                                    m_time, m_id)
 
         if status != result["page_status"]:
-            self.update_page_status(cursor, result, pageid, status, chart)
+            special = self.update_page_status(cursor, result, pageid, status,
+                                              chart)
+            s_user = special[0]
+        else:
+            try:
+                s_user = result["page_special_user"].decode("utf8")
+            except AttributeError:  # Happens if page_special_user is None
+                s_user = result["page_special_user"]
 
+        notes = self.get_notes(chart, content, m_time, s_user)
         if notes != result["page_notes"]:
             self.update_page_notes(cursor, result, pageid, notes)
 
@@ -438,7 +445,6 @@ class Task(BaseTask):
                                      result["row_chart"], status, chart))
 
         s_user, s_time, s_id = self.get_special(pageid, chart)
-
         if s_id != result["page_special_oldid"]:
             cursor.execute(query2, (s_user, s_time, s_id, pageid))
             msg = u"{0}: special: {1} / {2} / {3} -> {4} / {5} / {6}"
@@ -447,6 +453,8 @@ class Task(BaseTask):
                              result["page_special_time"],
                              result["page_special_oldid"], s_user, s_time, s_id)
             self.logger.debug(msg)
+
+        return s_user, s_time, s_id
 
     def update_page_notes(self, cursor, result, pageid, notes):
         """Update the notes (or warnings) of a page in our database."""
@@ -491,7 +499,7 @@ class Task(BaseTask):
         except KeyError:
             if tries > 0:
                 sleep(5)
-                return self.get_revision_content(revid, tries=tries-1)
+                return self.get_revision_content(revid, tries=tries - 1)
 
     def get_status_and_chart(self, content, namespace):
         """Determine the status and chart number of an AFC submission.
@@ -705,8 +713,8 @@ class Task(BaseTask):
         if len(content) < 500:
             notes += "|ns=1"  # Submission is short
 
-        if not re.search("\<ref\s*(.*?)\>(.*?)\</ref\>", content, re.I|re.S):
-            if re.search("https?:\/\/(.*?)\.", content, re.I|re.S):
+        if not re.search("\<ref\s*(.*?)\>(.*?)\</ref\>", content, re.I | re.S):
+            if re.search("https?:\/\/(.*?)\.", content, re.I | re.S):
                 notes += "|ni=1"  # Submission has no inline citations
             else:
                 notes += "|nu=1"  # Submission is completely unsourced
@@ -716,7 +724,7 @@ class Task(BaseTask):
         if time_since_modify > max_time:
             notes += "|no=1"  # Submission hasn't been touched in over 4 days
 
-        if chart in [self.CHART_PEND, self.CHART_DRAFT]:
+        if chart in [self.CHART_PEND, self.CHART_DRAFT] and s_user:
             submitter = self.site.get_user(s_user)
             try:
                 if submitter.blockinfo():
