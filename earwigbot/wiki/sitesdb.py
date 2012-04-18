@@ -22,7 +22,6 @@
 
 from cookielib import LWPCookieJar, LoadError
 import errno
-from getpass import getpass
 from os import chmod, path
 from platform import python_version
 import stat
@@ -87,8 +86,8 @@ class SitesDB(object):
             if e.errno == errno.ENOENT:  # "No such file or directory"
                 # Create the file and restrict reading/writing only to the
                 # owner, so others can't peak at our cookies:
-                open(cookie_file, "w").close()
-                chmod(cookie_file, stat.S_IRUSR|stat.S_IWUSR)
+                open(self._cookie_file, "w").close()
+                chmod(self._cookie_file, stat.S_IRUSR|stat.S_IWUSR)
             else:
                 raise
 
@@ -344,7 +343,6 @@ class SitesDB(object):
         assert_edit = config.wiki.get("assert")
         maxlag = config.wiki.get("maxlag")
         wait_between_queries = config.wiki.get("waitTime", 5)
-        logger = self._logger.getChild(name)
         search_config = config.wiki.get("search")
 
         # Create a Site object to log in and load the other attributes:
@@ -352,7 +350,7 @@ class SitesDB(object):
                     login=login, cookiejar=cookiejar, user_agent=user_agent,
                     use_https=use_https, assert_edit=assert_edit,
                     maxlag=maxlag, wait_between_queries=wait_between_queries,
-                    logger=logger, search_config=search_config)
+                    search_config=search_config)
 
         self._add_site_to_sitesdb(site)
         self._sites[site.name()] = site

@@ -138,7 +138,7 @@ class Site(object):
         if logger:
             self._logger = logger
         else:  # Just set up a null logger to eat up our messages:
-            self._logger = getLogger("earwigbot.wiki").getChild(self._name)
+            self._logger = getLogger("earwigbot.wiki")
             self._logger.addHandler(NullHandler())
 
         # If we have a name/pass and the API says we're not logged in, log in:

@@ -90,7 +90,7 @@ class BotConfig(object):
         with open(filename, 'r') as fp:
             try:
                 self._data = yaml.load(fp)
-            except yaml.YAMLError as error:
+            except yaml.YAMLError:
                 print "Error parsing config file {0}:".format(filename)
                 raise
 
@@ -137,7 +137,7 @@ class BotConfig(object):
         """Try to decrypt the contents of a config node. Use self.decrypt()."""
         try:
             node._decrypt(self._decryption_key, nodes[:-1], nodes[-1])
-        except blowfish.BlowfishError as error:
+        except blowfish.BlowfishError:
             print "Error decrypting passwords:"
             raise
 
