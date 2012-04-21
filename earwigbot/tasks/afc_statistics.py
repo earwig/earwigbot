@@ -129,7 +129,7 @@ class Task(BaseTask):
                          "<!-- sig begin -->~~~ at ~~~~~<!-- sig end -->",
                          newtext)
         page.edit(newtext, summary, minor=True, bot=True)
-        self.logger.info("Chart saved to [[{0}]]".format(page.title()))
+        self.logger.info(u"Chart saved to [[{0}]]".format(page.title()))
 
     def compile_charts(self):
         """Compile and return all statistics information from our local db."""
@@ -256,7 +256,7 @@ class Task(BaseTask):
                 try:
                     self.update_page(cursor, pageid, real_title)
                 except Exception:
-                    e = "Error updating page [[{0}]] (id: {1})"
+                    e = u"Error updating page [[{0}]] (id: {1})"
                     self.logger.exception(e.format(real_title, pageid))
 
     def add_untracked(self, cursor):
@@ -283,7 +283,7 @@ class Task(BaseTask):
                 try:
                     self.track_page(cursor, pageid, title)
                 except Exception:
-                    e = "Error tracking page [[{0}]] (id: {1})"
+                    e = u"Error tracking page [[{0}]] (id: {1})"
                     self.logger.exception(e.format(title, pageid))
 
     def delete_old(self, cursor):
