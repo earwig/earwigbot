@@ -58,7 +58,8 @@ class Command(BaseCommand):
 
         # Create a dummy message to test which commands pick up the user's
         # input:
-        dummy = Data(":foo!bar@example.com PRIVMSG #channel :msg!".split())
+        msg = ":foo!bar@example.com PRIVMSG #channel :msg".split()
+        dummy = Data(self.bot, msg)
         dummy.command = command.lower()
         dummy.is_command = True
 
