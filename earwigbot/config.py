@@ -1,17 +1,17 @@
 # -*- coding: utf-8  -*-
 #
 # Copyright (C) 2009-2012 by Ben Kurtovic <ben.kurtovic@verizon.net>
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is 
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,13 +21,13 @@
 # SOFTWARE.
 
 from getpass import getpass
+from hashlib import sha256
 import logging
 import logging.handlers
 from os import mkdir, path
 
+from Crypto.Cipher import Blowfish
 import yaml
-
-from earwigbot import blowfish
 
 __all__ = ["BotConfig"]
 
@@ -64,7 +64,7 @@ class BotConfig(object):
         self._logging_level = level
         self._config_path = path.join(self._root_dir, "config.yml")
         self._log_dir = path.join(self._root_dir, "logs")
-        self._decryption_key = None
+        self._decryption_cipher = None
         self._data = None
 
         self._components = _ConfigNode()
@@ -136,8 +136,8 @@ class BotConfig(object):
     def _decrypt(self, node, nodes):
         """Try to decrypt the contents of a config node. Use self.decrypt()."""
         try:
-            node._decrypt(self._decryption_key, nodes[:-1], nodes[-1])
-        except blowfish.BlowfishError:
+            node._decrypt(self._decryption_cipher, nodes[:-1], nodes[-1])
+        except ValueError:
             print "Error decrypting passwords:"
             raise
 
@@ -243,14 +243,14 @@ class BotConfig(object):
 
         self._setup_logging()
         if self.is_encrypted():
-            if not self._decryption_key:
+            if not self._decryption_cipher:
                 key = getpass("Enter key to decrypt bot passwords: ")
-                self._decryption_key = key
+                self._decryption_cipher = Blowfish.new(sha256(key).digest())
             for node, nodes in self._decryptable_nodes:
                 self._decrypt(node, nodes)
 
     def decrypt(self, node, *nodes):
-        """Use self._decryption_key to decrypt an object in our config tree.
+        """Use self._decryption_cipher to decrypt an object in our config tree.
 
         If this is called when passwords are not encrypted (check with
         config.is_encrypted()), nothing will happen. We'll also keep track of
@@ -317,15 +317,16 @@ class _ConfigNode(object):
     def _load(self, data):
         self.__dict__ = data.copy()
 
-    def _decrypt(self, key, intermediates, item):
+    def _decrypt(self, cipher, intermediates, item):
         base = self.__dict__
-        try:
-            for inter in intermediates:
+        for inter in intermediates:
+            try:
                 base = base[inter]
-        except KeyError:
-            return
+            except KeyError:
+                return
         if item in base:
-            base[item] = blowfish.decrypt(key, base[item])
+            ciphertext = base[item].decode("hex")
+            base[item] = cipher.decrypt(ciphertext).rstrip("\x00")
 
     def get(self, *args, **kwargs):
         return self.__dict__.get(*args, **kwargs)
@@ -335,7 +336,7 @@ class _ConfigNode(object):
 
     def values(self):
         return self.__dict__.values()
-        
+
     def items(self):
         return self.__dict__.items()
 
