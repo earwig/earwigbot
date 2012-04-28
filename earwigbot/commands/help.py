@@ -40,7 +40,7 @@ class Command(BaseCommand):
     def process(self, data):
         if not data.command:
             self.do_hello(data)
-        if data.args:
+        elif data.args:
             self.do_command_help(data)
         else:
             self.do_main_help(data)
