@@ -61,7 +61,7 @@ class Watcher(IRCConnection):
                 return
 
             msg = " ".join(line[3:])[1:]
-            rc = RC(msg)  # New RC object to store this event's data
+            rc = RC(chan, msg)  # New RC object to store this event's data
             rc.parse()  # Parse a message into pagenames, usernames, etc.
             self._process_rc_event(rc)
 

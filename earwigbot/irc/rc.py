@@ -33,7 +33,8 @@ class RC(object):
     pretty_edit = "\x02New {0}\x0F: \x0314[[\x0307{1}\x0314]]\x0306 * \x0303{2}\x0306 * \x0302{3}\x0306 * \x0310{4}"
     pretty_log = "\x02New {0}\x0F: \x0303{1}\x0306 * \x0302{2}\x0306 * \x0310{3}"
 
-    def __init__(self, msg):
+    def __init__(self, chan, msg):
+        self.chan = chan
         self.msg = msg
 
     def parse(self):
@@ -51,7 +52,7 @@ class RC(object):
             # We're probably missing the http:// part, because it's a log
             # entry, which lacks a URL:
             page, flags, user, comment = self.re_log.findall(msg)[0]
-            url = "".join(("http://en.wikipedia.org/wiki/", page))
+            url = "http://{0}.org/wiki/{1}".format(self.chan, page)
 
             self.is_edit = False  # This is a log entry, not edit
 
