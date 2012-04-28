@@ -77,7 +77,7 @@ class BotConfig(object):
                        self._metadata]
 
         self._decryptable_nodes = [  # Default nodes to decrypt
-            (self._wiki, ("password")),
+            (self._wiki, ("password",)),
             (self._wiki, ("search", "credentials", "key")),
             (self._wiki, ("search", "credentials", "secret")),
             (self._irc, ("frontend", "nickservPassword")),
