@@ -51,7 +51,7 @@ class Frontend(IRCConnection):
     def _process_message(self, line):
         """Process a single message from IRC."""
         line = line.strip().split()
-        data = Data(line)  # New Data instance to store info about this line
+        data = Data(self.bot, line)
 
         if line[1] == "JOIN":
             data.nick, data.ident, data.host = self.sender_regex.findall(line[0])[0]

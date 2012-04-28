@@ -29,11 +29,21 @@ class Command(BaseCommand):
     """Displays help information."""
     name = "help"
 
+    def check(self, data):
+        if data.is_command:
+            if data.command == "help":
+                return True
+            if not data.command and data.trigger == data.my_nick:
+                return True
+        return False
+
     def process(self, data):
-        if not data.args:
-            self.do_main_help(data)
-        else:
+        if not data.command:
+            self.do_hello(data)
+        if data.args:
             self.do_command_help(data)
+        else:
+            self.do_main_help(data)
 
     def do_main_help(self, data):
         """Give the user a general help message with a list of all commands."""
@@ -66,3 +76,6 @@ class Command(BaseCommand):
 
         msg = "sorry, no help for \x0303{0}\x0301.".format(command)
         self.reply(data, msg)
+
+    def do_hello(self, data):
+        self.say(data.chan, "Yes, {0}?".format(data.nick))

@@ -67,22 +67,6 @@ class BaseCommand(object):
         self.mode = lambda t, level, msg: self.bot.frontend.mode(t, level, msg)
         self.pong = lambda target: self.bot.frontend.pong(target)
 
-    def _wrap_check(self, data):
-        """Check whether this command should be called, catching errors."""
-        try:
-            return self.check(data)
-        except Exception:
-            e = "Error checking command '{0}' with data: {1}:"
-            self.logger.exception(e.format(self.name, data))
-
-    def _wrap_process(self, data):
-        """process() the message, catching and reporting any errors."""
-        try:
-            self.process(data)
-        except Exception:
-            e = "Error executing command '{0}':"
-            self.logger.exception(e.format(data.command))
-
     def check(self, data):
         """Return whether this command should be called in response to 'data'.
 

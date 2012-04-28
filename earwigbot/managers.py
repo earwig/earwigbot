@@ -147,13 +147,29 @@ class CommandManager(_ResourceManager):
         base = super(CommandManager, self)
         base.__init__(bot, "commands", "Command", BaseCommand)
 
+    def _wrap_check(self, command, data):
+        """Check whether a command should be called, catching errors."""
+        try:
+            return command.check(data)
+        except Exception:
+            e = "Error checking command '{0}' with data: {1}:"
+            self.logger.exception(e.format(command.name, data))
+
+    def _wrap_process(self, command, data):
+        """process() the message, catching and reporting any errors."""
+        try:
+            command.process(data)
+        except Exception:
+            e = "Error executing command '{0}':"
+            self.logger.exception(e.format(data.command))
+
     def check(self, hook, data):
         """Given an IRC event, check if there's anything we can respond to."""
         self.lock.acquire()
         for command in self._resources.itervalues():
-            if hook in command.hooks and command._wrap_check(data):
+            if hook in command.hooks and self._wrap_check(command, data):
                 self.lock.release()
-                command._wrap_process(data)
+                self._wrap_process(command, data)
                 return
         self.lock.release()
 

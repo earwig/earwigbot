@@ -43,12 +43,13 @@ class Command(BaseCommand):
             self.do_reload(data)
 
     def do_quit(self, data):
-        nick = self.config.irc.frontend["nick"]
-        if not data.args or data.args[0].lower() != nick.lower():
+        args = data.args
+        nick = self.config.irc.frontend["nick"].lower()
+        if data.trigger != nick and (not args or args[0].lower() != nick):
             self.reply(data, "to confirm this action, the first argument must be my nickname.")
             return
-        if data.args[1:]:
-            msg = " ".join(data.args[1:])
+        if args[1:]:
+            msg = " ".join(args[1:])
             self.bot.stop("Stopped by {0}: {1}".format(data.nick, msg))
         else:
             self.bot.stop("Stopped by {0}".format(data.nick))

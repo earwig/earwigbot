@@ -33,8 +33,9 @@ class KwargParseException(Exception):
 class Data(object):
     """Store data from an individual line received on IRC."""
     
-    def __init__(self, line):
+    def __init__(self, bot, line):
         self.line = line
+        self.my_nick = bot.config.irc["frontend"]["nick"].lower()
         self.chan = self.nick = self.ident = self.host = self.msg = ""
 
     def parse_args(self):
@@ -46,20 +47,28 @@ class Data(object):
 
         # Isolate command arguments:
         self.args = args[1:]
-        self.is_command = False  # is this message a command?
+        self.is_command = False  # Is this message a command?
+        self.trigger = None  # What triggered this command? (!, ., or our nick)
 
         try:
-            self.command = args[0]
+            self.command = args[0].lower()
         except IndexError:
             self.command = None
+            return
 
-        try:
-            if self.command.startswith('!') or self.command.startswith('.'):
-                self.is_command = True
-                self.command = self.command[1:]  # Strip the '!' or '.'
-                self.command = self.command.lower()
-        except AttributeError:
-            pass
+        if self.command.startswith("!") or self.command.startswith("."):
+            # e.g. "!command arg1 arg2"
+            self.is_command = True
+            self.trigger = self.command[0]
+            self.command = self.command[1:]  # Strip the "!" or "."
+        elif self.command.startswith(self.my_nick):
+            # e.g. "EarwigBot, command arg1 arg2"
+            self.is_command = True
+            self.trigger = self.my_nick
+            try:
+                self.command = self.args.pop(0).lower()
+            except IndexError:
+                self.command = ""
 
     def parse_kwargs(self):
         """Parse keyword arguments embedded in self.args.

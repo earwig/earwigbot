@@ -165,11 +165,9 @@ class Task(BaseTask):
         table, where keys are column names and values are their cell contents.
         """
         row = "{0}|s={page_status}|t={page_title}|h={page_short}|z={page_size}|"
-        row += "sr={page_special_user}|sh={page_special_hidden}|sd={page_special_time}|si={page_special_oldid}|"
-        row += "mr={page_modify_user}|mh={page_modify_hidden}|md={page_modify_time}|mi={page_modify_oldid}"
+        row += "sr={page_special_user}|sd={page_special_time}|si={page_special_oldid}|"
+        row += "mr={page_modify_user}|md={page_modify_time}|mi={page_modify_oldid}"
 
-        page["page_special_hidden"] = self.format_hidden(page["page_special_time"])
-        page["page_modify_hidden"] = self.format_hidden(page["page_modify_time"])
         page["page_special_time"] = self.format_time(page["page_special_time"])
         page["page_modify_time"] = self.format_time(page["page_modify_time"])
 
@@ -181,13 +179,6 @@ class Task(BaseTask):
     def format_time(self, dt):
         """Format a datetime into the standard MediaWiki timestamp format."""
         return dt.strftime("%H:%M, %d %b %Y")
-
-    def format_hidden(self, dt):
-        """Convert a datetime into seconds since the epoch.
-
-        This is used by the template as a hidden sortkey.
-        """
-        return int((dt - datetime(1970, 1, 1)).total_seconds())
 
     def sync(self, **kwargs):
         """Synchronize our local statistics database with the site.

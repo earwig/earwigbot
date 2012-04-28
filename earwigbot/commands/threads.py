@@ -119,7 +119,7 @@ class Command(BaseCommand):
 
         tasks = ", ".join(tasklist)
 
-        msg = "{0} tasks loaded: {1}.".format(len(tasklist), tasks)
+        msg = "\x02{0}\x0F tasks loaded: {1}.".format(len(tasklist), tasks)
         self.reply(self.data, msg)
 
     def do_start(self):
