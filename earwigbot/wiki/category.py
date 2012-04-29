@@ -35,7 +35,7 @@ class Category(Page):
     because it accepts category names without the namespace prefix.
 
     Public methods:
-    members -- returns a list of page titles in the category
+    get_members -- returns a list of page titles in the category
     """
 
     def __repr__(self):

@@ -57,7 +57,7 @@ class Frontend(IRCConnection):
             data.nick, data.ident, data.host = self.sender_regex.findall(line[0])[0]
             data.chan = line[2]
             data.parse_args()
-            self.bot.commands.check("join", data)
+            self.bot.commands.call("join", data)
 
         elif line[1] == "PRIVMSG":
             data.nick, data.ident, data.host = self.sender_regex.findall(line[0])[0]
@@ -69,13 +69,13 @@ class Frontend(IRCConnection):
                 # This is a privmsg to us, so set 'chan' as the nick of the
                 # sender, then check for private-only command hooks:
                 data.chan = data.nick
-                self.bot.commands.check("msg_private", data)
+                self.bot.commands.call("msg_private", data)
             else:
                 # Check for public-only command hooks:
-                self.bot.commands.check("msg_public", data)
+                self.bot.commands.call("msg_public", data)
 
             # Check for command hooks that apply to all messages:
-            self.bot.commands.check("msg", data)
+            self.bot.commands.call("msg", data)
 
         elif line[0] == "PING":  # If we are pinged, pong back
             self.pong(line[1])

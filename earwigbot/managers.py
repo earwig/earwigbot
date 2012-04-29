@@ -147,8 +147,8 @@ class CommandManager(_ResourceManager):
         base = super(CommandManager, self)
         base.__init__(bot, "commands", "Command", BaseCommand)
 
-    def check(self, hook, data):
-        """Given an IRC event, check if there's anything we can respond to."""
+    def call(self, hook, data):
+        """Given a hook type and a Data object, respond appropriately."""
         self.lock.acquire()
         for command in self._resources.itervalues():
             if hook in command.hooks and command._wrap_check(data):

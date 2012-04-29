@@ -38,19 +38,23 @@ class Page(CopyrightMixin):
     about the page, getting page content, and so on. Category is a subclass of
     Page with additional methods.
 
+    Attributes:
+    title       -- the page's title, or pagename
+    exists      -- whether the page exists
+    pageid      -- an integer ID representing the page
+    url         -- the page's URL
+    namespace   -- the page's namespace as an integer
+    protection  -- the page's current protection status
+    is_talkpage -- True if the page is a talkpage, else False
+    is_redirect -- True if the page is a redirect, else False
+
     Public methods:
-    title               -- returns the page's title, or pagename
-    exists              -- returns whether the page exists
-    pageid              -- returns an integer ID representing the page
-    url                 -- returns the page's URL
-    namespace           -- returns the page's namespace as an integer
-    protection          -- returns the page's current protection status
-    creator             -- returns the page's creator (first user to edit)
-    is_talkpage         -- returns True if the page is a talkpage, else False
-    is_redirect         -- returns True if the page is a redirect, else False
+    reload              -- forcibly reload the page's attributes
     toggle_talk         -- returns a content page's talk page, or vice versa
     get                 -- returns page content
     get_redirect_target -- if the page is a redirect, returns its destination
+    get_creator         -- returns a User object representing the first person
+                           to edit the page
     edit                -- replaces the page's content or creates a new page
     add_section         -- adds a new section at the bottom of the page
     copyvio_check       -- checks the page for copyright violations
