@@ -255,7 +255,7 @@ See the built-in wikiproject_tagger_ task for a relatively straightforward
 task, or the afc_statistics_ plugin for a more complicated one.
 
 The Wiki Toolset
-~~~~~~~~~~~~~~~~
+----------------
 
 EarwigBot's answer to the `Pywikipedia framework`_ is the Wiki Toolset
 (``earwigbot.wiki``), which you will mainly access through ``bot.wiki``.
@@ -270,7 +270,7 @@ Load your default site (the one that you picked during setup) with
 ``site = bot.wiki.get_site()``.
 
 Dealing with other sites
-^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 *Skip this section if you're only working with one site.*
 
@@ -317,7 +317,7 @@ or a project/lang pair like ``get_site()`` takes, and it'll remove that site
 from the sites database.
 
 Sites
-^^^^^
+~~~~~
 
 ``Site`` objects provide the following attributes:
 
@@ -347,7 +347,7 @@ and the following methods:
 - ``get_user(username)``: returns a ``User`` object for the given username
 
 Pages (and Categories)
-^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~
 
 Create ``Page`` objects with ``site.get_page(title)``,
 ``page.toggle_talk()``, ``user.get_userpage()``, or ``user.get_talkpage()``.
@@ -387,7 +387,7 @@ provide the following additional method:
   the category (limit is ``50`` by default if using the API)
 
 Users
-^^^^^
+~~~~~
 
 Create ``User`` objects with ``site.get_user(name)`` or
 ``page.get_creator()``. They provide the following attributes:
@@ -415,7 +415,7 @@ and the following methods:
   talkpage
 
 Additional features
-^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~
 
 Not all aspects of the toolset are covered here. Explore `its code and
 docstrings`_ to learn how to use it in a more hands-on fashion. For reference,
