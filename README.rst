@@ -137,10 +137,10 @@ The most useful attributes are:
   when disconnecting from IRC.
 
 `earwigbot.config.BotConfig`_ stores configuration information for the bot. Its
-``__doc__``string explains what each attribute is used for, but essentially
-each "node" (one of ``config.components``, ``wiki``, ``tasks``, ``irc``, or
-``metadata``) maps to a section of the bot's ``config.yml`` file. For example,
-if ``config.yml`` includes something like::
+docstring explains what each attribute is used for, but essentially each "node"
+(one of ``config.components``, ``wiki``, ``tasks``, ``irc``, and ``metadata``)
+maps to a section of the bot's ``config.yml`` file. For example, if
+``config.yml`` includes something like::
 
     irc:
         frontend:
@@ -160,7 +160,7 @@ Custom IRC commands
 Custom commands are subclasses of `earwigbot.commands.BaseCommand`_ that
 override ``BaseCommand``'s ``process()`` (and optionally ``check()``) methods.
 
-``BaseCommand``'s docstrings should explain what each attribute andmethod is
+``BaseCommand``'s docstrings should explain what each attribute and method is
 for and what they should be overridden with, but these are the basics:
 
 - Class attribute ``name`` is the name of the command. This must be specified.

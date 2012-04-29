@@ -6,13 +6,14 @@ databases. This is also the location where you will place custom IRC commands
 and bot tasks, which will be explained later. It doesn't matter where this
 directory is, as long as the bot can write to it.
 
-Start the bot with ``earwigbot path/to/working/dir``, or just ``earwigbot`` if
-the working directory is the current directory. It will notice that no
-``config.yml`` file exists and take you through the setup process.
+Start the bot with :command:`earwigbot path/to/working/dir`, or just
+:command:`earwigbot` if the working directory is the current directory. It will
+notice that no :file:`config.yml` file exists and take you through the setup
+process.
 
-There is currently no way to edit the ``config.yml`` file from within the bot
-after it has been created, but YAML is a very straightforward format, so you
-should be able to make any necessary changes yourself. Check out the
+There is currently no way to edit the :file:`config.yml` file from within the
+bot after it has been created, but YAML is a very straightforward format, so
+you should be able to make any necessary changes yourself. Check out the
 `explanation of YAML`_ on Wikipedia for help.
 
 After setup, the bot will start. This means it will connect to the IRC servers
