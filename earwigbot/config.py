@@ -40,6 +40,7 @@ class BotConfig(object):
     from scratch at the inital bot run.
 
     BotConfig has a few properties and functions, including the following:
+
     * config.root_dir    - bot's working directory; contains config.yml, logs/
     * config.path        - path to the bot's config file
     * config.components  - enabled components
@@ -50,6 +51,7 @@ class BotConfig(object):
     * config.schedule()  - tasks scheduled to run at a given time
 
     BotConfig also has some functions used in config loading:
+
     * config.load()     - loads and parses our config file, returning True if
                           passwords are stored encrypted or False otherwise;
                           can also be used to easily reload config

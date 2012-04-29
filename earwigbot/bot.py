@@ -38,6 +38,7 @@ class Bot(object):
 
     EarwigBot has three components that can run independently of each other: an
     IRC front-end, an IRC watcher, and a wiki scheduler.
+
     * The IRC front-end runs on a normal IRC server and expects users to
       interact with it/give it commands.
     * The IRC watcher runs on a wiki recent-changes server and listens for

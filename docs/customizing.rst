@@ -21,8 +21,8 @@ commands and tasks (i.e., :py:attr:`self.bot`).
 The most useful attributes are:
 
 - :py:attr:`~earwigbot.bot.Bot.config`: an instance of
-  :py:class:`~earwigbot.bot.BotConfig`, for accessing the bot's configuration
-  data (see below).
+  :py:class:`~earwigbot.config.BotConfig`, for accessing the bot's
+  configuration data (see below).
 
 - :py:attr:`~earwigbot.bot.Bot.commands`: the bot's
   :py:class:`~earwigbot.managers.CommandManager`, which is used internally to

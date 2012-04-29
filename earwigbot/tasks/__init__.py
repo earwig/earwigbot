@@ -34,8 +34,9 @@ class BaseTask(object):
     This class (import with `from earwigbot.tasks import BaseTask`) can be
     subclassed to create custom bot tasks.
 
-    To run a task, use bot.tasks.start(name, **kwargs). **kwargs get passed to
-    the Task's run() function.
+    To run a task, use :py:meth:`bot.tasks.start(name, **kwargs)
+    <earwigbot.managers.TaskManager.start>`. ``**kwargs`` get passed to the
+    Task's run() function.
     """
     name = None
     number = 0
