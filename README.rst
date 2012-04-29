@@ -306,7 +306,7 @@ something more like::
     try:
         site = bot.wiki.get_site(project=project, lang=lang)
     except earwigbot.SiteNotFoundError:
-        Load site info from http://mysite.net/mywiki/it/s/api.php:
+        # Load site info from http://mysite.net/mywiki/it/s/api.php:
         base_url = "http://mysite.net/" + project + "/" + lang
         db_name = lang + project + "_p"
         sql = {host: "sql.mysite.net", db: db_name}
