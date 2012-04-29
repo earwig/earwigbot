@@ -26,14 +26,16 @@ The most useful attributes are:
 
 - :py:attr:`~earwigbot.bot.Bot.commands`: the bot's
   :py:class:`~earwigbot.managers.CommandManager`, which is used internally to
-  run IRC commands (through :py:meth:`bot.commands.call`, which you shouldn't
-  have to use); you can safely reload all commands with
-  :py:meth:`~earwigbot.bot.Bot.commands.load`.
+  run IRC commands (through
+  :py:meth:`commands.call() <earwigbot.managers.CommandManager.call>`, which
+  you shouldn't have to use); you can safely reload all commands with
+  :py:meth:`commands.load() <earwigbot.bot.Bot.commands.load>`.
 
 - :py:attr:`~earwigbot.bot.Bot.tasks`: the bot's
   :py:class:`~earwigbot.managers.TaskManager`, which can be used to start tasks
-  with :py:attr:`~earwigbot.bot.Bot.tasks.start(task_name, **kwargs)`.
-  :py:meth:`~earwigbot.bot.Bot.tasks.load` can be used to safely reload all
+  with :py:meth:`tasks.start(task_name, **kwargs)
+  <earwigbot.managers.TaskManager.start>`. :py:meth:`tasks.load()
+  <earwigbot.managers.TaskManager.load>` can be used to safely reload all
   tasks.
 
 - :py:attr:`~earwigbot.bot.Bot.frontend` /
@@ -41,8 +43,8 @@ The most useful attributes are:
   :py:class:`earwigbot.irc.Frontend` and :py:class:`earwigbot.irc.Watcher`,
   respectively, which represent the bot's connections to these two servers; you
   can, for example, send a message to the frontend with
-  :py:attr:`~earwigbot.bot.Bot.frontend.say(chan, msg)` (more on communicating
-  with IRC below).
+  :py:meth:`frontend.say(chan, msg) <earwigbot.irc.IRConnection.say>` (more on
+  communicating with IRC below).
 
 - :py:attr:`~earwigbot.bot.Bot.wiki`: interface with the
   :doc:`Wiki Toolset <toolset>`.
@@ -113,12 +115,14 @@ these are the basics:
   :py:class:`~earwigbot.commands.BaseCommand`'s
   :py:meth:`~earwigbot.commands.BaseCommand.__init__` method for the full list.
 
-  The most common ones are :py:attr:`self.say(chan_or_user, msg)`,
-  :py:attr:`self.reply(data, msg)` (convenience function; sends a reply to the
+  The most common ones are :py:meth:`say(chan_or_user, msg)
+  <bot.irc.IRCConnection.say>`, :py:meth:`reply(data, msg)
+  <bot.irc.IRCConnection.reply>` (convenience function; sends a reply to the
   issuer of the command in the channel it was received),
-  :py:attr:`self.action(chan_or_user, msg)`,
-  :py:attr:`self.notice(chan_or_user, msg)`, :py:attr:`self.join(chan)`, and
-  :py:attr:`self.part(chan)`.
+  :py:meth:`action(chan_or_user, msg) <bot.irc.IRCConnection.action>`,
+  :py:meth:`notice(chan_or_user, msg) <bot.irc.IRCConnection.notice>`,
+  :py:meth:`join(chan) <bot.irc.IRCConnection.join>`, and
+  :py:meth:`part(chan) <bot.irc.IRCConnection.part>`.
 
 It's important to name the command class :py:class:`Command` within the file,
 or else the bot might not recognize it as a command. The name of the file
@@ -149,9 +153,9 @@ are the basics:
   generated with :py:meth:`~earwigbot.tasks.BaseTask.make_summary`). For
   example, EarwigBot's :py:attr:`config.wiki["summary"]` is
   ``"([[WP:BOT|Bot]]; [[User:EarwigBot#Task $1|Task $1]]): $2"``, which the
-  task class's :py:attr:`~earwigbot.tasks.BaseTask.make_summary(comment)`
-  method will take and replace ``$1`` with the task number and ``$2`` with the
-  details of the edit.
+  task class's :py:meth:`make_summary(comment)
+  <earwigbot.tasks.BaseTask.make_summary>` method will take and replace
+  ``$1`` with the task number and ``$2`` with the details of the edit.
   
   Additionally, :py:meth:`~earwigbot.tasks.BaseTask.shutoff_enabled` (which
   checks whether the bot has been told to stop on-wiki by checking the content
@@ -175,9 +179,10 @@ are the basics:
 
 - Method :py:meth:`~earwigbot.tasks.BaseTask.run` is called with any number of
   keyword arguments every time the task is executed (by
-  :py:attr:`bot.tasks.start(task_name, **kwargs)`, usually). This is where the
-  bulk of the task's code goes. For interfacing with MediaWiki sites, read up
-  on the :doc:`Wiki Toolset <toolset>`.
+  :py:meth:`tasks.start(task_name, **kwargs)
+  <earwigbot.managers.TaskManager.start>`, usually). This is where the bulk of
+  the task's code goes. For interfacing with MediaWiki sites, read up on the
+  :doc:`Wiki Toolset <toolset>`.
 
 Tasks have access to :py:attr:`config.tasks[task_name]` for config information,
 which is a node in :file:`config.yml` like every other attribute of

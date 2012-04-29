@@ -166,5 +166,5 @@ docstrings`_ to learn how to use it in a more hands-on fashion. For reference,
 ``bot.wiki`` is an instance of ``earwigbot.wiki.SitesDB`` tied to the
 ``sites.db`` file in the bot's working directory.
 
-.. _Pywikipedia framework:          http://pywikipediabot.sourceforge.net/
-.. _its code and docstrings:        https://github.com/earwig/earwigbot/tree/develop/earwigbot/wiki
+.. _Pywikipedia framework:   http://pywikipediabot.sourceforge.net/
+.. _its code and docstrings: https://github.com/earwig/earwigbot/tree/develop/earwigbot/wiki

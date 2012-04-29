@@ -25,4 +25,4 @@ You can stop the bot at any time with :kbd:`Control-c`, same as you stop a
 normal Python program, and it will try to exit safely. You can also use the
 "``!quit``" command on IRC.
 
-.. _explanation of YAML:            http://en.wikipedia.org/wiki/YAML
+.. _explanation of YAML: http://en.wikipedia.org/wiki/YAML
