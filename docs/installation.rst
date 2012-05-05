@@ -43,8 +43,9 @@ tags or by new features (``feature/*`` branches)::
 
 .. rubric:: Footnotes
 
-.. [1] ``python setup.py install``/``develop`` may require root, or use the
-       ``--user`` switch to install for the current user only.
+.. [1] :command:`python setup.py install`/:command:`develop` may require root,
+       or use the :command:`--user` switch to install for the current user
+       only.
 
 .. _my instance of EarwigBot: http://en.wikipedia.org/wiki/User:EarwigBot
 .. _earwigbot-plugins:        https://github.com/earwig/earwigbot-plugins

@@ -104,8 +104,8 @@ and the following methods:
 - :py:meth:`get_user(username) <earwigbot.wiki.Site.get_user>`: returns a
   :py:class:`~earwigbot.wiki.User` object for the given username
 
-Pages (and Categories)
-~~~~~~~~~~~~~~~~~~~~~~
+Pages and categories
+~~~~~~~~~~~~~~~~~~~~
 
 Create :py:class:`earwigbot.wiki.Page` objects with
 :py:meth:`site.get_page(title) <earwigbot.wiki.Site.get_page>`,

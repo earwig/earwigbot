@@ -29,22 +29,24 @@ The most useful attributes are:
   run IRC commands (through
   :py:meth:`commands.call() <earwigbot.managers.CommandManager.call>`, which
   you shouldn't have to use); you can safely reload all commands with
-  :py:meth:`commands.load() <earwigbot.bot.Bot.commands.load>`.
+  :py:meth:`commands.load() <earwigbot.managers._ResourceManager.load>`.
 
 - :py:attr:`~earwigbot.bot.Bot.tasks`: the bot's
   :py:class:`~earwigbot.managers.TaskManager`, which can be used to start tasks
   with :py:meth:`tasks.start(task_name, **kwargs)
   <earwigbot.managers.TaskManager.start>`. :py:meth:`tasks.load()
-  <earwigbot.managers.TaskManager.load>` can be used to safely reload all
+  <earwigbot.managers._ResourceManager.load>` can be used to safely reload all
   tasks.
 
 - :py:attr:`~earwigbot.bot.Bot.frontend` /
   :py:attr:`~earwigbot.bot.Bot.watcher`: instances of
-  :py:class:`earwigbot.irc.Frontend` and :py:class:`earwigbot.irc.Watcher`,
+  :py:class:`earwigbot.irc.Frontend <earwigbot.irc.frontend.Frontend>` and
+  :py:class:`earwigbot.irc.Watcher <earwigbot.irc.watcher.Watcher>`,
   respectively, which represent the bot's connections to these two servers; you
   can, for example, send a message to the frontend with
-  :py:meth:`frontend.say(chan, msg) <earwigbot.irc.IRConnection.say>` (more on
-  communicating with IRC below).
+  :py:meth:`frontend.say(chan, msg)
+  <earwigbot.irc.connection.IRCConnection.say>` (more on communicating with IRC
+  below).
 
 - :py:attr:`~earwigbot.bot.Bot.wiki`: interface with the
   :doc:`Wiki Toolset <toolset>`.
@@ -96,8 +98,8 @@ these are the basics:
   responds to other hook types.
 
 - Method :py:meth:`~earwigbot.commands.BaseCommand.check` is passed a
-  :py:class:`~earwigbot.irc.Data` [1]_ object, and should return ``True`` if
-  you want to respond to this message, or ``False`` otherwise. The default
+  :py:class:`~earwigbot.irc.data.Data` [1]_ object, and should return ``True``
+  if you want to respond to this message, or ``False`` otherwise. The default
   behavior is to return ``True`` only if
   :py:attr:`data.is_command` is ``True`` and :py:attr:`data.command` ==
   :py:attr:`~earwigbot.commands.BaseCommand.name`, which is suitable for most
@@ -106,7 +108,7 @@ these are the basics:
   prevent any other commands from responding to this message.
 
 - Method :py:meth:`~earwigbot.commands.BaseCommand.process` is passed the same
-  :py:class:`~earwigbot.irc.Data` object as
+  :py:class:`~earwigbot.irc.data.Data` object as
   :py:meth:`~earwigbot.commands.BaseCommand.check`, but only if
   :py:meth:`~earwigbot.commands.BaseCommand.check` returned ``True``. This is
   where the bulk of your command goes. To respond to IRC messages, there are a
@@ -116,13 +118,15 @@ these are the basics:
   :py:meth:`~earwigbot.commands.BaseCommand.__init__` method for the full list.
 
   The most common ones are :py:meth:`say(chan_or_user, msg)
-  <bot.irc.IRCConnection.say>`, :py:meth:`reply(data, msg)
-  <bot.irc.IRCConnection.reply>` (convenience function; sends a reply to the
-  issuer of the command in the channel it was received),
-  :py:meth:`action(chan_or_user, msg) <bot.irc.IRCConnection.action>`,
-  :py:meth:`notice(chan_or_user, msg) <bot.irc.IRCConnection.notice>`,
-  :py:meth:`join(chan) <bot.irc.IRCConnection.join>`, and
-  :py:meth:`part(chan) <bot.irc.IRCConnection.part>`.
+  <earwigbot.irc.connection.IRCConnection.say>`, :py:meth:`reply(data, msg)
+  <earwigbot.irc.connection.IRCConnection.reply>` (convenience function; sends
+  a reply to the issuer of the command in the channel it was received),
+  :py:meth:`action(chan_or_user, msg)
+  <earwigbot.irc.connection.IRCConnection.action>`,
+  :py:meth:`notice(chan_or_user, msg)
+  <earwigbot.irc.connection.IRCConnection.notice>`, :py:meth:`join(chan)
+  <earwigbot.irc.connection.IRCConnection.join>`, and
+  :py:meth:`part(chan) <earwigbot.irc.connection.IRCConnection.part>`.
 
 It's important to name the command class :py:class:`Command` within the file,
 or else the bot might not recognize it as a command. The name of the file
@@ -200,30 +204,31 @@ task, or the afc_statistics_ plugin for a more complicated one.
 
 .. rubric:: Footnotes
 
-.. [1] :py:class:`~earwigbot.irc.Data` objects are instances of
-       :py:class:`earwigbot.irc.Data` that contain information about a single
-       message sent on IRC. Their useful attributes are
-       :py:attr:`~earwigbot.irc.Data.chan` (channel the message was sent from,
-       equal to :py:attr:`~earwigbot.irc.Data.nick` if it's a private message),
-       :py:attr:`~earwigbot.irc.Data.nick` (nickname of the sender),
-       :py:attr:`~earwigbot.irc.Data.ident` (ident_ of the sender),
-       :py:attr:`~earwigbot.irc.Data.host` (hostname of the sender),
-       :py:attr:`~earwigbot.irc.Data.msg` (text of the sent message),
-       :py:attr:`~earwigbot.irc.Data.is_command` (boolean telling whether or
-       not this message is a bot command, e.g., whether it is prefixed by
-       ``!``), :py:attr:`~earwigbot.irc.Data.command` (if the message is a
-       command, this is the name of the command used), and
-       :py:attr:`~earwigbot.irc.Data.args` (if the message is a command, this
-       is a list of the command arguments - for example, if issuing
-       "``!part ##earwig Goodbye guys``", :py:attr:`~earwigbot.irc.Data.args`
-       will equal ``["##earwig", "Goodbye", "guys"]``). Note that not all
-       :py:class:`~earwigbot.irc.Data` objects will have all of these
-       attributes: :py:class:`~earwigbot.irc.Data` objects generated by private
-       messages will, but ones generated by joins will only have
-       :py:attr:`~earwigbot.irc.Data.chan`,
-       :py:attr:`~earwigbot.irc.Data.nick`,
-       :py:attr:`~earwigbot.irc.Data.ident`,
-       and :py:attr:`~earwigbot.irc.Data.host`.
+.. [1] :py:class:`~earwigbot.irc.data.Data` objects are instances of
+       :py:class:`earwigbot.irc.Data <earwigbot.irc.data.Data>` that contain
+       information about a single message sent on IRC. Their useful attributes
+       are :py:attr:`~earwigbot.irc.data.Data.chan` (channel the message was
+       sent from, equal to :py:attr:`~earwigbot.irc.data.Data.nick` if it's a
+       private message), :py:attr:`~earwigbot.irc.data.Data.nick` (nickname of
+       the sender), :py:attr:`~earwigbot.irc.data.Data.ident` (ident_ of the
+       sender), :py:attr:`~earwigbot.irc.data.Data.host` (hostname of the
+       sender), :py:attr:`~earwigbot.irc.data.Data.msg` (text of the sent
+       message), :py:attr:`~earwigbot.irc.data.Data.is_command` (boolean
+       telling whether or not this message is a bot command, e.g., whether it
+       is prefixed by ``!``), :py:attr:`~earwigbot.irc.data.Data.command` (if
+       the message is a command, this is the name of the command used), and
+       :py:attr:`~earwigbot.irc.data.Data.args` (if the message is a command,
+       this is a list of the command arguments - for example, if issuing
+       "``!part ##earwig Goodbye guys``",
+       :py:attr:`~earwigbot.irc.data.Data.args` will equal
+       ``["##earwig", "Goodbye", "guys"]``). Note that not all
+       :py:class:`~earwigbot.irc.data.Data` objects will have all of these
+       attributes: :py:class:`~earwigbot.irc.data.Data` objects generated by
+       private messages will, but ones generated by joins will only have
+       :py:attr:`~earwigbot.irc.data.Data.chan`,
+       :py:attr:`~earwigbot.irc.data.Data.nick`,
+       :py:attr:`~earwigbot.irc.data.Data.ident`,
+       and :py:attr:`~earwigbot.irc.data.Data.host`.
 
 .. _afc_status:         https://github.com/earwig/earwigbot-plugins/blob/develop/commands/afc_status.py
 .. _chanops:            https://github.com/earwig/earwigbot/blob/develop/earwigbot/commands/chanops.py
