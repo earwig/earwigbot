@@ -346,8 +346,8 @@ and the following methods:
   object for the given title (sans namespace)
 - ``get_user(username)``: returns a ``User`` object for the given username
 
-Pages (and Categories)
-~~~~~~~~~~~~~~~~~~~~~~
+Pages and categories
+~~~~~~~~~~~~~~~~~~~~
 
 Create ``Page`` objects with ``site.get_page(title)``,
 ``page.toggle_talk()``, ``user.get_userpage()``, or ``user.get_talkpage()``.

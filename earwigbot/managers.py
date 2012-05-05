@@ -161,7 +161,7 @@ class CommandManager(_ResourceManager):
             command.process(data)
         except Exception:
             e = "Error executing command '{0}':"
-            self.logger.exception(e.format(data.command))
+            self.logger.exception(e.format(command.name))
 
     def call(self, hook, data):
         """Given a hook type and a Data object, respond appropriately."""
