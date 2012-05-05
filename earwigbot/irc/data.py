@@ -22,13 +22,9 @@
 
 import re
 
-__all__ = ["KwargParseException", "Data"]
+from earwigbot.exceptions import KwargParseError
 
-class KwargParseException(Exception):
-    """Couldn't parse a certain keyword argument in self.args, probably because
-    it was given incorrectly: e.g., no value (abc), just a value (=xyz), just
-    an equal sign (=), instead of the correct (abc=xyz)."""
-    pass
+__all__ = ["Data"]
 
 class Data(object):
     """Store data from an individual line received on IRC."""
@@ -81,8 +77,8 @@ class Data(object):
             try:
                 key, value = re.findall("^(.*?)\=(.*?)$", arg)[0]
             except IndexError:
-                raise KwargParseException(arg)
+                raise KwargParseError(arg)
             if key and value:
                 self.kwargs[key] = value
             else:
-                raise KwargParseException(arg)
+                raise KwargParseError(arg)

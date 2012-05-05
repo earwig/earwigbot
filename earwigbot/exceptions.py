@@ -26,6 +26,9 @@ EarwigBot Exceptions
 This module contains all exceptions used by EarwigBot::
 
 EarwigBotError
+ +-- IRCError
+ |    +-- BrokenSocketError
+ |    +-- KwargParseError
  +-- WikiToolsetError
       +-- SiteNotFoundError
       +-- SiteAPIError
@@ -49,10 +52,24 @@ EarwigBotError
            +-- SearchQueryError
 """
 
-class EarwigBotErorr(Exception):
+class EarwigBotError(Exception):
     """Base exception class for errors in EarwigBot."""
 
-class WikiToolsetError(EarwigBotErorr):
+class IRCError(EarwigBotError):
+    """Base exception class for errors in IRC-relation sections of the bot."""
+
+class BrokenSocketError(IRCError):
+    """A socket has broken, because it is not sending data.
+
+    Raised by earwigbot.irc.IRCConnection()._get().
+    """
+
+class KwargParseError(IRCError):
+    """Couldn't parse a certain keyword argument in Data().args, probably
+    because it was given incorrectly: e.g., no value (abc), just a value
+    (=xyz), just an equal sign (=), instead of the correct (abc=xyz)."""
+
+class WikiToolsetError(EarwigBotError):
     """Base exception class for errors in the Wiki Toolset."""
 
 class SiteNotFoundError(WikiToolsetError):
