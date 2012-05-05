@@ -210,8 +210,8 @@ class SitesDB(object):
         namespaces are extracted from the site and inserted into the sites
         database. If the sitesdb doesn't exist, we'll create it first.
         """
-        name = site.name()
-        sites_data = (name, site.project(), site.lang(), site._base_url,
+        name = site.name
+        sites_data = (name, site.project, site.lang, site._base_url,
                       site._article_path, site._script_path)
         sql_data = [(name, key, val) for key, val in site._sql_data.iteritems()]
         ns_data = []
@@ -353,7 +353,7 @@ class SitesDB(object):
                     search_config=search_config)
 
         self._add_site_to_sitesdb(site)
-        self._sites[site.name()] = site
+        self._sites[site.name] = site
         return site
 
     def remove_site(self, name=None, project=None, lang=None):

@@ -48,7 +48,7 @@ __all__ = ["Site"]
 
 class Site(object):
     """
-    EarwigBot's Wiki Toolset: Site Class
+    **EarwigBot's Wiki Toolset: Site Class**
 
     Represents a Site, with support for API queries and returning Pages, Users,
     and Categories. The constructor takes a bunch of arguments and you probably
@@ -56,21 +56,23 @@ class Site(object):
     instances, tools.add_site() for adding new ones to config, and
     tools.del_site() for removing old ones from config, should suffice.
 
-    Attributes:
-    name    -- the site's name (or "wikiid"), like "enwiki"
-    project -- the site's project name, like "wikipedia"
-    lang    -- the site's language code, like "en"
-    domain  -- the site's web domain, like "en.wikipedia.org"
+    *Attributes:*
 
-    Public methods:
-    api_query            -- does an API query with the given kwargs as params
-    sql_query            -- does an SQL query and yields its results
-    get_replag           -- returns the estimated database replication lag
-    namespace_id_to_name -- given a namespace ID, returns associated name(s)
-    namespace_name_to_id -- given a namespace name, returns the associated ID
-    get_page             -- returns a Page object for the given title
-    get_category         -- returns a Category object for the given title
-    get_user             -- returns a User object for the given username
+    - :py:attr:`name`:    the site's name (or "wikiid"), like ``"enwiki"``
+    - :py:attr:`project`: the site's project name, like ``"wikipedia"``
+    - :py:attr:`lang`:    the site's language code, like ``"en"``
+    - :py:attr:`domain`:  the site's web domain, like ``"en.wikipedia.org"``
+
+    *Public methods:*
+
+    - :py:meth:`api_query`:            does an API query with kwargs as params
+    - :py:meth:`sql_query`:            does an SQL query and yields its results
+    - :py:meth:`get_replag`:           estimates the database replication lag
+    - :py:meth:`namespace_id_to_name`: returns names associated with an NS id
+    - :py:meth:`namespace_name_to_id`: returns the ID associated with a NS name
+    - :py:meth:`get_page`:             returns a Page for the given title
+    - :py:meth:`get_category`:         returns a Category for the given title
+    - :py:meth:`get_user`:             returns a User object for the given name
     """
 
     def __init__(self, name=None, project=None, lang=None, base_url=None,
@@ -172,8 +174,7 @@ class Site(object):
     def __str__(self):
         """Returns a nice string representation of the Site."""
         res = "<Site {0} ({1}:{2}) at {3}>"
-        return res.format(self.name(), self.project(), self.lang(),
-                          self.domain())
+        return res.format(self.name, self.project, self.lang, self.domain)
 
     def _urlencode_utf8(self, params):
         """Implement urllib.urlencode(params) with support for unicode input."""
@@ -381,13 +382,12 @@ class Site(object):
         (for that, we'd do self._login_info[0]), but rather to get our current
         username without an unnecessary ?action=query&meta=userinfo API query. 
         """
-        domain = self.domain()
         name = ''.join((self._name, "Token"))
-        cookie = self._get_cookie(name, domain)
+        cookie = self._get_cookie(name, self.domain)
 
         if cookie:
             name = ''.join((self._name, "UserName"))
-            user_name = self._get_cookie(name, domain)
+            user_name = self._get_cookie(name, self.domain)
             if user_name:
                 return user_name.value
 
@@ -399,7 +399,7 @@ class Site(object):
                 continue
             # Build a regex that will match domains this cookie affects:
             search = ''.join(("(.*?)", re_escape(cookie.domain)))
-            if re_match(search, domain):  # Test it against our site
+            if re_match(search, self.domain):  # Test it against our site
                 user_name = self._get_cookie("centralauth_User", cookie.domain)
                 if user_name:
                     return user_name.value
@@ -535,20 +535,24 @@ class Site(object):
 
         self._sql_conn = oursql.connect(**args)
 
+    @property
     def name(self):
-        """Returns the Site's name (or "wikiid" in the API), like "enwiki"."""
+        """The Site's name (or "wikiid" in the API), like ``"enwiki"``."""
         return self._name
 
+    @property 
     def project(self):
-        """Returns the Site's project name in lowercase, like "wikipedia"."""
+        """The Site's project name in lowercase, like ``"wikipedia"``."""
         return self._project
 
+    @property
     def lang(self):
-        """Returns the Site's language code, like "en" or "es"."""
+        """The Site's language code, like ``"en"`` or ``"es"``."""
         return self._lang
 
+    @property
     def domain(self):
-        """Returns the Site's web domain, like "en.wikipedia.org"."""
+        """The Site's web domain, like ``"en.wikipedia.org"``."""
         return urlparse(self._base_url).netloc
 
     def api_query(self, **kwargs):
