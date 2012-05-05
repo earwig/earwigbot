@@ -25,8 +25,8 @@ import re
 from time import gmtime, strftime
 from urllib import quote
 
+from earwigbot import exceptions
 from earwigbot.wiki.copyright import CopyrightMixin
-from earwigbot.wiki.exceptions import *
 
 __all__ = ["Page"]
 
@@ -132,7 +132,7 @@ class Page(CopyrightMixin):
         """
         if self._exists == 1:
             e = "Page '{0}' is invalid.".format(self._title)
-            raise InvalidPageError(e)
+            raise exceptions.InvalidPageError(e)
 
     def _force_existence(self):
         """Used to ensure that our page exists.
@@ -144,7 +144,7 @@ class Page(CopyrightMixin):
         self._force_validity()
         if self._exists == 2:
             e = "Page '{0}' does not exist.".format(self._title)
-            raise PageNotFoundError(e)
+            raise exceptions.PageNotFoundError(e)
 
     def _load_wrapper(self):
         """Calls _load_attributes() and follows redirects if we're supposed to.
@@ -278,8 +278,8 @@ class Page(CopyrightMixin):
             self._load_attributes()
         if not self._token:
             e = "You don't have permission to edit this page."
-            raise PermissionsError(e)
-        
+            raise exceptions.PermissionsError(e)
+
         # Weed out invalid pages before we get too far:
         self._force_validity()
 
@@ -310,7 +310,7 @@ class Page(CopyrightMixin):
         try:
             assertion = result["edit"]["assert"]
         except KeyError:
-            raise EditError(result["edit"])
+            raise exceptions.EditError(result["edit"])
         self._handle_assert_edit(assertion, params, tries)
 
     def _build_edit_params(self, text, summary, minor, bot, force, section,
@@ -353,13 +353,13 @@ class Page(CopyrightMixin):
         """
         if error.code in ["noedit", "cantcreate", "protectedtitle",
                           "noimageredirect"]:
-            raise PermissionsError(error.info)
+            raise exceptions.PermissionsError(error.info)
 
         elif error.code in ["noedit-anon", "cantcreate-anon",
                             "noimageredirect-anon"]:
             if not all(self._site._login_info):
                 # Insufficient login info:
-                raise PermissionsError(error.info)
+                raise exceptions.PermissionsError(error.info)
             if tries == 0:
                 # We have login info; try to login:
                 self._site._login(self._site._login_info)
@@ -368,28 +368,28 @@ class Page(CopyrightMixin):
             else:
                 # We already tried to log in and failed!
                 e = "Although we should be logged in, we are not. This may be a cookie problem or an odd bug."
-                raise LoginError(e)
+                raise exceptions.LoginError(e)
 
         elif error.code in ["editconflict", "pagedeleted", "articleexists"]:
             # These attributes are now invalidated:
             self._content = None
             self._basetimestamp = None
             self._exists = 0
-            raise EditConflictError(error.info)
+            raise exceptions.EditConflictError(error.info)
 
         elif error.code in ["emptypage", "emptynewsection"]:
-            raise NoContentError(error.info)
+            raise exceptions.NoContentError(error.info)
 
         elif error.code == "contenttoobig":
-            raise ContentTooBigError(error.info)
+            raise exceptions.ContentTooBigError(error.info)
 
         elif error.code == "spamdetected":
-            raise SpamDetectedError(error.info)
+            raise exceptions.SpamDetectedError(error.info)
 
         elif error.code == "filtered":
-            raise FilteredError(error.info)
+            raise exceptions.FilteredError(error.info)
 
-        raise EditError(": ".join((error.code, error.info)))
+        raise exceptions.EditError(": ".join((error.code, error.info)))
 
     def _handle_assert_edit(self, assertion, params, tries):
         """If we can't edit due to a failed AssertEdit assertion, handle that.
@@ -401,7 +401,7 @@ class Page(CopyrightMixin):
             if not all(self._site._login_info):
                 # Insufficient login info:
                 e = "AssertEdit: user assertion failed, and no login info was provided."
-                raise PermissionsError(e)
+                raise exceptions.PermissionsError(e)
             if tries == 0:
                 # We have login info; try to login:
                 self._site._login(self._site._login_info)
@@ -410,15 +410,15 @@ class Page(CopyrightMixin):
             else:
                 # We already tried to log in and failed!
                 e = "Although we should be logged in, we are not. This may be a cookie problem or an odd bug."
-                raise LoginError(e)
+                raise exceptions.LoginError(e)
 
         elif assertion == "bot":
             e = "AssertEdit: bot assertion failed; we don't have a bot flag!"
-            raise PermissionsError(e)
+            raise exceptions.PermissionsError(e)
 
         # Unknown assertion, maybe "true", "false", or "exists":
         e = "AssertEdit: assertion '{0}' failed.".format(assertion)
-        raise PermissionsError(e)
+        raise exceptions.PermissionsError(e)
 
     def title(self, force=False):
         """Returns the Page's title, or pagename.
@@ -570,7 +570,7 @@ class Page(CopyrightMixin):
         if self._namespace < 0:
             ns = self._site.namespace_id_to_name(self._namespace)
             e = "Pages in the {0} namespace can't have talk pages.".format(ns)
-            raise InvalidPageError(e)
+            raise exceptions.InvalidPageError(e)
 
         if self._is_talkpage:
             new_ns = self._namespace - 1
@@ -650,7 +650,7 @@ class Page(CopyrightMixin):
             return re.findall(self.re_redirect, content, flags=re.I)[0]
         except IndexError:
             e = "The page does not appear to have a redirect target."
-            raise RedirectError(e)
+            raise exceptions.RedirectError(e)
 
     def edit(self, text, summary, minor=False, bot=True, force=False):
         """Replaces the page's content or creates a new page.

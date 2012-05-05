@@ -22,8 +22,8 @@
 
 from time import gmtime, strptime
 
-from earwigbot.wiki.constants import *
-from earwigbot.wiki.exceptions import UserNotFoundError
+from earwigbot.exceptions import UserNotFoundError
+from earwigbot.wiki import constants
 from earwigbot.wiki.page import Page
 
 __all__ = ["User"]
@@ -252,7 +252,7 @@ class User(object):
         No checks are made to see if it exists or not. Proper site namespace
         conventions are followed.
         """
-        prefix = self._site.namespace_id_to_name(NS_USER)
+        prefix = self._site.namespace_id_to_name(constants.NS_USER)
         pagename = ':'.join((prefix, self._name))
         return Page(self._site, pagename)
 
@@ -262,6 +262,6 @@ class User(object):
         No checks are made to see if it exists or not. Proper site namespace
         conventions are followed.
         """
-        prefix = self._site.namespace_id_to_name(NS_USER_TALK)
+        prefix = self._site.namespace_id_to_name(constants.NS_USER_TALK)
         pagename = ':'.join((prefix, self._name))
         return Page(self._site, pagename)

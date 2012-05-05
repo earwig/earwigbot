@@ -35,7 +35,7 @@ try:
 except ImportError:
     oauth = None
 
-from earwigbot.wiki.exceptions import *
+from earwigbot.exceptions import *
 
 class _CopyvioCheckResult(object):
     def __init__(self, violation, confidence, url, queries, article, chains):

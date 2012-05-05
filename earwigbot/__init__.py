@@ -49,4 +49,12 @@ if not __release__:
     finally:
         del _add_git_commit_id_to_version_string
 
-from earwigbot import bot, commands, config, irc, managers, tasks, util, wiki
+from earwigbot import bot
+from earwigbot import commands
+from earwigbot import config
+from earwigbot import exceptions
+from earwigbot import irc
+from earwigbot import managers
+from earwigbot import tasks
+from earwigbot import util
+from earwigbot import wiki

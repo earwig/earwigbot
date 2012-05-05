@@ -24,14 +24,9 @@ import socket
 from threading import Lock
 from time import sleep
 
-__all__ = ["BrokenSocketException", "IRCConnection"]
+from earwigbot.exceptions import BrokenSocketError
 
-class BrokenSocketException(Exception):
-    """A socket has broken, because it is not sending data.
-
-    Raised by IRCConnection()._get().
-    """
-    pass
+__all__ = ["IRCConnection"]
 
 class IRCConnection(object):
     """A class to interface with IRC."""
@@ -72,7 +67,7 @@ class IRCConnection(object):
         data = self._sock.recv(size)
         if not data:
             # Socket isn't giving us any data, so it is dead or broken:
-            raise BrokenSocketException()
+            raise BrokenSocketError()
         return data
 
     def _send(self, msg):
@@ -137,7 +132,7 @@ class IRCConnection(object):
         while 1:
             try:
                 read_buffer += self._get()
-            except BrokenSocketException:
+            except BrokenSocketError:
                 self._is_running = False
                 break
 

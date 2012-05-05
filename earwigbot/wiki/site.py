@@ -38,9 +38,9 @@ try:
 except ImportError:
     oursql = None
 
+from earwigbot import exceptions
+from earwigbot.wiki import constants
 from earwigbot.wiki.category import Category
-from earwigbot.wiki.constants import *
-from earwigbot.wiki.exceptions import *
 from earwigbot.wiki.page import Page
 from earwigbot.wiki.user import User
 
@@ -128,7 +128,7 @@ class Site(object):
         else:
             self._cookiejar = CookieJar()
         if not user_agent:
-            user_agent = USER_AGENT  # Set default UA from wiki.constants
+            user_agent = constants.USER_AGENT  # Set default UA
         self._opener = build_opener(HTTPCookieProcessor(self._cookiejar))
         self._opener.addheaders = [("User-Agent", user_agent),
                                    ("Accept-Encoding", "gzip")]
@@ -232,7 +232,7 @@ class Site(object):
                 e = e.format(error.code)
             else:
                 e = "API query failed."
-            raise SiteAPIError(e)
+            raise exceptions.SiteAPIError(e)
 
         result = response.read()
         if response.headers.get("Content-Encoding") == "gzip":
@@ -246,7 +246,7 @@ class Site(object):
         """Given API query params, return the URL to query and POST data."""
         if not self._base_url or self._script_path is None:
             e = "Tried to do an API query, but no API URL is known."
-            raise SiteAPIError(e)
+            raise exceptions.SiteAPIError(e)
 
         base_url = self._base_url
         if base_url.startswith("//"): # Protocol-relative URLs from 1.18
@@ -271,7 +271,7 @@ class Site(object):
             res = loads(result)  # Try to parse as a JSON object
         except ValueError:
             e = "API query failed: JSON could not be decoded."
-            raise SiteAPIError(e)
+            raise exceptions.SiteAPIError(e)
 
         try:
             code = res["error"]["code"]
@@ -282,7 +282,7 @@ class Site(object):
         if code == "maxlag":  # We've been throttled by the server
             if tries >= self._max_retries:
                 e = "Maximum number of retries reached ({0})."
-                raise SiteAPIError(e.format(self._max_retries))
+                raise exceptions.SiteAPIError(e.format(self._max_retries))
             tries += 1
             msg = 'Server says "{0}"; retrying in {1} seconds ({2}/{3})'
             self._logger.info(msg.format(info, wait, tries, self._max_retries))
@@ -290,7 +290,7 @@ class Site(object):
             return self._api_query(params, tries=tries, wait=wait*3)
         else:  # Some unknown error occurred
             e = 'API query failed: got error "{0}"; server says: "{1}".'
-            error = SiteAPIError(e.format(code, info))
+            error = earwigbot.SiteAPIError(e.format(code, info))
             error.code, error.info = code, info
             raise error
 
@@ -491,7 +491,7 @@ class Site(object):
                 e = "The given password is incorrect."
             else:
                 e = "Couldn't login; server says '{0}'.".format(res)
-            raise LoginError(e)
+            raise exceptions.LoginError(e)
 
     def _logout(self):
         """Safely logout through the API.
@@ -518,7 +518,7 @@ class Site(object):
         """
         if not oursql:
             e = "Module 'oursql' is required for SQL queries."
-            raise SQLError(e)
+            raise exceptions.SQLError(e)
 
         args = self._sql_data
         for key, value in kwargs.iteritems():
@@ -638,7 +638,7 @@ class Site(object):
                 return self._namespaces[ns_id][0]
         except KeyError:
             e = "There is no namespace with id {0}.".format(ns_id)
-            raise NamespaceNotFoundError(e)
+            raise exceptions.NamespaceNotFoundError(e)
 
     def namespace_name_to_id(self, name):
         """Given a namespace name, returns the associated ID.
@@ -655,7 +655,7 @@ class Site(object):
                 return ns_id
 
         e = "There is no namespace with name '{0}'.".format(name)
-        raise NamespaceNotFoundError(e)
+        raise exceptions.NamespaceNotFoundError(e)
 
     def get_page(self, title, follow_redirects=False):
         """Returns a Page object for the given title (pagename).
@@ -667,7 +667,7 @@ class Site(object):
         Note that this doesn't do any direct checks for existence or
         redirect-following - Page's methods provide that.
         """
-        prefixes = self.namespace_id_to_name(NS_CATEGORY, all=True)
+        prefixes = self.namespace_id_to_name(constants.NS_CATEGORY, all=True)
         prefix = title.split(":", 1)[0]
         if prefix != title:  # Avoid a page that is simply "Category"
             if prefix in prefixes:
@@ -680,7 +680,7 @@ class Site(object):
         `catname` should be given *without* a namespace prefix. This method is
         really just shorthand for get_page("Category:" + catname).
         """
-        prefix = self.namespace_id_to_name(NS_CATEGORY)
+        prefix = self.namespace_id_to_name(constants.NS_CATEGORY)
         pagename = ':'.join((prefix, catname))
         return Category(self, pagename, follow_redirects)
 

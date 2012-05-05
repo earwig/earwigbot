@@ -33,14 +33,6 @@ wiki Package
     :undoc-members:
     :show-inheritance:
 
-:mod:`exceptions` Module
-------------------------
-
-.. automodule:: earwigbot.wiki.exceptions
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 :mod:`page` Module
 ------------------
 

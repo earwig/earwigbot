@@ -24,7 +24,7 @@ import threading
 import re
 
 from earwigbot.commands import BaseCommand
-from earwigbot.irc import KwargParseException
+from earwigbot.exceptions import KwargParseError
 
 class Command(BaseCommand):
     """Manage wiki tasks from IRC, and check on thread status."""
@@ -135,7 +135,7 @@ class Command(BaseCommand):
 
         try:
             data.parse_kwargs()
-        except KwargParseException, arg:
+        except KwargParseError, arg:
             msg = "error parsing argument: \x0303{0}\x0301.".format(arg)
             self.reply(data, msg)
             return
