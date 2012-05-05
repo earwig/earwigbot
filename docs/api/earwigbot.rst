@@ -9,14 +9,6 @@ earwigbot Package
     :undoc-members:
     :show-inheritance:
 
-:mod:`blowfish` Module
-----------------------
-
-.. automodule:: earwigbot.blowfish
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 :mod:`bot` Module
 -----------------
 
@@ -29,6 +21,14 @@ earwigbot Package
 --------------------
 
 .. automodule:: earwigbot.config
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`exceptions` Module
+------------------------
+
+.. automodule:: earwigbot.exceptions
     :members:
     :undoc-members:
     :show-inheritance:

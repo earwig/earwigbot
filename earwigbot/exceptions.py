@@ -25,31 +25,31 @@ EarwigBot Exceptions
 
 This module contains all exceptions used by EarwigBot::
 
-EarwigBotError
- +-- IRCError
- |    +-- BrokenSocketError
- |    +-- KwargParseError
- +-- WikiToolsetError
-      +-- SiteNotFoundError
-      +-- SiteAPIError
-      +-- LoginError
-      +-- NamespaceNotFoundError
-      +-- PageNotFoundError
-      +-- InvalidPageError
-      +-- RedirectError
-      +-- UserNotFoundError
-      +-- EditError
-      |    +-- PermissionsError
-      |    +-- EditConflictError
-      |    +-- NoContentError
-      |    +-- ContentTooBigError
-      |    +-- SpamDetectedError
-      |    +-- FilteredError
-      +-- SQLError
-      +-- CopyvioCheckError
-           +-- UnknownSearchEngineError
-           +-- UnsupportedSearchEngineError
-           +-- SearchQueryError
+    EarwigBotError
+     +-- IRCError
+     |    +-- BrokenSocketError
+     |    +-- KwargParseError
+     +-- WikiToolsetError
+          +-- SiteNotFoundError
+          +-- SiteAPIError
+          +-- LoginError
+          +-- NamespaceNotFoundError
+          +-- PageNotFoundError
+          +-- InvalidPageError
+          +-- RedirectError
+          +-- UserNotFoundError
+          +-- EditError
+          |    +-- PermissionsError
+          |    +-- EditConflictError
+          |    +-- NoContentError
+          |    +-- ContentTooBigError
+          |    +-- SpamDetectedError
+          |    +-- FilteredError
+          +-- SQLError
+          +-- CopyvioCheckError
+               +-- UnknownSearchEngineError
+               +-- UnsupportedSearchEngineError
+               +-- SearchQueryError
 """
 
 class EarwigBotError(Exception):
@@ -61,85 +61,184 @@ class IRCError(EarwigBotError):
 class BrokenSocketError(IRCError):
     """A socket has broken, because it is not sending data.
 
-    Raised by earwigbot.irc.IRCConnection()._get().
+    Raised by :py:meth:`IRCConnection._get
+    <earwigbot.irc.connection.IRCConnection._get>`.
     """
 
 class KwargParseError(IRCError):
-    """Couldn't parse a certain keyword argument in Data().args, probably
-    because it was given incorrectly: e.g., no value (abc), just a value
-    (=xyz), just an equal sign (=), instead of the correct (abc=xyz)."""
+    """Couldn't parse a certain keyword argument in an IRC message.
+    
+    This is usually caused by it being given incorrectly: e.g., no value (abc),
+    just a value (=xyz), just an equal sign (=), instead of the correct form
+    (abc=xyz).
+
+    Raised by :py:meth:`Data.parse_kwargs
+    <earwigbot.irc.data.Data.parse_kwargs>`.
+    """
 
 class WikiToolsetError(EarwigBotError):
     """Base exception class for errors in the Wiki Toolset."""
 
 class SiteNotFoundError(WikiToolsetError):
-    """A site matching the args given to get_site() could not be found in the
-    config file."""
+    """A particular site could not be found in the sites database.
+
+    Raised by :py:class:`~earwigbot.wiki.sitesdb.SitesDB`.
+    """
 
 class SiteAPIError(WikiToolsetError):
-    """We couldn't connect to a site's API, perhaps because the server doesn't
-    exist, our URL is wrong or incomplete, or they're having temporary
-    problems."""
+    """Couldn't connect to a site's API.
+
+    Perhaps the server doesn't exist, our URL is wrong or incomplete, or
+    there are temporary problems on their end.
+
+    Raised by :py:meth:`Site.api_query <earwigbot.wiki.site.Site.api_query>`.
+    """
 
 class LoginError(WikiToolsetError):
-    """An error occured while trying to login. Perhaps the username/password is
-    incorrect."""
+    """An error occured while trying to login.
+
+    Perhaps the username/password is incorrect.
+
+    Raised by :py:meth:`Site._login <earwigbot.wiki.site.Site._login>`.
+    """
 
 class NamespaceNotFoundError(WikiToolsetError):
-    """A requested namespace name or namespace ID does not exist."""
+    """A requested namespace name or namespace ID does not exist.
+
+    Raised by :py:meth:`Site.namespace_id_to_name
+    <earwigbot.wiki.site.Site.namespace_id_to_name>` and
+    :py:meth:`Site.namespace_name_to_id
+    <earwigbot.wiki.site.Site.namespace_name_to_id>`.
+    """
 
 class PageNotFoundError(WikiToolsetError):
-    """Attempting to get certain information about a page that does not
-    exist."""
+    """Attempted to get information about a page that does not exist.
+
+    Raised by :py:class:`~earwigbot.wiki.page.Page`.
+    """
 
 class InvalidPageError(WikiToolsetError):
-    """Attempting to get certain information about a page whose title is
-    invalid."""
+    """Attempted to get information about a page whose title is invalid.
+
+    Raised by :py:class:`~earwigbot.wiki.page.Page`.
+    """
 
 class RedirectError(WikiToolsetError):
-    """Page's get_redirect_target() method failed because the page is either
-    not a redirect, or it is malformed."""
+    """A redirect-only method was called on a malformed or non-redirect page.
+
+    Raised by :py:meth:`Page.get_redirect_target
+    <earwigbot.wiki.page.Page.get_redirect_target>`.
+    """
 
 class UserNotFoundError(WikiToolsetError):
-    """Attempting to get certain information about a user that does not
-    exist."""
+    """Attempted to get certain information about a user that does not exist.
+
+    Raised by :py:class:`~earwigbot.wiki.user.User`.
+    """
 
 class EditError(WikiToolsetError):
-    """We got some error while editing. Sometimes, a subclass of this exception
-    will be used, like PermissionsError or EditConflictError."""
+    """An error occured while editing.
+
+    This is used as a base class for all editing errors; this one specifically
+    is used only when a generic error occurs that we don't know about.
+
+    Raised by :py:meth:`Page.edit <earwigbot.wiki.page.Page.edit>` and
+    :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`.
+    """
 
 class PermissionsError(EditError):
-    """We tried to do something we don't have permission to, like a non-admin
-    trying to delete a page, or trying to edit a page when no login information
-    was provided."""
+    """A permissions error ocurred while editing.
+    
+    We tried to do something we don't have permission to, like trying to delete
+    a page as a non-admin, or trying to edit a page without login information
+    and AssertEdit enabled.
+
+    Raised by :py:meth:`Page.edit <earwigbot.wiki.page.Page.edit>` and
+    :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`.
+    """
 
 class EditConflictError(EditError):
-    """We've gotten an edit conflict or a (rarer) delete/recreate conflict."""
+    """We gotten an edit conflict or a (rarer) delete/recreate conflict.
+
+    Raised by :py:meth:`Page.edit <earwigbot.wiki.page.Page.edit>` and
+    :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`.
+    """
 
 class NoContentError(EditError):
-    """We tried to create a page or new section with no content."""
+    """We tried to create a page or new section with no content.
+
+    Raised by :py:meth:`Page.edit <earwigbot.wiki.page.Page.edit>` and
+    :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`.
+    """
 
 class ContentTooBigError(EditError):
-    """The edit we tried to push exceeded the article size limit."""
+    """The edit we tried to push exceeded the article size limit.
+
+    Raised by :py:meth:`Page.edit <earwigbot.wiki.page.Page.edit>` and
+    :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`.
+    """
 
 class SpamDetectedError(EditError):
-    """The spam filter refused our edit."""
+    """The spam filter refused our edit.
+
+    Raised by :py:meth:`Page.edit <earwigbot.wiki.page.Page.edit>` and
+    :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`.
+    """
 
 class FilteredError(EditError):
-    """The edit filter refused our edit."""
+    """The edit filter refused our edit.
+
+    Raised by :py:meth:`Page.edit <earwigbot.wiki.page.Page.edit>` and
+    :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`.
+    """
 
 class SQLError(WikiToolsetError):
-    """Some error involving SQL querying occurred."""
+    """Some error involving SQL querying occurred.
+
+    Raised by :py:meth:`Site.sql_query <earwigbot.wiki.site.Site.sql_query>`.
+    """
 
 class CopyvioCheckError(WikiToolsetError):
-    """An error occured when checking a page for copyright violations."""
+    """An error occured when checking a page for copyright violations.
+
+    This is a base class for multiple exceptions; usually one of those will be
+    raised instead of this.
+
+    Raised by :py:meth:`Page.copyvio_check
+    <earwigbot.wiki.copyvios.CopyvioMixin.copyvio_check>` and
+    :py:meth:`Page.copyvio_compare
+    <earwigbot.wiki.copyvios.CopyvioMixin.copyvio_compare>`.
+    """
 
 class UnknownSearchEngineError(CopyvioCheckError):
-    """CopyrightMixin().copyvio_check() called with an unknown engine."""
+    """Attempted to do a copyvio check with an unknown search engine.
+
+    Search engines are specified in :file:`config.yml` as
+    :py:attr:`config.wiki["search"]["engine"]`.
+
+    Raised by :py:meth:`Page.copyvio_check
+    <earwigbot.wiki.copyvios.CopyvioMixin.copyvio_check>` and
+    :py:meth:`Page.copyvio_compare
+    <earwigbot.wiki.copyvios.CopyvioMixin.copyvio_compare>`.
+    """
 
 class UnsupportedSearchEngineError(CopyvioCheckError):
-    """The engine requested is not available, e.g., because a required package
-    is missing."""
+    """Attmpted to do a copyvio check using an unavailable engine.
+
+    This might occur if, for example, an engine requires oauth2 but the package
+    couldn't be imported.
+
+    Raised by :py:meth:`Page.copyvio_check
+    <earwigbot.wiki.copyvios.CopyvioMixin.copyvio_check>` and
+    :py:meth:`Page.copyvio_compare
+    <earwigbot.wiki.copyvios.CopyvioMixin.copyvio_compare>`.
+    """
 
 class SearchQueryError(CopyvioCheckError):
-    """Some error ocurred while doing a search query."""
+    """Some error ocurred while doing a search query.
+
+    Raised by :py:meth:`Page.copyvio_check
+    <earwigbot.wiki.copyvios.CopyvioMixin.copyvio_check>` and
+    :py:meth:`Page.copyvio_compare
+    <earwigbot.wiki.copyvios.CopyvioMixin.copyvio_compare>`.
+    """
