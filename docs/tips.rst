@@ -37,8 +37,8 @@ Tips
 .. rubric:: Footnotes
 
 .. [1] In reality, all this does is call :py:meth:`bot.commands.load()
-       <earwigbot.commands.BaseCommand.load>` and
-       :py:meth:`bot.tasks.load() <earwigbot.tasks.BaseTask.load>`!
+       <earwigbot.managers._ResourceManager.load>` and
+       :py:meth:`bot.tasks.load() <earwigbot.managers._ResourceManager.load>`!
 
 .. _logging:         http://docs.python.org/library/logging.html
 .. _!git plugin:     https://github.com/earwig/earwigbot-plugins/blob/develop/commands/git.py
