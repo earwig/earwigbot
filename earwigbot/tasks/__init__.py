@@ -20,24 +20,24 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""
-EarwigBot's Bot Tasks
-
-This package provides the wiki bot "tasks" EarwigBot runs. This module contains
-the BaseTask class (import with `from earwigbot.tasks import BaseTask`),
-whereas the package contains various built-in tasks. Additional tasks can be
-installed as plugins in the bot's working directory.
-
-To run a task, use bot.tasks.start(name, **kwargs). **kwargs get passed to the
-Task's run() function.
-"""
-
 from earwigbot import wiki
 
 __all__ = ["BaseTask"]
 
 class BaseTask(object):
-    """A base class for bot tasks that edit Wikipedia."""
+    """
+    EarwigBot's Base Bot Task
+
+    This package provides built-in wiki bot "tasks" EarwigBot runs. Additional
+    tasks can be installed as plugins in the bot's working directory.
+
+    This class (import with `from earwigbot.tasks import BaseTask`) can be
+    subclassed to create custom bot tasks.
+
+    To run a task, use :py:meth:`bot.tasks.start(name, **kwargs)
+    <earwigbot.managers.TaskManager.start>`. ``**kwargs`` get passed to the
+    Task's run() function.
+    """
     name = None
     number = 0
 

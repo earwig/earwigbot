@@ -36,17 +36,20 @@ class User(object):
     information about the user, such as editcount and user rights, methods for
     returning the user's userpage and talkpage, etc.
 
+    Attributes:
+    name         -- the user's username
+    exists       -- True if the user exists, or False if they do not
+    userid       -- an integer ID representing the user
+    blockinfo    -- information about any current blocks on the user
+    groups       -- a list of the user's groups
+    rights       -- a list of the user's rights
+    editcount    -- the number of edits made by the user
+    registration -- the time the user registered as a time.struct_time
+    emailable    -- True if you can email the user, False if you cannot
+    gender       -- the user's gender ("male", "female", or "unknown")
+
     Public methods:
-    name         -- returns the user's username
-    exists       -- returns True if the user exists, False if they do not
-    userid       -- returns an integer ID representing the user
-    blockinfo    -- returns information about a current block on the user
-    groups       -- returns a list of the user's groups
-    rights       -- returns a list of the user's rights
-    editcount    -- returns the number of edits made by the user
-    registration -- returns the time the user registered as a time.struct_time
-    emailable    -- returns True if you can email the user, False if you cannot
-    gender       -- returns the user's gender ("male", "female", or "unknown")
+    reload       -- forcibly reload the user's attributes
     get_userpage -- returns a Page object representing the user's userpage
     get_talkpage -- returns a Page object representing the user's talkpage
     """

@@ -56,16 +56,18 @@ class Site(object):
     instances, tools.add_site() for adding new ones to config, and
     tools.del_site() for removing old ones from config, should suffice.
 
+    Attributes:
+    name    -- the site's name (or "wikiid"), like "enwiki"
+    project -- the site's project name, like "wikipedia"
+    lang    -- the site's language code, like "en"
+    domain  -- the site's web domain, like "en.wikipedia.org"
+
     Public methods:
-    name                 -- returns our name (or "wikiid"), like "enwiki"
-    project              -- returns our project name, like "wikipedia"
-    lang                 -- returns our language code, like "en"
-    domain               -- returns our web domain, like "en.wikipedia.org"
     api_query            -- does an API query with the given kwargs as params
     sql_query            -- does an SQL query and yields its results
     get_replag           -- returns the estimated database replication lag
     namespace_id_to_name -- given a namespace ID, returns associated name(s)
-    namespace_name_to_id -- given a namespace name, returns associated id
+    namespace_name_to_id -- given a namespace name, returns the associated ID
     get_page             -- returns a Page object for the given title
     get_category         -- returns a Category object for the given title
     get_user             -- returns a User object for the given username

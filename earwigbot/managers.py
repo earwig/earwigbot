@@ -163,8 +163,8 @@ class CommandManager(_ResourceManager):
             e = "Error executing command '{0}':"
             self.logger.exception(e.format(data.command))
 
-    def check(self, hook, data):
-        """Given an IRC event, check if there's anything we can respond to."""
+    def call(self, hook, data):
+        """Given a hook type and a Data object, respond appropriately."""
         self.lock.acquire()
         for command in self._resources.itervalues():
             if hook in command.hooks and self._wrap_check(command, data):

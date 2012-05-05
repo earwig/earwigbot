@@ -22,9 +22,10 @@
 
 """
 EarwigBot is a Python robot that edits Wikipedia and interacts with people over
-IRC. - http://earwig.github.com/earwig/earwigbot
+IRC. - https://github.com/earwig/earwigbot
 
-See README.md for a basic overview, or the docs/ directory for details.
+See README.rst for an overview, or the docs/ directory for details. This
+documentation is also available online at http://packages.python.org/earwigbot.
 """
 
 __author__ = "Ben Kurtovic"
@@ -35,17 +36,17 @@ __email__ = "ben.kurtovic@verizon.net"
 __release__ = False
 
 if not __release__:
-    def _add_git_commit_id_to_version(version):
+    def _add_git_commit_id_to_version_string(version):
         from git import Repo
         from os.path import split, dirname
         path = split(dirname(__file__))[0]
         commit_id = Repo(path).head.object.hexsha
         return version + ".git+" + commit_id[:8]
     try:
-        __version__ = _add_git_commit_id_to_version(__version__)
+        __version__ = _add_git_commit_id_to_version_string(__version__)
     except Exception:
         pass
     finally:
-        del _add_git_commit_id_to_version
+        del _add_git_commit_id_to_version_string
 
 from earwigbot import bot, commands, config, irc, managers, tasks, util, wiki
