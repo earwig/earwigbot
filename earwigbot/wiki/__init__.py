@@ -37,7 +37,6 @@ Category, and User) needs.
 
 from earwigbot.wiki.category import *
 from earwigbot.wiki.constants import *
-from earwigbot.wiki.exceptions import *
 from earwigbot.wiki.page import *
 from earwigbot.wiki.site import *
 from earwigbot.wiki.sitesdb import *

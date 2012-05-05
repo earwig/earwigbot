@@ -35,7 +35,8 @@ earwigbot.wiki (e.g. `earwigbot.wiki.USER_AGENT`).
 # Default User Agent when making API queries:
 from earwigbot import __version__ as _v
 from platform import python_version as _p
-USER_AGENT = "EarwigBot/{0} (Python/{1}; https://github.com/earwig/earwigbot)".format(_v, _p())
+USER_AGENT = "EarwigBot/{0} (Python/{1}; https://github.com/earwig/earwigbot)"
+USER_AGENT = USER_AGENT.format(_v, _p())
 del _v, _p
 
 # Default namespace IDs:

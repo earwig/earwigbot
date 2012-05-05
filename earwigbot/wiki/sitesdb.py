@@ -28,7 +28,7 @@ import stat
 import sqlite3 as sqlite
 
 from earwigbot import __version__
-from earwigbot.wiki.exceptions import SiteNotFoundError
+from earwigbot.exceptions import SiteNotFoundError
 from earwigbot.wiki.site import Site
 
 __all__ = ["SitesDB"]

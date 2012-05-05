@@ -21,34 +21,38 @@
 # SOFTWARE.
 
 """
-EarwigBot's Wiki Toolset: Exceptions
+EarwigBot Exceptions
 
-This module contains all exceptions used by the wiki package. There are a lot:
+This module contains all exceptions used by EarwigBot::
 
--- WikiToolsetError
-        -- SiteNotFoundError
-        -- SiteAPIError
-        -- LoginError
-        -- NamespaceNotFoundError
-        -- PageNotFoundError
-        -- InvalidPageError
-        -- RedirectError
-        -- UserNotFoundError
-        -- EditError
-                -- PermissionsError
-                -- EditConflictError
-                -- NoContentError
-                -- ContentTooBigError
-                -- SpamDetectedError
-                -- FilteredError
-        -- SQLError
-        -- CopyvioCheckError
-                -- UnknownSearchEngineError
-                -- UnsupportedSearchEngineError
-                -- SearchQueryError
+EarwigBotError
+ +-- WikiToolsetError
+      +-- SiteNotFoundError
+      +-- SiteAPIError
+      +-- LoginError
+      +-- NamespaceNotFoundError
+      +-- PageNotFoundError
+      +-- InvalidPageError
+      +-- RedirectError
+      +-- UserNotFoundError
+      +-- EditError
+      |    +-- PermissionsError
+      |    +-- EditConflictError
+      |    +-- NoContentError
+      |    +-- ContentTooBigError
+      |    +-- SpamDetectedError
+      |    +-- FilteredError
+      +-- SQLError
+      +-- CopyvioCheckError
+           +-- UnknownSearchEngineError
+           +-- UnsupportedSearchEngineError
+           +-- SearchQueryError
 """
 
-class WikiToolsetError(Exception):
+class EarwigBotErorr(Exception):
+    """Base exception class for errors in EarwigBot."""
+
+class WikiToolsetError(EarwigBotErorr):
     """Base exception class for errors in the Wiki Toolset."""
 
 class SiteNotFoundError(WikiToolsetError):
