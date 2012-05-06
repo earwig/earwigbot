@@ -160,7 +160,7 @@ class Site(object):
                 self._login(login)
 
     def __repr__(self):
-        """Returns the canonical string representation of the Site."""
+        """Return the canonical string representation of the Site."""
         res = ", ".join((
             "Site(name={_name!r}", "project={_project!r}", "lang={_lang!r}",
             "base_url={_base_url!r}", "article_path={_article_path!r}",
@@ -179,7 +179,7 @@ class Site(object):
         return res.format(login, cookies, agent, **self.__dict__)
 
     def __str__(self):
-        """Returns a nice string representation of the Site."""
+        """Return a nice string representation of the Site."""
         res = "<Site {0} ({1}:{2}) at {3}>"
         return res.format(self.name, self.project, self.lang, self.domain)
 
@@ -704,7 +704,7 @@ class Site(object):
         return Page(self, title, follow_redirects)
 
     def get_category(self, catname, follow_redirects=False):
-        """Returns a :py:class:`Category` object for the given category name.
+        """Return a :py:class:`Category` object for the given category name.
 
         *catname* should be given *without* a namespace prefix. This method is
         really just shorthand for :py:meth:`get_page("Category:" + catname)
@@ -715,7 +715,7 @@ class Site(object):
         return Category(self, pagename, follow_redirects)
 
     def get_user(self, username=None):
-        """Returns a :py:class:`User` object for the given username.
+        """Return a :py:class:`User` object for the given username.
 
         If *username* is left as ``None``, then a
         :py:class:`~earwigbot.wiki.user.User` object representing the currently

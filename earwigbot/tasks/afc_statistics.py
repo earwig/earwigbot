@@ -718,7 +718,7 @@ class Task(BaseTask):
         if chart in [self.CHART_PEND, self.CHART_DRAFT] and s_user:
             submitter = self.site.get_user(s_user)
             try:
-                if submitter.blockinfo():
+                if submitter.blockinfo:
                     notes += "|nb=1"  # Submitter is blocked
             except wiki.UserNotFoundError:  # Likely an IP
                 pass

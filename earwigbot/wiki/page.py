@@ -123,12 +123,12 @@ class Page(CopyrightMixin):
             self._is_talkpage = self._namespace % 2 == 1
 
     def __repr__(self):
-        """Returns the canonical string representation of the Page."""
+        """Return the canonical string representation of the Page."""
         res = "Page(title={0!r}, follow_redirects={1!r}, site={2!r})"
         return res.format(self._title, self._follow_redirects, self._site)
 
     def __str__(self):
-        """Returns a nice string representation of the Page."""
+        """Return a nice string representation of the Page."""
         return '<Page "{0}" of {1}>'.format(self.title, str(self._site))
 
     def _assert_validity(self):
@@ -157,7 +157,7 @@ class Page(CopyrightMixin):
             raise exceptions.PageNotFoundError(e)
 
     def _load(self):
-        """Calls _load_attributes() and follows redirects if we're supposed to.
+        """Call _load_attributes() and follows redirects if we're supposed to.
 
         This method will only follow redirects if follow_redirects=True was
         passed to __init__() (perhaps indirectly passed by site.get_page()).
@@ -180,7 +180,7 @@ class Page(CopyrightMixin):
             self._load_attributes()
 
     def _load_attributes(self, result=None):
-        """Loads various data from the API in a single query.
+        """Load various data from the API in a single query.
 
         Loads self._title, ._exists, ._is_redirect, ._pageid, ._fullurl,
         ._protection, ._namespace, ._is_talkpage, ._creator, ._lastrevid,
@@ -245,7 +245,7 @@ class Page(CopyrightMixin):
             pass
 
     def _load_content(self, result=None):
-        """Loads current page content from the API.
+        """Load current page content from the API.
 
         If *result* is provided, we'll pretend that is the result of an API
         query and try to get content from that. Otherwise, we'll do an API
@@ -557,7 +557,7 @@ class Page(CopyrightMixin):
             self._load_content()
 
     def toggle_talk(self, follow_redirects=None):
-        """Returns a content page's talk page, or vice versa.
+        """Return a content page's talk page, or vice versa.
 
         The title of the new page is determined by namespace logic, not API
         queries. We won't make any API queries on our own.
@@ -601,7 +601,7 @@ class Page(CopyrightMixin):
         return Page(self._site, new_title, follow_redirects)
 
     def get(self):
-        """Returns page content, which is cached if you try to call get again.
+        """Return page content, which is cached if you try to call get again.
 
         Raises InvalidPageError or PageNotFoundError if the page name is
         invalid or the page does not exist, respectively.
@@ -675,7 +675,7 @@ class Page(CopyrightMixin):
         return self._site.get_user(self._creator)
 
     def edit(self, text, summary, minor=False, bot=True, force=False):
-        """Replaces the page's content or creates a new page.
+        """Replace the page's content or creates a new page.
 
         *text* is the new page content, with *summary* as the edit summary.
         If *minor* is ``True``, the edit will be marked as minor. If *bot* is
@@ -690,7 +690,7 @@ class Page(CopyrightMixin):
                    force=force)
 
     def add_section(self, text, title, minor=False, bot=True, force=False):
-        """Adds a new section to the bottom of the page.
+        """Add a new section to the bottom of the page.
 
         The arguments for this are the same as those for :py:meth:`edit`, but
         instead of providing a summary, you provide a section title.

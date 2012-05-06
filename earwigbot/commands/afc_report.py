@@ -78,7 +78,7 @@ class Command(BaseCommand):
         short = self.statistics.get_short_title(page.title)
         status = self.get_status(page)
         user = self.site.get_user(page.creator())
-        user_name = user.name()
+        user_name = user.name
         user_url = user.get_talkpage().url
 
         msg1 = "AfC submission report for \x0302{0}\x0301 ({1}):"

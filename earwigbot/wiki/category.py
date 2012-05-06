@@ -43,12 +43,12 @@ class Category(Page):
     """
 
     def __repr__(self):
-        """Returns the canonical string representation of the Category."""
+        """Return the canonical string representation of the Category."""
         res = "Category(title={0!r}, follow_redirects={1!r}, site={2!r})"
         return res.format(self._title, self._follow_redirects, self._site)
 
     def __str__(self):
-        """Returns a nice string representation of the Category."""
+        """Return a nice string representation of the Category."""
         return '<Category "{0}" of {1}>'.format(self.title, str(self._site))
 
     def _get_members_via_sql(self, limit):
@@ -87,7 +87,7 @@ class Category(Page):
         return [member["title"] for member in members]
 
     def get_members(self, use_sql=False, limit=None):
-        """Returns a list of page titles in the category.
+        """Return a list of page titles in the category.
 
         If *use_sql* is ``True``, we will use a SQL query instead of the API.
         Pages will be returned as tuples of ``(title, pageid)`` instead of just

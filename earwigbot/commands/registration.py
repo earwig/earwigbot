@@ -45,7 +45,7 @@ class Command(BaseCommand):
         user = site.get_user(name)
 
         try:
-            reg = user.registration()
+            reg = user.registration
         except wiki.UserNotFoundError:
             msg = "the user \x0302{0}\x0301 does not exist."
             self.reply(data, msg.format(name))
@@ -54,14 +54,13 @@ class Command(BaseCommand):
         date = time.strftime("%b %d, %Y at %H:%M:%S UTC", reg)
         age = self.get_diff(time.mktime(reg), time.mktime(time.gmtime()))
 
-        g = user.gender()
-        if g == "male":
+        if user.gender == "male":
             gender = "He's"
-        elif g == "female":
+        elif user.gender == "female":
             gender = "She's"
         else:
             gender = "They're"
-        
+
         msg = "\x0302{0}\x0301 registered on {1}. {2} {3} old."
         self.reply(data, msg.format(name, date, gender, age))
 
