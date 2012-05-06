@@ -50,11 +50,18 @@ class Site(object):
     """
     **EarwigBot's Wiki Toolset: Site Class**
 
-    Represents a Site, with support for API queries and returning Pages, Users,
-    and Categories. The constructor takes a bunch of arguments and you probably
-    won't need to call it directly, rather tools.get_site() for returning Site
-    instances, tools.add_site() for adding new ones to config, and
-    tools.del_site() for removing old ones from config, should suffice.
+    Represents a site, with support for API queries and returning
+    :py:class:`~earwigbot.wiki.page.Page`,
+    :py:class:`~earwigbot.wiki.user.User`,
+    and :py:class:`~earwigbot.wiki.category.Category` objects. The constructor
+    takes a bunch of arguments and you probably won't need to call it directly,
+    rather :py:meth:`wiki.get_site() <earwigbot.wiki.sitesdb.SitesDB.get_site>`
+    for returning :py:class:`Site`
+    instances, :py:meth:`wiki.add_site()
+    <earwigbot.wiki.sitesdb.SitesDB.add_site>` for adding new ones to our
+    database, and :py:meth:`wiki.remove_site()
+    <earwigbot.wiki.sitesdb.SitesDB.remove_site>` for removing old ones from
+    our database, should suffice.
 
     *Attributes:*
 

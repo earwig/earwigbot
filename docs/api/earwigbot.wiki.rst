@@ -7,7 +7,6 @@ wiki Package
 .. automodule:: earwigbot.wiki
     :members:
     :undoc-members:
-    :show-inheritance:
 
 :mod:`category` Module
 ----------------------
@@ -15,7 +14,6 @@ wiki Package
 .. automodule:: earwigbot.wiki.category
     :members:
     :undoc-members:
-    :show-inheritance:
 
 :mod:`constants` Module
 -----------------------
@@ -23,7 +21,6 @@ wiki Package
 .. automodule:: earwigbot.wiki.constants
     :members:
     :undoc-members:
-    :show-inheritance:
 
 :mod:`copyright` Module
 -----------------------
@@ -31,7 +28,6 @@ wiki Package
 .. automodule:: earwigbot.wiki.copyright
     :members:
     :undoc-members:
-    :show-inheritance:
 
 :mod:`page` Module
 ------------------
@@ -47,7 +43,6 @@ wiki Package
 .. automodule:: earwigbot.wiki.site
     :members:
     :undoc-members:
-    :show-inheritance:
 
 :mod:`sitesdb` Module
 ---------------------
@@ -55,7 +50,6 @@ wiki Package
 .. automodule:: earwigbot.wiki.sitesdb
     :members:
     :undoc-members:
-    :show-inheritance:
 
 :mod:`user` Module
 ------------------
@@ -63,5 +57,3 @@ wiki Package
 .. automodule:: earwigbot.wiki.user
     :members:
     :undoc-members:
-    :show-inheritance:
-
