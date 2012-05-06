@@ -37,7 +37,7 @@ class User(object):
     editcount and user rights, methods for returning the user's userpage and
     talkpage, etc.
 
-    Attributes:
+    *Attributes:*
 
     - :py:attr:`name`:         the user's username
     - :py:attr:`exists`:       ``True`` if the user exists, else ``False``
@@ -50,7 +50,7 @@ class User(object):
     - :py:attr:`emailable`:    ``True`` if you can email the user, or ``False``
     - :py:attr:`gender`:       the user's gender ("male"/"female"/"unknown")
 
-    Public methods:
+    *Public methods:*
 
     - :py:meth:`reload`:       forcibly reloads the user's attributes
     - :py:meth:`get_userpage`: returns a Page object representing the user's
