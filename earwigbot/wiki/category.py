@@ -49,14 +49,14 @@ class Category(Page):
 
     def __str__(self):
         """Returns a nice string representation of the Category."""
-        return '<Category "{0}" of {1}>'.format(self.title(), str(self._site))
+        return '<Category "{0}" of {1}>'.format(self.title, str(self._site))
 
     def _get_members_via_sql(self, limit):
         """Return a list of tuples of (title, pageid) in the category."""
         query = """SELECT page_title, page_namespace, page_id FROM page
                    JOIN categorylinks ON page_id = cl_from
                    WHERE cl_to = ?"""
-        title = self.title().replace(" ", "_").split(":", 1)[1]
+        title = self.title.replace(" ", "_").split(":", 1)[1]
 
         if limit:
             query += " LIMIT ?"

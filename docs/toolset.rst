@@ -117,6 +117,8 @@ Create :py:class:`earwigbot.wiki.Page <earwigbot.wiki.page.Page>` objects with
 :py:meth:`user.get_talkpage() <earwigbot.wiki.user.User.get_talkpage>`. They
 provide the following attributes:
 
+- :py:attr:`~earwigbot.wiki.page.Page.site`: the page's corresponding
+  :py:class:`~earwigbot.wiki.site.Site` object
 - :py:attr:`~earwigbot.wiki.page.Page.title`: the page's title, or pagename
 - :py:attr:`~earwigbot.wiki.page.Page.exists`: whether the page exists
 - :py:attr:`~earwigbot.wiki.page.Page.pageid`: an integer ID representing the

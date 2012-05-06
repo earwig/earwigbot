@@ -41,6 +41,7 @@ class Page(CopyrightMixin):
 
     *Attributes:*
 
+    - :py:attr:`site`:        the page's corresponding Site object
     - :py:attr:`title`:       the page's title, or pagename
     - :py:attr:`exists`:      whether the page exists
     - :py:attr:`pageid`:      an integer ID representing the page
@@ -128,9 +129,9 @@ class Page(CopyrightMixin):
 
     def __str__(self):
         """Returns a nice string representation of the Page."""
-        return '<Page "{0}" of {1}>'.format(self.title(), str(self._site))
+        return '<Page "{0}" of {1}>'.format(self.title, str(self._site))
 
-    def _force_validity(self):
+    def _assert_validity(self):
         """Used to ensure that our page's title is valid.
 
         If this method is called when our page is not valid (and after
@@ -143,14 +144,14 @@ class Page(CopyrightMixin):
             e = "Page '{0}' is invalid.".format(self._title)
             raise exceptions.InvalidPageError(e)
 
-    def _force_existence(self):
+    def _assert_existence(self):
         """Used to ensure that our page exists.
 
         If this method is called when our page doesn't exist (and after
         _load_attributes() has been called), PageNotFoundError will be raised.
-        It will also call _force_validity() beforehand.
+        It will also call _assert_validity() beforehand.
         """
-        self._force_validity()
+        self._assert_validity()
         if self._exists == 2:
             e = "Page '{0}' does not exist.".format(self._title)
             raise exceptions.PageNotFoundError(e)
@@ -267,7 +268,7 @@ class Page(CopyrightMixin):
             # self._load_attributes(). In that case, some of our attributes are
             # outdated, so force another self._load_attributes():
             self._load_attributes()
-            self._force_existence()
+            self._assert_existence()
 
     def _edit(self, params=None, text=None, summary=None, minor=None, bot=None,
               force=None, section=None, captcha_id=None, captcha_word=None,
@@ -290,7 +291,7 @@ class Page(CopyrightMixin):
             raise exceptions.PermissionsError(e)
 
         # Weed out invalid pages before we get too far:
-        self._force_validity()
+        self._assert_validity()
 
         # Build our API query string:
         if not params:
@@ -430,6 +431,11 @@ class Page(CopyrightMixin):
         raise exceptions.PermissionsError(e)
 
     @property
+    def site(self):
+        """The Page's corresponding Site object."""
+        return self._site
+
+    @property
     def title(self):
         """The Page's title, or "pagename".
 
@@ -474,7 +480,7 @@ class Page(CopyrightMixin):
         """
         if self._exists == 0:
             self._load()
-        self._force_existence()  # Missing pages do not have IDs
+        self._assert_existence()  # Missing pages do not have IDs
         return self._pageid
 
     @property
@@ -514,7 +520,7 @@ class Page(CopyrightMixin):
         """
         if self._exists == 0:
             self._load()
-        self._force_validity()  # Invalid pages cannot be protected
+        self._assert_validity()  # Invalid pages cannot be protected
         return self._protection
 
     @property
@@ -608,7 +614,7 @@ class Page(CopyrightMixin):
                       "intoken": "edit", "rvprop": "content|timestamp"}
             result = self._site._api_query(params)
             self._load_attributes(result=result)
-            self._force_existence()
+            self._assert_existence()
             self._load_content(result=result)
 
             # Follow redirects if we're told to:
@@ -623,7 +629,7 @@ class Page(CopyrightMixin):
         # Make sure we're dealing with a real page here. This may be outdated
         # if the page was deleted since we last called self._load_attributes(),
         # but self._load_content() can handle that:
-        self._force_existence()
+        self._assert_existence()
 
         if self._content is None:
             self._load_content()
@@ -662,10 +668,10 @@ class Page(CopyrightMixin):
         """
         if self._exists == 0:
             self._load()
-        self._force_existence()
+        self._assert_existence()
         if not self._creator:
             self._load()
-            self._force_existence()
+            self._assert_existence()
         return self._site.get_user(self._creator)
 
     def edit(self, text, summary, minor=False, bot=True, force=False):

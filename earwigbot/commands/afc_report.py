@@ -70,16 +70,16 @@ class Command(BaseCommand):
 
     def get_page(self, title):
         page = self.site.get_page(title, follow_redirects=False)
-        if page.exists()[0]:
+        if page.exists[0]:
             return page
 
     def report(self, page):
-        url = page.url().replace("en.wikipedia.org/wiki", "enwp.org")
-        short = self.statistics.get_short_title(page.title())
+        url = page.url.replace("en.wikipedia.org/wiki", "enwp.org")
+        short = self.statistics.get_short_title(page.title)
         status = self.get_status(page)
         user = self.site.get_user(page.creator())
         user_name = user.name()
-        user_url = user.get_talkpage().url()
+        user_url = user.get_talkpage().url
 
         msg1 = "AfC submission report for \x0302{0}\x0301 ({1}):"
         msg2 = "Status: \x0303{0}\x0301"
@@ -92,9 +92,9 @@ class Command(BaseCommand):
         self.say(self.data.chan, msg3.format(user_name, user_url))
 
     def get_status(self, page):
-        if page.is_redirect():
+        if page.is_redirect:
             target = page.get_redirect_target()
-            if self.site.get_page(target).namespace() == wiki.NS_MAIN:
+            if self.site.get_page(target).namespace == wiki.NS_MAIN:
                 return "accepted"
             return "redirect"
 

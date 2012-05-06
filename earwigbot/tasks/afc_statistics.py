@@ -129,7 +129,7 @@ class Task(BaseTask):
                          "<!-- sig begin -->~~~ at ~~~~~<!-- sig end -->",
                          newtext)
         page.edit(newtext, summary, minor=True, bot=True)
-        self.logger.info(u"Chart saved to [[{0}]]".format(page.title()))
+        self.logger.info(u"Chart saved to [[{0}]]".format(page.title))
 
     def compile_charts(self):
         """Compile and return all statistics information from our local db."""
@@ -332,7 +332,7 @@ class Task(BaseTask):
             self.logger.error(msg)
             return
 
-        namespace = self.site.get_page(title).namespace()
+        namespace = self.site.get_page(title).namespace
         status, chart = self.get_status_and_chart(content, namespace)
         if chart == self.CHART_NONE:
             msg = u"Could not find a status for [[{0}]]".format(title)
@@ -364,7 +364,7 @@ class Task(BaseTask):
             self.logger.error(msg)
             return
 
-        namespace = self.site.get_page(title).namespace()
+        namespace = self.site.get_page(title).namespace
         status, chart = self.get_status_and_chart(content, namespace)
         if chart == self.CHART_NONE:
             self.untrack_page(cursor, pageid)
