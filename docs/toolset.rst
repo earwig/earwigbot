@@ -133,7 +133,7 @@ provide the following attributes:
 
 and the following methods:
 
-- :py:meth:`~earwigbot.wiki.page.Page.reload`: forcibly reload the page's
+- :py:meth:`~earwigbot.wiki.page.Page.reload`: forcibly reloads the page's
   attributes (emphasis on *reload* - this is only necessary if there is reason
   to believe they have changed)
 - :py:meth:`toggle_talk(...) <earwigbot.wiki.page.Page.toggle_talk>`: returns a
@@ -198,7 +198,7 @@ provide the following attributes:
 
 and the following methods:
 
-- :py:meth:`~earwigbot.wiki.user.User.reload`: forcibly reload the user's
+- :py:meth:`~earwigbot.wiki.user.User.reload`: forcibly reloads the user's
   attributes (emphasis on *reload* - this is only necessary if there is reason
   to believe they have changed)
 - :py:meth:`~earwigbot.wiki.user.User.get_userpage`: returns a

@@ -32,32 +32,41 @@ __all__ = ["Page"]
 
 class Page(CopyrightMixin):
     """
-    EarwigBot's Wiki Toolset: Page Class
+    **EarwigBot's Wiki Toolset: Page Class**
 
-    Represents a Page on a given Site. Has methods for getting information
-    about the page, getting page content, and so on. Category is a subclass of
-    Page with additional methods.
+    Represents a page on a given :py:class:`~earwigbot.wiki.site.Site`. Has
+    methods for getting information about the page, getting page content, and
+    so on. :py:class:`~earwigbot.wiki.category.Category` is a subclass of
+    :py:class:`Page` with additional methods.
 
-    Attributes:
-    title       -- the page's title, or pagename
-    exists      -- whether the page exists
-    pageid      -- an integer ID representing the page
-    url         -- the page's URL
-    namespace   -- the page's namespace as an integer
-    protection  -- the page's current protection status
-    is_talkpage -- True if the page is a talkpage, else False
-    is_redirect -- True if the page is a redirect, else False
+    *Attributes:*
 
-    Public methods:
-    reload              -- forcibly reload the page's attributes
-    toggle_talk         -- returns a content page's talk page, or vice versa
-    get                 -- returns page content
-    get_redirect_target -- if the page is a redirect, returns its destination
-    get_creator         -- returns a User object representing the first person
-                           to edit the page
-    edit                -- replaces the page's content or creates a new page
-    add_section         -- adds a new section at the bottom of the page
-    copyvio_check       -- checks the page for copyright violations
+    - :py:attr:`title`:       the page's title, or pagename
+    - :py:attr:`exists`:      whether the page exists
+    - :py:attr:`pageid`:      an integer ID representing the page
+    - :py:attr:`url`:         the page's URL
+    - :py:attr:`namespace`:   the page's namespace as an integer
+    - :py:attr:`protection`:  the page's current protection status
+    - :py:attr:`is_talkpage`: ``True`` if this is a talkpage, else ``False``
+    - :py:attr:`is_redirect`: ``True`` if this is a redirect, else ``False``
+
+    *Public methods:*
+
+    - :py:meth:`reload`:      forcibly reloads the page's attributes
+    - :py:meth:`toggle_talk`: returns a content page's talk page, or vice versa
+    - :py:meth:`get`:         returns the page's content
+    - :py:meth:`get_redirect_target`: returns the page's destination if it is a
+      redirect
+    - :py:meth:`get_creator`: returns a User object representing the first
+      person to edit the page
+    - :py:meth:`edit`:        replaces the page's content or creates a new page
+    - :py:meth:`add_section`: adds a new section at the bottom of the page
+
+    - :py:meth:`~earwigbot.wiki.copyvios.CopyrightMixin.copyvio_check`:
+      checks the page for copyright violations
+    - :py:meth:`~earwigbot.wiki.copyvios.CopyrightMixin.copyvio_compare`:
+      checks the page for like :py:meth:`copyvio_check`, but against a specific
+      URL
     """
 
     re_redirect = "^\s*\#\s*redirect\s*\[\[(.*?)\]\]"
@@ -69,10 +78,10 @@ class Page(CopyrightMixin):
         and whether or not to follow redirects (optional, defaults to False).
 
         As with User, site.get_page() is preferred. Site's method has support
-        for a default `follow_redirects` value in our config, while __init__
+        for a default *follow_redirects* value in our config, while __init__()
         always defaults to False.
 
-        __init__ will not do any API queries, but it will use basic namespace
+        __init__() will not do any API queries, but it will use basic namespace
         logic to determine our namespace ID and if we are a talkpage.
         """
         super(Page, self).__init__(site)
@@ -146,7 +155,7 @@ class Page(CopyrightMixin):
             e = "Page '{0}' does not exist.".format(self._title)
             raise exceptions.PageNotFoundError(e)
 
-    def _load_wrapper(self):
+    def _load(self):
         """Calls _load_attributes() and follows redirects if we're supposed to.
 
         This method will only follow redirects if follow_redirects=True was
@@ -241,8 +250,8 @@ class Page(CopyrightMixin):
         query and try to get content from that. Otherwise, we'll do an API
         query on our own.
 
-        Don't call this directly, ever - use .get(force=True) if you want to
-        force content reloading.
+        Don't call this directly, ever - use reload() followed by get() if you
+        want to force content reloading.
         """
         if not result:
             params = {"action": "query", "prop": "revisions", "rvlimit": 1,
@@ -420,28 +429,28 @@ class Page(CopyrightMixin):
         e = "AssertEdit: assertion '{0}' failed.".format(assertion)
         raise exceptions.PermissionsError(e)
 
-    def title(self, force=False):
-        """Returns the Page's title, or pagename.
+    @property
+    def title(self):
+        """The Page's title, or "pagename".
 
-        This won't do any API queries on its own unless force is True, in which
-        case the title will be forcibly reloaded from the API (normalizing it,
-        and following redirects if follow_redirects=True was passed to
-        __init__()). Any other methods that do API queries will reload title on
-        their own, however, like exists() and get().
+        This won't do any API queries on its own. Any other attributes or
+        methods that do API queries will reload the title, however, like
+        :py:attr:`exists` and :py:meth:`get`, potentially "normalizing" it or
+        following redirects if :py:attr:`self._follow_redirects` is ``True``.
         """
-        if force:
-            self._load_wrapper()
         return self._title
 
-    def exists(self, force=False):
-        """Returns information about whether the Page exists or not.
+    @property
+    def exists(self):
+        """Information about whether the Page exists or not.
 
-        The returned "information" is a tuple with two items. The first is a
-        bool, either True if the page exists or False if it does not. The
-        second is a string giving more information, either "invalid", (title
-        is invalid, e.g. it contains "["), "missing", or "exists".
+        The "information" is a tuple with two items. The first is a bool,
+        either ``True`` if the page exists or ``False`` if it does not. The
+        second is a string giving more information, either ``"invalid"``,
+        (title is invalid, e.g. it contains ``"["``), ``"missing"``, or
+        ``"exists"``.
 
-        Makes an API query if force is True or if we haven't already made one.
+        Makes an API query only if we haven't already made one.
         """
         cases = {
             0: (None, "unknown"),
@@ -449,11 +458,12 @@ class Page(CopyrightMixin):
             2: (False, "missing"),
             3: (True, "exists"),
         }
-        if self._exists == 0 or force:
-            self._load_wrapper()
+        if self._exists == 0:
+            self._load()
         return cases[self._exists]
 
-    def pageid(self, force=False):
+    @property
+    def pageid(self):
         """Returns an integer ID representing the Page.
 
         Makes an API query if force is True or if we haven't already made one.
@@ -461,20 +471,19 @@ class Page(CopyrightMixin):
         Raises InvalidPageError or PageNotFoundError if the page name is
         invalid or the page does not exist, respectively.
         """
-        if self._exists == 0 or force:
-            self._load_wrapper()
-        self._force_existence()  # missing pages do not have IDs
+        if self._exists == 0:
+            self._load()
+        self._force_existence()  # Missing pages do not have IDs
         return self._pageid
 
-    def url(self, force=False):
+    @property
+    def url(self):
         """Returns the page's URL.
 
         Like title(), this won't do any API queries on its own unless force is
         True. If the API was never queried for this page, we will attempt to
         determine the URL ourselves based on the title.
         """
-        if force:
-            self._load_wrapper()
         if self._fullurl:
             return self._fullurl
         else:
@@ -482,18 +491,18 @@ class Page(CopyrightMixin):
             path = self._site._article_path.replace("$1", slug)
             return ''.join((self._site._base_url, path))
 
-    def namespace(self, force=False):
+    @property
+    def namespace(self):
         """Returns the page's namespace ID (an integer).
 
         Like title(), this won't do any API queries on its own unless force is
         True. If the API was never queried for this page, we will attempt to
         determine the namespace ourselves based on the title.
         """
-        if force:
-            self._load_wrapper()
         return self._namespace
 
-    def protection(self, force=False):
+    @property
+    def protection(self):
         """Returns the page's current protection status.
 
         Makes an API query if force is True or if we haven't already made one.
@@ -501,55 +510,45 @@ class Page(CopyrightMixin):
         Raises InvalidPageError if the page name is invalid. Will not raise an
         error if the page is missing because those can still be protected.
         """
-        if self._exists == 0 or force:
-            self._load_wrapper()
+        if self._exists == 0:
+            self._load()
         self._force_validity()  # invalid pages cannot be protected
         return self._protection
 
-    def creator(self, force=False):
-        """Returns the page's creator (i.e., the first user to edit the page).
-
-        Makes an API query if force is True or if we haven't already made one.
-        Normally, we can get the creator along with everything else (except
-        content) in self._load_attributes(). However, due to a limitation in
-        the API (can't get the editor of one revision and the content of
-        another at both ends of the history), if our other attributes were only
-        loaded from get(), we'll have to do another API query. This is done
-        by calling ourselves again with force=True.
-
-        Raises InvalidPageError or PageNotFoundError if the page name is
-        invalid or the page does not exist, respectively.
-        """
-        if self._exists == 0 or force:
-            self._load_wrapper()
-        self._force_existence()
-        if not self._creator and not force:
-            self.creator(force=True)
-        return self._creator
-
-    def is_talkpage(self, force=False):
+    @property
+    def is_talkpage(self):
         """Returns True if the page is a talkpage, else False.
 
         Like title(), this won't do any API queries on its own unless force is
         True. If the API was never queried for this page, we will attempt to
         determine the talkpage status ourselves based on its namespace ID.
         """
-        if force:
-            self._load_wrapper()
         return self._is_talkpage
 
-    def is_redirect(self, force=False):
+    @property
+    def is_redirect(self):
         """Returns True if the page is a redirect, else False.
 
         Makes an API query if force is True or if we haven't already made one.
 
         We will return False even if the page does not exist or is invalid.
         """
-        if self._exists == 0 or force:
-            self._load_wrapper()
+        if self._exists == 0:
+            self._load()
         return self._is_redirect
 
-    def toggle_talk(self, force=False, follow_redirects=None):
+    def reload(self):
+        """Forcibly reload the page's attributes.
+
+        Emphasis on *reload*: this is only necessary if there is reason to
+        believe they have changed.
+        """
+        self._load()
+        if self._content is not None:
+            # Only reload content if it has already been loaded:
+            self._load_content()
+
+    def toggle_talk(self, follow_redirects=None):
         """Returns a content page's talk page, or vice versa.
 
         The title of the new page is determined by namespace logic, not API
@@ -565,8 +564,6 @@ class Page(CopyrightMixin):
         page (in the Special: or Media: namespaces), but we won't raise an
         exception if our page is otherwise missing or invalid.
         """
-        if force:
-            self._load_wrapper()
         if self._namespace < 0:
             ns = self._site.namespace_id_to_name(self._namespace)
             e = "Pages in the {0} namespace can't have talk pages.".format(ns)
@@ -595,17 +592,13 @@ class Page(CopyrightMixin):
             follow_redirects = self._follow_redirects
         return Page(self._site, new_title, follow_redirects)
 
-    def get(self, force=False):
+    def get(self):
         """Returns page content, which is cached if you try to call get again.
-
-        Use `force` to forcibly reload page content even if we've already
-        loaded some. This is good if you want to edit a page multiple times,
-        and you want to get updated content before you make your second edit.
 
         Raises InvalidPageError or PageNotFoundError if the page name is
         invalid or the page does not exist, respectively.
         """
-        if force or self._exists == 0:
+        if self._exists == 0:
             # Kill two birds with one stone by doing an API query for both our
             # attributes and our page content:
             params = {"action": "query", "rvlimit": 1, "titles": self._title,
@@ -619,9 +612,9 @@ class Page(CopyrightMixin):
             # Follow redirects if we're told to:
             if self._keep_following and self._is_redirect:
                 self._title = self.get_redirect_target()
-                self._keep_following = False  # don't follow double redirects
-                self._content = None  # reset the content we just loaded
-                self.get(force=True)
+                self._keep_following = False  # Don't follow double redirects
+                self._exists = 0  # Force another API query
+                self.get()
 
             return self._content
 
@@ -635,22 +628,40 @@ class Page(CopyrightMixin):
 
         return self._content
 
-    def get_redirect_target(self, force=False):
+    def get_redirect_target(self):
         """If the page is a redirect, returns its destination.
-
-        Use `force` to forcibly reload content even if we've already loaded
-        some before. Note that this method calls get() for page content.
 
         Raises InvalidPageError or PageNotFoundError if the page name is
         invalid or the page does not exist, respectively. Raises RedirectError
         if the page is not a redirect.
         """
-        content = self.get(force)
+        content = self.get()
         try:
             return re.findall(self.re_redirect, content, flags=re.I)[0]
         except IndexError:
             e = "The page does not appear to have a redirect target."
             raise exceptions.RedirectError(e)
+
+    def get_creator(self):
+        """Returns the page's creator (i.e., the first user to edit the page).
+
+        Makes an API query if force is True or if we haven't already made one.
+        Normally, we can get the creator along with everything else (except
+        content) in self._load_attributes(). However, due to a limitation in
+        the API (can't get the editor of one revision and the content of
+        another at both ends of the history), if our other attributes were only
+        loaded from get(), we'll have to do another API query.
+
+        Raises InvalidPageError or PageNotFoundError if the page name is
+        invalid or the page does not exist, respectively.
+        """
+        if self._exists == 0:
+            self._load()
+        self._force_existence()
+        if not self._creator:
+            self._load()
+            self._force_existence()
+        return self._creator
 
     def edit(self, text, summary, minor=False, bot=True, force=False):
         """Replaces the page's content or creates a new page.
