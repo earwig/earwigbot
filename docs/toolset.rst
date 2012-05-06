@@ -117,6 +117,8 @@ Create :py:class:`earwigbot.wiki.Page <earwigbot.wiki.page.Page>` objects with
 :py:meth:`user.get_talkpage() <earwigbot.wiki.user.User.get_talkpage>`. They
 provide the following attributes:
 
+- :py:attr:`~earwigbot.wiki.page.Page.site`: the page's corresponding
+  :py:class:`~earwigbot.wiki.site.Site` object
 - :py:attr:`~earwigbot.wiki.page.Page.title`: the page's title, or pagename
 - :py:attr:`~earwigbot.wiki.page.Page.exists`: whether the page exists
 - :py:attr:`~earwigbot.wiki.page.Page.pageid`: an integer ID representing the
@@ -133,7 +135,7 @@ provide the following attributes:
 
 and the following methods:
 
-- :py:meth:`~earwigbot.wiki.page.Page.reload`: forcibly reload the page's
+- :py:meth:`~earwigbot.wiki.page.Page.reload`: forcibly reloads the page's
   attributes (emphasis on *reload* - this is only necessary if there is reason
   to believe they have changed)
 - :py:meth:`toggle_talk(...) <earwigbot.wiki.page.Page.toggle_talk>`: returns a
@@ -198,7 +200,7 @@ provide the following attributes:
 
 and the following methods:
 
-- :py:meth:`~earwigbot.wiki.user.User.reload`: forcibly reload the user's
+- :py:meth:`~earwigbot.wiki.user.User.reload`: forcibly reloads the user's
   attributes (emphasis on *reload* - this is only necessary if there is reason
   to believe they have changed)
 - :py:meth:`~earwigbot.wiki.user.User.get_userpage`: returns a

@@ -35,20 +35,23 @@ __all__ = ["SitesDB"]
 
 class SitesDB(object):
     """
-    EarwigBot's Wiki Toolset: Sites Database Manager
+    **EarwigBot's Wiki Toolset: Sites Database Manager**
 
-    This class controls the sites.db file, which stores information about all
-    wiki sites known to the bot. Three public methods act as bridges between
-    the bot's config files and Site objects:
-    get_site        -- returns a Site object corresponding to a given site name
-    add_site        -- stores a site in the database, given connection info
-    remove_site     -- removes a site from the database, given its name
+    This class controls the :file:`sites.db` file, which stores information
+    about all wiki sites known to the bot. Three public methods act as bridges
+    between the bot's config files and :py:class:`~earwigbot.wiki.site.Site`
+    objects:
+
+    - :py:meth:`get_site`:    returns a Site object corresponding to a site
+    - :py:meth:`add_site`:    stores a site in the database
+    - :py:meth:`remove_site`: removes a site from the database
 
     There's usually no need to use this class directly. All public methods
-    here are available as bot.wiki.get_site(), bot.wiki.add_site(), and
-    bot.wiki.remove_site(), which use a sites.db file located in the same
-    directory as our config.yml file. Lower-level access can be achieved
-    by importing the manager class (`from earwigbot.wiki import SitesDB`).
+    here are available as :py:meth:`bot.wiki.get_site`,
+    :py:meth:`bot.wiki.add_site`, and :py:meth:`bot.wiki.remove_site`, which
+    use a :file:`sites.db` file located in the same directory as our
+    :file:`config.yml` file. Lower-level access can be achieved by importing
+    the manager class (``from earwigbot.wiki import SitesDB``).
     """
 
     def __init__(self, bot):
@@ -157,7 +160,7 @@ class SitesDB(object):
                 namespaces)
 
     def _make_site_object(self, name):
-        """Return a Site object associated with the site 'name' in our sitesdb.
+        """Return a Site object associated with the site *name* in our sitesdb.
 
         This calls _load_site_from_sitesdb(), so SiteNotFoundError will be
         raised if the site is not in our sitesdb.
@@ -210,8 +213,8 @@ class SitesDB(object):
         namespaces are extracted from the site and inserted into the sites
         database. If the sitesdb doesn't exist, we'll create it first.
         """
-        name = site.name()
-        sites_data = (name, site.project(), site.lang(), site._base_url,
+        name = site.name
+        sites_data = (name, site.project, site.lang, site._base_url,
                       site._article_path, site._script_path)
         sql_data = [(name, key, val) for key, val in site._sql_data.iteritems()]
         ns_data = []
@@ -255,24 +258,25 @@ class SitesDB(object):
         """Return a Site instance based on information from the sitesdb.
 
         With no arguments, return the default site as specified by our config
-        file. This is config.wiki["defaultSite"].
+        file. This is ``config.wiki["defaultSite"]``.
 
-        With 'name' specified, return the site with that name. This is
-        equivalent to the site's 'wikiid' in the API, like 'enwiki'.
+        With *name* specified, return the site with that name. This is
+        equivalent to the site's ``wikiid`` in the API, like *enwiki*.
 
-        With 'project' and 'lang' specified, return the site whose project and
+        With *project* and *lang* specified, return the site whose project and
         language match these values. If there are multiple sites with the same
         values (unlikely), this is not a reliable way of loading a site. Call
-        the function with an explicit 'name' in that case.
+        the function with an explicit *name* in that case.
 
         We will attempt to login to the site automatically using
-        config.wiki["username"] and config.wiki["password"] if both are
+        ``config.wiki["username"]`` and ``config.wiki["password"]`` if both are
         defined.
 
         Specifying a project without a lang or a lang without a project will
-        raise TypeError. If all three args are specified, 'name' will be first
-        tried, then 'project' and 'lang' if 'name' doesn't work. If a site
-        cannot be found in the sitesdb, SiteNotFoundError will be raised. An
+        raise :py:exc:`TypeError`. If all three args are specified, *name* will
+        be first tried, then *project* and *lang* if *name* doesn't work. If a
+        site cannot be found in the sitesdb,
+        :py:exc:`~earwigbot.exceptions.SiteNotFoundError` will be raised. An
         empty sitesdb will be created if none is found.
         """
         # Someone specified a project without a lang, or vice versa:
@@ -311,23 +315,27 @@ class SitesDB(object):
                  script_path="/w", sql=None):
         """Add a site to the sitesdb so it can be retrieved with get_site().
 
-        If only a project and a lang are given, we'll guess the base_url as
-        "//{lang}.{project}.org" (which is protocol-relative, becoming 'https'
-        if 'useHTTPS' is True in config otherwise 'http'). If this is wrong,
-        provide the correct base_url as an argument (in which case project and
-        lang are ignored). Most wikis use "/w" as the script path (meaning the
-        API is located at "{base_url}{script_path}/api.php" ->
-        "//{lang}.{project}.org/w/api.php"), so this is the default. If your
-        wiki is different, provide the script_path as an argument. The only
-        other argument to Site() that we can't get from config files or by
-        querying the wiki itself is SQL connection info, so provide a dict of
-        kwargs as `sql` and Site will pass it to oursql.connect(**sql),
-        allowing you to make queries with site.sql_query().
+        If only a project and a lang are given, we'll guess the *base_url* as
+        ``"//{lang}.{project}.org"`` (which is protocol-relative, becoming
+        ``"https"`` if *useHTTPS* is ``True`` in config otherwise ``"http"``).
+        If this is wrong, provide the correct *base_url* as an argument (in
+        which case project and lang are ignored). Most wikis use ``"/w"`` as
+        the script path (meaning the API is located at
+        ``"{base_url}{script_path}/api.php"`` ->
+        ``"//{lang}.{project}.org/w/api.php"``), so this is the default. If
+        your wiki is different, provide the script_path as an argument. The
+        only other argument to :py:class:`~earwigbot.wiki.site.Site` that we
+        can't get from config files or by querying the wiki itself is SQL
+        connection info, so provide a dict of kwargs as *sql* and Site will
+        pass it to :py:func:`oursql.connect(**sql) <oursql.connect>`, allowing
+        you to make queries with :py:meth:`site.sql_query
+        <earwigbot.wiki.site.Site.sql_query>`.
 
-        Returns True if the site was added successfully or False if the site is
-        already in our sitesdb (this can be done purposefully to update old
-        site info). Raises SiteNotFoundError if not enough information has
-        been provided to identify the site (e.g. a project but not a lang).
+        Returns ``True`` if the site was added successfully or ``False`` if the
+        site is already in our sitesdb (this can be done purposefully to update
+        old site info). Raises :py:exc:`~earwigbot.exception.SiteNotFoundError`
+        if not enough information has been provided to identify the site (e.g.
+        a *project* but not a *lang*).
         """
         if not base_url:
             if not project or not lang:
@@ -353,18 +361,18 @@ class SitesDB(object):
                     search_config=search_config)
 
         self._add_site_to_sitesdb(site)
-        self._sites[site.name()] = site
+        self._sites[site.name] = site
         return site
 
     def remove_site(self, name=None, project=None, lang=None):
         """Remove a site from the sitesdb.
 
-        Returns True if the site was removed successfully or False if the site
-        was not in our sitesdb originally. If all three args (name, project,
-        and lang) are given, we'll first try 'name' and then try the latter two
-        if 'name' wasn't found in the database. Raises TypeError if a project
-        was given but not a language, or vice versa. Will create an empty
-        sitesdb if none was found.
+        Returns ``True`` if the site was removed successfully or ``False`` if
+        the site was not in our sitesdb originally. If all three args (*name*,
+        *project*, and *lang*) are given, we'll first try *name* and then try
+        the latter two if *name* wasn't found in the database. Raises
+        :py:exc:`TypeError` if a project was given but not a language, or vice
+        versa. Will create an empty sitesdb if none was found.
         """
         # Someone specified a project without a lang, or vice versa:
         if (project and not lang) or (not project and lang):

@@ -93,7 +93,7 @@ class Task(BaseTask):
         generator = self.backwards_cat_iterator()
         for d in xrange(num_days):
             category = generator.next()
-            date = category.title().split("/")[-1]
+            date = category.title.split("/")[-1]
             self.update_date(date, category)
             sleep(10)
         self.logger.info("Update complete")
@@ -104,7 +104,7 @@ class Task(BaseTask):
         generator = self.backwards_cat_iterator()
         for d in xrange(num_days):
             category = generator.next()
-            date = category.title().split("/")[-1]
+            date = category.title.split("/")[-1]
             data[date] = self.get_date_counts(date)
 
         data = OrderedDict(reversed(data.items()))  # Oldest to most recent
@@ -123,7 +123,7 @@ class Task(BaseTask):
             current -= timedelta(1)  # Subtract one day from date
 
     def update_date(self, date, category):
-        msg = "Updating {0} ([[{1}]])".format(date, category.title())
+        msg = "Updating {0} ([[{1}]])".format(date, category.title)
         self.logger.debug(msg)
 
         q_select = "SELECT page_date, page_status FROM page WHERE page_id = ?"
@@ -153,7 +153,7 @@ class Task(BaseTask):
 
     def get_status(self, title, pageid):
         page = self.site.get_page(title)
-        ns = page.namespace()
+        ns = page.namespace
 
         if ns == wiki.NS_FILE_TALK:  # Ignore accepted FFU requests
             return self.STATUS_NONE
@@ -161,7 +161,7 @@ class Task(BaseTask):
         if ns == wiki.NS_TALK:
             new_page = page.toggle_talk()
             sleep(2)
-            if new_page.is_redirect():
+            if new_page.is_redirect:
                 return self.STATUS_NONE  # Ignore accepted AFC/R requests
             return self.STATUS_ACCEPT
 

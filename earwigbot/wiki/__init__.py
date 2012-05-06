@@ -21,18 +21,26 @@
 # SOFTWARE.
 
 """
-EarwigBot's Wiki Toolset
+**EarwigBot's Wiki Toolset**
 
 This is a collection of classes and functions to read from and write to
-Wikipedia and other wiki sites. No connection whatsoever to python-wikitools
-written by Mr.Z-man, other than a similar purpose. We share no code.
+Wikipedia and other wiki sites. No connection whatsoever to `python-wikitools
+<http://code.google.com/p/python-wikitools/>`_ written by `Mr.Z-man
+<http://en.wikipedia.org/wiki/User:Mr.Z-man>`_, other than a similar purpose.
+We share no code.
 
-Import the toolset directly with `from earwigbot import wiki`. If using the
-built-in integration with the rest of the bot, Bot() objects contain a `wiki`
-attribute, which is a SitesDB object tied to the sites.db file located in the
-same directory as config.yml. That object has the principal methods get_site,
-add_site, and remove_site that should handle all of your Site (and thus, Page,
-Category, and User) needs.
+Import the toolset directly with ``from earwigbot import wiki``. If using the
+built-in integration with the rest of the bot, :py:class:`~earwigbot.bot.Bot`
+objects contain a :py:attr:`~earwigbot.bot.Bot.wiki` attribute, which is a
+:py:class:`~earwigbot.wiki.sitesdb.SitesDB` object tied to the :file:`sites.db`
+file located in the same directory as :file:`config.yml`. That object has the
+principal methods :py:meth:`~earwigbot.wiki.sitesdb.SitesDB.get_site`,
+:py:meth:`~earwigbot.wiki.sitesdb.SitesDB.add_site`, and
+:py:meth:`~earwigbot.wiki.sitesdb.SitesDB.remove_site` that should handle all
+of your :py:class:`~earwigbot.wiki.site.Site` (and thus,
+:py:class:`~earwigbot.wiki.page.Page`,
+:py:class:`~earwigbot.wiki.category.Category`, and
+:py:class:`~earwigbot.wiki.user.User`) needs.
 """
 
 from earwigbot.wiki.category import *

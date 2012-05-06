@@ -70,13 +70,13 @@ class Task(BaseTask):
 
     def process(self, page):
         """Detect copyvios in 'page' and add a note if any are found."""
-        title = page.title()
+        title = page.title
         if title in self.ignore_list:
             msg = "Skipping page in ignore list: [[{0}]]"
             self.logger.info(msg.format(title))
             return
 
-        pageid = page.pageid()
+        pageid = page.pageid
         if self.has_been_processed(pageid):
             msg = "Skipping check on already processed page [[{0}]]"
             self.logger.info(msg.format(title))
@@ -143,7 +143,7 @@ class Task(BaseTask):
         This will only be called if "cache_results" == True in the task's
         config, which is False by default.
         """
-        pageid = page.pageid()
+        pageid = page.pageid
         hash = sha256(page.get()).hexdigest()
         query1 = "SELECT 1 FROM cache WHERE cache_id = ?"
         query2 = "DELETE FROM cache WHERE cache_id = ?"

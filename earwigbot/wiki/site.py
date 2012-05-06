@@ -48,29 +48,38 @@ __all__ = ["Site"]
 
 class Site(object):
     """
-    EarwigBot's Wiki Toolset: Site Class
+    **EarwigBot's Wiki Toolset: Site Class**
 
-    Represents a Site, with support for API queries and returning Pages, Users,
-    and Categories. The constructor takes a bunch of arguments and you probably
-    won't need to call it directly, rather tools.get_site() for returning Site
-    instances, tools.add_site() for adding new ones to config, and
-    tools.del_site() for removing old ones from config, should suffice.
+    Represents a site, with support for API queries and returning
+    :py:class:`~earwigbot.wiki.page.Page`,
+    :py:class:`~earwigbot.wiki.user.User`,
+    and :py:class:`~earwigbot.wiki.category.Category` objects. The constructor
+    takes a bunch of arguments and you probably won't need to call it directly,
+    rather :py:meth:`wiki.get_site() <earwigbot.wiki.sitesdb.SitesDB.get_site>`
+    for returning :py:class:`Site`
+    instances, :py:meth:`wiki.add_site()
+    <earwigbot.wiki.sitesdb.SitesDB.add_site>` for adding new ones to our
+    database, and :py:meth:`wiki.remove_site()
+    <earwigbot.wiki.sitesdb.SitesDB.remove_site>` for removing old ones from
+    our database, should suffice.
 
-    Attributes:
-    name    -- the site's name (or "wikiid"), like "enwiki"
-    project -- the site's project name, like "wikipedia"
-    lang    -- the site's language code, like "en"
-    domain  -- the site's web domain, like "en.wikipedia.org"
+    *Attributes:*
 
-    Public methods:
-    api_query            -- does an API query with the given kwargs as params
-    sql_query            -- does an SQL query and yields its results
-    get_replag           -- returns the estimated database replication lag
-    namespace_id_to_name -- given a namespace ID, returns associated name(s)
-    namespace_name_to_id -- given a namespace name, returns the associated ID
-    get_page             -- returns a Page object for the given title
-    get_category         -- returns a Category object for the given title
-    get_user             -- returns a User object for the given username
+    - :py:attr:`name`:    the site's name (or "wikiid"), like ``"enwiki"``
+    - :py:attr:`project`: the site's project name, like ``"wikipedia"``
+    - :py:attr:`lang`:    the site's language code, like ``"en"``
+    - :py:attr:`domain`:  the site's web domain, like ``"en.wikipedia.org"``
+
+    *Public methods:*
+
+    - :py:meth:`api_query`:            does an API query with kwargs as params
+    - :py:meth:`sql_query`:            does an SQL query and yields its results
+    - :py:meth:`get_replag`:           estimates the database replication lag
+    - :py:meth:`namespace_id_to_name`: returns names associated with an NS id
+    - :py:meth:`namespace_name_to_id`: returns the ID associated with a NS name
+    - :py:meth:`get_page`:             returns a Page for the given title
+    - :py:meth:`get_category`:         returns a Category for the given title
+    - :py:meth:`get_user`:             returns a User object for the given name
     """
 
     def __init__(self, name=None, project=None, lang=None, base_url=None,
@@ -83,11 +92,11 @@ class Site(object):
 
         This probably isn't necessary to call yourself unless you're building a
         Site that's not in your config and you don't want to add it - normally
-        all you need is tools.get_site(name), which creates the Site for you
+        all you need is wiki.get_site(name), which creates the Site for you
         based on your config file and the sites database. We accept a bunch of
-        kwargs, but the only ones you really "need" are `base_url` and
-        `script_path` - this is enough to figure out an API url. `login`, a 
-        tuple of (username, password), is highly recommended. `cookiejar` will
+        kwargs, but the only ones you really "need" are *base_url* and
+        *script_path*; this is enough to figure out an API url. *login*, a 
+        tuple of (username, password), is highly recommended. *cookiejar will
         be used to store cookies, and we'll use a normal CookieJar if none is
         given.
 
@@ -151,7 +160,7 @@ class Site(object):
                 self._login(login)
 
     def __repr__(self):
-        """Returns the canonical string representation of the Site."""
+        """Return the canonical string representation of the Site."""
         res = ", ".join((
             "Site(name={_name!r}", "project={_project!r}", "lang={_lang!r}",
             "base_url={_base_url!r}", "article_path={_article_path!r}",
@@ -170,13 +179,12 @@ class Site(object):
         return res.format(login, cookies, agent, **self.__dict__)
 
     def __str__(self):
-        """Returns a nice string representation of the Site."""
+        """Return a nice string representation of the Site."""
         res = "<Site {0} ({1}:{2}) at {3}>"
-        return res.format(self.name(), self.project(), self.lang(),
-                          self.domain())
+        return res.format(self.name, self.project, self.lang, self.domain)
 
     def _urlencode_utf8(self, params):
-        """Implement urllib.urlencode(params) with support for unicode input."""
+        """Implement urllib.urlencode() with support for unicode input."""
         enc = lambda s: s.encode("utf8") if isinstance(s, unicode) else str(s)
         args = []
         for key, val in params.iteritems():
@@ -186,30 +194,10 @@ class Site(object):
         return "&".join(args)
 
     def _api_query(self, params, tries=0, wait=5):
-        """Do an API query with `params` as a dict of parameters.
+        """Do an API query with *params* as a dict of parameters.
 
-        This will first attempt to construct an API url from self._base_url and
-        self._script_path. We need both of these, or else we'll raise
-        SiteAPIError. If self._base_url is protocol-relative (introduced in
-        MediaWiki 1.18), we'll choose HTTPS if self._user_https is True,
-        otherwise HTTP.
-
-        We'll encode the given params, adding format=json along the way, as
-        well as &assert= and &maxlag= based on self._assert_edit and _maxlag.
-        Additionally, we'll sleep a bit if the last query was made less than
-        self._wait_between_queries seconds ago. The request is made through
-        self._opener, which has cookie support (self._cookiejar), a User-Agent
-        (wiki.constants.USER_AGENT), and Accept-Encoding set to "gzip".
-
-        Assuming everything went well, we'll gunzip the data (if compressed),
-        load it as a JSON object, and return it.
-
-        If our request failed for some reason, we'll raise SiteAPIError with
-        details. If that reason was due to maxlag, we'll sleep for a bit and
-        then repeat the query until we exceed self._max_retries.
-
-        There's helpful MediaWiki API documentation at
-        <http://www.mediawiki.org/wiki/API>.
+        See the documentation for :py:meth:`api_query` for full implementation
+        details.
         """
         since_last_query = time() - self._last_query_time  # Throttling support
         if since_last_query < self._wait_between_queries:
@@ -301,8 +289,8 @@ class Site(object):
         was not given as a keyword argument. We'll do an API query to get the
         missing data, but only if there actually *is* missing data.
 
-        Additionally, you can call this with `force=True` to forcibly reload
-        all attributes.
+        Additionally, you can call this with *force* set to True to forcibly
+        reload all attributes.
         """
         # All attributes to be loaded, except _namespaces, which is a special
         # case because it requires additional params in the API query:
@@ -332,7 +320,7 @@ class Site(object):
     def _load_namespaces(self, result):
         """Fill self._namespaces with a dict of namespace IDs and names.
 
-        Called by _load_attributes() with API data as `result` when
+        Called by _load_attributes() with API data as *result* when
         self._namespaces was not given as an kwarg to __init__().
         """
         self._namespaces = {}
@@ -381,13 +369,12 @@ class Site(object):
         (for that, we'd do self._login_info[0]), but rather to get our current
         username without an unnecessary ?action=query&meta=userinfo API query. 
         """
-        domain = self.domain()
         name = ''.join((self._name, "Token"))
-        cookie = self._get_cookie(name, domain)
+        cookie = self._get_cookie(name, self.domain)
 
         if cookie:
             name = ''.join((self._name, "UserName"))
-            user_name = self._get_cookie(name, domain)
+            user_name = self._get_cookie(name, self.domain)
             if user_name:
                 return user_name.value
 
@@ -399,7 +386,7 @@ class Site(object):
                 continue
             # Build a regex that will match domains this cookie affects:
             search = ''.join(("(.*?)", re_escape(cookie.domain)))
-            if re_match(search, domain):  # Test it against our site
+            if re_match(search, self.domain):  # Test it against our site
                 user_name = self._get_cookie("centralauth_User", cookie.domain)
                 if user_name:
                     return user_name.value
@@ -464,8 +451,8 @@ class Site(object):
         Raises LoginError on login errors (duh), like bad passwords and
         nonexistent usernames.
 
-        `login` is a (username, password) tuple. `token` is the token returned
-        from our first request, and `attempt` is to prevent getting stuck in a
+        *login* is a (username, password) tuple. *token* is the token returned
+        from our first request, and *attempt* is to prevent getting stuck in a
         loop if MediaWiki isn't acting right.
         """
         name, password = login
@@ -535,26 +522,57 @@ class Site(object):
 
         self._sql_conn = oursql.connect(**args)
 
+    @property
     def name(self):
-        """Returns the Site's name (or "wikiid" in the API), like "enwiki"."""
+        """The Site's name (or "wikiid" in the API), like ``"enwiki"``."""
         return self._name
 
+    @property 
     def project(self):
-        """Returns the Site's project name in lowercase, like "wikipedia"."""
+        """The Site's project name in lowercase, like ``"wikipedia"``."""
         return self._project
 
+    @property
     def lang(self):
-        """Returns the Site's language code, like "en" or "es"."""
+        """The Site's language code, like ``"en"`` or ``"es"``."""
         return self._lang
 
+    @property
     def domain(self):
-        """Returns the Site's web domain, like "en.wikipedia.org"."""
+        """The Site's web domain, like ``"en.wikipedia.org"``."""
         return urlparse(self._base_url).netloc
 
     def api_query(self, **kwargs):
         """Do an API query with `kwargs` as the parameters.
 
-        See _api_query()'s documentation for details.
+        This will first attempt to construct an API url from
+        :py:attr:`self._base_url` and :py:attr:`self._script_path`. We need
+        both of these, or else we'll raise
+        :py:exc:`~earwigbot.exceptions.SiteAPIError`. If
+        :py:attr:`self._base_url` is protocol-relative (introduced in MediaWiki
+        1.18), we'll choose HTTPS only if :py:attr:`self._user_https` is
+        ``True``, otherwise HTTP.
+
+        We'll encode the given params, adding ``format=json`` along the way, as
+        well as ``&assert=`` and ``&maxlag=`` based on
+        :py:attr:`self._assert_edit` and :py:attr:`_maxlag` respectively.
+        Additionally, we'll sleep a bit if the last query was made fewer than
+        :py:attr:`self._wait_between_queries` seconds ago. The request is made
+        through :py:attr:`self._opener`, which has cookie support
+        (:py:attr:`self._cookiejar`), a ``User-Agent``
+        (:py:const:`earwigbot.wiki.constants.USER_AGENT`), and
+        ``Accept-Encoding`` set to ``"gzip"``.
+
+        Assuming everything went well, we'll gunzip the data (if compressed),
+        load it as a JSON object, and return it.
+
+        If our request failed for some reason, we'll raise
+        :py:exc:`~earwigbot.exceptions.SiteAPIError` with details. If that
+        reason was due to maxlag, we'll sleep for a bit and then repeat the
+        query until we exceed :py:attr:`self._max_retries`.
+
+        There is helpful MediaWiki API documentation at `MediaWiki.org
+        <http://www.mediawiki.org/wiki/API>`_.
         """
         return self._api_query(kwargs)
 
@@ -562,34 +580,33 @@ class Site(object):
                   cursor_class=None, show_table=False):
         """Do an SQL query and yield its results.
 
-        If `plain_query` is True, we will force an unparameterized query.
-        Specifying both params and plain_query will cause an error.
+        If *plain_query* is ``True``, we will force an unparameterized query.
+        Specifying both *params* and *plain_query* will cause an error. If
+        *dict_cursor* is ``True``, we will use :py:class:`oursql.DictCursor` as
+        our cursor, otherwise the default :py:class:`oursql.Cursor`. If
+        *cursor_class* is given, it will override this option. If *show_table*
+        is True, the name of the table will be prepended to the name of the
+        column. This will mainly affect an :py:class:`~oursql.DictCursor`.
 
-        If `dict_cursor` is True, we will use oursql.DictCursor as our cursor,
-        otherwise the default oursql.Cursor. If `cursor_class` is given, it
-        will override this option.
+        Example usage::
 
-        If `show_table` is True, the name of the table will be prepended to the
-        name of the column. This will mainly affect a DictCursor.
+            >>> query = "SELECT user_id, user_registration FROM user WHERE user_name = ?"
+            >>> params = ("The Earwig",)
+            >>> result1 = site.sql_query(query, params)
+            >>> result2 = site.sql_query(query, params, dict_cursor=True)
+            >>> for row in result1: print row
+            (7418060L, '20080703215134')
+            >>> for row in result2: print row
+            {'user_id': 7418060L, 'user_registration': '20080703215134'}
 
-        Example:
-        >>> query = "SELECT user_id, user_registration FROM user WHERE user_name = ?"
-        >>> params = ("The Earwig",)
-        >>> result1 = site.sql_query(query, params)
-        >>> result2 = site.sql_query(query, params, dict_cursor=True)
-        >>> for row in result1: print row
-        (7418060L, '20080703215134')
-        >>> for row in result2: print row
-        {'user_id': 7418060L, 'user_registration': '20080703215134'}
+        This may raise :py:exc:`~earwigbot.exceptions.SQLError` or one of
+        oursql's exceptions (:py:exc:`oursql.ProgrammingError`,
+        :py:exc:`oursql.InterfaceError`, ...) if there were problems with the
+        query.
 
-        See _sql_connect() for information on how a connection is acquired.
-
-        <http://packages.python.org/oursql> has helpful documentation on the
-        oursql module.
-
-        This may raise SQLError() or one of oursql's exceptions
-        (oursql.ProgrammingError, oursql.InterfaceError, ...) if there were
-        problems with the query.
+        See :py:meth:`_sql_connect` for information on how a connection is
+        acquired. Also relevant is `oursql's documentation
+        <http://packages.python.org/oursql>`_ for details on that package.
         """
         if not cursor_class:
             if dict_cursor:
@@ -608,11 +625,16 @@ class Site(object):
 
     def get_replag(self):
         """Return the estimated database replication lag in seconds.
-        
+
         Requires SQL access. This function only makes sense on a replicated
         database (e.g. the Wikimedia Toolserver) and on a wiki that receives a
         large number of edits (ideally, at least one per second), or the result
-        may be larger than expected. 
+        may be larger than expected, since it works by subtracting the current
+        time from the timestamp of the latest recent changes event.
+
+        This may raise :py:exc:`~earwigbot.exceptions.SQLError` or one of
+        oursql's exceptions (:py:exc:`oursql.ProgrammingError`,
+        :py:exc:`oursql.InterfaceError`, ...) if there were problems.
         """
         query = """SELECT UNIX_TIMESTAMP() - UNIX_TIMESTAMP(rc_timestamp) FROM
                    recentchanges ORDER BY rc_timestamp DESC LIMIT 1"""
@@ -622,14 +644,16 @@ class Site(object):
     def namespace_id_to_name(self, ns_id, all=False):
         """Given a namespace ID, returns associated namespace names.
 
-        If all is False (default), we'll return the first name in the list,
-        which is usually the localized version. Otherwise, we'll return the
-        entire list, which includes the canonical name.
+        If *all* is ``False`` (default), we'll return the first name in the
+        list, which is usually the localized version. Otherwise, we'll return
+        the entire list, which includes the canonical name.
 
-        For example, returns u"Wikipedia" if ns_id=4 and all=False on enwiki;
-        returns [u"Wikipedia", u"Project", u"WP"] if ns_id=4 and all=True.
+        For example, this returns ``u"Wikipedia"`` if *ns_id* = ``4`` and
+        *all* = ``False`` on ``enwiki``; returns ``[u"Wikipedia", u"Project",
+        u"WP"]`` if *ns_id* = ``4`` and *all* is ``True``.
 
-        Raises NamespaceNotFoundError if the ID is not found.
+        Raises :py:exc:`~earwigbot.exceptions.NamespaceNotFoundError` if the ID
+        is not found.
         """
         try:
             if all:
@@ -643,10 +667,11 @@ class Site(object):
     def namespace_name_to_id(self, name):
         """Given a namespace name, returns the associated ID.
 
-        Like namespace_id_to_name(), but reversed. Case is ignored, because
-        namespaces are assumed to be case-insensitive.
+        Like :py:meth:`namespace_id_to_name`, but reversed. Case is ignored,
+        because namespaces are assumed to be case-insensitive.
 
-        Raises NamespaceNotFoundError if the name is not found.
+        Raises :py:exc:`~earwigbot.exceptions.NamespaceNotFoundError` if the
+        name is not found.
         """
         lname = name.lower()
         for ns_id, names in self._namespaces.items():
@@ -658,14 +683,18 @@ class Site(object):
         raise exceptions.NamespaceNotFoundError(e)
 
     def get_page(self, title, follow_redirects=False):
-        """Returns a Page object for the given title (pagename).
+        """Return a :py:class:`Page` object for the given title.
 
-        Will return a Category object instead if the given title is in the
-        category namespace. As Category is a subclass of Page, this should not
-        cause problems.
+        *follow_redirects* is passed directly to
+        :py:class:`~earwigbot.wiki.page.Page`'s constructor. Also, this will
+        return a :py:class:`~earwigbot.wiki.category.Category` object instead
+        if the given title is in the category namespace. As
+        :py:class:`~earwigbot.wiki.category.Category` is a subclass of
+        :py:class:`~earwigbot.wiki.page.Page`, this should not cause problems.
 
         Note that this doesn't do any direct checks for existence or
-        redirect-following - Page's methods provide that.
+        redirect-following: :py:class:`~earwigbot.wiki.page.Page`'s methods
+        provide that.
         """
         prefixes = self.namespace_id_to_name(constants.NS_CATEGORY, all=True)
         prefix = title.split(":", 1)[0]
@@ -675,20 +704,22 @@ class Site(object):
         return Page(self, title, follow_redirects)
 
     def get_category(self, catname, follow_redirects=False):
-        """Returns a Category object for the given category name.
+        """Return a :py:class:`Category` object for the given category name.
 
-        `catname` should be given *without* a namespace prefix. This method is
-        really just shorthand for get_page("Category:" + catname).
+        *catname* should be given *without* a namespace prefix. This method is
+        really just shorthand for :py:meth:`get_page("Category:" + catname)
+        <get_page>`.
         """
         prefix = self.namespace_id_to_name(constants.NS_CATEGORY)
         pagename = ':'.join((prefix, catname))
         return Category(self, pagename, follow_redirects)
 
     def get_user(self, username=None):
-        """Returns a User object for the given username.
+        """Return a :py:class:`User` object for the given username.
 
-        If `username` is left as None, then a User object representing the
-        currently logged-in (or anonymous!) user is returned.
+        If *username* is left as ``None``, then a
+        :py:class:`~earwigbot.wiki.user.User` object representing the currently
+        logged-in (or anonymous!) user is returned.
         """
         if not username:
             username = self._get_username()
