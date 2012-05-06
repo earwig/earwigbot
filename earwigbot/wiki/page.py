@@ -693,9 +693,8 @@ class Page(CopyrightMixin):
         """Add a new section to the bottom of the page.
 
         The arguments for this are the same as those for :py:meth:`edit`, but
-        instead of providing a summary, you provide a section title.
-
-        Likewise, raised exceptions are the same as :py:meth:`edit`'s.
+        instead of providing a summary, you provide a section title. Likewise,
+        raised exceptions are the same as :py:meth:`edit`'s.
 
         This should create the page if it does not already exist, with just the
         new section as content.

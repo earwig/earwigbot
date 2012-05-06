@@ -646,11 +646,10 @@ class Site(object):
 
         If *all* is ``False`` (default), we'll return the first name in the
         list, which is usually the localized version. Otherwise, we'll return
-        the entire list, which includes the canonical name.
-
-        For example, this returns ``u"Wikipedia"`` if *ns_id* = ``4`` and
-        *all* = ``False`` on ``enwiki``; returns ``[u"Wikipedia", u"Project",
-        u"WP"]`` if *ns_id* = ``4`` and *all* is ``True``.
+        the entire list, which includes the canonical name. For example, this
+        returns ``u"Wikipedia"`` if *ns_id* = ``4`` and *all* is ``False`` on
+        ``enwiki``; returns ``[u"Wikipedia", u"Project", u"WP"]`` if *ns_id* =
+        ``4`` and *all* is ``True``.
 
         Raises :py:exc:`~earwigbot.exceptions.NamespaceNotFoundError` if the ID
         is not found.

@@ -21,11 +21,12 @@
 # SOFTWARE.
 
 """
-EarwigBot is a Python robot that edits Wikipedia and interacts with people over
-IRC. - https://github.com/earwig/earwigbot
+`EarwigBot <https://github.com/earwig/earwigbot>`_ is a Python robot that edits
+Wikipedia and interacts with people over IRC.
 
-See README.rst for an overview, or the docs/ directory for details. This
-documentation is also available online at http://packages.python.org/earwigbot.
+See :file:`README.rst` for an overview, or the :file:`docs/` directory for
+details. This documentation is also available `online
+<http://packages.python.org/earwigbot>`_.
 """
 
 __author__ = "Ben Kurtovic"

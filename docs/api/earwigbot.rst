@@ -7,7 +7,6 @@ earwigbot Package
 .. automodule:: earwigbot.__init__
     :members:
     :undoc-members:
-    :show-inheritance:
 
 :mod:`bot` Module
 -----------------
@@ -15,7 +14,6 @@ earwigbot Package
 .. automodule:: earwigbot.bot
     :members:
     :undoc-members:
-    :show-inheritance:
 
 :mod:`config` Module
 --------------------
@@ -23,7 +21,6 @@ earwigbot Package
 .. automodule:: earwigbot.config
     :members:
     :undoc-members:
-    :show-inheritance:
 
 :mod:`exceptions` Module
 ------------------------
@@ -37,7 +34,7 @@ earwigbot Package
 ----------------------
 
 .. automodule:: earwigbot.managers
-    :members:
+    :members: _ResourceManager, CommandManager, TaskManager
     :undoc-members:
     :show-inheritance:
 
@@ -47,7 +44,6 @@ earwigbot Package
 .. automodule:: earwigbot.util
     :members:
     :undoc-members:
-    :show-inheritance:
 
 Subpackages
 -----------

@@ -40,18 +40,21 @@ class Bot(object):
     EarwigBot has three components that can run independently of each other: an
     IRC front-end, an IRC watcher, and a wiki scheduler.
 
-    * The IRC front-end runs on a normal IRC server and expects users to
+    - The IRC front-end runs on a normal IRC server and expects users to
       interact with it/give it commands.
-    * The IRC watcher runs on a wiki recent-changes server and listens for
+    - The IRC watcher runs on a wiki recent-changes server and listens for
       edits. Users cannot interact with this part of the bot.
-    * The wiki scheduler runs wiki-editing bot tasks in separate threads at
+    - The wiki scheduler runs wiki-editing bot tasks in separate threads at
       user-defined times through a cron-like interface.
- 
-    The Bot() object is accessable from within commands and tasks as self.bot.
-    This is the primary way to access data from other components of the bot.
-    For example, our BotConfig object is accessable from bot.config, tasks
-    can be started with bot.tasks.start(), and sites can be loaded from the
-    wiki toolset with bot.wiki.get_site().
+
+    The :py:class:`Bot` object is accessable from within commands and tasks as
+    :py:attr:`self.bot`. This is the primary way to access data from other
+    components of the bot. For example, our
+    :py:class:`~earwigbot.config.BotConfig` object is accessable from
+    :py:attr:`bot.config`, tasks can be started with
+    :py:meth:`bot.tasks.start <earwigbot.managers.TaskManager.start>`, and
+    sites can be loaded from the wiki toolset with :py:meth:`bot.wiki.get_site
+    <earwigbot.wiki.sitesdb.SitesDB.get_site>`.
     """
 
     def __init__(self, root_dir, level=logging.INFO):
@@ -160,11 +163,11 @@ class Bot(object):
 
         This is thread-safe, and it will gracefully stop IRC components before
         reloading anything. Note that you can safely reload commands or tasks
-        without restarting the bot with bot.commands.load() or
-        bot.tasks.load(). These should not interfere with running components
-        or tasks.
+        without restarting the bot with :py:meth:`bot.commands.load` or
+        :py:meth:`bot.tasks.load`. These should not interfere with running
+        components or tasks.
 
-        If given, 'msg' will be used as our quit message.
+        If given, *msg* will be used as our quit message.
         """
         if msg:
             self.logger.info('Restarting bot ("{0}")'.format(msg))
@@ -180,7 +183,7 @@ class Bot(object):
     def stop(self, msg=None):
         """Gracefully stop all bot components.
 
-        If given, 'msg' will be used as our quit message.
+        If given, *msg* will be used as our quit message.
         """
         if msg:
             self.logger.info('Stopping bot ("{0}")'.format(msg))

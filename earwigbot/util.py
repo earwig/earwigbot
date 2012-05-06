@@ -22,8 +22,27 @@
 # SOFTWARE.
 
 """
-This is EarwigBot's command-line utility, enabling you to easily start the
-bot or run specific tasks.
+usage: :command:`earwigbot [-h] [-v] [-d] [-q] [-t NAME] [PATH]`
+
+This is EarwigBot's command-line utility, enabling you to easily start the bot
+or run specific tasks.
+
+.. glossary::
+
+``PATH``
+    path to the bot's working directory, which will be created if it doesn't
+    exist; current directory assumed if not specified
+``-h``, ``--help``
+    show this help message and exit
+``-v``, ``--version``
+    show program's version number and exit
+``-d``, ``--debug``
+    print all logs, including ``DEBUG``-level messages
+``-q``, ``--quiet``
+    don't print any logs except warnings and errors
+``-t NAME``, ``--task NAME``
+    given the name of a task, the bot will run it instead of the main bot and
+    then exit
 """
 
 from argparse import ArgumentParser
@@ -37,17 +56,23 @@ from earwigbot.bot import Bot
 __all__ = ["main"]
 
 def main():
+    """Main entry point for the command-line utility."""
     version = "EarwigBot v{0}".format(__version__)
-    parser = ArgumentParser(description=__doc__)
+    desc = """This is EarwigBot's command-line utility, enabling you to easily
+              start the bot or run specific tasks."""
+    parser = ArgumentParser(description=desc)
     parser.add_argument("path", nargs="?", metavar="PATH", default=path.curdir,
-                        help="path to the bot's working directory, which will be created if it doesn't exist; current directory assumed if not specified")
+                        help="""path to the bot's working directory, which will
+                                be created if it doesn't exist; current
+                                directory assumed if not specified""")
     parser.add_argument("-v", "--version", action="version", version=version)
     parser.add_argument("-d", "--debug", action="store_true",
                         help="print all logs, including DEBUG-level messages")
     parser.add_argument("-q", "--quiet", action="store_true",
                         help="don't print any logs except warnings and errors")
     parser.add_argument("-t", "--task", metavar="NAME",
-                        help="given the name of a task, the bot will run it instead of the main bot and then exit")
+                        help="""given the name of a task, the bot will run it
+                                instead of the main bot and then exit""")
     args = parser.parse_args()
 
     level = logging.INFO

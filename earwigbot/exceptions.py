@@ -26,6 +26,7 @@ EarwigBot Exceptions
 This module contains all exceptions used by EarwigBot::
 
     EarwigBotError
+     +-- NoConfigError
      +-- IRCError
      |    +-- BrokenSocketError
      |    +-- KwargParseError
@@ -54,6 +55,13 @@ This module contains all exceptions used by EarwigBot::
 
 class EarwigBotError(Exception):
     """Base exception class for errors in EarwigBot."""
+
+class NoConfigError(EarwigBotError):
+    """The bot cannot be run without a config file.
+
+    This occurs if no config file exists, and the user said they did not want
+    one to be created.
+    """
 
 class IRCError(EarwigBotError):
     """Base exception class for errors in IRC-relation sections of the bot."""

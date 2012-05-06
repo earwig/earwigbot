@@ -29,36 +29,34 @@ from os import mkdir, path
 from Crypto.Cipher import Blowfish
 import yaml
 
+from earwigbot.exceptions import NoConfigError
+
 __all__ = ["BotConfig"]
 
 class BotConfig(object):
     """
-    EarwigBot's YAML Config File Manager
+    **EarwigBot's YAML Config File Manager**
 
     This handles all tasks involving reading and writing to our config file,
     including encrypting and decrypting passwords and making a new config file
     from scratch at the inital bot run.
 
-    BotConfig has a few properties and functions, including the following:
+    BotConfig has a few attributes and methods, including the following:
 
-    * config.root_dir    - bot's working directory; contains config.yml, logs/
-    * config.path        - path to the bot's config file
-    * config.components  - enabled components
-    * config.wiki        - information about wiki-editing
-    * config.tasks       - information for bot tasks
-    * config.irc         - information about IRC
-    * config.metadata    - miscellaneous information
-    * config.schedule()  - tasks scheduled to run at a given time
+    - :py:attr:`root_dir`:   bot's working directory; contains
+      :file:`config.yml`, :file:`logs/`
+    - :py:attr:`path`:       path to the bot's config file
+    - :py:attr:`components`: enabled components
+    - :py:attr:`wiki`:       information about wiki-editing
+    - :py:attr:`tasks`:      information for bot tasks
+    - :py:attr:`irc`:        information about IRC
+    - :py:attr:`metadata`:   miscellaneous information
+    - :py:meth:`schedule`:   tasks scheduled to run at a given time
 
-    BotConfig also has some functions used in config loading:
+    BotConfig also has some methods used in config loading:
 
-    * config.load()     - loads and parses our config file, returning True if
-                          passwords are stored encrypted or False otherwise;
-                          can also be used to easily reload config
-    * config.decrypt()  - given a key, decrypts passwords inside our config
-                          variables, and remembers to decrypt the password if
-                          config is reloaded; won't do anything if passwords
-                          aren't encrypted
+    - :py:meth:`load`:    loads (or reloads) and parses our config file
+    - :py:meth:`decrypt`: decrypts an object in the config tree
     """
 
     def __init__(self, root_dir, level):
@@ -159,10 +157,12 @@ class BotConfig(object):
 
     @property
     def root_dir(self):
+        """The bot's root directory containing its config file and more."""
         return self._root_dir
 
     @property
     def logging_level(self):
+        """The minimum logging level for messages logged via stdout."""
         return self._logging_level
 
     @logging_level.setter
@@ -172,15 +172,17 @@ class BotConfig(object):
 
     @property
     def path(self):
+        """The path to the bot's config file."""
         return self._config_path
 
     @property
     def log_dir(self):
+        """The directory containing the bot's logs."""
         return self._log_dir
 
     @property
     def data(self):
-        """The entire config file."""
+        """The entire config file as a decoded JSON object."""
         return self._data
 
     @property
@@ -209,11 +211,11 @@ class BotConfig(object):
         return self._metadata
 
     def is_loaded(self):
-        """Return True if our config file has been loaded, otherwise False."""
+        """Return ``True`` if our config file has been loaded, or ``False``."""
         return self._data is not None
 
     def is_encrypted(self):
-        """Return True if passwords are encrypted, otherwise False."""
+        """Return ``True`` if passwords are encrypted, otherwise ``False``."""
         return self.metadata.get("encryptPasswords", False)
 
     def load(self):
@@ -223,12 +225,14 @@ class BotConfig(object):
         user. If there is no config file at all, offer to make one, otherwise
         exit.
 
-        Store data from our config file in five _ConfigNodes (components,
-        wiki, tasks, irc, metadata) for easy access (as well as the internal
-        _data variable).
-
-        If config is being reloaded, encrypted items will be automatically
-        decrypted if they were decrypted beforehand.
+        Data from the config file is stored in five
+        :py:class:`~earwigbot.config._ConfigNode` s (:py:attr:`components`,
+        :py:attr:`wiki`, :py:attr:`tasks`, :py:attr:`irc`, :py:attr:`metadata`)
+        for easy access (as well as the lower-level :py:attr:`data` attribute).
+        If passwords are encrypted, we'll use :py:func:`~getpass.getpass` for
+        the key and then decrypt them. If the config is being reloaded,
+        encrypted items will be automatically decrypted if they were decrypted
+        earlier.
         """
         if not path.exists(self._config_path):
             print "Config file not found:", self._config_path
@@ -236,7 +240,7 @@ class BotConfig(object):
             if choice.lower().startswith("y"):
                 self._make_new()
             else:
-                exit(1)                                                                     # TODO: raise an exception instead
+                raise NoConfigError()
 
         self._load()
         data = self._data
@@ -255,16 +259,19 @@ class BotConfig(object):
                 self._decrypt(node, nodes)
 
     def decrypt(self, node, *nodes):
-        """Use self._decryption_cipher to decrypt an object in our config tree.
+        """Decrypt an object in our config tree.
 
-        If this is called when passwords are not encrypted (check with
-        config.is_encrypted()), nothing will happen. We'll also keep track of
-        this node if config.load() is called again (i.e. to reload) and
-        automatically decrypt it.
+        :py:attr:`_decryption_cipher` is used as our key, retrieved using
+        :py:func:`~getpass.getpass` in :py:meth:`load` if it wasn't already
+        specified. If this is called when passwords are not encrypted (check
+        with :py:meth:`is_encrypted`), nothing will happen. We'll also keep
+        track of this node if :py:meth:`load` is called again (i.e. to reload)
+        and automatically decrypt it.
 
-        Example usage:
-        config.decrypt(config.irc, "frontend", "nickservPassword")
-        -> decrypts config.irc["frontend"]["nickservPassword"]
+        Example usage::
+
+            >>> config.decrypt(config.irc, "frontend", "nickservPassword")
+            # decrypts config.irc["frontend"]["nickservPassword"]
         """
         self._decryptable_nodes.append((node, nodes))
         if self.is_encrypted():
@@ -273,9 +280,8 @@ class BotConfig(object):
     def schedule(self, minute, hour, month_day, month, week_day):
         """Return a list of tasks scheduled to run at the specified time.
 
-        The schedule data comes from our config file's 'schedule' field, which
-        is stored as self._data["schedule"]. Call this function as
-        config.schedule(args).
+        The schedule data comes from our config file's ``schedule`` field,
+        which is stored as :py:attr:`self.data["schedule"] <data>`.
         """
         # Tasks to run this turn, each as a list of either [task_name, kwargs],
         # or just the task_name:

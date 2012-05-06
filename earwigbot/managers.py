@@ -34,21 +34,21 @@ __all__ = ["CommandManager", "TaskManager"]
 
 class _ResourceManager(object):
     """
-    EarwigBot's Base Resource Manager
-
     Resources are essentially objects dynamically loaded by the bot, both
     packaged with it (built-in resources) and created by users (plugins, aka
     custom resources). Currently, the only two types of resources are IRC
     commands and bot tasks. These are both loaded from two locations: the
-    earwigbot.commands and earwigbot.tasks packages, and the commands/ and
-    tasks/ directories within the bot's working directory.
+    :py:mod:`earwigbot.commands` and :py:mod:`earwigbot.tasks packages`, and
+    the :file:`commands/` and :file:`tasks/` directories within the bot's
+    working directory.
 
-    This class handles the low-level tasks of (re)loading resources via load(),
-    retrieving specific resources via get(), and iterating over all resources
-    via __iter__(). If iterating over resources, it is recommended to acquire
-    self.lock beforehand and release it afterwards (alternatively, wrap your
-    code in a `with` statement) so an attempt at reloading resources in another
-    thread won't disrupt your iteration.
+    This class handles the low-level tasks of (re)loading resources via
+    :py:meth:`load`, retrieving specific resources via :py:meth:`get`, and
+    iterating over all resources via :py:meth:`__iter__`. If iterating over
+    resources, it is recommended to acquire :py:attr:`self.lock <lock>`
+    beforehand and release it afterwards (alternatively, wrap your code in a
+    ``with`` statement) so an attempt at reloading resources in another thread
+    won't disrupt your iteration.
     """
     def __init__(self, bot, name, attribute, base):
         self.bot = bot
@@ -62,6 +62,7 @@ class _ResourceManager(object):
 
     @property
     def lock(self):
+        """The resource access/modify lock."""
         return self._resource_access_lock
 
     def __iter__(self):
@@ -116,7 +117,7 @@ class _ResourceManager(object):
                 processed.append(modname)
 
     def load(self):
-        """Load (or reload) all valid resources into self._resources."""
+        """Load (or reload) all valid resources into :py:attr:`_resources`."""
         name = self._resource_name  # e.g. "commands" or "tasks"
         with self.lock:
             self._resources.clear()
@@ -132,15 +133,14 @@ class _ResourceManager(object):
     def get(self, key):
         """Return the class instance associated with a certain resource.
 
-        Will raise KeyError if the resource (command or task) is not found.
+        Will raise :py:exc:`KeyError` if the resource (a command or task) is
+        not found.
         """
         return self._resources[key]
 
 
 class CommandManager(_ResourceManager):
     """
-    EarwigBot's IRC Command Manager
-
     Manages (i.e., loads, reloads, and calls) IRC commands.
     """
     def __init__(self, bot):
@@ -164,7 +164,7 @@ class CommandManager(_ResourceManager):
             self.logger.exception(e.format(command.name))
 
     def call(self, hook, data):
-        """Given a hook type and a Data object, respond appropriately."""
+        """Respond to a hook type and a :py:class:`Data` object."""
         self.lock.acquire()
         for command in self._resources.itervalues():
             if hook in command.hooks and self._wrap_check(command, data):
@@ -176,8 +176,6 @@ class CommandManager(_ResourceManager):
 
 class TaskManager(_ResourceManager):
     """
-    EarwigBot's Bot Task Manager
-
     Manages (i.e., loads, reloads, schedules, and runs) wiki bot tasks.
     """
     def __init__(self, bot):
@@ -197,8 +195,9 @@ class TaskManager(_ResourceManager):
     def start(self, task_name, **kwargs):
         """Start a given task in a new daemon thread, and return the thread.
 
-        kwargs are passed to task.run(). If the task is not found, None will be
-        returned.
+        kwargs are passed to :py:meth:`task.run() <earwigbot.tasks.BaseTask>`.
+        If the task is not found, ``None`` will be returned an an error is
+        logged.
         """
         msg = "Starting task '{0}' in a new thread"
         self.logger.info(msg.format(task_name))

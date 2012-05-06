@@ -57,7 +57,7 @@ The most useful attributes are:
   logged and used as the quit message when disconnecting from IRC.
 
 :py:class:`earwigbot.config.BotConfig` stores configuration information for the
-bot. Its docstring explains what each attribute is used for, but essentially
+bot. Its docstrings explains what each attribute is used for, but essentially
 each "node" (one of :py:attr:`config.components`, :py:attr:`wiki`,
 :py:attr:`tasks`, :py:attr:`tasks`, or :py:attr:`metadata`) maps to a section
 of the bot's :file:`config.yml` file. For example, if :file:`config.yml`
