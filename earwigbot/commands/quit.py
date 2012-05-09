@@ -44,13 +44,16 @@ class Command(BaseCommand):
 
     def do_quit(self, data):
         args = data.args
-        nick = self.config.irc.frontend["nick"].lower()
-        if data.trigger != nick and (not args or args[0].lower() != nick):
-            self.reply(data, "to confirm this action, the first argument must be my nickname.")
-            return
-        if args[1:]:
-            msg = " ".join(args[1:])
-            self.bot.stop("Stopped by {0}: {1}".format(data.nick, msg))
+        if data.trigger == data.my_nick:
+            reason = " ".join(args)
+        else:
+            if not args or args[0].lower() != data.my_nick:
+                self.reply(data, "to confirm this action, the first argument must be my name.")
+                return
+            reason = " ".join(args[1:])
+
+        if reason:
+            self.bot.stop("Stopped by {0}: {1}".format(data.nick, reason))
         else:
             self.bot.stop("Stopped by {0}".format(data.nick))
 

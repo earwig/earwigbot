@@ -28,7 +28,7 @@ __all__ = ["Data"]
 
 class Data(object):
     """Store data from an individual line received on IRC."""
-    
+
     def __init__(self, bot, line):
         self.line = line
         self.my_nick = bot.config.irc["frontend"]["nick"].lower()
