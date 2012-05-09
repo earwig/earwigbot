@@ -196,7 +196,7 @@ class User(object):
         Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user
         does not exist. Makes an API query only if we haven't made one already.
         """
-        return self._get_attribute("_blockinfo", force)
+        return self._get_attribute("_blockinfo")
 
     @property
     def groups(self):
@@ -205,7 +205,7 @@ class User(object):
         Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user
         does not exist. Makes an API query only if we haven't made one already.
         """
-        return self._get_attribute("_groups", force)
+        return self._get_attribute("_groups")
 
     @property
     def rights(self):
@@ -214,7 +214,7 @@ class User(object):
         Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user
         does not exist. Makes an API query only if we haven't made one already.
         """
-        return self._get_attribute("_rights", force)
+        return self._get_attribute("_rights")
 
     @property
     def editcount(self):
@@ -223,7 +223,7 @@ class User(object):
         Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user
         does not exist. Makes an API query only if we haven't made one already.
         """
-        return self._get_attribute("_editcount", force)
+        return self._get_attribute("_editcount")
 
     @property
     def registration(self):
@@ -232,7 +232,7 @@ class User(object):
         Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user
         does not exist. Makes an API query only if we haven't made one already.
         """
-        return self._get_attribute("_registration", force)
+        return self._get_attribute("_registration")
 
     @property
     def emailable(self):
@@ -241,7 +241,7 @@ class User(object):
         Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user
         does not exist. Makes an API query only if we haven't made one already.
         """
-        return self._get_attribute("_emailable", force)
+        return self._get_attribute("_emailable")
 
     @property
     def gender(self):
@@ -253,7 +253,7 @@ class User(object):
         Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user
         does not exist. Makes an API query only if we haven't made one already.
         """
-        return self._get_attribute("_gender", force)
+        return self._get_attribute("_gender")
 
     def reload(self):
         """Forcibly reload the user's attributes.
