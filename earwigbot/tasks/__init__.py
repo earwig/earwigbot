@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from earwigbot import exceptions
 from earwigbot import wiki
 
 __all__ = ["BaseTask"]
@@ -122,7 +123,7 @@ class BaseTask(object):
 
         try:
             content = page.get()
-        except wiki.PageNotFoundError:
+        except exceptions.PageNotFoundError:
             return False
         if content == cfg.get("disabled", "run"):
             return False

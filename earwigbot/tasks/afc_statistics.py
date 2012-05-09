@@ -28,6 +28,7 @@ from time import sleep
 
 import oursql
 
+from earwigbot import exceptions
 from earwigbot import wiki
 from earwigbot.tasks import BaseTask
 
@@ -470,7 +471,7 @@ class Task(BaseTask):
         else:
             try:
                 ns = self.site.namespace_name_to_id(namespace)
-            except wiki.NamespaceNotFoundError:
+            except exceptions.NamespaceNotFoundError:
                 base = title
                 ns = wiki.NS_MAIN
 
@@ -720,7 +721,7 @@ class Task(BaseTask):
             try:
                 if submitter.blockinfo:
                     notes += "|nb=1"  # Submitter is blocked
-            except wiki.UserNotFoundError:  # Likely an IP
+            except exceptions.UserNotFoundError:  # Likely an IP
                 pass
 
         return notes

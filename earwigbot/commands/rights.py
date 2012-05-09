@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from earwigbot import exceptions
 from earwigbot import wiki
 from earwigbot.commands import BaseCommand
 
@@ -44,7 +45,7 @@ class Command(BaseCommand):
 
         try:
             rights = user.groups
-        except wiki.UserNotFoundError:
+        except exceptions.UserNotFoundError:
             msg = "the user \x0302{0}\x0301 does not exist."
             self.reply(data, msg.format(name))
             return
