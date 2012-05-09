@@ -110,7 +110,7 @@ class Page(CopyrightMixin):
         if prefix != title:  # ignore a page that's titled "Category" or "User"
             try:
                 self._namespace = self._site.namespace_name_to_id(prefix)
-            except NamespaceNotFoundError:
+            except exceptions.NamespaceNotFoundError:
                 self._namespace = 0
         else:
             self._namespace = 0
@@ -191,10 +191,10 @@ class Page(CopyrightMixin):
         Assuming the API is sound, this should not raise any exceptions.
         """
         if not result:
-            params = {"action": "query", "rvprop": "user", "intoken": "edit",
-                      "prop": "info|revisions", "rvlimit": 1, "rvdir": "newer",
-                      "titles": self._title, "inprop": "protection|url"}
-            result = self._site._api_query(params)
+            query = self._site.api_query
+            result = query(action="query", rvprop="user", intoken="edit",
+                           prop="info|revisions", rvlimit=1, rvdir="newer",
+                           titles=self._title, inprop="protection|url")
 
         res = result["query"]["pages"].values()[0]
 
@@ -255,9 +255,9 @@ class Page(CopyrightMixin):
         want to force content reloading.
         """
         if not result:
-            params = {"action": "query", "prop": "revisions", "rvlimit": 1,
-                      "rvprop": "content|timestamp", "titles": self._title}
-            result = self._site._api_query(params)
+            query = self._site.api_query
+            result = query(action="query", prop="revisions", rvlimit=1,
+                           rvprop="content|timestamp", titles=self._title)
 
         res = result["query"]["pages"].values()[0]
         try:
@@ -302,8 +302,8 @@ class Page(CopyrightMixin):
 
         # Try the API query, catching most errors with our handler:
         try:
-            result = self._site._api_query(params)
-        except SiteAPIError as error:
+            result = self._site.api_query(**params)
+        except exceptions.SiteAPIError as error:
             if not hasattr(error, "code"):
                 raise  # We can only handle errors with a code attribute
             result = self._handle_edit_errors(error, params, tries)
@@ -609,10 +609,10 @@ class Page(CopyrightMixin):
         if self._exists == 0:
             # Kill two birds with one stone by doing an API query for both our
             # attributes and our page content:
-            params = {"action": "query", "rvlimit": 1, "titles": self._title,
-                      "prop": "info|revisions", "inprop": "protection|url",
-                      "intoken": "edit", "rvprop": "content|timestamp"}
-            result = self._site._api_query(params)
+            query = self._site.api_query
+            result = query(action="query", rvlimit=1, titles=self._title,
+                           prop="info|revisions", inprop="protection|url",
+                           intoken="edit", rvprop="content|timestamp")
             self._load_attributes(result=result)
             self._assert_existence()
             self._load_content(result=result)

@@ -122,6 +122,7 @@ class Site(object):
         self._wait_between_queries = wait_between_queries
         self._max_retries = 5
         self._last_query_time = 0
+        self._api_lock = Lock()
 
         # Attributes used for SQL queries:
         self._sql_data = sql
@@ -278,7 +279,7 @@ class Site(object):
             return self._api_query(params, tries=tries, wait=wait*3)
         else:  # Some unknown error occurred
             e = 'API query failed: got error "{0}"; server says: "{1}".'
-            error = earwigbot.SiteAPIError(e.format(code, info))
+            error = exceptions.SiteAPIError(e.format(code, info))
             error.code, error.info = code, info
             raise error
 
@@ -297,17 +298,16 @@ class Site(object):
         attrs = [self._name, self._project, self._lang, self._base_url,
             self._article_path, self._script_path]
 
-        params = {"action": "query", "meta": "siteinfo"}
+        params = {"action": "query", "meta": "siteinfo", "siprop": "general"}
 
         if not self._namespaces or force:
-            params["siprop"] = "general|namespaces|namespacealiases"
-            result = self._api_query(params)
+            params["siprop"] += "|namespaces|namespacealiases"
+            result = self.api_query(**params)
             self._load_namespaces(result)
         elif all(attrs):  # Everything is already specified and we're not told
             return        # to force a reload, so do nothing
         else:  # We're only loading attributes other than _namespaces
-            params["siprop"] = "general"
-            result = self._api_query(params)
+            result = self.api_query(**params)
 
         res = result["query"]["general"]
         self._name = res["wikiid"]
@@ -402,8 +402,7 @@ class Site(object):
         username argument) when cookie lookup fails, probably indicating that
         we are logged out.
         """
-        params = {"action": "query", "meta": "userinfo"}
-        result = self._api_query(params)
+        result = self.api_query(action="query", meta="userinfo")
         return result["query"]["userinfo"]["name"]
 
     def _get_username(self):
@@ -456,12 +455,14 @@ class Site(object):
         loop if MediaWiki isn't acting right.
         """
         name, password = login
-        params = {"action": "login", "lgname": name, "lgpassword": password}
         if token:
-            params["lgtoken"] = token
-        result = self._api_query(params)
-        res = result["login"]["result"]
+            result = self.api_query(action="login", lgname=name,
+                                    lgpassword=password, lgtoken=token)
+        else:
+            result = self.api_query(action="login", lgname=name,
+                                    lgpassword=password)
 
+        res = result["login"]["result"]
         if res == "Success":
             self._save_cookiejar()
         elif res == "NeedToken" and attempt == 0:
@@ -487,8 +488,7 @@ class Site(object):
         cookiejar (which probably contains now-invalidated cookies) and try to
         save it, if it supports that sort of thing.
         """
-        params = {"action": "logout"}
-        self._api_query(params)
+        self.api_query(action="logout")
         self._cookiejar.clear()
         self._save_cookiejar()
 
@@ -574,7 +574,8 @@ class Site(object):
         There is helpful MediaWiki API documentation at `MediaWiki.org
         <http://www.mediawiki.org/wiki/API>`_.
         """
-        return self._api_query(kwargs)
+        with self._api_lock:
+            return self._api_query(kwargs)
 
     def sql_query(self, query, params=(), plain_query=False, dict_cursor=False,
                   cursor_class=None, show_table=False):

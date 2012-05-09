@@ -91,7 +91,7 @@ class Task(BaseTask):
     def update(self, num_days):
         self.logger.info("Updating past {0} days".format(num_days))
         generator = self.backwards_cat_iterator()
-        for d in xrange(num_days):
+        for i in xrange(num_days):
             category = generator.next()
             date = category.title.split("/")[-1]
             self.update_date(date, category)
@@ -102,7 +102,7 @@ class Task(BaseTask):
         self.logger.info("Generating chart for past {0} days".format(num_days))
         data = OrderedDict()
         generator = self.backwards_cat_iterator()
-        for d in xrange(num_days):
+        for i in xrange(num_days):
             category = generator.next()
             date = category.title.split("/")[-1]
             data[date] = self.get_date_counts(date)

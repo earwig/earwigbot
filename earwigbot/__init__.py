@@ -37,18 +37,19 @@ __email__ = "ben.kurtovic@verizon.net"
 __release__ = False
 
 if not __release__:
-    def _add_git_commit_id_to_version_string(version):
+    def _get_git_commit_id():
+        """Return the ID of the git HEAD commit."""
         from git import Repo
         from os.path import split, dirname
         path = split(dirname(__file__))[0]
         commit_id = Repo(path).head.object.hexsha
-        return version + ".git+" + commit_id[:8]
+        return commit_id[:8]
     try:
-        __version__ = _add_git_commit_id_to_version_string(__version__)
+        __version__ += ".git+" + _get_git_commit_id()
     except Exception:
         pass
     finally:
-        del _add_git_commit_id_to_version_string
+        del _get_git_commit_id
 
 from earwigbot import bot
 from earwigbot import commands

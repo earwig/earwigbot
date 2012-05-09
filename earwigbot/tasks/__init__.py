@@ -107,9 +107,9 @@ class BaseTask(object):
         Otherwise, we'll use our default site.
         """
         if not site:
-            try:
-                site = self.site
-            except AttributeError:
+            if hasattr(self, "site"):
+                site = getattr(self, "site")
+            else:
                 site = self.bot.wiki.get_site()
 
         try:

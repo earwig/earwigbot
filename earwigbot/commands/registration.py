@@ -23,7 +23,6 @@
 import time
 
 from earwigbot import exceptions
-from earwigbot import wiki
 from earwigbot.commands import BaseCommand
 
 class Command(BaseCommand):

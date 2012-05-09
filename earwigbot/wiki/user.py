@@ -105,9 +105,9 @@ class User(object):
         Normally, this is called by _get_attribute() when a requested attribute
         is not defined. This defines it.
         """
-        params = {"action": "query", "list": "users", "ususers": self._name,
-                  "usprop": "blockinfo|groups|rights|editcount|registration|emailable|gender"}
-        result = self._site._api_query(params)
+        props = "blockinfo|groups|rights|editcount|registration|emailable|gender"
+        result = self._site.api_query(action="query", list="users",
+                                      ususers=self._name, usprop=props)
         res = result["query"]["users"][0]
 
         # normalize our username in case it was entered oddly

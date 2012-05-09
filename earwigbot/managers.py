@@ -79,7 +79,7 @@ class _ResourceManager(object):
         """
         f, path, desc = imp.find_module(name, [path])
         try:
-             module = imp.load_module(name, f, path, desc)
+            module = imp.load_module(name, f, path, desc)
         except Exception:
             e = "Couldn't load module {0} (from {1})"
             self.logger.exception(e.format(name, path))
