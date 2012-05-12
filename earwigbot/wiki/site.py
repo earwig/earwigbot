@@ -1,17 +1,17 @@
 # -*- coding: utf-8  -*-
 #
 # Copyright (C) 2009-2012 by Ben Kurtovic <ben.kurtovic@verizon.net>
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is 
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -95,7 +95,7 @@ class Site(object):
         all you need is wiki.get_site(name), which creates the Site for you
         based on your config file and the sites database. We accept a bunch of
         kwargs, but the only ones you really "need" are *base_url* and
-        *script_path*; this is enough to figure out an API url. *login*, a 
+        *script_path*; this is enough to figure out an API url. *login*, a
         tuple of (username, password), is highly recommended. *cookiejar will
         be used to store cookies, and we'll use a normal CookieJar if none is
         given.
@@ -367,7 +367,7 @@ class Site(object):
         If we didn't get any matches, we'll return None. Our goal here isn't to
         return the most likely username, or what we *want* our username to be
         (for that, we'd do self._login_info[0]), but rather to get our current
-        username without an unnecessary ?action=query&meta=userinfo API query. 
+        username without an unnecessary ?action=query&meta=userinfo API query.
         """
         name = ''.join((self._name, "Token"))
         cookie = self._get_cookie(name, self.domain)
@@ -379,7 +379,7 @@ class Site(object):
                 return user_name.value
 
         name = "centralauth_Token"
-        for cookie in self._cookiejar:            
+        for cookie in self._cookiejar:
             if not cookie.domain_initial_dot or cookie.is_expired():
                 continue
             if cookie.name != name:
@@ -393,11 +393,11 @@ class Site(object):
 
     def _get_username_from_api(self):
         """Do a simple API query to get our username and return it.
-        
+
         This is a reliable way to make sure we are actually logged in, because
         it doesn't deal with annoying cookie logic, but it results in an API
         query that is unnecessary in some cases.
-        
+
         Called by _get_username() (in turn called by get_user() with no
         username argument) when cookie lookup fails, probably indicating that
         we are logged out.
@@ -527,7 +527,7 @@ class Site(object):
         """The Site's name (or "wikiid" in the API), like ``"enwiki"``."""
         return self._name
 
-    @property 
+    @property
     def project(self):
         """The Site's project name in lowercase, like ``"wikipedia"``."""
         return self._project

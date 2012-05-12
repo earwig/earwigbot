@@ -1,17 +1,17 @@
 # -*- coding: utf-8  -*-
 #
 # Copyright (C) 2009-2012 by Ben Kurtovic <ben.kurtovic@verizon.net>
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is 
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -75,7 +75,7 @@ class BrokenSocketError(IRCError):
 
 class KwargParseError(IRCError):
     """Couldn't parse a certain keyword argument in an IRC message.
-    
+
     This is usually caused by it being given incorrectly: e.g., no value (abc),
     just a value (=xyz), just an equal sign (=), instead of the correct form
     (abc=xyz).
@@ -156,7 +156,7 @@ class EditError(WikiToolsetError):
 
 class PermissionsError(EditError):
     """A permissions error ocurred while editing.
-    
+
     We tried to do something we don't have permission to, like trying to delete
     a page as a non-admin, or trying to edit a page without login information
     and AssertEdit enabled.
