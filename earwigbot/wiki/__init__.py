@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 """
-**EarwigBot's Wiki Toolset**
+**EarwigBot: Wiki Toolset**
 
 This is a collection of classes and functions to read from and write to
 Wikipedia and other wiki sites. No connection whatsoever to `python-wikitools

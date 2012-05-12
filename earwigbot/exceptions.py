@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 """
-EarwigBot Exceptions
+**EarwigBot: Exceptions**
 
 This module contains all exceptions used by EarwigBot::
 

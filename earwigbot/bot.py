@@ -1,17 +1,17 @@
 # -*- coding: utf-8  -*-
 #
 # Copyright (C) 2009-2012 by Ben Kurtovic <ben.kurtovic@verizon.net>
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is 
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -34,8 +34,10 @@ __all__ = ["Bot"]
 
 class Bot(object):
     """
-    The Bot class is the core of EarwigBot, essentially responsible for
-    starting the various bot components and making sure they are all happy.
+    **EarwigBot: Main Bot Class**
+
+    The :py:class:`Bot` class is the core of EarwigBot, essentially responsible
+    for starting the various bot components and making sure they are all happy.
 
     EarwigBot has three components that can run independently of each other: an
     IRC front-end, an IRC watcher, and a wiki scheduler.
@@ -47,14 +49,14 @@ class Bot(object):
     - The wiki scheduler runs wiki-editing bot tasks in separate threads at
       user-defined times through a cron-like interface.
 
-    The :py:class:`Bot` object is accessable from within commands and tasks as
+    The :py:class:`Bot` object is accessible from within commands and tasks as
     :py:attr:`self.bot`. This is the primary way to access data from other
     components of the bot. For example, our
     :py:class:`~earwigbot.config.BotConfig` object is accessable from
     :py:attr:`bot.config`, tasks can be started with
-    :py:meth:`bot.tasks.start <earwigbot.managers.TaskManager.start>`, and
-    sites can be loaded from the wiki toolset with :py:meth:`bot.wiki.get_site
-    <earwigbot.wiki.sitesdb.SitesDB.get_site>`.
+    :py:meth:`bot.tasks.start() <earwigbot.managers.TaskManager.start>`, and
+    sites can be loaded from the wiki toolset with
+    :py:meth:`bot.wiki.get_site() <earwigbot.wiki.sitesdb.SitesDB.get_site>`.
     """
 
     def __init__(self, root_dir, level=logging.INFO):
@@ -163,9 +165,10 @@ class Bot(object):
 
         This is thread-safe, and it will gracefully stop IRC components before
         reloading anything. Note that you can safely reload commands or tasks
-        without restarting the bot with :py:meth:`bot.commands.load` or
-        :py:meth:`bot.tasks.load`. These should not interfere with running
-        components or tasks.
+        without restarting the bot with :py:meth:`bot.commands.load()
+        <earwigbot.managers._ResourceManager.load>` or
+        :py:meth:`bot.tasks.load() <earwigbot.managers._ResourceManager.load>`.
+        These should not interfere with running components or tasks.
 
         If given, *msg* will be used as our quit message.
         """

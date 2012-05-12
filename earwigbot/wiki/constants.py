@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 """
-**EarwigBot's Wiki Toolset: Constants**
+**EarwigBot: Wiki Toolset: Constants**
 
 This module defines some useful constants:
 

@@ -28,7 +28,7 @@ __all__ = ["Watcher"]
 
 class Watcher(IRCConnection):
     """
-    EarwigBot's IRC Watcher Component
+    **EarwigBot: IRC Watcher Component**
 
     The IRC watcher runs on a wiki recent-changes server and listens for
     edits. Users cannot interact with this part of the bot. When an event

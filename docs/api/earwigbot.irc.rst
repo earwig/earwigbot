@@ -7,7 +7,6 @@ irc Package
 .. automodule:: earwigbot.irc
     :members:
     :undoc-members:
-    :show-inheritance:
 
 :mod:`connection` Module
 ------------------------
@@ -15,7 +14,6 @@ irc Package
 .. automodule:: earwigbot.irc.connection
     :members:
     :undoc-members:
-    :show-inheritance:
 
 :mod:`data` Module
 ------------------
@@ -23,7 +21,6 @@ irc Package
 .. automodule:: earwigbot.irc.data
     :members:
     :undoc-members:
-    :show-inheritance:
 
 :mod:`frontend` Module
 ----------------------
@@ -39,7 +36,6 @@ irc Package
 .. automodule:: earwigbot.irc.rc
     :members:
     :undoc-members:
-    :show-inheritance:
 
 :mod:`watcher` Module
 ---------------------
@@ -48,4 +44,3 @@ irc Package
     :members:
     :undoc-members:
     :show-inheritance:
-

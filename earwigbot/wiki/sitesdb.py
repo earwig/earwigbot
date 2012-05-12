@@ -35,7 +35,7 @@ __all__ = ["SitesDB"]
 
 class SitesDB(object):
     """
-    **EarwigBot's Wiki Toolset: Sites Database Manager**
+    **EarwigBot: Wiki Toolset: Sites Database Manager**
 
     This class controls the :file:`sites.db` file, which stores information
     about all wiki sites known to the bot. Three public methods act as bridges

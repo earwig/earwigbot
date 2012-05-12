@@ -28,13 +28,15 @@ __all__ = ["Frontend"]
 
 class Frontend(IRCConnection):
     """
-    EarwigBot's IRC Frontend Component
+    **EarwigBot: IRC Frontend Component**
 
     The IRC frontend runs on a normal IRC server and expects users to interact
     with it and give it commands. Commands are stored as "command classes",
-    subclasses of BaseCommand in classes/base_command.py. All command classes
-    are automatically imported by commands/__init__.py if they are in
-    commands/.
+    subclasses of :py:class:`~earwigbot.commands.BaseCommand`. All command
+    classes are automatically imported by :py:meth:`commands.load()
+    <earwigbot.managers._ResourceManager.load>` if they are in
+    :py:mod:`earwigbot.commands` or the bot's custom command directory
+    (explained in the :doc:`documentation </customizing>`).
     """
     sender_regex = re.compile(":(.*?)!(.*?)@(.*?)\Z")
 

@@ -30,7 +30,7 @@ __all__ = ["User"]
 
 class User(object):
     """
-    **EarwigBot's Wiki Toolset: User Class**
+    **EarwigBot: Wiki Toolset: User**
 
     Represents a user on a given :py:class:`~earwigbot.wiki.site.Site`. Has
     methods for getting a bunch of information about the user, such as

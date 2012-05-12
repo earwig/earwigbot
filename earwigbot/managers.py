@@ -34,6 +34,8 @@ __all__ = ["CommandManager", "TaskManager"]
 
 class _ResourceManager(object):
     """
+    **EarwigBot: Resource Manager**
+
     Resources are essentially objects dynamically loaded by the bot, both
     packaged with it (built-in resources) and created by users (plugins, aka
     custom resources). Currently, the only two types of resources are IRC

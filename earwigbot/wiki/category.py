@@ -26,7 +26,7 @@ __all__ = ["Category"]
 
 class Category(Page):
     """
-    **EarwigBot's Wiki Toolset: Category Class**
+    **EarwigBot: Wiki Toolset: Category**
 
     Represents a category on a given :py:class:`~earwigbot.wiki.site.Site`, a
     subclass of :py:class:`~earwigbot.wiki.page.Page`. Provides additional

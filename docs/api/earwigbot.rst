@@ -54,4 +54,3 @@ Subpackages
     earwigbot.irc
     earwigbot.tasks
     earwigbot.wiki
-

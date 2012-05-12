@@ -7,7 +7,6 @@ tasks Package
 .. automodule:: earwigbot.tasks
     :members:
     :undoc-members:
-    :show-inheritance:
 
 :mod:`afc_catdelink` Module
 ---------------------------
@@ -88,4 +87,3 @@ tasks Package
     :members:
     :undoc-members:
     :show-inheritance:
-

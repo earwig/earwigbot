@@ -29,7 +29,7 @@ from earwigbot.exceptions import BrokenSocketError
 __all__ = ["IRCConnection"]
 
 class IRCConnection(object):
-    """A class to interface with IRC."""
+    """Interface with an IRC server."""
 
     def __init__(self, host, port, nick, ident, realname):
         self.host = host

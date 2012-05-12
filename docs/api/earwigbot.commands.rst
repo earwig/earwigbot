@@ -7,7 +7,6 @@ commands Package
 .. automodule:: earwigbot.commands
     :members:
     :undoc-members:
-    :show-inheritance:
 
 :mod:`afc_report` Module
 ------------------------
@@ -152,4 +151,3 @@ commands Package
     :members:
     :undoc-members:
     :show-inheritance:
-

@@ -24,16 +24,17 @@ __all__ = ["BaseCommand"]
 
 class BaseCommand(object):
     """
-    EarwigBot's Base IRC Command
+    **EarwigBot: Base IRC Command**
 
     This package provides built-in IRC "commands" used by the bot's front-end
     component. Additional commands can be installed as plugins in the bot's
     working directory.
 
-    This class (import with `from earwigbot.commands import BaseCommand`),
+    This class (import with ``from earwigbot.commands import BaseCommand``),
     can be subclassed to create custom IRC commands.
 
-    This docstring is reported to the user when they use !help <command>.
+    This docstring is reported to the user when they type ``"!help
+    <command>"``.
     """
     # This is the command's name, as reported to the user when they use !help:
     name = None
@@ -47,9 +48,10 @@ class BaseCommand(object):
         """Constructor for new commands.
 
         This is called once when the command is loaded (from
-        commands._load_command()). `bot` is out base Bot object. Generally you
+        :py:meth:`commands.load() <earwigbot.managers._ResourceManager.load>`).
+        *bot* is out base :py:class:`~earwigbot.bot.Bot` object. Generally you
         shouldn't need to override this; if you do, call
-        super(Command, self).__init__() first.
+        ``super(Command, self).__init__()`` first.
         """
         self.bot = bot
         self.config = bot.config
@@ -66,16 +68,18 @@ class BaseCommand(object):
         self.pong = lambda target: self.bot.frontend.pong(target)
 
     def check(self, data):
-        """Return whether this command should be called in response to 'data'.
+        """Return whether this command should be called in response to *data*.
 
-        Given a Data() instance, return True if we should respond to this
-        activity, or False if we should ignore it or it doesn't apply to us.
-        Be aware that since this is called for each message sent on IRC, it
-        should not be cheap to execute and unlikely to throw exceptions.
+        Given a :py:class:`~earwigbot.irc.data.Data` instance, return ``True``
+        if we should respond to this activity, or ``False`` if we should ignore
+        it and move on. Be aware that since this is called for each message
+        sent on IRC, it should be cheap to execute and unlikely to throw
+        exceptions.
 
-        Most commands return True if data.command == self.name, otherwise they
-        return False. This is the default behavior of check(); you need only
-        override it if you wish to change that.
+        Most commands return ``True`` if :py:attr:`data.command
+        <earwigbot.irc.data.Data.command>` ``==`` :py:attr:`self.name <name>`,
+        otherwise they return ``False``. This is the default behavior of
+        :py:meth:`check`; you need only override it if you wish to change that.
         """
         return data.is_command and data.command == self.name
 
@@ -83,9 +87,8 @@ class BaseCommand(object):
         """Main entry point for doing a command.
 
         Handle an activity (usually a message) on IRC. At this point, thanks
-        to self.check() which is called automatically by the command handler,
-        we know this is something we should respond to, so something like
-        `if data.command != "command_name": return` is usually unnecessary.
-        Note that 
+        to :py:meth:`check` which is called automatically by the command
+        handler, we know this is something we should respond to. Place your
+        command's body here.
         """
         pass

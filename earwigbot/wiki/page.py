@@ -32,7 +32,7 @@ __all__ = ["Page"]
 
 class Page(CopyrightMixin):
     """
-    **EarwigBot's Wiki Toolset: Page Class**
+    **EarwigBot: Wiki Toolset: Page**
 
     Represents a page on a given :py:class:`~earwigbot.wiki.site.Site`. Has
     methods for getting information about the page, getting page content, and

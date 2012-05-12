@@ -35,7 +35,7 @@ __all__ = ["BotConfig"]
 
 class BotConfig(object):
     """
-    **EarwigBot's YAML Config File Manager**
+    **EarwigBot: YAML Config File Manager**
 
     This handles all tasks involving reading and writing to our config file,
     including encrypting and decrypting passwords and making a new config file
@@ -226,7 +226,7 @@ class BotConfig(object):
         exit.
 
         Data from the config file is stored in five
-        :py:class:`~earwigbot.config._ConfigNode` s (:py:attr:`components`,
+        :py:class:`~earwigbot.config._ConfigNode`\ s (:py:attr:`components`,
         :py:attr:`wiki`, :py:attr:`tasks`, :py:attr:`irc`, :py:attr:`metadata`)
         for easy access (as well as the lower-level :py:attr:`data` attribute).
         If passwords are encrypted, we'll use :py:func:`~getpass.getpass` for

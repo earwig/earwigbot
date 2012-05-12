@@ -27,17 +27,17 @@ __all__ = ["BaseTask"]
 
 class BaseTask(object):
     """
-    EarwigBot's Base Bot Task
+    **EarwigBot: Base Bot Task**
 
     This package provides built-in wiki bot "tasks" EarwigBot runs. Additional
     tasks can be installed as plugins in the bot's working directory.
 
-    This class (import with `from earwigbot.tasks import BaseTask`) can be
+    This class (import with ``from earwigbot.tasks import BaseTask``) can be
     subclassed to create custom bot tasks.
 
     To run a task, use :py:meth:`bot.tasks.start(name, **kwargs)
     <earwigbot.managers.TaskManager.start>`. ``**kwargs`` get passed to the
-    Task's run() function.
+    Task's :meth:`run` method.
     """
     name = None
     number = 0
@@ -46,8 +46,10 @@ class BaseTask(object):
         """Constructor for new tasks.
 
         This is called once immediately after the task class is loaded by
-        the task manager (in tasks._load_task()). Don't override this directly
-        (or if you do, remember super(Task, self).__init()) - use setup().
+        the task manager (in :py:meth:`tasks.load()
+        <earwigbot.managers._ResourceManager.load>`). Don't override this
+        directly; if you do, remember to place ``super(Task, self).__init()``
+        first. Use :py:meth:`setup` for typical task-init/setup needs.
         """
         self.bot = bot
         self.config = bot.config
@@ -64,25 +66,22 @@ class BaseTask(object):
     def run(self, **kwargs):
         """Main entry point to run a given task.
 
-        This is called directly by tasks.start() and is the main way to make a
-        task do stuff. kwargs will be any keyword arguments passed to start()
-        which are entirely optional.
-
-        The same task instance is preserved between runs, so you can
-        theoretically store data in self (e.g.
-        start('mytask', action='store', data='foo')) and then use it later
-        (e.g. start('mytask', action='save')).
+        This is called directly by :py:meth:`tasks.start()
+        <earwigbot.managers.TaskManager.start>` and is the main way to make a
+        task do stuff. *kwargs* will be any keyword arguments passed to
+        :py:meth:`~earwigbot.managers.TaskManager.start`, which are entirely
+        optional.
         """
         pass
 
     def make_summary(self, comment):
-        """Makes an edit summary by filling in variables in a config value.
+        """Make an edit summary by filling in variables in a config value.
 
-        config.wiki["summary"] is used, where $2 is replaced by the main
-        summary body, given as a method arg, and $1 is replaced by the task
-        number.
+        :py:attr:`config.wiki["summary"] <earwigbot.config.BotConfig.wiki>` is
+        used, where ``$2`` is replaced by the main summary body, given by the
+        *comment* argument, and ``$1`` is replaced by the task number.
 
-        If the config value is not found, we just return the arg as-is.
+        If the config value is not found, we'll just return *comment* as-is.
         """
         try:
             summary = self.bot.config.wiki["summary"]
@@ -91,20 +90,22 @@ class BaseTask(object):
         return summary.replace("$1", str(self.number)).replace("$2", comment)
 
     def shutoff_enabled(self, site=None):
-        """Returns whether on-wiki shutoff is enabled for this task.
+        """Return whether on-wiki shutoff is enabled for this task.
 
         We check a certain page for certain content. This is determined by
-        our config file: config.wiki["shutoff"]["page"] is used as the title,
-        with $1 replaced by our username and $2 replaced by the task number,
-        and config.wiki["shutoff"]["disabled"] is used as the content.
+        our config file: :py:attr:`config.wiki["shutoff"]["page"]
+        <earwigbot.config.BotConfig.wiki>` is used as the title, with any
+        embedded ``$1`` replaced by our username and ``$2``  replaced by the
+        task number; and :py:attr:`config.wiki["shutoff"]["disabled"]
+        <earwigbot.config.BotConfig.wiki>` is used as the content.
 
-        If the page has that content or the page does not exist, then shutoff
-        is "disabled", meaning the bot is supposed to run normally, and we
-        return False. If the page's content is something other than what we
-        expect, shutoff is enabled, and we return True.
+        If the page has that exact content or the page does not exist, then
+        shutoff is "disabled", meaning the bot is supposed to run normally, and
+        we return  ``False``. If the page's content is something other than
+        what we expect, shutoff is enabled, and we return ``True``.
 
-        If a site is not provided, we'll try to use self.site if it's set.
-        Otherwise, we'll use our default site.
+        If a site is not provided, we'll try to use :py:attr:`self.site <site>`
+        if it's set. Otherwise, we'll use our default site.
         """
         if not site:
             if hasattr(self, "site"):

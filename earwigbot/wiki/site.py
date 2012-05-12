@@ -48,7 +48,7 @@ __all__ = ["Site"]
 
 class Site(object):
     """
-    **EarwigBot's Wiki Toolset: Site Class**
+    **EarwigBot: Wiki Toolset: Site**
 
     Represents a site, with support for API queries and returning
     :py:class:`~earwigbot.wiki.page.Page`,
