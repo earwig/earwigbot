@@ -9,14 +9,6 @@ commands Package
     :undoc-members:
     :show-inheritance:
 
-:mod:`_old` Module
-------------------
-
-.. automodule:: earwigbot.commands._old
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 :mod:`afc_report` Module
 ------------------------
 

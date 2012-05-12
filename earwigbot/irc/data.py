@@ -1,17 +1,17 @@
 # -*- coding: utf-8  -*-
 #
 # Copyright (C) 2009-2012 by Ben Kurtovic <ben.kurtovic@verizon.net>
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is 
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -35,7 +35,15 @@ class Data(object):
         self.chan = self.nick = self.ident = self.host = self.msg = ""
 
     def parse_args(self):
-        """Parse command args from self.msg into self.command and self.args."""
+        """Parse command arguments from the message.
+
+        :py:attr:`self.msg <msg>` is converted into the string
+        :py:attr:`self.command <command>` and the argument list
+        :py:attr:`self.args <args>` if the message starts with a "trigger"
+        (``"!"``, ``"."``, or the bot's name); :py:attr:`self.is_command
+        <is_command>` will be set to ``True``, and :py:attr:`self.trigger
+        <trigger>` will store the trigger string. Otherwise,
+        :py:attr:`is_command` will be set to ``False``."""
         args = self.msg.strip().split()
 
         while "" in args:
@@ -67,10 +75,11 @@ class Data(object):
                 self.command = ""
 
     def parse_kwargs(self):
-        """Parse keyword arguments embedded in self.args.
-        
-        Parse a command given as "!command key1=value1 key2=value2..." into a
-        dict, self.kwargs, like {'key1': 'value2', 'key2': 'value2'...}.
+        """Parse keyword arguments embedded in :py:attr:`self.args <args>`.
+
+        Parse a command given as ``"!command key1=value1 key2=value2..."``
+        into a dict, :py:attr:`self.kwargs <kwargs>`, like
+        ``{'key1': 'value2', 'key2': 'value2'...}``.
         """
         self.kwargs = {}
         for arg in self.args[2:]:
