@@ -367,24 +367,6 @@ def parse(command, line, line2, nick, chan, host, auth, notice, say, reply, s):
 			reply("NotImplementedError", chan, nick)
 		elif action == "report":
 			reply("NotImplementedError", chan, nick)
-	if command == "langcode" or command == "lang" or command == "language":
-		try:
-			lang = line2[4]
-		except Exception:
-			reply("Please specify an ISO code.", chan, nick)
-			return
-		data = urllib.urlopen("http://toolserver.org/~earwig/cgi-bin/swmt.py?action=iso").read()
-		data = string.split(data, "\n")
-		result = False
-		for datum in data:
-			if datum.startswith(lang):
-				result = re.findall(".*? (.*)", datum)[0]
-				break
-		if result:
-			reply(result, chan, nick)
-			return
-		reply("Not found.", chan, nick)
-		return
 	if command == "lookup" or command == "ip":
 		try:
 			hexIP = line2[4]
