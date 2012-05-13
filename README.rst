@@ -138,9 +138,9 @@ The most useful attributes are:
 
 `earwigbot.config.BotConfig`_ stores configuration information for the bot. Its
 docstring explains what each attribute is used for, but essentially each "node"
-(one of ``config.components``, ``wiki``, ``tasks``, ``irc``, and ``metadata``)
-maps to a section of the bot's ``config.yml`` file. For example, if
-``config.yml`` includes something like::
+(one of ``config.components``, ``wiki``, ``irc``, ``commands``, ``tasks``, and
+``metadata``) maps to a section of the bot's ``config.yml`` file. For example,
+if ``config.yml`` includes something like::
 
     irc:
         frontend:
@@ -158,7 +158,8 @@ Custom IRC commands
 ~~~~~~~~~~~~~~~~~~~
 
 Custom commands are subclasses of `earwigbot.commands.BaseCommand`_ that
-override ``BaseCommand``'s ``process()`` (and optionally ``check()``) methods.
+override ``BaseCommand``'s ``process()`` (and optionally ``check()`` or
+``setup()``) methods.
 
 ``BaseCommand``'s docstrings should explain what each attribute and method is
 for and what they should be overridden with, but these are the basics:
@@ -170,6 +171,12 @@ for and what they should be overridden with, but these are the basics:
   ``"msg_private"`` (for private messages only), ``"msg_public"`` (for channel
   messages only), and ``"join"`` (for when a user joins a channel). See the
   afc_status_ plugin for a command that responds to other hook types.
+
+- Method ``setup()`` is called *once* with no arguments immediately after the
+  command is first loaded. Does nothing by default; treat it like an
+  ``__init__()`` if you want (``__init__()`` does things by default and a
+  dedicated setup method is often easier than overriding ``__init__()`` and
+  using ``super``).
 
 - Method ``check()`` is passed a ``Data`` [2]_ object, and should return
   ``True`` if you want to respond to this message, or ``False`` otherwise. The
@@ -190,6 +197,12 @@ for and what they should be overridden with, but these are the basics:
   issuer of the command in the channel it was received),
   ``self.action(chan_or_user, msg)``, ``self.notice(chan_or_user, msg)``,
   ``self.join(chan)``, and ``self.part(chan)``.
+
+Commands have access to ``config.commands[command_name]`` for config
+information, which is a node in ``config.yml`` like every other attribute of
+``bot.config``. This can be used to store, for example, API keys or SQL
+connection info, so that these can be easily changed without modifying the
+command itself.
 
 It's important to name the command class ``Command`` within the file, or else
 the bot might not recognize it as a command. The name of the file doesn't
@@ -243,7 +256,7 @@ and what they should be overridden with, but these are the basics:
 
 Tasks have access to ``config.tasks[task_name]`` for config information, which
 is a node in ``config.yml`` like every other attribute of ``bot.config``. This
-can be used to store, for example, edit summaries, or templates to append to
+can be used to store, for example, edit summaries or templates to append to
 user talk pages, so that these can be easily changed without modifying the task
 itself.
 

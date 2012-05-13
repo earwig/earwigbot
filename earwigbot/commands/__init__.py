@@ -49,9 +49,10 @@ class BaseCommand(object):
 
         This is called once when the command is loaded (from
         :py:meth:`commands.load() <earwigbot.managers._ResourceManager.load>`).
-        *bot* is out base :py:class:`~earwigbot.bot.Bot` object. Generally you
-        shouldn't need to override this; if you do, call
-        ``super(Command, self).__init__()`` first.
+        *bot* is out base :py:class:`~earwigbot.bot.Bot` object. Don't override
+        this directly; if you do, remember to place
+        ``super(Command, self).__init()`` first. Use :py:meth:`setup` for
+        typical command-init/setup needs.
         """
         self.bot = bot
         self.config = bot.config
@@ -66,6 +67,15 @@ class BaseCommand(object):
         self.part = lambda chan, msg=None: self.bot.frontend.part(chan, msg)
         self.mode = lambda t, level, msg: self.bot.frontend.mode(t, level, msg)
         self.pong = lambda target: self.bot.frontend.pong(target)
+
+        self.setup()
+
+    def setup(self):
+        """Hook called immediately after the command is loaded.
+
+        Does nothing by default; feel free to override.
+        """
+        pass
 
     def check(self, data):
         """Return whether this command should be called in response to *data*.

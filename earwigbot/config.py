@@ -48,8 +48,9 @@ class BotConfig(object):
     - :py:attr:`path`:       path to the bot's config file
     - :py:attr:`components`: enabled components
     - :py:attr:`wiki`:       information about wiki-editing
-    - :py:attr:`tasks`:      information for bot tasks
     - :py:attr:`irc`:        information about IRC
+    - :py:attr:`commands`:   information about IRC commands
+    - :py:attr:`tasks`:      information for bot tasks
     - :py:attr:`metadata`:   miscellaneous information
     - :py:meth:`schedule`:   tasks scheduled to run at a given time
 
@@ -69,12 +70,13 @@ class BotConfig(object):
 
         self._components = _ConfigNode()
         self._wiki = _ConfigNode()
-        self._tasks = _ConfigNode()
         self._irc = _ConfigNode()
+        self._commands = _ConfigNode()
+        self._tasks = _ConfigNode()
         self._metadata = _ConfigNode()
 
-        self._nodes = [self._components, self._wiki, self._tasks, self._irc,
-                       self._metadata]
+        self._nodes = [self._components, self._wiki, self._irc, self._commands,
+                       self._tasks, self._metadata]
 
         self._decryptable_nodes = [  # Default nodes to decrypt
             (self._wiki, ("password",)),
@@ -196,14 +198,19 @@ class BotConfig(object):
         return self._wiki
 
     @property
-    def tasks(self):
-        """A dict of information for bot tasks."""
-        return self._tasks
-
-    @property
     def irc(self):
         """A dict of information about IRC."""
         return self._irc
+
+    @property
+    def commands(self):
+        """A dict of information for IRC commands."""
+        return self._commands
+
+    @property
+    def tasks(self):
+        """A dict of information for bot tasks."""
+        return self._tasks
 
     @property
     def metadata(self):
@@ -225,14 +232,14 @@ class BotConfig(object):
         user. If there is no config file at all, offer to make one, otherwise
         exit.
 
-        Data from the config file is stored in five
+        Data from the config file is stored in six
         :py:class:`~earwigbot.config._ConfigNode`\ s (:py:attr:`components`,
-        :py:attr:`wiki`, :py:attr:`tasks`, :py:attr:`irc`, :py:attr:`metadata`)
-        for easy access (as well as the lower-level :py:attr:`data` attribute).
-        If passwords are encrypted, we'll use :py:func:`~getpass.getpass` for
-        the key and then decrypt them. If the config is being reloaded,
-        encrypted items will be automatically decrypted if they were decrypted
-        earlier.
+        :py:attr:`wiki`, :py:attr:`irc`, :py:attr:`commands`, :py:attr:`tasks`,
+        :py:attr:`metadata`) for easy access (as well as the lower-level
+        :py:attr:`data` attribute). If passwords are encrypted, we'll use
+        :py:func:`~getpass.getpass` for the key and then decrypt them. If the
+        config is being reloaded, encrypted items will be automatically
+        decrypted if they were decrypted earlier.
         """
         if not path.exists(self._config_path):
             print "Config file not found:", self._config_path
@@ -246,8 +253,9 @@ class BotConfig(object):
         data = self._data
         self.components._load(data.get("components", {}))
         self.wiki._load(data.get("wiki", {}))
-        self.tasks._load(data.get("tasks", {}))
         self.irc._load(data.get("irc", {}))
+        self.commands._load(data.get("commands", {}))
+        self.tasks._load(data.get("tasks", {}))
         self.metadata._load(data.get("metadata", {}))
 
         self._setup_logging()

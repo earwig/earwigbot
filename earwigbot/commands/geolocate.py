@@ -29,6 +29,15 @@ class Command(BaseCommand):
     """Geolocate an IP address (via http://ipinfodb.com/)."""
     name = "geolocate"
 
+    def setup(self):
+        self.config.decrypt(self.config.commands, (self.name, "apiKey"))
+        try:
+            self.key = self.config.commands[self.name]["apiKey"]
+        except KeyError:
+            self.key = None
+            log = 'Cannot use without an API key for http://ipinfodb.com/ stored as config.commands["{0}"]["apiKey"]'
+            self.logger.warn(log.format(self.name))
+
     def check(self, data):
         commands = ["geolocate", "locate", "geo", "ip"]
         return data.is_command and data.command in commands
@@ -38,18 +47,16 @@ class Command(BaseCommand):
             self.reply(data, "please specify an IP to lookup.")
             return
 
-        try:
-            key = config.tasks[self.name]["apiKey"]
-        except KeyError:
-            msg = 'I need an API key for http://ipinfodb.com/ stored as \x0303config.tasks["{0}"]["apiKey"]\x0301.'
-            log = 'Need an API key for http://ipinfodb.com/ stored as config.tasks["{0}"]["apiKey"]'
+        if not self.key:
+            msg = 'I need an API key for http://ipinfodb.com/ stored as \x0303config.commands["{0}"]["apiKey"]\x0301.'
+            log = 'Need an API key for http://ipinfodb.com/ stored as config.commands["{0}"]["apiKey"]'
             self.reply(data, msg.format(self.name) + ".")
             self.logger.error(log.format(self.name))
             return
 
         address = data.args[0]
         url = "http://api.ipinfodb.com/v3/ip-city/?key={0}&ip={1}&format=json"
-        query = urllib2.urlopen(url.format(key, address)).read()
+        query = urllib2.urlopen(url.format(self.key, address)).read()
         res = json.loads(query)
 
         try:
