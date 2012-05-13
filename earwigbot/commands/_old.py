@@ -131,10 +131,6 @@ def parse(command, line, line2, nick, chan, host, auth, notice, say, reply, s):
 			msg = 'Can\'t find the etymology for "%s". Try %s' % (word, uri)
 			reply(msg, chan, nick)
 		return
-	if command == "pend" or command == "pending":
-		say("Pending submissions status page: <http://en.wikipedia.org/wiki/WP:AFC/S>.", chan)
-		say("Pending submissions category: <http://en.wikipedia.org/wiki/Category:Pending_AfC_submissions>.", chan)
-		return
 	if command == "sub" or command == "submissions":
 		try:
 			number = int(line2[4])
@@ -190,49 +186,6 @@ def parse(command, line, line2, nick, chan, host, auth, notice, say, reply, s):
 			say(msg, chan)
 		else:
 			reply("I refuse to hurt anything with \"Earwig\" in its name :P", chan, nick)
-		return
-	if command == "mysql":
-		if authy != "owner":
-			reply("You aren't authorized to use this command.", chan, nick)
-			return
-		import MySQLdb
-		try:
-			strings = line2[4]
-			strings = ' '.join(line2[4:])
-			if "db:" in strings:
-				database = re.findall("db\:(.*?)\s", strings)[0]
-			else:
-				database = "enwiki_p"
-			if "time:" in strings:
-				times = int(re.findall("time\:(.*?)\s", strings)[0])
-			else:
-				times = 60
-			file = re.findall("file\:(.*?)\s", strings)[0]
-			sqlquery = re.findall("query\:(.*?)\Z", strings)[0]
-		except Exception:
-			reply("You did not specify enough data for the bot to continue.", chan, nick)
-			return
-		database2 = database[:-2] + "-p"
-		db = MySQLdb.connect(db=database, host="%s.rrdb.toolserver.org" % database2, read_default_file="/home/earwig/.my.cnf")
-		db.query(sqlquery)
-		r = db.use_result()
-		data = r.fetch_row(0)
-		try:
-			f = codecs.open("/home/earwig/public_html/reports/%s/%s" % (database[:-2], file), 'r')
-			reply("A file already exists with that name.", chan, nick)
-			return
-		except Exception:
-			pass
-		f = codecs.open("/home/earwig/public_html/reports/%s/%s" % (database[:-2], file), 'a', 'utf-8')
-		for line in data:
-			new_line = []
-			for l in line:
-				new_line.append(str(l))
-			f.write('	'.join(new_line) + "\n")
-		f.close()
-		reply("Query completed successfully. See http://toolserver.org/~earwig/reports/%s/%s. I will delete the report in %s seconds." % (database[:-2], file, times), chan, nick)
-		time.sleep(times)
-		os.remove("/home/earwig/public_html/reports/%s/%s" % (database[:-2], file))
 		return
 	if command == "notes" or command == "note" or command == "about" or command == "data" or command == "database":
 		try:
