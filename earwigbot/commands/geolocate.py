@@ -20,36 +20,49 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from urllib import quote_plus
+import json
+import urllib2
 
-from earwigbot import exceptions
 from earwigbot.commands import BaseCommand
 
 class Command(BaseCommand):
-    """Return a user's edit count."""
-    name = "editcount"
+    """Geolocate an IP address (via http://ipinfodb.com/)."""
+    name = "geolocate"
 
     def check(self, data):
-        commands = ["ec", "editcount"]
+        commands = ["geolocate", "locate", "geo", "ip"]
         return data.is_command and data.command in commands
 
     def process(self, data):
         if not data.args:
-            name = data.nick
-        else:
-            name = ' '.join(data.args)
-
-        site = self.bot.wiki.get_site()
-        user = site.get_user(name)
-
-        try:
-            count = user.editcount
-        except exceptions.UserNotFoundError:
-            msg = "the user \x0302{0}\x0301 does not exist."
-            self.reply(data, msg.format(name))
+            self.reply(data, "please specify an IP to lookup.")
             return
 
-        safe = quote_plus(user.name)
-        url = "http://toolserver.org/~tparis/pcount/index.php?name={0}&lang=en&wiki=wikipedia"
-        msg = "\x0302{0}\x0301 has {1} edits ({2})."
-        self.reply(data, msg.format(name, count, url.format(safe)))
+        try:
+            key = config.tasks[self.name]["apiKey"]
+        except KeyError:
+            msg = 'I need an API key for http://ipinfodb.com/ stored as \x0303config.tasks["{0}"]["apiKey"]\x0301.'
+            log = 'Need an API key for http://ipinfodb.com/ stored as config.tasks["{0}"]["apiKey"]'
+            self.reply(data, msg.format(self.name) + ".")
+            self.logger.error(log.format(self.name))
+            return
+
+        address = data.args[0]
+        url = "http://api.ipinfodb.com/v3/ip-city/?key={0}&ip={1}&format=json"
+        query = urllib2.urlopen(url.format(key, address)).read()
+        res = json.loads(query)
+
+        try:
+            country = res["countryName"]
+            region = res["regionName"]
+            city = res["cityName"]
+            latitude = res["latitude"]
+            longitude = res["longitude"]
+            utcoffset = res["timeZone"]
+        except KeyError:
+            self.reply(data, "IP \x0302{0}\x0301 not found.".format(address))
+            return
+
+        msg = "{0}, {1}, {2} ({3}, {4}), UTC {5}"
+        geo = msg.format(country, region, city, latitude, longitude, utcoffset)
+        self.reply(data, geo)

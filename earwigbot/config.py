@@ -273,7 +273,10 @@ class BotConfig(object):
             >>> config.decrypt(config.irc, "frontend", "nickservPassword")
             # decrypts config.irc["frontend"]["nickservPassword"]
         """
-        self._decryptable_nodes.append((node, nodes))
+        signature = (node, nodes)
+        if signature in self._decryptable_nodes:
+            return  # Already decrypted
+        self._decryptable_nodes.append(signature)
         if self.is_encrypted():
             self._decrypt(node, nodes)
 

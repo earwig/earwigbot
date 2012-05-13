@@ -367,17 +367,3 @@ def parse(command, line, line2, nick, chan, host, auth, notice, say, reply, s):
 			reply("NotImplementedError", chan, nick)
 		elif action == "report":
 			reply("NotImplementedError", chan, nick)
-	if command == "lookup" or command == "ip":
-		try:
-			hexIP = line2[4]
-		except Exception:
-			reply("Please specify a hex IP address.", chan, nick)
-			return
-		hexes = [hexIP[:2], hexIP[2:4], hexIP[4:6], hexIP[6:8]]
-		hashes = []
-		for hexHash in hexes:
-			newHex = int(hexHash, 16)
-			hashes.append(newHex)
-		normalizedIP = "%s.%s.%s.%s" % (hashes[0], hashes[1], hashes[2], hashes[3])
-		reply(normalizedIP, chan, nick)
-		return

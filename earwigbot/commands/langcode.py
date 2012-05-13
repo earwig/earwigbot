@@ -45,7 +45,7 @@ class Command(BaseCommand):
             if site["code"] == code:
                 name = site["name"]
                 sites = ", ".join([s["url"] for s in site["site"]])
-                msg = "\x0302{0}\x0302 is {1} ({2})".format(code, name, sites)
+                msg = "\x0302{0}\x0301 is {1} ({2})".format(code, name, sites)
                 self.reply(data, msg)
                 return
 

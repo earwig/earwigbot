@@ -30,9 +30,7 @@ class Command(BaseCommand):
     name = "remind"
 
     def check(self, data):
-        if data.is_command and data.command in ["remind", "reminder"]:
-            return True
-        return False
+        return data.is_command and data.command in ["remind", "reminder"]
 
     def process(self, data):
         if not data.args:

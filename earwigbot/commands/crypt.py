@@ -33,9 +33,7 @@ class Command(BaseCommand):
 
     def check(self, data):
         commands = ["crypt", "hash", "encrypt", "decrypt"]
-        if data.is_command and data.command in commands:
-            return True
-        return False
+        return data.is_command and data.command in commands
 
     def process(self, data):
         if data.command == "crypt":

@@ -41,7 +41,8 @@ class Command(BaseCommand):
 
         conn = oursql.connect(**args)
         with conn.cursor() as cursor:
-            query = "SELECT UNIX_TIMESTAMP() - UNIX_TIMESTAMP(rc_timestamp) FROM recentchanges ORDER BY rc_timestamp DESC LIMIT 1"
+            query = """SELECT UNIX_TIMESTAMP() - UNIX_TIMESTAMP(rc_timestamp)
+                       FROM recentchanges ORDER BY rc_timestamp DESC LIMIT 1"""
             cursor.execute(query)
             replag = int(cursor.fetchall()[0][0])
         conn.close()

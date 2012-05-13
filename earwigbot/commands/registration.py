@@ -31,9 +31,7 @@ class Command(BaseCommand):
 
     def check(self, data):
         commands = ["registration", "reg", "age"]
-        if data.is_command and data.command in commands:
-            return True
-        return False
+        return data.is_command and data.command in commands
 
     def process(self, data):
         if not data.args:

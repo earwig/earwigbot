@@ -32,9 +32,7 @@ class Command(BaseCommand):
 
     def check(self, data):
         commands = ["tasks", "task", "threads", "tasklist"]
-        if data.is_command and data.command in commands:
-            return True
-        return False
+        return data.is_command and data.command in commands
 
     def process(self, data):
         self.data = data
