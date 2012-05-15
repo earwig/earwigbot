@@ -70,7 +70,7 @@ class Command(BaseCommand):
 
     def get_page(self, title):
         page = self.site.get_page(title, follow_redirects=False)
-        if page.exists[0]:
+        if page.exists == page.PAGE_EXISTS:
             return page
 
     def report(self, page):

@@ -184,6 +184,12 @@ class Site(object):
         res = "<Site {0} ({1}:{2}) at {3}>"
         return res.format(self.name, self.project, self.lang, self.domain)
 
+    def _unicodeify(self, value, encoding="utf8"):
+        """Return input as unicode if it's not unicode to begin with."""
+        if isinstance(value, unicode):
+            return value
+        return unicode(value, encoding)
+
     def _urlencode_utf8(self, params):
         """Implement urllib.urlencode() with support for unicode input."""
         enc = lambda s: s.encode("utf8") if isinstance(s, unicode) else str(s)
@@ -682,7 +688,7 @@ class Site(object):
         e = "There is no namespace with name '{0}'.".format(name)
         raise exceptions.NamespaceNotFoundError(e)
 
-    def get_page(self, title, follow_redirects=False):
+    def get_page(self, title, follow_redirects=False, pageid=None):
         """Return a :py:class:`Page` object for the given title.
 
         *follow_redirects* is passed directly to
@@ -696,23 +702,26 @@ class Site(object):
         redirect-following: :py:class:`~earwigbot.wiki.page.Page`'s methods
         provide that.
         """
+        title = self._unicodeify(title)
         prefixes = self.namespace_id_to_name(constants.NS_CATEGORY, all=True)
         prefix = title.split(":", 1)[0]
         if prefix != title:  # Avoid a page that is simply "Category"
             if prefix in prefixes:
-                return Category(self, title, follow_redirects)
-        return Page(self, title, follow_redirects)
+                return Category(self, title, follow_redirects, pageid)
+        return Page(self, title, follow_redirects, pageid)
 
-    def get_category(self, catname, follow_redirects=False):
+    def get_category(self, catname, follow_redirects=False, pageid=None):
         """Return a :py:class:`Category` object for the given category name.
 
         *catname* should be given *without* a namespace prefix. This method is
         really just shorthand for :py:meth:`get_page("Category:" + catname)
         <get_page>`.
         """
+        catname = self._unicodeify(catname)
+        name = name if isinstance(name, unicode) else name.decode("utf8")
         prefix = self.namespace_id_to_name(constants.NS_CATEGORY)
-        pagename = ':'.join((prefix, catname))
-        return Category(self, pagename, follow_redirects)
+        pagename = u':'.join((prefix, catname))
+        return Category(self, pagename, follow_redirects, pageid)
 
     def get_user(self, username=None):
         """Return a :py:class:`User` object for the given username.
@@ -721,6 +730,7 @@ class Site(object):
         :py:class:`~earwigbot.wiki.user.User` object representing the currently
         logged-in (or anonymous!) user is returned.
         """
+        username = self._unicodeify(username)
         if not username:
             username = self._get_username()
         return User(self, username)

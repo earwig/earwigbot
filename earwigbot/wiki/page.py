@@ -43,7 +43,7 @@ class Page(CopyrightMixin):
 
     - :py:attr:`site`:        the page's corresponding Site object
     - :py:attr:`title`:       the page's title, or pagename
-    - :py:attr:`exists`:      whether the page exists
+    - :py:attr:`exists`:      whether or not the page exists
     - :py:attr:`pageid`:      an integer ID representing the page
     - :py:attr:`url`:         the page's URL
     - :py:attr:`namespace`:   the page's namespace as an integer
@@ -70,17 +70,20 @@ class Page(CopyrightMixin):
       URL
     """
 
-    re_redirect = "^\s*\#\s*redirect\s*\[\[(.*?)\]\]"
+    PAGE_UNKNOWN = 0
+    PAGE_INVALID = 1
+    PAGE_MISSING = 2
+    PAGE_EXISTS = 3
 
-    def __init__(self, site, title, follow_redirects=False):
+    def __init__(self, site, title, follow_redirects=False, pageid=None):
         """Constructor for new Page instances.
 
-        Takes three arguments: a Site object, the Page's title (or pagename),
-        and whether or not to follow redirects (optional, defaults to False).
+        Takes four arguments: a Site object, the Page's title (or pagename),
+        whether or not to follow redirects (optional, defaults to False), and
+        a page ID to supplement the title (optional, defaults to None - i.e.,
+        we will have to query the API to get it).
 
-        As with User, site.get_page() is preferred. Site's method has support
-        for a default *follow_redirects* value in our config, while __init__()
-        always defaults to False.
+        As with User, site.get_page() is preferred.
 
         __init__() will not do any API queries, but it will use basic namespace
         logic to determine our namespace ID and if we are a talkpage.
@@ -89,9 +92,9 @@ class Page(CopyrightMixin):
         self._site = site
         self._title = title.strip()
         self._follow_redirects = self._keep_following = follow_redirects
+        self._pageid = pageid
 
-        self._exists = 0
-        self._pageid = None
+        self._exists = self.PAGE_UNKNOWN
         self._is_redirect = None
         self._lastrevid = None
         self._protection = None
@@ -140,7 +143,7 @@ class Page(CopyrightMixin):
         Note that validity != existence. If a page's title is invalid (e.g, it
         contains "[") it will always be invalid, and cannot be edited.
         """
-        if self._exists == 1:
+        if self._exists == self.PAGE_INVALID:
             e = "Page '{0}' is invalid.".format(self._title)
             raise exceptions.InvalidPageError(e)
 
@@ -152,7 +155,7 @@ class Page(CopyrightMixin):
         It will also call _assert_validity() beforehand.
         """
         self._assert_validity()
-        if self._exists == 2:
+        if self._exists == self.PAGE_MISSING:
             e = "Page '{0}' does not exist.".format(self._title)
             raise exceptions.PageNotFoundError(e)
 
@@ -213,14 +216,14 @@ class Page(CopyrightMixin):
             if "missing" in res:
                 # If it has a negative ID and it's missing; we can still get
                 # data like the namespace, protection, and URL:
-                self._exists = 2
+                self._exists = self.PAGE_MISSING
             else:
                 # If it has a negative ID and it's invalid, then break here,
                 # because there's no other data for us to get:
-                self._exists = 1
+                self._exists = self.PAGE_INVALID
                 return
         else:
-            self._exists = 3
+            self._exists = self.PAGE_EXISTS
 
         self._fullurl = res["fullurl"]
         self._protection = res["protection"]
@@ -312,7 +315,7 @@ class Page(CopyrightMixin):
         if result["edit"]["result"] == "Success":
             self._content = None
             self._basetimestamp = None
-            self._exists = 0
+            self._exists = self.PAGE_UNKNOWN
             return
 
         # If we're here, then the edit failed. If it's because of AssertEdit,
@@ -346,7 +349,7 @@ class Page(CopyrightMixin):
             params["starttimestamp"] = self._starttimestamp
             if self._basetimestamp:
                 params["basetimestamp"] = self._basetimestamp
-            if self._exists == 2:
+            if self._exists == self.PAGE_MISSING:
                 # Page does not exist; don't edit if it already exists:
                 params["createonly"] = "true"
         else:
@@ -384,7 +387,7 @@ class Page(CopyrightMixin):
             # These attributes are now invalidated:
             self._content = None
             self._basetimestamp = None
-            self._exists = 0
+            self._exists = self.PAGE_UNKNOWN
             raise exceptions.EditConflictError(error.info)
 
         elif error.code in ["emptypage", "emptynewsection"]:
@@ -432,12 +435,12 @@ class Page(CopyrightMixin):
 
     @property
     def site(self):
-        """The Page's corresponding Site object."""
+        """The page's corresponding Site object."""
         return self._site
 
     @property
     def title(self):
-        """The Page's title, or "pagename".
+        """The page's title, or "pagename".
 
         This won't do any API queries on its own. Any other attributes or
         methods that do API queries will reload the title, however, like
@@ -448,37 +451,36 @@ class Page(CopyrightMixin):
 
     @property
     def exists(self):
-        """Information about whether the Page exists or not.
+        """Whether or not the page exists.
 
-        The "information" is a tuple with two items. The first is a bool,
-        either ``True`` if the page exists or ``False`` if it does not. The
-        second is a string giving more information, either ``"invalid"``,
-        (title is invalid, e.g. it contains ``"["``), ``"missing"``, or
-        ``"exists"``.
+        This will be a number; its value does not matter, but it will equal
+        one of :py:attr:`self.PAGE_INVALID <PAGE_INVALID>`,
+        :py:attr:`self.PAGE_MISSING <PAGE_MISSING>`, or
+        :py:attr:`self.PAGE_EXISTS <PAGE_EXISTS>`.
 
         Makes an API query only if we haven't already made one.
         """
-        cases = {
-            0: (None, "unknown"),
-            1: (False, "invalid"),
-            2: (False, "missing"),
-            3: (True, "exists"),
-        }
-        if self._exists == 0:
+        if self._exists == self.PAGE_UNKNOWN:
             self._load()
-        return cases[self._exists]
+        return self._exists
 
     @property
     def pageid(self):
-        """An integer ID representing the Page.
+        """An integer ID representing the page.
 
-        Makes an API query only if we haven't already made one.
+        Makes an API query only if we haven't already made one and the *pageid*
+        parameter to :py:meth:`__init__` was left as ``None``, which should be
+        true for all cases except when pages are returned by an SQL generator
+        (like :py:meth:`category.get_members(use_sql=True)
+        <earwigbot.wiki.category.Category.get_members>`).
 
         Raises :py:exc:`~earwigbot.exceptions.InvalidPageError` or
         :py:exc:`~earwigbot.exceptions.PageNotFoundError` if the page name is
         invalid or the page does not exist, respectively.
         """
-        if self._exists == 0:
+        if self._pageid:
+            return self._pageid
+        if self._exists == self.PAGE_UNKNOWN:
             self._load()
         self._assert_existence()  # Missing pages do not have IDs
         return self._pageid
@@ -518,7 +520,7 @@ class Page(CopyrightMixin):
         name is invalid. Won't raise an error if the page is missing because
         those can still be create-protected.
         """
-        if self._exists == 0:
+        if self._exists == self.PAGE_UNKNOWN:
             self._load()
         self._assert_validity()  # Invalid pages cannot be protected
         return self._protection
@@ -541,7 +543,7 @@ class Page(CopyrightMixin):
 
         We will return ``False`` even if the page does not exist or is invalid.
         """
-        if self._exists == 0:
+        if self._exists == self.PAGE_UNKNOWN:
             self._load()
         return self._is_redirect
 
@@ -606,7 +608,7 @@ class Page(CopyrightMixin):
         Raises InvalidPageError or PageNotFoundError if the page name is
         invalid or the page does not exist, respectively.
         """
-        if self._exists == 0:
+        if self._exists == self.PAGE_UNKNOWN:
             # Kill two birds with one stone by doing an API query for both our
             # attributes and our page content:
             query = self._site.api_query
@@ -621,7 +623,7 @@ class Page(CopyrightMixin):
             if self._keep_following and self._is_redirect:
                 self._title = self.get_redirect_target()
                 self._keep_following = False  # Don't follow double redirects
-                self._exists = 0  # Force another API query
+                self._exists = self.PAGE_UNKNOWN  # Force another API query
                 self.get()
 
             return self._content
@@ -645,9 +647,10 @@ class Page(CopyrightMixin):
         :py:exc:`~earwigbot.exceptions.RedirectError` if the page is not a
         redirect.
         """
+        re_redirect = "^\s*\#\s*redirect\s*\[\[(.*?)\]\]"
         content = self.get()
         try:
-            return re.findall(self.re_redirect, content, flags=re.I)[0]
+            return re.findall(re_redirect, content, flags=re.I)[0]
         except IndexError:
             e = "The page does not appear to have a redirect target."
             raise exceptions.RedirectError(e)
@@ -666,7 +669,7 @@ class Page(CopyrightMixin):
         :py:exc:`~earwigbot.exceptions.PageNotFoundError` if the page name is
         invalid or the page does not exist, respectively.
         """
-        if self._exists == 0:
+        if self._exists == self.PAGE_UNKNOWN:
             self._load()
         self._assert_existence()
         if not self._creator:

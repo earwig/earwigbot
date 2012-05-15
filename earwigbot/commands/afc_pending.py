@@ -23,7 +23,7 @@
 from earwigbot.commands import BaseCommand
 
 class Command(BaseCommand):
-    """Links the user to the pending AFC submissions page and category."""
+    """Link the user to the pending AFC submissions page and category."""
     name = "pending"
 
     def check(self, data):
