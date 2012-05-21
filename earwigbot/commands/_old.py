@@ -21,11 +21,6 @@ def parse(command, line, line2, nick, chan, host, auth, notice, say, reply, s):
 		u.close()
 		say('"' + info['Date'] + '" - tycho.usno.navy.mil', chan)
 		return
-	if command == "beats":
-		beats = ((time.time() + 3600) % 86400) / 86.4
-		beats = int(math.floor(beats))
-		say('@%03i' % beats, chan)
-		return
 	if command == "dict" or command == "dictionary":
 		def trim(thing):
 			if thing.endswith('&nbsp;'):

@@ -24,7 +24,7 @@
 import imp
 from os import listdir, path
 from re import sub
-from threading import Lock, Thread
+from threading import RLock, Thread
 from time import gmtime, strftime
 
 from earwigbot.commands import BaseCommand
@@ -46,11 +46,7 @@ class _ResourceManager(object):
 
     This class handles the low-level tasks of (re)loading resources via
     :py:meth:`load`, retrieving specific resources via :py:meth:`get`, and
-    iterating over all resources via :py:meth:`__iter__`. If iterating over
-    resources, it is recommended to acquire :py:attr:`self.lock <lock>`
-    beforehand and release it afterwards (alternatively, wrap your code in a
-    ``with`` statement) so an attempt at reloading resources in another thread
-    won't disrupt your iteration.
+    iterating over all resources via :py:meth:`__iter__`.
     """
     def __init__(self, bot, name, attribute, base):
         self.bot = bot
@@ -60,16 +56,12 @@ class _ResourceManager(object):
         self._resource_name = name  # e.g. "commands" or "tasks"
         self._resource_attribute = attribute  # e.g. "Command" or "Task"
         self._resource_base = base  # e.g. BaseCommand or BaseTask
-        self._resource_access_lock = Lock()
-
-    @property
-    def lock(self):
-        """The resource access/modify lock."""
-        return self._resource_access_lock
+        self._resource_access_lock = RLock()
 
     def __iter__(self):
-        for name in self._resources:
-            yield name
+        with self.lock:
+            for resource in self._resources.itervalues():
+                yield resource
 
     def _load_resource(self, name, path):
         """Load a specific resource from a module, identified by name and path.
@@ -118,6 +110,11 @@ class _ResourceManager(object):
                 self._load_resource(modname, dir)
                 processed.append(modname)
 
+    @property
+    def lock(self):
+        """The resource access/modify lock."""
+        return self._resource_access_lock
+
     def load(self):
         """Load (or reload) all valid resources into :py:attr:`_resources`."""
         name = self._resource_name  # e.g. "commands" or "tasks"
@@ -138,7 +135,8 @@ class _ResourceManager(object):
         Will raise :py:exc:`KeyError` if the resource (a command or task) is
         not found.
         """
-        return self._resources[key]
+        with self.lock:
+            return self._resources[key]
 
 
 class CommandManager(_ResourceManager):
@@ -167,13 +165,10 @@ class CommandManager(_ResourceManager):
 
     def call(self, hook, data):
         """Respond to a hook type and a :py:class:`Data` object."""
-        self.lock.acquire()
-        for command in self._resources.itervalues():
+        for command in self:
             if hook in command.hooks and self._wrap_check(command, data):
-                self.lock.release()
                 self._wrap_process(command, data)
                 return
-        self.lock.release()
 
 
 class TaskManager(_ResourceManager):

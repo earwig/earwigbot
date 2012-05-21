@@ -28,10 +28,7 @@ from earwigbot.commands import BaseCommand
 class Command(BaseCommand):
     """Return a user's edit count."""
     name = "editcount"
-
-    def check(self, data):
-        commands = ["ec", "editcount"]
-        return data.is_command and data.command in commands
+    commands = ["ec", "editcount"]
 
     def process(self, data):
         if not data.args:

@@ -29,10 +29,7 @@ from earwigbot.exceptions import KwargParseError
 class Command(BaseCommand):
     """Manage wiki tasks from IRC, and check on thread status."""
     name = "threads"
-
-    def check(self, data):
-        commands = ["tasks", "task", "threads", "tasklist"]
-        return data.is_command and data.command in commands
+    commands = ["tasks", "task", "threads", "tasklist"]
 
     def process(self, data):
         self.data = data
@@ -103,7 +100,7 @@ class Command(BaseCommand):
         whether they are currently running or idle."""
         threads = threading.enumerate()
         tasklist = []
-        for task in sorted(self.bot.tasks):
+        for task in sorted([task.name for task in self.bot.tasks]):
             threadlist = [t for t in threads if t.name.startswith(task)]
             ids = [str(t.ident) for t in threadlist]
             if not ids:
@@ -138,7 +135,7 @@ class Command(BaseCommand):
             self.reply(data, msg)
             return
 
-        if task_name not in self.bot.tasks:
+        if task_name not in [task.name for task in self.bot.tasks]:
             # This task does not exist or hasn't been loaded:
             msg = "task could not be found; either it doesn't exist, or it wasn't loaded correctly."
             self.reply(data, msg.format(task_name))

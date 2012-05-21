@@ -20,30 +20,51 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from datetime import datetime, timedelta
+from math import floor
+from time import time
+
 from earwigbot.commands import BaseCommand
 
 class Command(BaseCommand):
-    """Convert a language code into its name and a list of WMF sites in that
-    language."""
-    name = "langcode"
-    commands = ["langcode", "lang", "language"]
+    """Report the current time in any timezone (UTC default), or in beats."""
+    name = "time"
+    commands = ["time", "beats", "swatch"]
+    timezones = [
+        "UTC": 0,
+        "EST": -5,
+        "EDT": -4,
+        "CST": -6,
+        "CDT": -5,
+        "MST": -7,
+        "MDT": -6,
+        "PST": -8,
+        "PDT": -7,
+    ]
 
     def process(self, data):
-        if not data.args:
-            self.reply(data, "please specify a language code.")
+        if data.command in ["beats", "swatch"]:
+            self.do_beats(data)
             return
+        if data.args:
+            timezone = data.args[0]
+        else:
+            timezone = "UTC"
+        if timezone in ["beats", "swatch"]:
+            self.do_beats(data)
+        else:
+            self.do_time(data, timezone)
 
-        code = data.args[0]
-        site = self.bot.wiki.get_site()
-        matrix = site.api_query(action="sitematrix")["sitematrix"]
-        del matrix["specials"]
+    def do_beats(self, data):
+        beats = ((time() + 3600) % 86400) / 86.4
+        beats = int(floor(beats))
+        self.reply(data, "@{0:0>3}".format(beats))
 
-        for site in matrix.itervalues():
-            if site["code"] == code:
-                name = site["name"]
-                sites = ", ".join([s["url"] for s in site["site"]])
-                msg = "\x0302{0}\x0301 is {1} ({2})".format(code, name, sites)
-                self.reply(data, msg)
-                return
-
-        self.reply(data, "site \x0302{0}\x0301 not found.".format(code))
+    def do_time(self, data, timezone):
+        now = datetime.utcnow()
+        try:
+            now += timedelta(hours=self.timezones[timezone])  # Timezone offset
+        except KeyError:
+            self.reply(data, "unknown timezone: {0}.".format(timezone))
+            return
+        self.reply(data, now.strftime("%Y-%m-%d %H:%M:%S") + " " + timezone)

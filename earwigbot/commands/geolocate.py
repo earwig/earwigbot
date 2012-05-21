@@ -28,6 +28,7 @@ from earwigbot.commands import BaseCommand
 class Command(BaseCommand):
     """Geolocate an IP address (via http://ipinfodb.com/)."""
     name = "geolocate"
+    commands = ["geolocate", "locate", "geo", "ip"]
 
     def setup(self):
         self.config.decrypt(self.config.commands, (self.name, "apiKey"))
@@ -37,10 +38,6 @@ class Command(BaseCommand):
             self.key = None
             log = 'Cannot use without an API key for http://ipinfodb.com/ stored as config.commands["{0}"]["apiKey"]'
             self.logger.warn(log.format(self.name))
-
-    def check(self, data):
-        commands = ["geolocate", "locate", "geo", "ip"]
-        return data.is_command and data.command in commands
 
     def process(self, data):
         if not data.args:

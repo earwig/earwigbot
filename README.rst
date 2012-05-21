@@ -166,6 +166,13 @@ for and what they should be overridden with, but these are the basics:
 
 - Class attribute ``name`` is the name of the command. This must be specified.
 
+- Class attribute ``commands`` is a list of names that will trigger this
+  command. It defaults to the command's ``name``, but you can override it with
+  multiple names to serve as aliases. This is handled by the default
+  ``check()`` implementation (see below), so if ``check()`` is overridden, this
+  is ignored by everything except the help_ command (so ``!help alias`` will
+  trigger help for the actual command).
+
 - Class attribute ``hooks`` is a list of the "IRC events" that this command
   might respond to. It defaults to ``["msg"]``, but options include
   ``"msg_private"`` (for private messages only), ``"msg_public"`` (for channel
@@ -181,10 +188,12 @@ for and what they should be overridden with, but these are the basics:
 - Method ``check()`` is passed a ``Data`` [2]_ object, and should return
   ``True`` if you want to respond to this message, or ``False`` otherwise. The
   default behavior is to return ``True`` only if ``data.is_command`` is
-  ``True`` and ``data.command == self.name``, which is suitable for most cases.
-  A common, straightforward reason for overriding is if a command has aliases
-  (see chanops_ for an example). Note that by returning ``True``, you prevent
-  any other commands from responding to this message.
+  ``True`` and ``data.command`` ``==`` ``self.name`` (or ``data.command`` is in
+  ``self.commands`` if that list is overriden; see above), which is suitable
+  for most cases. A possible reason for overriding is if you want to do
+  something in response to events from a specific channel only. Note that by
+  returning ``True``, you prevent any other commands from responding to this
+  message.
 
 - Method ``process()`` is passed the same ``Data`` object as ``check()``, but
   only if ``check()`` returned ``True``. This is where the bulk of your command
@@ -230,7 +239,7 @@ and what they should be overridden with, but these are the basics:
   ``"([[WP:BOT|Bot]]; [[User:EarwigBot#Task $1|Task $1]]): $2"``, which the
   task class's ``make_summary(comment)`` method will take and replace ``$1``
   with the task number and ``$2`` with the details of the edit.
-  
+
   Additionally, ``shutoff_enabled()`` (which checks whether the bot has been
   told to stop on-wiki by checking the content of a particular page) can check
   a different page for each task using similar variables. EarwigBot's
@@ -510,6 +519,7 @@ Footnotes
 .. _earwigbot.bot.Bot:              https://github.com/earwig/earwigbot/blob/develop/earwigbot/bot.py
 .. _earwigbot.config.BotConfig:     https://github.com/earwig/earwigbot/blob/develop/earwigbot/config.py
 .. _earwigbot.commands.BaseCommand: https://github.com/earwig/earwigbot/blob/develop/earwigbot/commands/__init__.py
+.. _help:                           https://github.com/earwig/earwigbot/blob/develop/earwigbot/commands/help.py
 .. _afc_status:                     https://github.com/earwig/earwigbot-plugins/blob/develop/commands/afc_status.py
 .. _chanops:                        https://github.com/earwig/earwigbot/blob/develop/earwigbot/commands/chanops.py
 .. _test:                           https://github.com/earwig/earwigbot/blob/develop/earwigbot/commands/test.py

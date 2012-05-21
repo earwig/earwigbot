@@ -26,10 +26,7 @@ class Command(BaseCommand):
     """Voice, devoice, op, or deop users in the channel, or join or part from
     other channels."""
     name = "chanops"
-
-    def check(self, data):
-        cmnds = ["chanops", "voice", "devoice", "op", "deop", "join", "part"]
-        return data.is_command and data.command in cmnds
+    commands = ["chanops", "voice", "devoice", "op", "deop", "join", "part"]
 
     def process(self, data):
         if data.command == "chanops":

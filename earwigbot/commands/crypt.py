@@ -30,10 +30,7 @@ class Command(BaseCommand):
     """Provides hash functions with !hash (!hash list for supported algorithms)
     and blowfish encryption with !encrypt and !decrypt."""
     name = "crypt"
-
-    def check(self, data):
-        commands = ["crypt", "hash", "encrypt", "decrypt"]
-        return data.is_command and data.command in commands
+    commands = ["crypt", "hash", "encrypt", "decrypt"]
 
     def process(self, data):
         if data.command == "crypt":

@@ -26,10 +26,7 @@ from earwigbot.commands import BaseCommand
 class Command(BaseCommand):
     """Retrieve a list of rights for a given username."""
     name = "rights"
-
-    def check(self, data):
-        commands = ["rights", "groups", "permissions", "privileges"]
-        return data.is_command and data.command in commands
+    commands = ["rights", "groups", "permissions", "privileges"]
 
     def process(self, data):
         if not data.args:

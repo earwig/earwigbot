@@ -25,11 +25,8 @@ from earwigbot.commands import BaseCommand
 class Command(BaseCommand):
     """Praise people!"""
     name = "praise"
-
-    def check(self, data):
-        commands = ["praise", "earwig", "leonard", "leonard^bloom", "groove",
-                  "groovedog"]
-        return data.is_command and data.command in commands
+    commands = ["praise", "earwig", "leonard", "leonard^bloom", "groove",
+                "groovedog"]
 
     def process(self, data):
         if data.command == "earwig":

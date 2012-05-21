@@ -28,10 +28,7 @@ from earwigbot.commands import BaseCommand
 class Command(BaseCommand):
     """Return when a user registered."""
     name = "registration"
-
-    def check(self, data):
-        commands = ["registration", "reg", "age"]
-        return data.is_command and data.command in commands
+    commands = ["registration", "reg", "age"]
 
     def process(self, data):
         if not data.args:

@@ -96,6 +96,15 @@ these are the basics:
 - Class attribute :py:attr:`~earwigbot.commands.BaseCommand.name` is the name
   of the command. This must be specified.
 
+- Class attribute :py:attr:`~earwigbot.commands.BaseCommand.commands` is a list
+  of names that will trigger this command. It defaults to the command's
+  :py:attr:`~earwigbot.commands.BaseCommand.name`, but you can override it with
+  multiple names to serve as aliases. This is handled by the default
+  :py:meth:`~earwigbot.commands.BaseCommand.check` implementation (see below),
+  so if :py:meth:`~earwigbot.commands.BaseCommand.check` is overridden, this is
+  ignored by everything except the help_ command (so ``!help alias`` will
+  trigger help for the actual command).
+
 - Class attribute :py:attr:`~earwigbot.commands.BaseCommand.hooks` is a list of
   the "IRC events" that this command might respond to. It defaults to
   ``["msg"]``, but options include ``"msg_private"`` (for private messages
@@ -113,12 +122,15 @@ these are the basics:
 - Method :py:meth:`~earwigbot.commands.BaseCommand.check` is passed a
   :py:class:`~earwigbot.irc.data.Data` [1]_ object, and should return ``True``
   if you want to respond to this message, or ``False`` otherwise. The default
-  behavior is to return ``True`` only if
-  :py:attr:`data.is_command` is ``True`` and :py:attr:`data.command` ==
-  :py:attr:`~earwigbot.commands.BaseCommand.name`, which is suitable for most
-  cases. A common, straightforward reason for overriding is if a command has
-  aliases (see chanops_ for an example). Note that by returning ``True``, you
-  prevent any other commands from responding to this message.
+  behavior is to return ``True`` only if :py:attr:`data.is_command` is ``True``
+  and :py:attr:`data.command` ``==``
+  :py:attr:`~earwigbot.commands.BaseCommand.name` (or :py:attr:`data.command
+  <earwigbot.irc.data.Data.command>` is in
+  :py:attr:`~earwigbot.commands.BaseCommand.commands` if that list is
+  overriden; see above), which is suitable for most cases. A possible reason
+  for overriding is if you want to do something in response to events from a
+  specific channel only. Note that by returning ``True``, you prevent any other
+  commands from responding to this message.
 
 - Method :py:meth:`~earwigbot.commands.BaseCommand.process` is passed the same
   :py:class:`~earwigbot.irc.data.Data` object as
@@ -179,7 +191,7 @@ are the basics:
   task class's :py:meth:`make_summary(comment)
   <earwigbot.tasks.BaseTask.make_summary>` method will take and replace
   ``$1`` with the task number and ``$2`` with the details of the edit.
-  
+
   Additionally, :py:meth:`~earwigbot.tasks.BaseTask.shutoff_enabled` (which
   checks whether the bot has been told to stop on-wiki by checking the content
   of a particular page) can check a different page for each task using similar
@@ -249,6 +261,7 @@ task, or the afc_statistics_ plugin for a more complicated one.
        :py:attr:`~earwigbot.irc.data.Data.ident`,
        and :py:attr:`~earwigbot.irc.data.Data.host`.
 
+.. _help:               https://github.com/earwig/earwigbot/blob/develop/earwigbot/commands/help.py
 .. _afc_status:         https://github.com/earwig/earwigbot-plugins/blob/develop/commands/afc_status.py
 .. _chanops:            https://github.com/earwig/earwigbot/blob/develop/earwigbot/commands/chanops.py
 .. _test:               https://github.com/earwig/earwigbot/blob/develop/earwigbot/commands/test.py

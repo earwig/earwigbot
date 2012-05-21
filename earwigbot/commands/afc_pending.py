@@ -25,10 +25,7 @@ from earwigbot.commands import BaseCommand
 class Command(BaseCommand):
     """Link the user to the pending AFC submissions page and category."""
     name = "pending"
-
-    def check(self, data):
-        commands = ["pending", "pend"]
-        return data.is_command and data.command in commands
+    commands = ["pending", "pend"]
 
     def process(self, data):
         msg1 = "pending submissions status page: http://enwp.org/WP:AFC/ST"
