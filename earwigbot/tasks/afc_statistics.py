@@ -85,22 +85,28 @@ class Task(BaseTask):
         (self.save()). We will additionally create an SQL connection with our
         local database.
         """
-        self.site = self.bot.wiki.get_site()
-        with self.db_access_lock:
-            self.conn = oursql.connect(**self.conn_data)
+        action = kwargs.get("action")
+        if not self.db_access_lock.acquire(blocking=False):
+            if action == "sync":
+                return
+            self.db_access_lock.acquire(blocking=True)
 
-            action = kwargs.get("action")
+        try:
+            self.site = self.bot.wiki.get_site()
+            self.conn = oursql.connect(**self.conn_data)
             try:
                 if action == "save":
-                    self.save(**kwargs)
+                    self.save(kwargs)
                 elif action == "sync":
-                    self.sync(**kwargs)
+                    self.sync(kwargs)
                 elif action == "update":
-                    self.update(**kwargs)
+                    self.update(kwargs)
             finally:
                 self.conn.close()
+        finally:
+            self.db_access_lock.release()
 
-    def save(self, **kwargs):
+    def save(self, kwargs):
         """Save our local statistics to the wiki.
 
         After checking for emergency shutoff, the statistics chart is compiled,
@@ -181,7 +187,7 @@ class Task(BaseTask):
         """Format a datetime into the standard MediaWiki timestamp format."""
         return dt.strftime("%H:%M, %d %b %Y")
 
-    def sync(self, **kwargs):
+    def sync(self, kwargs):
         """Synchronize our local statistics database with the site.
 
         Syncing involves, in order, updating tracked submissions that have
@@ -290,7 +296,7 @@ class Task(BaseTask):
                    AND ADDTIME(page_special_time, '36:00:00') < NOW()"""
         cursor.execute(query, (self.CHART_ACCEPT, self.CHART_DECLINE))
 
-    def update(self, **kwargs):
+    def update(self, kwargs):
         """Update a page by name, regardless of whether anything has changed.
 
         Mainly intended as a command to be used via IRC, e.g.:
@@ -650,11 +656,16 @@ class Task(BaseTask):
         last = (None, None, None)
         for user, ts, revid in result:
             counter += 1
-            if counter > 100:
-                msg = "Exceeded 100 content lookups while determining special for page (id: {0}, chart: {1})"
+            if counter > 50:
+                msg = "Exceeded 50 content lookups while determining special for page (id: {0}, chart: {1})"
                 self.logger.warn(msg.format(pageid, chart))
                 return None, None, None
-            content = self.get_revision_content(revid)
+            try:
+                content = self.get_revision_content(revid)
+            except exceptions.SiteAPIError:
+                msg = "API error interrupted SQL query in get_special() for page (id: {0}, chart: {1})"
+                self.logger.exception(msg.format(pageid, chart))
+                return None, None, None
             statuses = self.get_statuses(content)
             matches = [s in statuses for s in search_not]
             if search_for:
@@ -706,7 +717,9 @@ class Task(BaseTask):
             notes += "|ns=1"  # Submission is short
 
         if not re.search("\<ref\s*(.*?)\>(.*?)\</ref\>", content, re.I | re.S):
-            if re.search("https?:\/\/(.*?)\.", content, re.I | re.S):
+            regex = "(https?:)|\[//(?!{0})([^ \]\\t\\n\\r\\f\\v]+?)"
+            sitedomain = re.escape(self.site.domain)
+            if re.search(regex.format(sitedomain), content, re.I | re.S):
                 notes += "|ni=1"  # Submission has no inline citations
             else:
                 notes += "|nu=1"  # Submission is completely unsourced
