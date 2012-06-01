@@ -52,7 +52,7 @@ class RC(object):
             # We're probably missing the http:// part, because it's a log
             # entry, which lacks a URL:
             page, flags, user, comment = self.re_log.findall(msg)[0]
-            url = "http://{0}.org/wiki/{1}".format(self.chan, page)
+            url = "http://{0}.org/wiki/{1}".format(self.chan[1:], page)
 
             self.is_edit = False  # This is a log entry, not edit
 

@@ -86,7 +86,7 @@ class Site(object):
                  article_path=None, script_path=None, sql=None,
                  namespaces=None, login=(None, None), cookiejar=None,
                  user_agent=None, use_https=False, assert_edit=None,
-                 maxlag=None, wait_between_queries=5, logger=None,
+                 maxlag=None, wait_between_queries=3, logger=None,
                  search_config=(None, None)):
         """Constructor for new Site instances.
 
@@ -120,7 +120,7 @@ class Site(object):
         self._assert_edit = assert_edit
         self._maxlag = maxlag
         self._wait_between_queries = wait_between_queries
-        self._max_retries = 5
+        self._max_retries = 6
         self._last_query_time = 0
         self._api_lock = Lock()
 
@@ -276,7 +276,7 @@ class Site(object):
             msg = 'Server says "{0}"; retrying in {1} seconds ({2}/{3})'
             self._logger.info(msg.format(info, wait, tries, self._max_retries))
             sleep(wait)
-            return self._api_query(params, tries=tries, wait=wait*3)
+            return self._api_query(params, tries=tries, wait=wait*2)
         else:  # Some unknown error occurred
             e = 'API query failed: got error "{0}"; server says: "{1}".'
             error = exceptions.SiteAPIError(e.format(code, info))
