@@ -34,7 +34,6 @@ from earwigbot.tasks import BaseTask
 
 __all__ = ["Task"]
 
-
 class Task(BaseTask):
     """A task to generate statistics for WikiProject Articles for Creation.
 
@@ -86,10 +85,10 @@ class Task(BaseTask):
         local database.
         """
         action = kwargs.get("action")
-        if not self.db_access_lock.acquire(blocking=False):
+        if not self.db_access_lock.acquire(False):  # Non-blocking
             if action == "sync":
                 return
-            self.db_access_lock.acquire(blocking=True)
+            self.db_access_lock.acquire()
 
         try:
             self.site = self.bot.wiki.get_site()
