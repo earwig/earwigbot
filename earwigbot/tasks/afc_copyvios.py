@@ -26,11 +26,11 @@ from threading import Lock
 
 import oursql
 
-from earwigbot.tasks import BaseTask
+from earwigbot.tasks import Task
 
-__all__ = ["Task"]
+__all__ = ["AFCCopyvios"]
 
-class Task(BaseTask):
+class AFCCopyvios(Task):
     """A task to check newly-edited [[WP:AFC]] submissions for copyright
     violations."""
     name = "afc_copyvios"

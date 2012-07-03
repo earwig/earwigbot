@@ -32,11 +32,11 @@ from numpy import arange
 import oursql
 
 from earwigbot import wiki
-from earwigbot.tasks import BaseTask
+from earwigbot.tasks import Task
 
-__all__ = ["Task"]
+__all__ = ["AFCHistory"]
 
-class Task(BaseTask):
+class AFCHistory(Task):
     """A task to generate charts about AfC submissions over time.
 
     The main function of the task is to work through the "AfC submissions by

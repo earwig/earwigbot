@@ -23,16 +23,16 @@
 from earwigbot import exceptions
 from earwigbot import wiki
 
-__all__ = ["BaseTask"]
+__all__ = ["Task"]
 
-class BaseTask(object):
+class Task(object):
     """
     **EarwigBot: Base Bot Task**
 
     This package provides built-in wiki bot "tasks" EarwigBot runs. Additional
     tasks can be installed as plugins in the bot's working directory.
 
-    This class (import with ``from earwigbot.tasks import BaseTask``) can be
+    This class (import with ``from earwigbot.tasks import Task``) can be
     subclassed to create custom bot tasks.
 
     To run a task, use :py:meth:`bot.tasks.start(name, **kwargs)

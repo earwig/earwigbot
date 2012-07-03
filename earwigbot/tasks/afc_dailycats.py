@@ -20,11 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.tasks import BaseTask
+from earwigbot.tasks import Task
 
-__all__ = ["Task"]
+__all__ = ["AFCDailyCats"]
 
-class Task(BaseTask):
+class AFCDailyCats(Task):
     """ A task to create daily categories for [[WP:AFC]]."""
     name = "afc_dailycats"
     number = 3

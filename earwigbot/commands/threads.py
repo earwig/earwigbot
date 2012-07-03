@@ -23,10 +23,11 @@
 import threading
 import re
 
-from earwigbot.commands import BaseCommand
-from earwigbot.exceptions import KwargParseError
+from earwigbot.commands import Command
 
-class Command(BaseCommand):
+__all__ = ["Threads"]
+
+class Threads(Command):
     """Manage wiki tasks from IRC, and check on thread status."""
     name = "threads"
 
@@ -131,13 +132,6 @@ class Command(BaseCommand):
             task_name = data.args[1]
         except IndexError:  # No task name given
             self.reply(data, "what task do you want me to start?")
-            return
-
-        try:
-            data.parse_kwargs()
-        except KwargParseError, arg:
-            msg = "error parsing argument: \x0303{0}\x0301.".format(arg)
-            self.reply(data, msg)
             return
 
         if task_name not in self.bot.tasks:

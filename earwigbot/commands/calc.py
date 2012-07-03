@@ -23,9 +23,11 @@
 import re
 import urllib
 
-from earwigbot.commands import BaseCommand
+from earwigbot.commands import Command
 
-class Command(BaseCommand):
+__all__ = ["Calc"]
+
+class Calc(Command):
     """A somewhat advanced calculator: see http://futureboy.us/fsp/frink.fsp
     for details."""
     name = "calc"

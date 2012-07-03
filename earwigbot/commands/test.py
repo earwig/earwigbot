@@ -22,14 +22,16 @@
 
 import random
 
-from earwigbot.commands import BaseCommand
+from earwigbot.commands import Command
 
-class Command(BaseCommand):
+__all__ = ["Test"]
+
+class Test(Command):
     """Test the bot!"""
     name = "test"
 
     def process(self, data):
-        user = "\x02{0}\x0F".format(data.nick)
+        user = "\x02" + data.nick + "\x0F"  # Wrap nick in bold
         hey = random.randint(0, 1)
         if hey:
             self.say(data.chan, "Hey {0}!".format(user))

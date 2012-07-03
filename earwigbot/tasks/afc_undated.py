@@ -20,11 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.tasks import BaseTask
+from earwigbot.tasks import Task
 
-__all__ = ["Task"]
+__all__ = ["AFCUndated"]
 
-class Task(BaseTask):
+class AFCUndated(Task):
     """A task to clear [[Category:Undated AfC submissions]]."""
     name = "afc_undated"
 

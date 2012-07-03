@@ -20,11 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.tasks import BaseTask
+from earwigbot.tasks import Task
 
-__all__ = ["Task"]
+__all__ = ["WrongMIME"]
 
-class Task(BaseTask):
+class WrongMIME(Task):
     """A task to tag files whose extensions do not agree with their MIME
     type."""
     name = "wrongmime"

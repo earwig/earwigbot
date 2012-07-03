@@ -22,10 +22,12 @@
 
 import re
 
-from earwigbot.commands import BaseCommand
+from earwigbot.commands import Command
 from earwigbot.irc import Data
 
-class Command(BaseCommand):
+__all__ = ["Help"]
+
+class Help(Command):
     """Displays help information."""
     name = "help"
 

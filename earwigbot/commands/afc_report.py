@@ -21,9 +21,11 @@
 # SOFTWARE.
 
 from earwigbot import wiki
-from earwigbot.commands import BaseCommand
+from earwigbot.commands import Command
 
-class Command(BaseCommand):
+__all__ = ["AFCReport"]
+
+class AFCReport(Command):
     """Get information about an AFC submission by name."""
     name = "report"
 

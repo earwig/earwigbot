@@ -23,9 +23,11 @@
 import threading
 import time
 
-from earwigbot.commands import BaseCommand
+from earwigbot.commands import Command
 
-class Command(BaseCommand):
+__all__ = ["Remind"]
+
+class Remind(Command):
     """Set a message to be repeated to you in a certain amount of time."""
     name = "remind"
 

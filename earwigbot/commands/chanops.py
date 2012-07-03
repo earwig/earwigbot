@@ -20,9 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.commands import BaseCommand
+from earwigbot.commands import Command
 
-class Command(BaseCommand):
+__all__ = ["ChanOps"]
+
+class ChanOps(Command):
     """Voice, devoice, op, or deop users in the channel, or join or part from
     other channels."""
     name = "chanops"

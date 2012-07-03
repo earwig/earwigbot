@@ -29,7 +29,6 @@ This module contains all exceptions used by EarwigBot::
      +-- NoConfigError
      +-- IRCError
      |    +-- BrokenSocketError
-     |    +-- KwargParseError
      +-- WikiToolsetError
           +-- SiteNotFoundError
           +-- SiteAPIError
@@ -71,17 +70,6 @@ class BrokenSocketError(IRCError):
 
     Raised by :py:meth:`IRCConnection._get
     <earwigbot.irc.connection.IRCConnection._get>`.
-    """
-
-class KwargParseError(IRCError):
-    """Couldn't parse a certain keyword argument in an IRC message.
-
-    This is usually caused by it being given incorrectly: e.g., no value (abc),
-    just a value (=xyz), just an equal sign (=), instead of the correct form
-    (abc=xyz).
-
-    Raised by :py:meth:`Data.parse_kwargs
-    <earwigbot.irc.data.Data.parse_kwargs>`.
     """
 
 class WikiToolsetError(EarwigBotError):

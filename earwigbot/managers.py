@@ -27,8 +27,8 @@ from re import sub
 from threading import Lock, Thread
 from time import gmtime, strftime
 
-from earwigbot.commands import BaseCommand
-from earwigbot.tasks import BaseTask
+from earwigbot.commands import Command
+from earwigbot.tasks import Task
 
 __all__ = ["CommandManager", "TaskManager"]
 
@@ -52,32 +52,40 @@ class _ResourceManager(object):
     ``with`` statement) so an attempt at reloading resources in another thread
     won't disrupt your iteration.
     """
-    def __init__(self, bot, name, attribute, base):
+    def __init__(self, bot, name, base):
         self.bot = bot
         self.logger = bot.logger.getChild(name)
 
         self._resources = {}
         self._resource_name = name  # e.g. "commands" or "tasks"
-        self._resource_attribute = attribute  # e.g. "Command" or "Task"
-        self._resource_base = base  # e.g. BaseCommand or BaseTask
+        self._resource_base = base  # e.g. Command or Task
         self._resource_access_lock = Lock()
-
-    @property
-    def lock(self):
-        """The resource access/modify lock."""
-        return self._resource_access_lock
 
     def __iter__(self):
         for name in self._resources:
             yield name
 
-    def _load_resource(self, name, path):
+    def _load_resource(self, name, path, klass):
+        """Instantiate a resource class and add it to the dictionary."""
+        res_type = self._resource_name[:-1]  # e.g. "command" or "task"
+        try:
+            resource = klass(self.bot)  # Create instance of resource
+        except Exception:
+            e = "Error instantiating {0} class in {1} (from {2})"
+            self.logger.exception(e.format(res_type, name, path))
+        else:
+            self._resources[resource.name] = resource
+            self.logger.debug("Loaded {0} {1}".format(res_type, resource.name))
+
+    def _load_module(self, name, path):
         """Load a specific resource from a module, identified by name and path.
 
         We'll first try to import it using imp magic, and if that works, make
-        an instance of the 'Command' class inside (assuming it is an instance
-        of BaseCommand), add it to self._commands, and log the addition. Any
-        problems along the way will either be ignored or logged.
+        instances of any classes inside that are subclasses of the base
+        (:py:attr:`self._resource_base <_resource_base>`), add them to the
+        resources dictionary with :py:meth:`self._load_resource()
+        <_load_resource>`, and finally log the addition. Any problems along
+        the way will either be ignored or logged.
         """
         f, path, desc = imp.find_module(name, [path])
         try:
@@ -89,24 +97,13 @@ class _ResourceManager(object):
         finally:
             f.close()
 
-        attr = self._resource_attribute
-        if not hasattr(module, attr):
-            return  # No resources in this module
-        resource_class = getattr(module, attr)
-        try:
-            resource = resource_class(self.bot)  # Create instance of resource
-        except Exception:
-            e = "Error instantiating {0} class in {1} (from {2})"
-            self.logger.exception(e.format(attr, name, path))
-            return
-        if not isinstance(resource, self._resource_base):
-            return
-
-        self._resources[resource.name] = resource
-        self.logger.debug("Loaded {0} {1}".format(attr.lower(), resource.name))
+        for obj in vars(module).values():
+            if type(obj) is type and isinstance(obj, self._resource_base):
+                self._load_resource(name, path, obj)
 
     def _load_directory(self, dir):
         """Load all valid resources in a given directory."""
+        self.logger.debug("Loading directory {0}".format(dir))
         processed = []
         for name in listdir(dir):
             if not name.endswith(".py") and not name.endswith(".pyc"):
@@ -115,8 +112,13 @@ class _ResourceManager(object):
                 continue
             modname = sub("\.pyc?$", "", name)  # Remove extension
             if modname not in processed:
-                self._load_resource(modname, dir)
+                self._load_module(modname, dir)
                 processed.append(modname)
+
+    @property
+    def lock(self):
+        """The resource access/modify lock."""
+        return self._resource_access_lock
 
     def load(self):
         """Load (or reload) all valid resources into :py:attr:`_resources`."""
@@ -146,8 +148,7 @@ class CommandManager(_ResourceManager):
     Manages (i.e., loads, reloads, and calls) IRC commands.
     """
     def __init__(self, bot):
-        base = super(CommandManager, self)
-        base.__init__(bot, "commands", "Command", BaseCommand)
+        super(CommandManager, self).__init__(bot, "commands", Command)
 
     def _wrap_check(self, command, data):
         """Check whether a command should be called, catching errors."""
@@ -181,7 +182,7 @@ class TaskManager(_ResourceManager):
     Manages (i.e., loads, reloads, schedules, and runs) wiki bot tasks.
     """
     def __init__(self, bot):
-        super(TaskManager, self).__init__(bot, "tasks", "Task", BaseTask)
+        super(TaskManager, self).__init__(bot, "tasks", Task)
 
     def _wrapper(self, task, **kwargs):
         """Wrapper for task classes: run the task and catch any errors."""
@@ -197,9 +198,8 @@ class TaskManager(_ResourceManager):
     def start(self, task_name, **kwargs):
         """Start a given task in a new daemon thread, and return the thread.
 
-        kwargs are passed to :py:meth:`task.run() <earwigbot.tasks.BaseTask>`.
-        If the task is not found, ``None`` will be returned an an error is
-        logged.
+        kwargs are passed to :py:meth:`task.run() <earwigbot.tasks.Task>`. If
+        the task is not found, ``None`` will be returned an an error is logged.
         """
         msg = "Starting task '{0}' in a new thread"
         self.logger.info(msg.format(task_name))

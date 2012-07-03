@@ -20,8 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import re
-
 from earwigbot.irc import IRCConnection, Data
 
 __all__ = ["Frontend"]
@@ -32,13 +30,12 @@ class Frontend(IRCConnection):
 
     The IRC frontend runs on a normal IRC server and expects users to interact
     with it and give it commands. Commands are stored as "command classes",
-    subclasses of :py:class:`~earwigbot.commands.BaseCommand`. All command
-    classes are automatically imported by :py:meth:`commands.load()
+    subclasses of :py:class:`~earwigbot.commands.Command`. All command classes
+    are automatically imported by :py:meth:`commands.load()
     <earwigbot.managers._ResourceManager.load>` if they are in
     :py:mod:`earwigbot.commands` or the bot's custom command directory
     (explained in the :doc:`documentation </customizing>`).
     """
-    sender_regex = re.compile(":(.*?)!(.*?)@(.*?)\Z")
 
     def __init__(self, bot):
         self.bot = bot
@@ -53,30 +50,17 @@ class Frontend(IRCConnection):
     def _process_message(self, line):
         """Process a single message from IRC."""
         line = line.strip().split()
-        data = Data(self.bot, line)
 
         if line[1] == "JOIN":
-            data.nick, data.ident, data.host = self.sender_regex.findall(line[0])[0]
-            data.chan = line[2]
-            data.parse_args()
+            data = Data(self.bot, self.nick, line, msgtype="JOIN")
             self.bot.commands.call("join", data)
 
         elif line[1] == "PRIVMSG":
-            data.nick, data.ident, data.host = self.sender_regex.findall(line[0])[0]
-            data.msg = " ".join(line[3:])[1:]
-            data.chan = line[2]
-            data.parse_args()
-
-            if data.chan == self.bot.config.irc["frontend"]["nick"]:
-                # This is a privmsg to us, so set 'chan' as the nick of the
-                # sender, then check for private-only command hooks:
-                data.chan = data.nick
+            data = Data(self.bot, self.nick, line, msgtype="PRIVMSG")
+            if data.is_private:
                 self.bot.commands.call("msg_private", data)
             else:
-                # Check for public-only command hooks:
                 self.bot.commands.call("msg_public", data)
-
-            # Check for command hooks that apply to all messages:
             self.bot.commands.call("msg", data)
 
         elif line[0] == "PING":  # If we are pinged, pong back

@@ -24,9 +24,11 @@ import platform
 import time
 
 from earwigbot import __version__
-from earwigbot.commands import BaseCommand
+from earwigbot.commands import Command
 
-class Command(BaseCommand):
+__all__ = ["CTCP"]
+
+class CTCP(Command):
     """Not an actual command; this module implements responses to the CTCP
     requests PING, TIME, and VERSION."""
     name = "ctcp"

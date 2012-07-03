@@ -75,17 +75,20 @@ class Bot(object):
         self.commands.load()
         self.tasks.load()
 
+    def _dispatch_irc_component(self, name, klass):
+        """Create a new IRC component, record it internally, and start it."""
+        component = klass(self)
+        setattr(self, name, component)
+        Thread(name="irc_" + name, target=component.loop).start()
+
     def _start_irc_components(self):
         """Start the IRC frontend/watcher in separate threads if enabled."""
         if self.config.components.get("irc_frontend"):
             self.logger.info("Starting IRC frontend")
-            self.frontend = Frontend(self)
-            Thread(name="irc_frontend", target=self.frontend.loop).start()
-
+            self._dispatch_irc_component("frontend", Frontend)
         if self.config.components.get("irc_watcher"):
             self.logger.info("Starting IRC watcher")
-            self.watcher = Watcher(self)
-            Thread(name="irc_watcher", target=self.watcher.loop).start()
+            self._dispatch_irc_component("watcher", Watcher)
 
     def _start_wiki_scheduler(self):
         """Start the wiki scheduler in a separate thread if enabled."""
@@ -103,6 +106,16 @@ class Bot(object):
             thread = Thread(name="wiki_scheduler", target=wiki_scheduler)
             thread.daemon = True  # Stop if other threads stop
             thread.start()
+
+    def _keep_irc_component_alive(self, name, klass):
+        """Ensure that IRC components stay connected, else restart them."""
+        component = getattr(self, name)
+        if component:
+            component.keep_alive()
+            if component.is_stopped():
+                log = "IRC {0} has stopped; restarting".format(name)
+                self.logger.warn(log)
+                self._dispatch_irc_component(name, klass)
 
     def _stop_irc_components(self, msg):
         """Request the IRC frontend and watcher to stop if enabled."""
@@ -148,16 +161,8 @@ class Bot(object):
         self._start_wiki_scheduler()
         while self._keep_looping:
             with self.component_lock:
-                if self.frontend and self.frontend.is_stopped():
-                    name = "irc_frontend"
-                    self.logger.warn("IRC frontend has stopped; restarting")
-                    self.frontend = Frontend(self)
-                    Thread(name=name, target=self.frontend.loop).start()
-                if self.watcher and self.watcher.is_stopped():
-                    name = "irc_watcher"
-                    self.logger.warn("IRC watcher has stopped; restarting")
-                    self.watcher = Watcher(self)
-                    Thread(name=name, target=self.watcher.loop).start()
+                self._keep_irc_component_alive("frontend", Frontend)
+                self._keep_irc_component_alive("watcher", Watcher)
             sleep(2)
 
     def restart(self, msg=None):

@@ -24,9 +24,11 @@ import hashlib
 
 from Crypto.Cipher import Blowfish
 
-from earwigbot.commands import BaseCommand
+from earwigbot.commands import Command
 
-class Command(BaseCommand):
+__all__ = ["Crypt"]
+
+class Crypt(Command):
     """Provides hash functions with !hash (!hash list for supported algorithms)
     and blowfish encryption with !encrypt and !decrypt."""
     name = "crypt"

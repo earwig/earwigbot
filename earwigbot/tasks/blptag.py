@@ -20,11 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.tasks import BaseTask
+from earwigbot.tasks import Task
 
-__all__ = ["Task"]
+__all__ = ["BLPTag"]
 
-class Task(BaseTask):
+class BLPTag(Task):
     """A task to add |blp=yes to ``{{WPB}}`` or ``{{WPBS}}`` when it is used
     along with ``{{WP Biography}}``."""
     name = "blptag"

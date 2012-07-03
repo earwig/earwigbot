@@ -22,9 +22,11 @@
 
 import re
 
-from earwigbot.commands import BaseCommand
+from earwigbot.commands import Command
 
-class Command(BaseCommand):
+__all__ = ["AFCStatus"]
+
+class AFCStatus(Command):
     """Get the number of pending AfC submissions, open redirect requests, and
     open file upload requests."""
     name = "status"

@@ -30,11 +30,11 @@ import oursql
 
 from earwigbot import exceptions
 from earwigbot import wiki
-from earwigbot.tasks import BaseTask
+from earwigbot.tasks import Task
 
-__all__ = ["Task"]
+__all__ = ["AFCStatistics"]
 
-class Task(BaseTask):
+class AFCStatistics(Task):
     """A task to generate statistics for WikiProject Articles for Creation.
 
     Statistics are stored in a MySQL database ("u_earwig_afc_statistics")
@@ -87,7 +87,9 @@ class Task(BaseTask):
         action = kwargs.get("action")
         if not self.db_access_lock.acquire(False):  # Non-blocking
             if action == "sync":
+                self.logger.info("A sync is already ongoing; aborting")
                 return
+            self.logger.info("Waiting for database access lock")
             self.db_access_lock.acquire()
 
         try:

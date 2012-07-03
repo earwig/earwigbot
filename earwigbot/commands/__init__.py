@@ -20,9 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-__all__ = ["BaseCommand"]
+__all__ = ["Command"]
 
-class BaseCommand(object):
+class Command(object):
     """
     **EarwigBot: Base IRC Command**
 
@@ -30,8 +30,8 @@ class BaseCommand(object):
     component. Additional commands can be installed as plugins in the bot's
     working directory.
 
-    This class (import with ``from earwigbot.commands import BaseCommand``),
-    can be subclassed to create custom IRC commands.
+    This class (import with ``from earwigbot.commands import Command``), can be
+    subclassed to create custom IRC commands.
 
     This docstring is reported to the user when they type ``"!help
     <command>"``.

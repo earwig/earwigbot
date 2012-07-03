@@ -23,9 +23,11 @@
 import time
 
 from earwigbot import exceptions
-from earwigbot.commands import BaseCommand
+from earwigbot.commands import Command
 
-class Command(BaseCommand):
+__all__ = ["Registration"]
+
+class Registration(Command):
     """Return when a user registered."""
     name = "registration"
 

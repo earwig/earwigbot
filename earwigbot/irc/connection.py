@@ -22,7 +22,7 @@
 
 import socket
 from threading import Lock
-from time import sleep
+from time import sleep, time
 
 from earwigbot.exceptions import BrokenSocketError
 
@@ -32,15 +32,17 @@ class IRCConnection(object):
     """Interface with an IRC server."""
 
     def __init__(self, host, port, nick, ident, realname):
-        self.host = host
-        self.port = port
-        self.nick = nick
-        self.ident = ident
-        self.realname = realname
-        self._is_running = False
+        self._host = host
+        self._port = port
+        self._nick = nick
+        self._ident = ident
+        self._realname = realname
 
-        # A lock to prevent us from sending two messages at once:
+        self._is_running = False
         self._send_lock = Lock()
+
+        self._last_recv = time()
+        self._last_ping = 0
 
     def _connect(self):
         """Connect to our IRC server."""
@@ -55,7 +57,7 @@ class IRCConnection(object):
         self._send("USER {0} {1} * :{2}".format(self.ident, self.host, self.realname))
 
     def _close(self):
-        """Close our connection with the IRC server."""
+        """Completely close our connection with the IRC server."""
         try:
             self._sock.shutdown(socket.SHUT_RDWR)  # Shut down connection first
         except socket.error:
@@ -73,15 +75,47 @@ class IRCConnection(object):
     def _send(self, msg):
         """Send data to the server."""
         with self._send_lock:
-            self._sock.sendall(msg + "\r\n")
-            self.logger.debug(msg)
+            try:
+                self._sock.sendall(msg + "\r\n")
+            except socket.error:
+                self._is_running = False
+            else:
+                self.logger.debug(msg)
 
     def _quit(self, msg=None):
-        """Issue a quit message to the server."""
+        """Issue a quit message to the server. Doesn't close the connection."""
         if msg:
             self._send("QUIT :{0}".format(msg))
         else:
             self._send("QUIT")
+
+    @property
+    def host(self):
+        """The hostname of the IRC server, like ``"irc.freenode.net"``."""
+        return self._host
+
+    @property
+    def port(self):
+        """The port of the IRC server, like ``6667``."""
+        return self._port
+
+    @property
+    def nick(self):
+        """Our nickname on the server, like ``"EarwigBot"``."""
+        return self._nick
+
+    @property
+    def ident(self):
+        """Our ident on the server, like ``"earwig"``.
+
+        See `http://en.wikipedia.org/wiki/Ident`_.
+        """
+        return self._ident
+
+    @property
+    def realname(self):
+        """Our realname (gecos field) on the server."""
+        return self._realname
 
     def say(self, target, msg):
         """Send a private message to a target on the server."""
@@ -120,6 +154,11 @@ class IRCConnection(object):
         msg = "MODE {0} {1} {2}".format(target, level, msg)
         self._send(msg)
 
+    def ping(self, target):
+        """Ping another entity on the server."""
+        msg = "PING {0} {0}".format(target)
+        self._send(msg)
+
     def pong(self, target):
         """Pong another entity on the server."""
         msg = "PONG {0}".format(target)
@@ -136,13 +175,25 @@ class IRCConnection(object):
                 self._is_running = False
                 break
 
+            self._last_recv = time()
             lines = read_buffer.split("\n")
             read_buffer = lines.pop()
             for line in lines:
                 self._process_message(line)
             if self.is_stopped():
-                self._close()
                 break
+
+        self._close()
+
+    def keep_alive(self):
+        """Ensure that we stay connected, stopping if the connection breaks."""
+        now = time()
+        if now - self._last_recv > 60:
+            if self._last_ping < self._last_recv:
+                self.ping(self.host)
+                self._last_ping = now
+            elif now - self._last_ping > 60:
+                self.stop()
 
     def stop(self, msg=None):
         """Request the IRC connection to close at earliest convenience."""

@@ -24,9 +24,11 @@ import time
 
 import git
 
-from earwigbot.commands import BaseCommand
+from earwigbot.commands import Command
 
-class Command(BaseCommand):
+__all__ = ["Git"]
+
+class Git(Command):
     """Commands to interface with the bot's git repository; use '!git' for a
     sub-command list."""
     name = "git"

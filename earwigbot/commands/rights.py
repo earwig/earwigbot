@@ -21,9 +21,11 @@
 # SOFTWARE.
 
 from earwigbot import exceptions
-from earwigbot.commands import BaseCommand
+from earwigbot.commands import Command
 
-class Command(BaseCommand):
+__all__ = ["Rights"]
+
+class Rights(Command):
     """Retrieve a list of rights for a given username."""
     name = "rights"
 
