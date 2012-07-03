@@ -25,6 +25,11 @@ import re
 from time import gmtime, strftime
 from urllib import quote
 
+try:
+    import mwparserfromhell
+except ImportError:
+    mwparserfromhell = None
+
 from earwigbot import exceptions
 from earwigbot.wiki.copyright import CopyrightMixin
 
@@ -60,14 +65,14 @@ class Page(CopyrightMixin):
       redirect
     - :py:meth:`get_creator`: returns a User object representing the first
       person to edit the page
+    - :py:meth:`parse`:       parses the page content for templates, links, etc
     - :py:meth:`edit`:        replaces the page's content or creates a new page
     - :py:meth:`add_section`: adds a new section at the bottom of the page
 
     - :py:meth:`~earwigbot.wiki.copyvios.CopyrightMixin.copyvio_check`:
       checks the page for copyright violations
     - :py:meth:`~earwigbot.wiki.copyvios.CopyrightMixin.copyvio_compare`:
-      checks the page for like :py:meth:`copyvio_check`, but against a specific
-      URL
+      checks the page like :py:meth:`copyvio_check`, but against a specific URL
     """
 
     re_redirect = "^\s*\#\s*redirect\s*\[\[(.*?)\]\]"
@@ -673,6 +678,19 @@ class Page(CopyrightMixin):
             self._load()
             self._assert_existence()
         return self._site.get_user(self._creator)
+
+    def parse(self):
+        """Parse the page content for templates, links, etc.
+
+        Actual parsing is handled by :py:mod:`mwparserfromhell`. Raises
+        :py:exc:`ImportError` if :py:mod:`mwparserfromhell` isn't installed,
+        and :py:exc:`~earwigbot.exceptions.InvalidPageError` or
+        :py:exc:`~earwigbot.exceptions.PageNotFoundError` if the page name is
+        invalid or the page does not exist, respectively.
+        """
+        if not mwparserfromhell:
+            raise ImportError("mwparserfromhell")
+        return mwparserfromhell.parse(self.get())
 
     def edit(self, text, summary, minor=False, bot=True, force=False):
         """Replace the page's content or creates a new page.

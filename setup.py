@@ -32,11 +32,12 @@ setup(
     name = "earwigbot",
     packages = find_packages(exclude=("tests",)),
     entry_points = {"console_scripts": ["earwigbot = earwigbot.util:main"]},
-    install_requires = ["oursql >= 0.9.3",  # Talking with MediaWiki databases
+    install_requires = ["GitPython >= 0.3.2.RC1",  # Interfacing with git
+                        "PyYAML >= 3.10",  # Config parsing
+                        "mwparserfromhell >= 0.1",  # Wikicode parsing
+                        "oursql >= 0.9.3",  # Talking with MediaWiki databases
                         "oauth2 >= 1.5.211",  # Talking with Yahoo BOSS Search
                         "pycrypto >= 2.5",  # Storing bot passwords and keys
-                        "GitPython >= 0.3.2.RC1",  # Interfacing with git
-                        "PyYAML >= 3.10",  # Config parsing
                         ],
     test_suite = "tests",
     version = __version__,
