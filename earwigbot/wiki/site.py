@@ -129,7 +129,7 @@ class Site(object):
         self._sql_conn = None
         self._sql_lock = Lock()
 
-        # Attribute used in copyright violation checks (see CopyrightMixin):
+        # Attribute used in copyright violation checks (see CopyrightMixIn):
         self._search_config = search_config
 
         # Set up cookiejar and URL opener for making API queries:

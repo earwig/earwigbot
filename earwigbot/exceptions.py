@@ -201,9 +201,9 @@ class CopyvioCheckError(WikiToolsetError):
     raised instead of this.
 
     Raised by :py:meth:`Page.copyvio_check
-    <earwigbot.wiki.copyvios.CopyvioMixin.copyvio_check>` and
+    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>` and
     :py:meth:`Page.copyvio_compare
-    <earwigbot.wiki.copyvios.CopyvioMixin.copyvio_compare>`.
+    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_compare>`.
     """
 
 class UnknownSearchEngineError(CopyvioCheckError):
@@ -213,9 +213,9 @@ class UnknownSearchEngineError(CopyvioCheckError):
     :py:attr:`config.wiki["search"]["engine"]`.
 
     Raised by :py:meth:`Page.copyvio_check
-    <earwigbot.wiki.copyvios.CopyvioMixin.copyvio_check>` and
+    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>` and
     :py:meth:`Page.copyvio_compare
-    <earwigbot.wiki.copyvios.CopyvioMixin.copyvio_compare>`.
+    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_compare>`.
     """
 
 class UnsupportedSearchEngineError(CopyvioCheckError):
@@ -225,16 +225,16 @@ class UnsupportedSearchEngineError(CopyvioCheckError):
     couldn't be imported.
 
     Raised by :py:meth:`Page.copyvio_check
-    <earwigbot.wiki.copyvios.CopyvioMixin.copyvio_check>` and
+    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>` and
     :py:meth:`Page.copyvio_compare
-    <earwigbot.wiki.copyvios.CopyvioMixin.copyvio_compare>`.
+    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_compare>`.
     """
 
 class SearchQueryError(CopyvioCheckError):
     """Some error ocurred while doing a search query.
 
     Raised by :py:meth:`Page.copyvio_check
-    <earwigbot.wiki.copyvios.CopyvioMixin.copyvio_check>` and
+    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>` and
     :py:meth:`Page.copyvio_compare
-    <earwigbot.wiki.copyvios.CopyvioMixin.copyvio_compare>`.
+    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_compare>`.
     """

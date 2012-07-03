@@ -153,11 +153,11 @@ and the following methods:
   <earwigbot.wiki.page.Page.add_section>`: adds a new section named ``title``
   at the bottom of the page
 - :py:meth:`copyvio_check(...)
-  <earwigbot.wiki.copyvios.CopyvioMixin.copyvio_check>`: checks the page for
+  <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>`: checks the page for
   copyright violations
 - :py:meth:`copyvio_compare(url, ...)
-  <earwigbot.wiki.copyvios.CopyvioMixin.copyvio_compare>`: checks the page like
-  :py:meth:`~earwigbot.wiki.copyvios.CopyvioMixin.copyvio_check`, but
+  <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_compare>`: checks the page like
+  :py:meth:`~earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check`, but
   against a specific URL
 
 Additionally, :py:class:`~earwigbot.wiki.category.Category` objects (created

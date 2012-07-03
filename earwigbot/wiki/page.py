@@ -31,11 +31,11 @@ except ImportError:
     mwparserfromhell = None
 
 from earwigbot import exceptions
-from earwigbot.wiki.copyright import CopyrightMixin
+from earwigbot.wiki.copyright import CopyrightMixIn
 
 __all__ = ["Page"]
 
-class Page(CopyrightMixin):
+class Page(CopyrightMixIn):
     """
     **EarwigBot: Wiki Toolset: Page**
 
@@ -69,9 +69,9 @@ class Page(CopyrightMixin):
     - :py:meth:`edit`:        replaces the page's content or creates a new page
     - :py:meth:`add_section`: adds a new section at the bottom of the page
 
-    - :py:meth:`~earwigbot.wiki.copyvios.CopyrightMixin.copyvio_check`:
+    - :py:meth:`~earwigbot.wiki.copyvios.CopyrightMixIn.copyvio_check`:
       checks the page for copyright violations
-    - :py:meth:`~earwigbot.wiki.copyvios.CopyrightMixin.copyvio_compare`:
+    - :py:meth:`~earwigbot.wiki.copyvios.CopyrightMixIn.copyvio_compare`:
       checks the page like :py:meth:`copyvio_check`, but against a specific URL
     """
 
