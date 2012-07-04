@@ -139,30 +139,30 @@ class AFCStatus(Command):
     def get_aggregate(self, num):
         """Returns a human-readable AFC status based on the number of pending
         AFC submissions, open redirect requests, and open FFU requests. This
-        does not match {{AFC status}} directly because my algorithm factors in
+        does not match {{AFC status}} directly because the algorithm factors in
         WP:AFC/R and WP:FFU while the template only looks at the main
-        submissions. My reasoning is that AFC/R and FFU are still part of
+        submissions. The reasoning is that AFC/R and FFU are still part of
         the project, so even if there are no pending submissions, a backlog at
         FFU (for example) indicates that our work is *not* done and the
         project-wide backlog is most certainly *not* clear."""
         if num == 0:
             return "is \x02\x0303clear\x0301\x0F"
-        elif num < 125:  # < 25 subs
+        elif num <= 200:
             return "is \x0303almost clear\x0301"
-        elif num < 200:  # < 40 subs
+        elif num <= 400:
             return "is \x0312normal\x0301"
-        elif num < 275:  # < 55 subs
+        elif num <= 600:
             return "is \x0307lightly backlogged\x0301"
-        elif num < 350:  # < 70 subs
+        elif num <= 900:
             return "is \x0304backlogged\x0301"
-        elif num < 500:  # < 100 subs
+        elif num <= 1200:
             return "is \x02\x0304heavily backlogged\x0301\x0F"
-        else:  # >= 100 subs
+        else:
             return "is \x02\x1F\x0304severely backlogged\x0301\x0F"
 
     def get_aggregate_number(self, (subs, redirs, files)):
         """Returns an 'aggregate number' based on the real number of pending
         submissions in CAT:PEND (subs), open redirect submissions in WP:AFC/R
         (redirs), and open files-for-upload requests in WP:FFU (files)."""
-        num = (subs * 5) + (redirs * 2) + (files * 2)
+        num = subs + (redirs / 2) + (files / 2)
         return num
