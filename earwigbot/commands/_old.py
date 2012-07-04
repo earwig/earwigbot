@@ -128,28 +128,6 @@ def parse(command, line, line2, nick, chan, host, auth, notice, say, reply, s):
 		return
 
 
-	if command == "trout":
-		try:
-			user = line2[4]
-			user = ' '.join(line2[4:])
-		except Exception:
-			reply("Hahahahahahahaha...", chan, nick)
-			return
-		normal = unicodedata.normalize('NFKD', unicode(string.lower(user)))
-		if "itself" in normal:
-			reply("I'm not that stupid ;)", chan, nick)
-			return
-		elif "earwigbot" in normal:
-			reply("I'm not that stupid ;)", chan, nick)
-		elif "earwig" not in normal and "ear wig" not in normal:
-			text = 'slaps %s around a bit with a large trout.' % user
-			msg = '\x01ACTION %s\x01' % text
-			say(msg, chan)
-		else:
-			reply("I refuse to hurt anything with \"Earwig\" in its name :P", chan, nick)
-		return
-
-
 	if command == "notes" or command == "note" or command == "about" or command == "data" or command == "database":
 		try:
 			action = line2[4]

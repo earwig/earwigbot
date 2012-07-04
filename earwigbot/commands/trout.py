@@ -20,15 +20,29 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.commands import BaseCommand
+from unicodedata import normalize
 
-class Command(BaseCommand):
-    """Link the user to the pending AFC submissions page and category."""
-    name = "pending"
-    commands = ["pending", "pend"]
+from earwigbot.commands import Command
+
+__all__ = ["Trout"]
+
+class Trout(Command):
+    """Slap someone with a trout, or related fish."""
+    name = "trout"
+    commands = ["trout", "whale"]
+
+    def setup(self):
+        try:
+            self.exceptions = self.config.commands[self.name]["exceptions"]
+        except KeyError:
+            self.exceptions = {}
 
     def process(self, data):
-        msg1 = "pending submissions status page: http://enwp.org/WP:AFC/ST"
-        msg2 = "pending submissions category: http://enwp.org/CAT:PEND"
-        self.reply(data, msg1)
-        self.reply(data, msg2)
+        animal = data.command
+        target = " ".join(data.args) or data.nick
+        normal = normalize("NFKD", target.decode("utf8")).lower()
+        if normal in self.exceptions:
+            self.reply(data, self.exceptions["normal"])
+        else:
+            msg = "slaps {0} around a bit with a large {1}."
+            self.action(data.chan, msg.format(target, animal))
