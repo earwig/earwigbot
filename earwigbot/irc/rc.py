@@ -28,7 +28,7 @@ class RC(object):
     """Store data from an event received from our IRC watcher."""
     re_color = re.compile("\x03([0-9]{1,2}(,[0-9]{1,2})?)?")
     re_edit = re.compile("\A\[\[(.*?)\]\]\s(.*?)\s(http://.*?)\s\*\s(.*?)\s\*\s(.*?)\Z")
-    re_log = re.compile("\A\[\[(.*?)\]\]\s(.*?)\s\*\s(.*?)\s\*\s(.*?)\Z")
+    re_log = re.compile("\A\[\[(.*?)\]\]\s(.*?)\s\s\*\s(.*?)\s\*\s\s(.*?)\Z")
 
     pretty_edit = "\x02New {0}\x0F: \x0314[[\x0307{1}\x0314]]\x0306 * \x0303{2}\x0306 * \x0302{3}\x0306 * \x0310{4}"
     pretty_log = "\x02New {0}\x0F: \x0303{1}\x0306 * \x0302{2}\x0306 * \x0310{3}"
@@ -73,13 +73,13 @@ class RC(object):
             event_type = "protection"  # "New protection:"
         elif flags == "create":
             event_type = "user"  # "New user:"
-        if self.page == "Special:Log/move":
+        elif flags == "move":
             event_type = "move"  # New move:
         else:
             event_type = "edit"  # "New edit:"
             if "B" in flags:
                 # "New bot edit:"
-                event_type = "bot " + event_type
+                event_type = "bot edit"
             if "M" in flags:
                 # "New minor edit:" OR "New minor bot edit:"
                 event_type = "minor " + event_type
