@@ -37,6 +37,7 @@ setup(
                         "pycrypto >= 2.5",  # Storing bot passwords and keys
                         "GitPython >= 0.3.2.RC1",  # Interfacing with git
                         "PyYAML >= 3.10",  # Config parsing
+                        "pytz >= 2012c",  # Timezone handling
                         ],
     test_suite = "tests",
     version = __version__,

@@ -20,9 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from math import floor
 from time import time
+
+try:
+    import pytz
+except ImportError:
+    pytz = None
 
 from earwigbot.commands import BaseCommand
 
@@ -30,17 +35,6 @@ class Command(BaseCommand):
     """Report the current time in any timezone (UTC default), or in beats."""
     name = "time"
     commands = ["time", "beats", "swatch"]
-    timezones = [
-        "UTC": 0,
-        "EST": -5,
-        "EDT": -4,
-        "CST": -6,
-        "CDT": -5,
-        "MST": -7,
-        "MDT": -6,
-        "PST": -8,
-        "PDT": -7,
-    ]
 
     def process(self, data):
         if data.command in ["beats", "swatch"]:
@@ -61,10 +55,14 @@ class Command(BaseCommand):
         self.reply(data, "@{0:0>3}".format(beats))
 
     def do_time(self, data, timezone):
-        now = datetime.utcnow()
+        if not pytz:
+            msg = "this command requires the 'pytz' module: http://pytz.sourceforge.net/"
+            self.reply(data, msg)
+            return
         try:
-            now += timedelta(hours=self.timezones[timezone])  # Timezone offset
-        except KeyError:
+            tzinfo = pytz.timezone(timezone)
+        except pytz.exceptions.UnknownTimeZoneError:
             self.reply(data, "unknown timezone: {0}.".format(timezone))
             return
-        self.reply(data, now.strftime("%Y-%m-%d %H:%M:%S") + " " + timezone)
+        now = pytz.utc.localize(datetime.utcnow()).astimezone(tzinfo)
+        self.reply(data, now.strftime("%Y-%m-%d %H:%M:%S %Z"))
