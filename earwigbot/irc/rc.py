@@ -65,28 +65,24 @@ class RC(object):
     def prettify(self):
         """Make a nice, colorful message to send back to the IRC front-end."""
         flags = self.flags
-        if "N" in flags:
-            event_type = "page"  # "New page:"
-        elif flags == "delete":
-            event_type = "deletion"  # "New deletion:"
-        elif flags == "protect":
-            event_type = "protection"  # "New protection:"
-        elif flags == "create":
-            event_type = "user"  # "New user:"
-        elif flags == "move":
-            event_type = "move"  # New move:
-        else:
-            event_type = "edit"  # "New edit:"
-            if "B" in flags:
-                # "New bot edit:"
-                event_type = "bot edit"
-            if "M" in flags:
-                # "New minor edit:" OR "New minor bot edit:"
-                event_type = "minor " + event_type
-
         if self.is_edit:
-            return self.pretty_edit.format(event_type, self.page, self.user,
+            if "N" in flags:
+                event = "page"  # "New page:"
+            else:
+                event = "edit"  # "New edit:"
+                if "B" in flags:
+                    event = "bot edit"  # "New bot edit:"
+                if "M" in flags:
+                    event = "minor " + event  # "New minor (bot)? edit:"
+            return self.pretty_edit.format(event, self.page, self.user,
                                            self.url, self.comment)
+
+        if flags == "delete":
+            event = "deletion"  # "New deletion:"
+        elif flags == "protect":
+            event = "protection"  # "New protection:"
+        elif flags == "create":
+            event = "user"  # "New user:"
         else:
-            return self.pretty_log.format(event_type, self.user, self.url,
-                                          self.comment)
+            event = flags  # Works for "move", "block", etc
+        return self.pretty_log.format(event, self.user, self.url, self.comment)
