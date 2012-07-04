@@ -25,22 +25,24 @@ from earwigbot.commands import BaseCommand
 class Command(BaseCommand):
     """Praise people!"""
     name = "praise"
-    commands = ["praise", "earwig", "leonard", "leonard^bloom", "groove",
-                "groovedog"]
+
+    def setup(self):
+        try:
+            self.praises = self.config.commands[self.name]["praises"]
+        except KeyError:
+            self.praises = []
+
+    def check(self, data):
+        check = data.command == "praise" or data.command in self.praises
+        return data.is_command and check
 
     def process(self, data):
-        if data.command == "earwig":
-            msg = "\x02Earwig\x0F is the bestest Python programmer ever!"
-        elif data.command in ["leonard", "leonard^bloom"]:
-            msg = "\x02Leonard^Bloom\x0F is the biggest slacker ever!"
-        elif data.command in ["groove", "groovedog"]:
-            msg = "\x02GrooveDog\x0F is the bestest heh evar!"
-        else:
-            if not data.args:
-                msg = "You use this command to praise certain people. Who they are is a secret."
-            else:
-                msg = "You're doing it wrong."
-            self.reply(data, msg)
+        if data.command in self.praises:
+            msg = self.praises[data.command]
+            self.say(data.chan, msg)
             return
-
-        self.say(data.chan, msg)
+        if not data.args:
+            msg = "You use this command to praise certain people. Who they are is a secret."
+        else:
+            msg = "you're doing it wrong."
+        self.reply(data, msg)

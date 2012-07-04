@@ -32,7 +32,7 @@ class Command(BaseCommand):
 
     def setup(self):
         try:
-            self.key = self.config.commands[self.name]["default"]
+            self.default = self.config.commands[self.name]["default"]
         except KeyError:
             self.default = None
 
