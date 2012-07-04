@@ -20,13 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.tasks import BaseTask
+from earwigbot.tasks import Task
 
-__all__ = ["Task"]
+__all__ = ["ImageDisplayResize"]
 
-class Task(BaseTask):
-    """A task to create daily categories for [[WP:FEED]]."""
-    name = "feed_dailycats"
+class ImageDisplayResize(Task):
+    """A task to resize upscaled portraits in infoboxes."""
+    name = "image_display_resize"
 
     def setup(self):
         pass
