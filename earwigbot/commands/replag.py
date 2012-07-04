@@ -30,10 +30,16 @@ class Command(BaseCommand):
     """Return the replag for a specific database on the Toolserver."""
     name = "replag"
 
+    def setup(self):
+        try:
+            self.key = self.config.commands[self.name]["default"]
+        except KeyError:
+            self.default = None
+
     def process(self, data):
         args = {}
         if not data.args:
-            args["db"] = "enwiki_p"
+            args["db"] = self.default or self.bot.wiki.get_site().name + "_p"
         else:
             args["db"] = data.args[0]
         args["host"] = args["db"].replace("_", "-") + ".rrdb.toolserver.org"
@@ -47,5 +53,5 @@ class Command(BaseCommand):
             replag = int(cursor.fetchall()[0][0])
         conn.close()
 
-        msg = "Replag on \x0302{0}\x0301 is \x02{1}\x0F seconds."
+        msg = "replag on \x0302{0}\x0301 is \x02{1}\x0F seconds."
         self.reply(data, msg.format(args["db"], replag))

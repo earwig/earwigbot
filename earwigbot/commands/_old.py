@@ -128,44 +128,6 @@ def parse(command, line, line2, nick, chan, host, auth, notice, say, reply, s):
 		return
 
 
-	if command == "sub" or command == "submissions":
-		try:
-			number = int(line2[4])
-		except Exception:
-			reply("Please enter a number.", chan, nick)
-			return
-		do_url = False
-		try:
-			if "url" in line2[5:]: do_url = True
-		except Exception:
-			pass
-		url = "http://en.wikipedia.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:Pending_AfC_submissions&cmlimit=500&cmsort=timestamp"
-		query = urllib.urlopen(url)
-		data = query.read()
-		pages = re.findall("title=&quot;(.*?)&quot;", data)
-		try:
-			pages.remove("Wikipedia:Articles for creation/Redirects")
-		except Exception:
-			pass
-		try:
-			pages.remove("Wikipedia:Files for upload")
-		except Exception:
-			pass
-		pages.reverse()
-		pages = pages[:number]
-		if not do_url:
-			s = string.join(pages, "]], [[")
-			s = "[[%s]]" % s
-		else:
-			s = string.join(pages, ">, <http://en.wikipedia.org/wiki/")
-			s = "<http://en.wikipedia.org/wiki/%s>" % s
-			s = re.sub(" ", "_", s)
-			s = re.sub(">,_<", ">, <", s)
-		report = "\x02First %s pending AfC submissions:\x0F %s" % (number, s)
-		say(report, chan)
-		return
-
-
 	if command == "trout":
 		try:
 			user = line2[4]

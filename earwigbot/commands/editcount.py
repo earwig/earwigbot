@@ -47,6 +47,7 @@ class Command(BaseCommand):
             return
 
         safe = quote_plus(user.name)
-        url = "http://toolserver.org/~tparis/pcount/index.php?name={0}&lang=en&wiki=wikipedia"
+        url = "http://toolserver.org/~tparis/pcount/index.php?name={0}&lang={1}&wiki={2}"
+        fullurl = url.format(safe, site.lang, site.project)
         msg = "\x0302{0}\x0301 has {1} edits ({2})."
-        self.reply(data, msg.format(name, count, url.format(safe)))
+        self.reply(data, msg.format(name, count, fullurl))
