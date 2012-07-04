@@ -498,7 +498,7 @@ class Page(CopyrightMixin):
         else:
             slug = quote(self._title.replace(" ", "_"), safe="/:")
             path = self._site._article_path.replace("$1", slug)
-            return ''.join((self._site._base_url, path))
+            return ''.join((self._site.url, path))
 
     @property
     def namespace(self):

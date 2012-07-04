@@ -9,18 +9,16 @@
 
 def parse(command, line, line2, nick, chan, host, auth, notice, say, reply, s):
 	authy = auth(host)
+
+
 	if command == "access":
 		a = 'The bot\'s owner is "%s".' % OWNER
 		b = 'The bot\'s admins are "%s".' % ', '.join(ADMINS_R)
 		reply(a, chan, nick)
 		reply(b, chan, nick)
 		return
-	if command == "tock":
-		u = urllib.urlopen('http://tycho.usno.navy.mil/cgi-bin/timer.pl')
-		info = u.info()
-		u.close()
-		say('"' + info['Date'] + '" - tycho.usno.navy.mil', chan)
-		return
+
+
 	if command == "dict" or command == "dictionary":
 		def trim(thing):
 			if thing.endswith('&nbsp;'):
@@ -58,6 +56,8 @@ def parse(command, line, line2, nick, chan, host, auth, notice, say, reply, s):
 			reply('Sorry, no definition found.', chan, nick)
 		else: say(result, chan)
 		return
+
+
 	if command == "ety" or command == "etymology":
 		etyuri = 'http://etymonline.com/?term=%s'
 		etysearch = 'http://etymonline.com/?search=%s'
@@ -126,6 +126,8 @@ def parse(command, line, line2, nick, chan, host, auth, notice, say, reply, s):
 			msg = 'Can\'t find the etymology for "%s". Try %s' % (word, uri)
 			reply(msg, chan, nick)
 		return
+
+
 	if command == "sub" or command == "submissions":
 		try:
 			number = int(line2[4])
@@ -162,6 +164,8 @@ def parse(command, line, line2, nick, chan, host, auth, notice, say, reply, s):
 		report = "\x02First %s pending AfC submissions:\x0F %s" % (number, s)
 		say(report, chan)
 		return
+
+
 	if command == "trout":
 		try:
 			user = line2[4]
@@ -182,6 +186,8 @@ def parse(command, line, line2, nick, chan, host, auth, notice, say, reply, s):
 		else:
 			reply("I refuse to hurt anything with \"Earwig\" in its name :P", chan, nick)
 		return
+
+
 	if command == "notes" or command == "note" or command == "about" or command == "data" or command == "database":
 		try:
 			action = line2[4]

@@ -69,6 +69,7 @@ class Site(object):
     - :py:attr:`project`: the site's project name, like ``"wikipedia"``
     - :py:attr:`lang`:    the site's language code, like ``"en"``
     - :py:attr:`domain`:  the site's web domain, like ``"en.wikipedia.org"``
+    - :py:attr:`url`:     the site's URL, like ``"https://en.wikipedia.org"``
 
     *Public methods:*
 
@@ -243,14 +244,7 @@ class Site(object):
             e = "Tried to do an API query, but no API URL is known."
             raise exceptions.SiteAPIError(e)
 
-        base_url = self._base_url
-        if base_url.startswith("//"): # Protocol-relative URLs from 1.18
-            if self._use_https:
-                base_url = "https:" + base_url
-            else:
-                base_url = "http:" + base_url
-        url = ''.join((base_url, self._script_path, "/api.php"))
-
+        url = ''.join((self.url, self._script_path, "/api.php"))
         params["format"] = "json"  # This is the only format we understand
         if self._assert_edit:  # If requested, ensure that we're logged in
             params["assert"] = self._assert_edit
@@ -547,6 +541,17 @@ class Site(object):
     def domain(self):
         """The Site's web domain, like ``"en.wikipedia.org"``."""
         return urlparse(self._base_url).netloc
+
+    @property
+    def url(self):
+        """The Site's full base URL, like ``"https://en.wikipedia.org"``."""
+        url = self._base_url
+        if url.startswith("//"):  # Protocol-relative URLs from 1.18
+            if self._use_https:
+                url = "https:" + url
+            else:
+                url = "http:" + url
+        return url
 
     def api_query(self, **kwargs):
         """Do an API query with `kwargs` as the parameters.

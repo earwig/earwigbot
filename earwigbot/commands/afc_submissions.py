@@ -55,5 +55,6 @@ class AFCSubmissions(Command):
 
         site = self.bot.wiki.get_site()
         category = site.get_category("Pending AfC submissions")
-        pages = ", ".join(category.get_members(use_sql=True, limit=number))
+        members = category.get_members(use_sql=True, limit=number)
+        pages = ", ".join([member.url for member in members])
         self.reply(data, "{0} pending AfC subs: {1}".format(number, pages))

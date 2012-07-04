@@ -80,6 +80,8 @@ following attributes:
   ``"en"``
 - :py:attr:`~earwigbot.wiki.site.Site.domain`: the site's web domain, like
   ``"en.wikipedia.org"``
+- :py:attr:`~earwigbot.wiki.site.Site.url`: the site's full base URL, like
+  ``"https://en.wikipedia.org"``
 
 and the following methods:
 
