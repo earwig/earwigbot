@@ -128,6 +128,7 @@ class Site(object):
         self._max_retries = 6
         self._last_query_time = 0
         self._api_lock = Lock()
+        self._api_info_cache = {"maxlag": 0, "lastcheck": 0}
 
         # Attributes used for SQL queries:
         self._sql_data = sql
@@ -531,21 +532,23 @@ class Site(object):
     def _get_service_order(self):
         """Return a preferred order for using services (e.g. the API and SQL).
 
-        A list is returned, starting with the preferred service first and
+        A list is returned, starting with the most preferred service first and
         ending with the least preferred one. Currently, there are only two
         services. SERVICE_API will always be included since the API is expected
         to be always usable. In normal circumstances, self.SERVICE_SQL will be
         first (with the API second), since using SQL directly is easier on the
         servers than making web queries with the API. self.SERVICE_SQL will be
-        second if replag is greater than ten minutes (a cached value updated
-        every five minutes at most). self.SERVICE_SQL will not be included in
-        the list if we cannot form a proper SQL connection.
+        second if replag is greater than three minutes (a cached value updated
+        every two minutes at most), *unless* API lag is also very high.
+        self.SERVICE_SQL will not be included in the list if we cannot form a
+        proper SQL connection.
         """
-        if time() - self._sql_info_cache["lastcheck"] > 300:
-            self._sql_info_cache["lastcheck"] = time()
+        now = time()
+        if now - self._sql_info_cache["lastcheck"] > 120:
+            self._sql_info_cache["lastcheck"] = now
             try:
-                self._sql_info_cache["replag"] = self.get_replag()
-            except exceptions.SQLError, oursql.Error:
+                self._sql_info_cache["replag"] = sqllag = self.get_replag()
+            except (exceptions.SQLError, oursql.Error):
                 self._sql_info_cache["usable"] = False
                 return [self.SERVICE_API]
             self._sql_info_cache["usable"] = True
@@ -553,8 +556,19 @@ class Site(object):
             if not self._sql_info_cache["usable"]:
                 return [self.SERVICE_API]
 
-        if self._sql_info_cache["replag"] > 600:
+        if sqllag > 180:
+            if not self._maxlag:
+                return [self.SERVICE_API, self.SERVICE_SQL]
+            if now - self._api_info_cache["lastcheck"] > 120:
+                self._api_info_cache["lastcheck"] = now
+                try:
+                    self._api_info_cache["maxlag"] = apilag = self.get_maxlag()
+                except exceptions.APIError:
+                    self._api_info_cache["maxlag"] = apilag = 0
+            if sqllag / (180.0 / self._maxlag) < apilag:
+                return [self.SERVICE_SQL, self.SERVICE_API]
             return [self.SERVICE_API, self.SERVICE_SQL]
+
         return [self.SERVICE_SQL, self.SERVICE_API]
 
     @property
