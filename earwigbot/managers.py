@@ -55,7 +55,7 @@ class _ResourceManager(object):
         self._resources = {}
         self._resource_name = name  # e.g. "commands" or "tasks"
         self._resource_base = base  # e.g. Command or Task
-        self._resource_access_lock = Lock()
+        self._resource_access_lock = RLock()
 
     def __iter__(self):
         with self.lock:
