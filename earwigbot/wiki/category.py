@@ -51,6 +51,26 @@ class Category(Page):
         """Return a nice string representation of the Category."""
         return '<Category "{0}" of {1}>'.format(self.title, str(self.site))
 
+    def _get_members_via_api(self, limit, follow):
+        """Iterate over Pages in the category using the API."""
+        params = {"action": "query", "list": "categorymembers",
+                  "cmtitle": self.title}
+
+        while 1:
+            params["cmlimit"] = limit if limit else "max"
+            result = self.site.api_query(**params)
+            for member in result["query"]["categorymembers"]:
+                title = member["title"]
+                yield self.site.get_page(title, follow_redirects=follow)
+
+            if "query-continue" in result:
+                qcontinue = result["query-continue"]["categorymembers"]
+                params["cmcontinue"] = qcontinue["cmcontinue"]
+                if limit:
+                    limit -= len(result["query"]["categorymembers"])
+            else:
+                break
+
     def _get_members_via_sql(self, limit, follow):
         """Iterate over Pages in the category using SQL."""
         query = """SELECT page_title, page_namespace, page_id FROM page
@@ -75,27 +95,7 @@ class Category(Page):
             yield self.site.get_page(title, follow_redirects=follow,
                                       pageid=row[2])
 
-    def _get_members_via_api(self, limit, follow):
-        """Iterate over Pages in the category using the API."""
-        params = {"action": "query", "list": "categorymembers",
-                  "cmtitle": self.title}
-
-        while 1:
-            params["cmlimit"] = limit if limit else "max"
-            result = self.site.api_query(**params)
-            for member in result["query"]["categorymembers"]:
-                title = member["title"]
-                yield self.site.get_page(title, follow_redirects=follow)
-
-            if "query-continue" in result:
-                qcontinue = result["query-continue"]["categorymembers"]
-                params["cmcontinue"] = qcontinue["cmcontinue"]
-                if limit:
-                    limit -= len(result["query"]["categorymembers"])
-            else:
-                break
-
-    def _get_size_via_sql(self, member_type):
+    def _get_size_via_api(self, member_type):
         query = "SELECT COUNT(*) FROM categorylinks WHERE cl_to = ?"
         title = self.title.replace(" ", "_").split(":", 1)[1]
         if member_type == "size":
@@ -134,19 +134,19 @@ class Category(Page):
     def subcats(self):
         return self._get_size("subcats")
 
-    def get_members(self, use_sql=False, limit=None, follow_redirects=None):
+    def get_members(self, limit=None, follow_redirects=None):
         """Iterate over Pages in the category.
 
-        If *use_sql* is ``True``, we will use a SQL query instead of the API.
-        Note that pages are retrieved from the API in chunks (by default, in
-        500-page chunks for normal users and 5000-page chunks for bots and
-        admins), so queries may be made as we go along. If *limit* is given, we
-        will provide this many pages, or less if the category is smaller. By
-        default, *limit* is ``None``, meaning we will keep iterating over
-        members until the category is exhausted. *follow_redirects* is passed
-        directly to :py:meth:`site.get_page()
+        If *limit* is given, we will provide this many pages, or less if the
+        category is smaller. By default, *limit* is ``None``, meaning we will
+        keep iterating over members until the category is exhausted.
+        *follow_redirects* is passed directly to :py:meth:`site.get_page()
         <earwigbot.wiki.site.Site.get_page>`; it defaults to ``None``, which
         will use the value passed to our :py:meth:`__init__`.
+
+        This will use either the API or SQL depending on which are enabled and
+        the amount of lag on each. This is handled by :py:meth:`site.delegate()
+        <earwigbot.wiki.site.Site.delegate>`.
 
         .. note::
            Be careful when iterating over very large categories with no limit.
@@ -160,9 +160,10 @@ class Category(Page):
            thousand, in which case the sheer number of titles in memory becomes
            problematic.
         """
+        services = {
+            self.site.SERVICE_API: self._get_members_via_api,
+            self.site.SERVICE_SQL: self._get_members_via_sql
+        }
         if follow_redirects is None:
             follow_redirects = self._follow_redirects
-        if use_sql:
-            return self._get_members_via_sql(limit, follow_redirects)
-        else:
-            return self._get_members_via_api(limit, follow_redirects)
+        return self.site.delegate(services, (follow_redirects,))
