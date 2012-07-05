@@ -38,11 +38,14 @@ class Langcode(Command):
         code = data.args[0]
         site = self.bot.wiki.get_site()
         matrix = site.api_query(action="sitematrix")["sitematrix"]
+        del matrix["count"]
         del matrix["specials"]
 
         for site in matrix.itervalues():
             if site["code"] == code:
                 name = site["name"]
+                if name != site["localname"]:
+                    name += " ({0})".format(site["localname"])
                 sites = ", ".join([s["url"] for s in site["site"]])
                 msg = "\x0302{0}\x0301 is {1} ({2})".format(code, name, sites)
                 self.reply(data, msg)
