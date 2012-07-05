@@ -90,11 +90,11 @@ class Data(object):
         Parse a command given as "!command key1=value1 key2=value2..." into a
         dict, self.kwargs, like {'key1': 'value2', 'key2': 'value2'...}.
         """
-        for arg in self.args[2:]:
+        for arg in self.args:
             try:
                 key, value = re.findall("^(.*?)\=(.*?)$", arg)[0]
             except IndexError:
-                pass
+                continue
             if key and value:
                 self.kwargs[key] = value
 
