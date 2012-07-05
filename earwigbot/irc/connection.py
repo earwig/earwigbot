@@ -156,7 +156,7 @@ class IRCConnection(object):
 
     def ping(self, target):
         """Ping another entity on the server."""
-        msg = "PING {0} {0}".format(target)
+        msg = "PING {0}".format(target)
         self._send(msg)
 
     def pong(self, target):

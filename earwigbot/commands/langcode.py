@@ -43,12 +43,12 @@ class Langcode(Command):
 
         for site in matrix.itervalues():
             if site["code"] == code:
-                name = site["name"]
+                name = site["name"].encode("utf8")
                 if name != site["localname"]:
-                    name += " ({0})".format(site["localname"])
+                    name += " ({0})".format(site["localname"].encode("utf8"))
                 sites = ", ".join([s["url"] for s in site["site"]])
                 msg = "\x0302{0}\x0301 is {1} ({2})".format(code, name, sites)
                 self.reply(data, msg)
                 return
 
-        self.reply(data, "site \x0302{0}\x0301 not found.".format(code))
+        self.reply(data, "language \x0302{0}\x0301 not found.".format(code))

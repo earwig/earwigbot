@@ -42,7 +42,7 @@ class Trout(Command):
         target = " ".join(data.args) or data.nick
         normal = normalize("NFKD", target.decode("utf8")).lower()
         if normal in self.exceptions:
-            self.reply(data, self.exceptions["normal"])
+            self.reply(data, self.exceptions[normal])
         else:
             msg = "slaps {0} around a bit with a large {1}."
             self.action(data.chan, msg.format(target, animal))

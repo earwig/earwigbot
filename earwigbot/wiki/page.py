@@ -149,7 +149,7 @@ class Page(CopyrightMixIn):
         contains "[") it will always be invalid, and cannot be edited.
         """
         if self._exists == self.PAGE_INVALID:
-            e = "Page '{0}' is invalid.".format(self._title)
+            e = u"Page '{0}' is invalid.".format(self._title)
             raise exceptions.InvalidPageError(e)
 
     def _assert_existence(self):
@@ -161,7 +161,7 @@ class Page(CopyrightMixIn):
         """
         self._assert_validity()
         if self._exists == self.PAGE_MISSING:
-            e = "Page '{0}' does not exist.".format(self._title)
+            e = u"Page '{0}' does not exist.".format(self._title)
             raise exceptions.PageNotFoundError(e)
 
     def _load(self):
@@ -581,7 +581,7 @@ class Page(CopyrightMixIn):
         """
         if self._namespace < 0:
             ns = self._site.namespace_id_to_name(self._namespace)
-            e = "Pages in the {0} namespace can't have talk pages.".format(ns)
+            e = u"Pages in the {0} namespace can't have talk pages.".format(ns)
             raise exceptions.InvalidPageError(e)
 
         if self._is_talkpage:
