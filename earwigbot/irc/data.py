@@ -41,7 +41,7 @@ class Data(object):
 
     def _parse(self, msgtype):
         """Parse a line from IRC into its components as instance attributes."""
-        sender = re.findall(":(.*?)!(.*?)@(.*?)\Z", line[0])[0]
+        sender = re.findall(":(.*?)!(.*?)@(.*?)\Z", self.line[0])[0]
         self._nick, self._ident, self._host = sender
         self._chan = self.line[2]
 
@@ -51,7 +51,7 @@ class Data(object):
                 # sender instead of the 'channel', which is ourselves:
                 self._chan = self._nick
                 self._is_private = True
-            self._msg = " ".join(line[3:])[1:]
+            self._msg = " ".join(self.line[3:])[1:]
             self._parse_args()
             self._parse_kwargs()
 

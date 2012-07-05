@@ -95,8 +95,10 @@ class _ResourceManager(object):
             f.close()
 
         for obj in vars(module).values():
-            if type(obj) is type and isinstance(obj, self._resource_base):
-                self._load_resource(name, path, obj)
+            if type(obj) is type:
+                isresource = issubclass(obj, self._resource_base)
+                if isresource and not obj is self._resource_base:
+                    self._load_resource(name, path, obj)
 
     def _load_directory(self, dir):
         """Load all valid resources in a given directory."""

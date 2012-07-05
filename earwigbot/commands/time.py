@@ -29,9 +29,11 @@ try:
 except ImportError:
     pytz = None
 
-from earwigbot.commands import BaseCommand
+from earwigbot.commands import Command
 
-class Command(BaseCommand):
+__all__ = ["Time"]
+
+class Time(Command):
     """Report the current time in any timezone (UTC default), or in beats."""
     name = "time"
     commands = ["time", "beats", "swatch"]

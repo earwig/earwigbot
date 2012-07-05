@@ -23,9 +23,11 @@
 import json
 import urllib2
 
-from earwigbot.commands import BaseCommand
+from earwigbot.commands import Command
 
-class Command(BaseCommand):
+__all__ = ["Geolocate"]
+
+class Geolocate(Command):
     """Geolocate an IP address (via http://ipinfodb.com/)."""
     name = "geolocate"
     commands = ["geolocate", "locate", "geo", "ip"]

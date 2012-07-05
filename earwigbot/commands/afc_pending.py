@@ -20,9 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.commands import BaseCommand
+from earwigbot.commands import Command
 
-class Command(BaseCommand):
+__all__ = ["AFCPending"]
+
+class AFCPending(Command):
     """Link the user to the pending AFC submissions page and category."""
     name = "pending"
     commands = ["pending", "pend"]
