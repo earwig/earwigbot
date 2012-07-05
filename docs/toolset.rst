@@ -80,6 +80,8 @@ following attributes:
   ``"en"``
 - :py:attr:`~earwigbot.wiki.site.Site.domain`: the site's web domain, like
   ``"en.wikipedia.org"``
+- :py:attr:`~earwigbot.wiki.site.Site.url`: the site's full base URL, like
+  ``"https://en.wikipedia.org"``
 
 and the following methods:
 
@@ -97,11 +99,11 @@ and the following methods:
 - :py:meth:`namespace_name_to_id(name)
   <earwigbot.wiki.site.Site.namespace_name_to_id>`: given a namespace name,
   returns the associated namespace ID
-- :py:meth:`get_page(title, follow_redirects=False)
+- :py:meth:`get_page(title, follow_redirects=False, ...)
   <earwigbot.wiki.site.Site.get_page>`: returns a ``Page`` object for the given
   title (or a :py:class:`~earwigbot.wiki.category.Category` object if the
   page's namespace is "``Category:``")
-- :py:meth:`get_category(catname, follow_redirects=False)
+- :py:meth:`get_category(catname, follow_redirects=False, ...)
   <earwigbot.wiki.site.Site.get_category>`: returns a ``Category`` object for
   the given title (sans namespace)
 - :py:meth:`get_user(username) <earwigbot.wiki.site.Site.get_user>`: returns a
@@ -120,7 +122,7 @@ provide the following attributes:
 - :py:attr:`~earwigbot.wiki.page.Page.site`: the page's corresponding
   :py:class:`~earwigbot.wiki.site.Site` object
 - :py:attr:`~earwigbot.wiki.page.Page.title`: the page's title, or pagename
-- :py:attr:`~earwigbot.wiki.page.Page.exists`: whether the page exists
+- :py:attr:`~earwigbot.wiki.page.Page.exists`: whether or not the page exists
 - :py:attr:`~earwigbot.wiki.page.Page.pageid`: an integer ID representing the
   page
 - :py:attr:`~earwigbot.wiki.page.Page.url`: the page's URL
@@ -166,9 +168,10 @@ or :py:meth:`site.get_page(title) <earwigbot.wiki.site.Site.get_page>` where
 ``title`` is in the ``Category:`` namespace) provide the following additional
 method:
 
-- :py:meth:`get_members(use_sql=False, limit=None)
-  <earwigbot.wiki.category.Category.get_members>`: returns a list of page
-  titles in the category (limit is ``50`` by default if using the API)
+- :py:meth:`get_members(use_sql=False, limit=None, ...)
+  <earwigbot.wiki.category.Category.get_members>`: iterates over
+  :py:class:`~earwigbot.wiki.page.Page`\ s in the category, until either the
+  category is exhausted or (if given) ``limit`` is reached
 
 Users
 ~~~~~
@@ -178,6 +181,8 @@ Create :py:class:`earwigbot.wiki.User <earwigbot.wiki.user.User>` objects with
 :py:meth:`page.get_creator() <earwigbot.wiki.page.Page.get_creator>`. They
 provide the following attributes:
 
+- :py:attr:`~earwigbot.wiki.user.User.site`: the user's corresponding
+  :py:class:`~earwigbot.wiki.site.Site` object
 - :py:attr:`~earwigbot.wiki.user.User.name`: the user's username
 - :py:attr:`~earwigbot.wiki.user.User.exists`: ``True`` if the user exists, or
   ``False`` if they do not

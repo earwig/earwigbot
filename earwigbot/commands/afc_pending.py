@@ -20,31 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.commands import Command
+from earwigbot.commands import BaseCommand
 
-__all__ = ["Praise"]
-
-class Praise(Command):
-    """Praise people!"""
-    name = "praise"
-
-    def setup(self):
-        try:
-            self.praises = self.config.commands[self.name]["praises"]
-        except KeyError:
-            self.praises = []
-
-    def check(self, data):
-        check = data.command == "praise" or data.command in self.praises
-        return data.is_command and check
+class Command(BaseCommand):
+    """Link the user to the pending AFC submissions page and category."""
+    name = "pending"
+    commands = ["pending", "pend"]
 
     def process(self, data):
-        if data.command in self.praises:
-            msg = self.praises[data.command]
-            self.say(data.chan, msg)
-            return
-        if not data.args:
-            msg = "You use this command to praise certain people. Who they are is a secret."
-        else:
-            msg = "you're doing it wrong."
-        self.reply(data, msg)
+        msg1 = "pending submissions status page: http://enwp.org/WP:AFC/ST"
+        msg2 = "pending submissions category: http://enwp.org/CAT:PEND"
+        self.reply(data, msg1)
+        self.reply(data, msg2)

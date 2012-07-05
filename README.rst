@@ -113,9 +113,9 @@ because it is the main way to communicate with other parts of the bot. A
 
 `earwigbot.config.BotConfig`_ stores configuration information for the bot. Its
 docstring explains what each attribute is used for, but essentially each "node"
-(one of ``config.components``, ``wiki``, ``tasks``, ``irc``, and ``metadata``)
-maps to a section of the bot's ``config.yml`` file. For example, if
-``config.yml`` includes something like::
+(one of ``config.components``, ``wiki``, ``irc``, ``commands``, ``tasks``, and
+``metadata``) maps to a section of the bot's ``config.yml`` file. For example,
+if ``config.yml`` includes something like::
 
     irc:
         frontend:
@@ -133,7 +133,8 @@ Custom IRC commands
 ~~~~~~~~~~~~~~~~~~~
 
 Custom commands are subclasses of `earwigbot.commands.Command`_ that override
-``Command``'s ``process()`` (and optionally ``check()``) methods.
+``Command``'s ``process()`` (and optionally ``check()`` or ``setup()``)
+methods.
 
 The bot has a wide selection of built-in commands and plugins to act as sample
 code and/or to give ideas. Start with test_, and then check out chanops_ and

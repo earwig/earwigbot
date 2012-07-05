@@ -39,7 +39,7 @@ class Category(Page):
 
     *Public methods:*
 
-    - :py:meth:`get_members`: returns a list of page titles in the category
+    - :py:meth:`get_members`: iterates over Pages in the category
     """
 
     def __repr__(self):
@@ -51,8 +51,8 @@ class Category(Page):
         """Return a nice string representation of the Category."""
         return '<Category "{0}" of {1}>'.format(self.title, str(self._site))
 
-    def _get_members_via_sql(self, limit):
-        """Return a list of tuples of (title, pageid) in the category."""
+    def _get_members_via_sql(self, limit, follow):
+        """Iterate over Pages in the category using SQL."""
         query = """SELECT page_title, page_namespace, page_id FROM page
                    JOIN categorylinks ON page_id = cl_from
                    WHERE cl_to = ?"""
@@ -64,42 +64,66 @@ class Category(Page):
         else:
             result = self._site.sql_query(query, (title,))
 
-        members = []
-        for row in result:
+        members = list(result)
+        for row in members:
             base = row[0].replace("_", " ").decode("utf8")
             namespace = self._site.namespace_id_to_name(row[1])
             if namespace:
                 title = u":".join((namespace, base))
             else:  # Avoid doing a silly (albeit valid) ":Pagename" thing
                 title = base
-            members.append((title, row[2]))
-        return members
+            yield self._site.get_page(title, follow_redirects=follow,
+                                      pageid=row[2])
 
-    def _get_members_via_api(self, limit):
-        """Return a list of page titles in the category using the API."""
+    def _get_members_via_api(self, limit, follow):
+        """Iterate over Pages in the category using the API."""
         params = {"action": "query", "list": "categorymembers",
-                  "cmlimit": limit, "cmtitle": self._title}
-        if not limit:
-            params["cmlimit"] = 50  # Default value
+                  "cmtitle": self._title}
 
-        result = self._site.api_query(**params)
-        members = result['query']['categorymembers']
-        return [member["title"] for member in members]
+        while 1:
+            params["cmlimit"] = limit if limit else "max"
+            result = self._site.api_query(**params)
+            for member in result["query"]["categorymembers"]:
+                title = member["title"]
+                yield self._site.get_page(title, follow_redirects=follow)
 
-    def get_members(self, use_sql=False, limit=None):
-        """Return a list of page titles in the category.
+            if "query-continue" in result:
+                qcontinue = result["query-continue"]["categorymembers"]
+                params["cmcontinue"] = qcontinue["cmcontinue"]
+                if limit:
+                    limit -= len(result["query"]["categorymembers"])
+            else:
+                break
+
+    def get_members(self, use_sql=False, limit=None, follow_redirects=None):
+        """Iterate over Pages in the category.
 
         If *use_sql* is ``True``, we will use a SQL query instead of the API.
-        Pages will be returned as tuples of ``(title, pageid)`` instead of just
-        titles.
+        Note that pages are retrieved from the API in chunks (by default, in
+        500-page chunks for normal users and 5000-page chunks for bots and
+        admins), so queries may be made as we go along. If *limit* is given, we
+        will provide this many pages, or less if the category is smaller. By
+        default, *limit* is ``None``, meaning we will keep iterating over
+        members until the category is exhausted. *follow_redirects* is passed
+        directly to :py:meth:`site.get_page()
+        <earwigbot.wiki.site.Site.get_page>`; it defaults to ``None``, which
+        will use the value passed to our :py:meth:`__init__`.
 
-        If *limit* is provided, we will provide this many titles, or less if
-        the category is smaller. It defaults to 50 for API queries; normal
-        users can go up to 500, and bots can go up to 5,000 on a single API
-        query. If we're using SQL, the limit is ``None`` by default (returning
-        all pages in the category), but an arbitrary limit can still be chosen.
+        .. note::
+           Be careful when iterating over very large categories with no limit.
+           If using the API, at best, you will make one query per 5000 pages,
+           which can add up significantly for categories with hundreds of
+           thousands of members. As for SQL, note that *all page titles are
+           stored internally* as soon as the query is made, so the site-wide
+           SQL lock can be freed and unrelated queries can be made without
+           requiring a separate connection to be opened. This is generally not
+           an issue unless your category's size approaches several hundred
+           thousand, in which case the sheer number of titles in memory becomes
+           problematic.
         """
+        if follow_redirects is None:
+            follow_redirects = self._follow_redirects
         if use_sql:
-            return self._get_members_via_sql(limit)
+            return self._get_members_via_sql(limit, follow_redirects)
         else:
-            return self._get_members_via_api(limit)
+            return self._get_members_via_api(limit, follow_redirects)

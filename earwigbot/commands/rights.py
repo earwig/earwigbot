@@ -28,12 +28,7 @@ __all__ = ["Rights"]
 class Rights(Command):
     """Retrieve a list of rights for a given username."""
     name = "rights"
-
-    def check(self, data):
-        commands = ["rights", "groups", "permissions", "privileges"]
-        if data.is_command and data.command in commands:
-            return True
-        return False
+    commands = ["rights", "groups", "permissions", "privileges"]
 
     def process(self, data):
         if not data.args:

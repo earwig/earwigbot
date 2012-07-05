@@ -69,6 +69,7 @@ class Site(object):
     - :py:attr:`project`: the site's project name, like ``"wikipedia"``
     - :py:attr:`lang`:    the site's language code, like ``"en"``
     - :py:attr:`domain`:  the site's web domain, like ``"en.wikipedia.org"``
+    - :py:attr:`url`:     the site's URL, like ``"https://en.wikipedia.org"``
 
     *Public methods:*
 
@@ -184,6 +185,12 @@ class Site(object):
         res = "<Site {0} ({1}:{2}) at {3}>"
         return res.format(self.name, self.project, self.lang, self.domain)
 
+    def _unicodeify(self, value, encoding="utf8"):
+        """Return input as unicode if it's not unicode to begin with."""
+        if isinstance(value, unicode):
+            return value
+        return unicode(value, encoding)
+
     def _urlencode_utf8(self, params):
         """Implement urllib.urlencode() with support for unicode input."""
         enc = lambda s: s.encode("utf8") if isinstance(s, unicode) else str(s)
@@ -237,14 +244,7 @@ class Site(object):
             e = "Tried to do an API query, but no API URL is known."
             raise exceptions.SiteAPIError(e)
 
-        base_url = self._base_url
-        if base_url.startswith("//"): # Protocol-relative URLs from 1.18
-            if self._use_https:
-                base_url = "https:" + base_url
-            else:
-                base_url = "http:" + base_url
-        url = ''.join((base_url, self._script_path, "/api.php"))
-
+        url = ''.join((self.url, self._script_path, "/api.php"))
         params["format"] = "json"  # This is the only format we understand
         if self._assert_edit:  # If requested, ensure that we're logged in
             params["assert"] = self._assert_edit
@@ -542,6 +542,17 @@ class Site(object):
         """The Site's web domain, like ``"en.wikipedia.org"``."""
         return urlparse(self._base_url).netloc
 
+    @property
+    def url(self):
+        """The Site's full base URL, like ``"https://en.wikipedia.org"``."""
+        url = self._base_url
+        if url.startswith("//"):  # Protocol-relative URLs from 1.18
+            if self._use_https:
+                url = "https:" + url
+            else:
+                url = "http:" + url
+        return url
+
     def api_query(self, **kwargs):
         """Do an API query with `kwargs` as the parameters.
 
@@ -682,7 +693,7 @@ class Site(object):
         e = "There is no namespace with name '{0}'.".format(name)
         raise exceptions.NamespaceNotFoundError(e)
 
-    def get_page(self, title, follow_redirects=False):
+    def get_page(self, title, follow_redirects=False, pageid=None):
         """Return a :py:class:`Page` object for the given title.
 
         *follow_redirects* is passed directly to
@@ -696,23 +707,26 @@ class Site(object):
         redirect-following: :py:class:`~earwigbot.wiki.page.Page`'s methods
         provide that.
         """
+        title = self._unicodeify(title)
         prefixes = self.namespace_id_to_name(constants.NS_CATEGORY, all=True)
         prefix = title.split(":", 1)[0]
         if prefix != title:  # Avoid a page that is simply "Category"
             if prefix in prefixes:
-                return Category(self, title, follow_redirects)
-        return Page(self, title, follow_redirects)
+                return Category(self, title, follow_redirects, pageid)
+        return Page(self, title, follow_redirects, pageid)
 
-    def get_category(self, catname, follow_redirects=False):
+    def get_category(self, catname, follow_redirects=False, pageid=None):
         """Return a :py:class:`Category` object for the given category name.
 
         *catname* should be given *without* a namespace prefix. This method is
         really just shorthand for :py:meth:`get_page("Category:" + catname)
         <get_page>`.
         """
+        catname = self._unicodeify(catname)
+        name = name if isinstance(name, unicode) else name.decode("utf8")
         prefix = self.namespace_id_to_name(constants.NS_CATEGORY)
-        pagename = ':'.join((prefix, catname))
-        return Category(self, pagename, follow_redirects)
+        pagename = u':'.join((prefix, catname))
+        return Category(self, pagename, follow_redirects, pageid)
 
     def get_user(self, username=None):
         """Return a :py:class:`User` object for the given username.
@@ -721,6 +735,7 @@ class Site(object):
         :py:class:`~earwigbot.wiki.user.User` object representing the currently
         logged-in (or anonymous!) user is returned.
         """
+        username = self._unicodeify(username)
         if not username:
             username = self._get_username()
         return User(self, username)

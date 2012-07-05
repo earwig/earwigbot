@@ -32,10 +32,12 @@ class Git(Command):
     """Commands to interface with the bot's git repository; use '!git' for a
     sub-command list."""
     name = "git"
-    repos = {
-        "core": "/home/earwig/git/earwigbot",
-        "plugins": "/home/earwig/git/earwigbot-plugins",
-    }
+
+    def setup(self):
+        try:
+            self.repos = self.config.commands[self.name]["repos"]
+        except KeyError:
+            self.repos = None
 
     def process(self, data):
         self.data = data
@@ -45,6 +47,9 @@ class Git(Command):
             return
         if not data.args or data.args[0] == "help":
             self.do_help()
+            return
+        if not self.repos:
+            self.reply(data, "no repos are specified in the config file.")
             return
 
         command = data.args[0]
@@ -57,7 +62,7 @@ class Git(Command):
             return
         if repo_name not in self.repos:
             repos = self.get_repos()
-            msg = "repository must be one of the following: {0}"
+            msg = "repository must be one of the following: {0}."
             self.reply(data, msg.format(repos))
             return
         self.repo = git.Repo(self.repos[repo_name])
@@ -91,7 +96,7 @@ class Git(Command):
         try:
             return getattr(self.repo.remotes, remote_name)
         except AttributeError:
-            msg = "unknown remote: \x0302{0}\x0301".format(remote_name)
+            msg = "unknown remote: \x0302{0}\x0301.".format(remote_name)
             self.reply(self.data, msg)
 
     def get_time_since(self, date):

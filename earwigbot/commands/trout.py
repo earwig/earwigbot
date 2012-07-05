@@ -20,16 +20,29 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.tasks import Task
+from unicodedata import normalize
 
-__all__ = ["FeedDailyCats"]
+from earwigbot.commands import Command
 
-class FeedDailyCats(Task):
-    """A task to create daily categories for [[WP:FEED]]."""
-    name = "feed_dailycats"
+__all__ = ["Trout"]
+
+class Trout(Command):
+    """Slap someone with a trout, or related fish."""
+    name = "trout"
+    commands = ["trout", "whale"]
 
     def setup(self):
-        pass
+        try:
+            self.exceptions = self.config.commands[self.name]["exceptions"]
+        except KeyError:
+            self.exceptions = {}
 
-    def run(self, **kwargs):
-        pass
+    def process(self, data):
+        animal = data.command
+        target = " ".join(data.args) or data.nick
+        normal = normalize("NFKD", target.decode("utf8")).lower()
+        if normal in self.exceptions:
+            self.reply(data, self.exceptions["normal"])
+        else:
+            msg = "slaps {0} around a bit with a large {1}."
+            self.action(data.chan, msg.format(target, animal))

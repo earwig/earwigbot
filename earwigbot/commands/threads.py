@@ -30,12 +30,7 @@ __all__ = ["Threads"]
 class Threads(Command):
     """Manage wiki tasks from IRC, and check on thread status."""
     name = "threads"
-
-    def check(self, data):
-        commands = ["tasks", "task", "threads", "tasklist"]
-        if data.is_command and data.command in commands:
-            return True
-        return False
+    commands = ["tasks", "task", "threads", "tasklist"]
 
     def process(self, data):
         self.data = data
@@ -106,7 +101,7 @@ class Threads(Command):
         whether they are currently running or idle."""
         threads = threading.enumerate()
         tasklist = []
-        for task in sorted(self.bot.tasks):
+        for task in sorted([task.name for task in self.bot.tasks]):
             threadlist = [t for t in threads if t.name.startswith(task)]
             ids = [str(t.ident) for t in threadlist]
             if not ids:
@@ -134,7 +129,7 @@ class Threads(Command):
             self.reply(data, "what task do you want me to start?")
             return
 
-        if task_name not in self.bot.tasks:
+        if task_name not in [task.name for task in self.bot.tasks]:
             # This task does not exist or hasn't been loaded:
             msg = "task could not be found; either it doesn't exist, or it wasn't loaded correctly."
             self.reply(data, msg.format(task_name))

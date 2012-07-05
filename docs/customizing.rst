@@ -58,8 +58,13 @@ The most useful attributes are:
 
 :py:class:`earwigbot.config.BotConfig` stores configuration information for the
 bot. Its docstrings explains what each attribute is used for, but essentially
-each "node" (one of :py:attr:`config.components`, :py:attr:`wiki`,
-:py:attr:`tasks`, :py:attr:`tasks`, or :py:attr:`metadata`) maps to a section
+each "node" (one of :py:attr:`config.components
+<earwigbot.config.BotConfig.components>`,
+:py:attr:`~earwigbot.config.BotConfig.wiki`,
+:py:attr:`~earwigbot.config.BotConfig.irc`,
+:py:attr:`~earwigbot.config.BotConfig.commands`,
+:py:attr:`~earwigbot.config.BotConfig.tasks`, or
+:py:attr:`~earwigbot.config.BotConfig.metadata`) maps to a section
 of the bot's :file:`config.yml` file. For example, if :file:`config.yml`
 includes something like::
 
@@ -81,7 +86,8 @@ Custom IRC commands
 Custom commands are subclasses of :py:class:`earwigbot.commands.Command` that
 override :py:class:`~earwigbot.commands.Command`'s
 :py:meth:`~earwigbot.commands.Command.process` (and optionally
-:py:meth:`~earwigbot.commands.Command.check`) methods.
+:py:meth:`~earwigbot.commands.Command.check` or
+:py:meth:`~earwigbot.commands.Command.setup`) methods.
 
 :py:class:`~earwigbot.commands.Command`'s docstrings should explain what each
 attribute and method is for and what they should be overridden with, but these
@@ -90,6 +96,15 @@ are the basics:
 - Class attribute :py:attr:`~earwigbot.commands.Command.name` is the name of
   the command. This must be specified.
 
+- Class attribute :py:attr:`~earwigbot.commands.Command.commands` is a list of
+  names that will trigger this command. It defaults to the command's
+  :py:attr:`~earwigbot.commands.Command.name`, but you can override it with
+  multiple names to serve as aliases. This is handled by the default
+  :py:meth:`~earwigbot.commands.Command.check` implementation (see below), so
+  if :py:meth:`~earwigbot.commands.Command.check` is overridden, this is
+  ignored by everything except the help_ command (so ``!help alias`` will
+  trigger help for the actual command).
+
 - Class attribute :py:attr:`~earwigbot.commands.Command.hooks` is a list of the
   "IRC events" that this command might respond to. It defaults to ``["msg"]``,
   but options include ``"msg_private"`` (for private messages only),
@@ -97,15 +112,25 @@ are the basics:
   joins a channel). See the afc_status_ plugin for a command that responds to
   other hook types.
 
+- Method :py:meth:`~earwigbot.commands.Command.setup` is called *once* with no
+  arguments immediately after the command is first loaded. Does nothing by
+  default; treat it like an :py:meth:`__init__` if you want
+  (:py:meth:`~earwigbot.tasks.Command.__init__` does things by default and a
+  dedicated setup method is often easier than overriding
+  :py:meth:`~earwigbot.tasks.Command.__init__` and using :py:obj:`super`).
+
 - Method :py:meth:`~earwigbot.commands.Command.check` is passed a
   :py:class:`~earwigbot.irc.data.Data` object, and should return ``True`` if
   you want to respond to this message, or ``False`` otherwise. The default
   behavior is to return ``True`` only if :py:attr:`data.is_command` is ``True``
-  and :py:attr:`data.command` == :py:attr:`~earwigbot.commands.Command.name`,
-  which is suitable for most cases. A common, straightforward reason for
-  overriding is if a command has aliases (see chanops_ for an example). Note
-  that by returning ``True``, you prevent any other commands from responding to
-  this message.
+  and :py:attr:`data.command` ``==``
+  :py:attr:`~earwigbot.commands.Command.name` (or :py:attr:`data.command
+  <earwigbot.irc.data.Data.command>` is in
+  :py:attr:`~earwigbot.commands.Command.commands` if that list is overriden;
+  see above), which is suitable for most cases. A possible reason for
+  overriding is if you want to do something in response to events from a
+  specific channel only. Note that by returning ``True``, you prevent any other
+  commands from responding to this message.
 
 - Method :py:meth:`~earwigbot.commands.Command.process` is passed the same
   :py:class:`~earwigbot.irc.data.Data` object as
@@ -127,6 +152,12 @@ are the basics:
   <earwigbot.irc.connection.IRCConnection.notice>`, :py:meth:`join(chan)
   <earwigbot.irc.connection.IRCConnection.join>`, and
   :py:meth:`part(chan) <earwigbot.irc.connection.IRCConnection.part>`.
+
+Commands have access to :py:attr:`config.commands[command_name]` for config
+information, which is a node in :file:`config.yml` like every other attribute
+of :py:attr:`bot.config`. This can be used to store, for example, API keys or
+SQL connection info, so that these can be easily changed without modifying the
+command itself.
 
 The command *class* doesn't need a specific name, but it should logically
 follow the command's name. The filename doesn't matter, but it is recommended
@@ -190,7 +221,7 @@ are the basics:
 
 Tasks have access to :py:attr:`config.tasks[task_name]` for config information,
 which is a node in :file:`config.yml` like every other attribute of
-:py:attr:`bot.config`. This can be used to store, for example, edit summaries,
+:py:attr:`bot.config`. This can be used to store, for example, edit summaries
 or templates to append to user talk pages, so that these can be easily changed
 without modifying the task itself.
 
@@ -201,8 +232,9 @@ the task name for readability. Multiple tasks classes are allowed in one file.
 See the built-in wikiproject_tagger_ task for a relatively straightforward
 task, or the afc_statistics_ plugin for a more complicated one.
 
+.. _help:               https://github.com/earwig/earwigbot/blob/develop/earwigbot/commands/help.py
 .. _afc_status:         https://github.com/earwig/earwigbot-plugins/blob/develop/commands/afc_status.py
-.. _chanops:            https://github.com/earwig/earwigbot/blob/develop/earwigbot/commands/chanops.py
 .. _test:               https://github.com/earwig/earwigbot/blob/develop/earwigbot/commands/test.py
+.. _chanops:            https://github.com/earwig/earwigbot/blob/develop/earwigbot/commands/chanops.py
 .. _wikiproject_tagger: https://github.com/earwig/earwigbot/blob/develop/earwigbot/tasks/wikiproject_tagger.py
 .. _afc_statistics:     https://github.com/earwig/earwigbot-plugins/blob/develop/tasks/afc_statistics.py

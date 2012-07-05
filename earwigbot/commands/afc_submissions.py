@@ -22,29 +22,39 @@
 
 from earwigbot.commands import Command
 
-__all__ = ["Praise"]
+__all__ = ["AFCSubmissions"]
 
-class Praise(Command):
-    """Praise people!"""
-    name = "praise"
+class AFCSubmissions(Command):
+    """Link the user directly to some pending AFC submissions."""
+    name = "submissions"
+    commands = ["submissions", "subs"]
 
     def setup(self):
         try:
-            self.praises = self.config.commands[self.name]["praises"]
+            self.ignore_list = self.config.commands[self.name]["ignoreList"]
         except KeyError:
-            self.praises = []
-
-    def check(self, data):
-        check = data.command == "praise" or data.command in self.praises
-        return data.is_command and check
+            try:
+                ignores = self.config.tasks["afc_statistics"]["ignoreList"]
+                self.ignore_list = ignores
+            except KeyError:
+                self.ignore_list = []
 
     def process(self, data):
-        if data.command in self.praises:
-            msg = self.praises[data.command]
-            self.say(data.chan, msg)
-            return
-        if not data.args:
-            msg = "You use this command to praise certain people. Who they are is a secret."
+        if data.args:
+            try:
+                number = int(data.args[0])
+            except ValueError:
+                self.reply(data, "argument must be a number.")
+                return
+            if number > 5:
+                msg = "cannot get more than five submissions at a time."
+                self.reply(data, msg)
+                return
         else:
-            msg = "you're doing it wrong."
-        self.reply(data, msg)
+            number = 3
+
+        site = self.bot.wiki.get_site()
+        category = site.get_category("Pending AfC submissions")
+        members = category.get_members(use_sql=True, limit=number)
+        pages = ", ".join([member.url for member in members])
+        self.reply(data, "{0} pending AfC subs: {1}".format(number, pages))

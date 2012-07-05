@@ -23,7 +23,6 @@
 import re
 
 from earwigbot.commands import Command
-from earwigbot.irc import Data
 
 __all__ = ["Help"]
 
@@ -50,34 +49,24 @@ class Help(Command):
     def do_main_help(self, data):
         """Give the user a general help message with a list of all commands."""
         msg = "Hi, I'm a bot! I have {0} commands loaded: {1}. You can get help for any command with '!help <command>'."
-        cmnds = sorted(self.bot.commands)
+        cmnds = sorted([cmnd.name for cmnd in self.bot.commands])
         msg = msg.format(len(cmnds), ', '.join(cmnds))
         self.reply(data, msg)
 
     def do_command_help(self, data):
         """Give the user help for a specific command."""
-        command = data.args[0]
+        target = data.args[0]
 
-        # Create a dummy message to test which commands pick up the user's
-        # input:
-        msg = ":foo!bar@example.com PRIVMSG #channel :msg".split()
-        dummy = Data(self.bot, msg)
-        dummy.command = command.lower()
-        dummy.is_command = True
+        for command in self.bot.commands:
+            if command.name == target or target in command.commands:
+                if command.__doc__:
+                    doc = command.__doc__.replace("\n", "")
+                    doc = re.sub("\s\s+", " ", doc)
+                    msg = "help for command \x0303{0}\x0301: \"{1}\""
+                    self.reply(data, msg.format(target, doc))
+                    return
 
-        for cmnd_name in self.bot.commands:
-            cmnd = self.bot.commands.get(cmnd_name)
-            if not cmnd.check(dummy):
-                continue
-            if cmnd.__doc__:
-                doc = cmnd.__doc__.replace("\n", "")
-                doc = re.sub("\s\s+", " ", doc)
-                msg = "help for command \x0303{0}\x0301: \"{1}\""
-                self.reply(data, msg.format(command, doc))
-                return
-            break
-
-        msg = "sorry, no help for \x0303{0}\x0301.".format(command)
+        msg = "sorry, no help for \x0303{0}\x0301.".format(target)
         self.reply(data, msg)
 
     def do_hello(self, data):

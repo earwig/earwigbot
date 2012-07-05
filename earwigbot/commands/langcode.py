@@ -20,17 +20,30 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.tasks import Task
+from earwigbot.commands import BaseCommand
 
-__all__ = ["WrongMIME"]
+class Command(BaseCommand):
+    """Convert a language code into its name and a list of WMF sites in that
+    language."""
+    name = "langcode"
+    commands = ["langcode", "lang", "language"]
 
-class WrongMIME(Task):
-    """A task to tag files whose extensions do not agree with their MIME
-    type."""
-    name = "wrongmime"
+    def process(self, data):
+        if not data.args:
+            self.reply(data, "please specify a language code.")
+            return
 
-    def setup(self):
-        pass
+        code = data.args[0]
+        site = self.bot.wiki.get_site()
+        matrix = site.api_query(action="sitematrix")["sitematrix"]
+        del matrix["specials"]
 
-    def run(self, **kwargs):
-        pass
+        for site in matrix.itervalues():
+            if site["code"] == code:
+                name = site["name"]
+                sites = ", ".join([s["url"] for s in site["site"]])
+                msg = "\x0302{0}\x0301 is {1} ({2})".format(code, name, sites)
+                self.reply(data, msg)
+                return
+
+        self.reply(data, "site \x0302{0}\x0301 not found.".format(code))

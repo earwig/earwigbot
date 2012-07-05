@@ -28,10 +28,7 @@ class Quit(Command):
     """Quit, restart, or reload components from the bot. Only the owners can
     run this command."""
     name = "quit"
-
-    def check(self, data):
-        commands = ["quit", "restart", "reload"]
-        return data.is_command and data.command in commands
+    commands = ["quit", "restart", "reload"]
 
     def process(self, data):
         if data.host not in self.config.irc["permissions"]["owners"]:

@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import threading
+from threading import Timer
 import time
 
 from earwigbot.commands import Command
@@ -30,11 +30,7 @@ __all__ = ["Remind"]
 class Remind(Command):
     """Set a message to be repeated to you in a certain amount of time."""
     name = "remind"
-
-    def check(self, data):
-        if data.is_command and data.command in ["remind", "reminder"]:
-            return True
-        return False
+    commands = ["remind", "reminder"]
 
     def process(self, data):
         if not data.args:
@@ -62,12 +58,7 @@ class Remind(Command):
         msg = msg.format(message, wait, end_time_with_timezone)
         self.reply(data, msg)
 
-        t_reminder = threading.Thread(target=self.reminder,
-                                      args=(data, message, wait))
+        t_reminder = Timer(wait, self.reply, args=(data, message))
         t_reminder.name = "reminder " + end_time
         t_reminder.daemon = True
         t_reminder.start()
-
-    def reminder(self, data, message, wait):
-        time.sleep(wait)
-        self.reply(data, message)

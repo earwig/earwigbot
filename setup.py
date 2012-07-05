@@ -38,6 +38,7 @@ setup(
                         "oursql >= 0.9.3",  # Talking with MediaWiki databases
                         "oauth2 >= 1.5.211",  # Talking with Yahoo BOSS Search
                         "pycrypto >= 2.5",  # Storing bot passwords and keys
+                        "pytz >= 2012c",  # Timezone handling
                         ],
     test_suite = "tests",
     version = __version__,

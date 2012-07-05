@@ -30,12 +30,7 @@ __all__ = ["Registration"]
 class Registration(Command):
     """Return when a user registered."""
     name = "registration"
-
-    def check(self, data):
-        commands = ["registration", "reg", "age"]
-        if data.is_command and data.command in commands:
-            return True
-        return False
+    commands = ["registration", "reg", "age"]
 
     def process(self, data):
         if not data.args:
@@ -61,7 +56,7 @@ class Registration(Command):
         elif user.gender == "female":
             gender = "She's"
         else:
-            gender = "They're"
+            gender = "They're"  # Singluar they?
 
         msg = "\x0302{0}\x0301 registered on {1}. {2} {3} old."
         self.reply(data, msg.format(name, date, gender, age))

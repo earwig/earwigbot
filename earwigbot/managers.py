@@ -24,7 +24,7 @@
 import imp
 from os import listdir, path
 from re import sub
-from threading import Lock, Thread
+from threading import RLock, Thread
 from time import gmtime, strftime
 
 from earwigbot.commands import Command
@@ -46,11 +46,7 @@ class _ResourceManager(object):
 
     This class handles the low-level tasks of (re)loading resources via
     :py:meth:`load`, retrieving specific resources via :py:meth:`get`, and
-    iterating over all resources via :py:meth:`__iter__`. If iterating over
-    resources, it is recommended to acquire :py:attr:`self.lock <lock>`
-    beforehand and release it afterwards (alternatively, wrap your code in a
-    ``with`` statement) so an attempt at reloading resources in another thread
-    won't disrupt your iteration.
+    iterating over all resources via :py:meth:`__iter__`.
     """
     def __init__(self, bot, name, base):
         self.bot = bot
@@ -62,8 +58,9 @@ class _ResourceManager(object):
         self._resource_access_lock = Lock()
 
     def __iter__(self):
-        for name in self._resources:
-            yield name
+        with self.lock:
+            for resource in self._resources.itervalues():
+                yield resource
 
     def _load_resource(self, name, path, klass):
         """Instantiate a resource class and add it to the dictionary."""
@@ -140,7 +137,8 @@ class _ResourceManager(object):
         Will raise :py:exc:`KeyError` if the resource (a command or task) is
         not found.
         """
-        return self._resources[key]
+        with self.lock:
+            return self._resources[key]
 
 
 class CommandManager(_ResourceManager):
@@ -168,13 +166,10 @@ class CommandManager(_ResourceManager):
 
     def call(self, hook, data):
         """Respond to a hook type and a :py:class:`Data` object."""
-        self.lock.acquire()
-        for command in self._resources.itervalues():
+        for command in self:
             if hook in command.hooks and self._wrap_check(command, data):
-                self.lock.release()
                 self._wrap_process(command, data)
                 return
-        self.lock.release()
 
 
 class TaskManager(_ResourceManager):

@@ -36,8 +36,12 @@ class Command(object):
     This docstring is reported to the user when they type ``"!help
     <command>"``.
     """
-    # This is the command's name, as reported to the user when they use !help:
+    # The command's name, as reported to the user when they use !help:
     name = None
+
+    # A list of names that will trigger this command. If left empty, it will
+    # be triggered by the command's name and its name only:
+    commands = []
 
     # Hooks are "msg", "msg_private", "msg_public", and "join". "msg" is the
     # default behavior; if you wish to override that, change the value in your
@@ -49,9 +53,10 @@ class Command(object):
 
         This is called once when the command is loaded (from
         :py:meth:`commands.load() <earwigbot.managers._ResourceManager.load>`).
-        *bot* is out base :py:class:`~earwigbot.bot.Bot` object. Generally you
-        shouldn't need to override this; if you do, call
-        ``super(Command, self).__init__()`` first.
+        *bot* is out base :py:class:`~earwigbot.bot.Bot` object. Don't override
+        this directly; if you do, remember to place
+        ``super(Command, self).__init()`` first. Use :py:meth:`setup` for
+        typical command-init/setup needs.
         """
         self.bot = bot
         self.config = bot.config
@@ -67,6 +72,15 @@ class Command(object):
         self.mode = lambda t, level, msg: self.bot.frontend.mode(t, level, msg)
         self.pong = lambda target: self.bot.frontend.pong(target)
 
+        self.setup()
+
+    def setup(self):
+        """Hook called immediately after the command is loaded.
+
+        Does nothing by default; feel free to override.
+        """
+        pass
+
     def check(self, data):
         """Return whether this command should be called in response to *data*.
 
@@ -76,11 +90,15 @@ class Command(object):
         sent on IRC, it should be cheap to execute and unlikely to throw
         exceptions.
 
-        Most commands return ``True`` if :py:attr:`data.command
+        Most commands return ``True`` only if :py:attr:`data.command
         <earwigbot.irc.data.Data.command>` ``==`` :py:attr:`self.name <name>`,
-        otherwise they return ``False``. This is the default behavior of
-        :py:meth:`check`; you need only override it if you wish to change that.
+        or :py:attr:`data.command <earwigbot.irc.data.Data.command>` is in
+        :py:attr:`self.commands <commands>` if that list is overriden. This is
+        the default behavior; you should only override it if you wish to change
+        that.
         """
+        if self.commands:
+            return data.is_command and data.command in self.commands
         return data.is_command and data.command == self.name
 
     def process(self, data):

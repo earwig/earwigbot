@@ -30,13 +30,12 @@ class AFCStatus(Command):
     """Get the number of pending AfC submissions, open redirect requests, and
     open file upload requests."""
     name = "status"
+    commands = ["status", "count", "num", "number"]
     hooks = ["join", "msg"]
 
     def check(self, data):
-        commands = ["status", "count", "num", "number"]
-        if data.is_command and data.command in commands:
+        if data.is_command and data.command in self.commands:
             return True
-
         try:
             if data.line[1] == "JOIN" and data.chan == "#wikipedia-en-afc":
                 if data.nick != self.config.irc["frontend"]["nick"]:

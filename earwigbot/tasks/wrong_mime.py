@@ -20,31 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.commands import Command
+from earwigbot.tasks import Task
 
-__all__ = ["Praise"]
+__all__ = ["WrongMIME"]
 
-class Praise(Command):
-    """Praise people!"""
-    name = "praise"
+class WrongMIME(Task):
+    """A task to tag files whose extensions do not agree with their MIME
+    type."""
+    name = "wrong_mime"
 
     def setup(self):
-        try:
-            self.praises = self.config.commands[self.name]["praises"]
-        except KeyError:
-            self.praises = []
+        pass
 
-    def check(self, data):
-        check = data.command == "praise" or data.command in self.praises
-        return data.is_command and check
-
-    def process(self, data):
-        if data.command in self.praises:
-            msg = self.praises[data.command]
-            self.say(data.chan, msg)
-            return
-        if not data.args:
-            msg = "You use this command to praise certain people. Who they are is a secret."
-        else:
-            msg = "you're doing it wrong."
-        self.reply(data, msg)
+    def run(self, **kwargs):
+        pass

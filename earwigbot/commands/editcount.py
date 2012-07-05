@@ -30,12 +30,7 @@ __all__ = ["Editcount"]
 class Editcount(Command):
     """Return a user's edit count."""
     name = "editcount"
-
-    def check(self, data):
-        commands = ["ec", "editcount"]
-        if data.is_command and data.command in commands:
-            return True
-        return False
+    commands = ["ec", "editcount"]
 
     def process(self, data):
         if not data.args:
@@ -54,6 +49,7 @@ class Editcount(Command):
             return
 
         safe = quote_plus(user.name)
-        url = "http://toolserver.org/~tparis/pcount/index.php?name={0}&lang=en&wiki=wikipedia"
+        url = "http://toolserver.org/~tparis/pcount/index.php?name={0}&lang={1}&wiki={2}"
+        fullurl = url.format(safe, site.lang, site.project)
         msg = "\x0302{0}\x0301 has {1} edits ({2})."
-        self.reply(data, msg.format(name, count, url.format(safe)))
+        self.reply(data, msg.format(name, count, fullurl))

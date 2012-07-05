@@ -39,6 +39,7 @@ class User(object):
 
     *Attributes:*
 
+    - :py:attr:`site`:         the user's corresponding Site object
     - :py:attr:`name`:         the user's username
     - :py:attr:`exists`:       ``True`` if the user exists, else ``False``
     - :py:attr:`userid`:       an integer ID representing the user
@@ -153,6 +154,11 @@ class User(object):
             self._emailable = True
 
         self._gender = res["gender"]
+
+    @property
+    def site(self):
+        """The user's corresponding Site object."""
+        return self._site
 
     @property
     def name(self):
