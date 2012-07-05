@@ -75,7 +75,8 @@ class Site(object):
 
     - :py:meth:`api_query`:            does an API query with kwargs as params
     - :py:meth:`sql_query`:            does an SQL query and yields its results
-    - :py:meth:`get_replag`:           estimates the database replication lag
+    - :py:meth:`get_maxlag`:           returns the internal database lag
+    - :py:meth:`get_replag`:           estimates the external database lag
     - :py:meth:`namespace_id_to_name`: returns names associated with an NS id
     - :py:meth:`namespace_name_to_id`: returns the ID associated with a NS name
     - :py:meth:`get_page`:             returns a Page for the given title
@@ -668,8 +669,27 @@ class Site(object):
                 for result in cur:
                     yield result
 
+    def get_maxlag(self, showall=False):
+        """Return the internal database replication lag in seconds.
+
+        In a typical setup, this function returns the replication lag *within*
+        the WMF's cluster, *not* external replication lag affecting the
+        Toolserver (see :py:meth:`get_replag` for that). This is useful when
+        combined with the ``maxlag`` API query param (added by config), in
+        which queries will be halted and retried if the lag is too high,
+        usually above five seconds.
+        """
+        if showall:
+            result = self.api_query(action="query", meta="siteinfo",
+                                    siprop="dbrepllag", sishowalldb=1)
+            return [server["lag"] for server in result["query"]["dbrepllag"]]
+        else:
+            result = self.api_query(action="query", meta="siteinfo",
+                                    siprop="dbrepllag")
+            return result["query"]["dbrepllag"][0]["lag"]
+
     def get_replag(self):
-        """Return the estimated database replication lag in seconds.
+        """Return the estimated external database replication lag in seconds.
 
         Requires SQL access. This function only makes sense on a replicated
         database (e.g. the Wikimedia Toolserver) and on a wiki that receives a
@@ -776,7 +796,17 @@ class Site(object):
     def delegate(self, services, args=None, kwargs=None):
         """Delegate a task to either the API or SQL depending on conditions.
 
-        *services* should be a dictionary of                                                            @@TODO
+        *services* should be a dictionary in which the key is the service name
+        (:py:attr:`self.SERVICE_API <SERVICE_API>` or
+        :py:attr:`self.SERVICE_SQL <SERVICE_SQL>`), and the value is the
+        function to call for this service. All functions will be passed the
+        same arguments the tuple *args* and the dict **kwargs**, which are both
+        empty by default. The service order is determined by
+        :py:meth:`_get_service_order`.
+
+        Not every service needs an entry in the dictionary. Will raise
+        :py:exc:`~earwigbot.exceptions.NoServiceError` if an appropriate
+        service cannot be found.
         """
         if not args:
             args = ()
