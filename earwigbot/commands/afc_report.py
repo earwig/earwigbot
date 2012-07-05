@@ -79,7 +79,7 @@ class AFCReport(Command):
         url = page.url.replace("en.wikipedia.org/wiki", "enwp.org")
         short = self.statistics.get_short_title(page.title)
         status = self.get_status(page)
-        user = self.site.get_user(page.get_creator())
+        user = page.get_creator()
         user_name = user.name
         user_url = user.get_talkpage().url
 
