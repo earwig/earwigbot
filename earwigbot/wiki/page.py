@@ -476,7 +476,7 @@ class Page(CopyrightMixIn):
         Makes an API query only if we haven't already made one and the *pageid*
         parameter to :py:meth:`__init__` was left as ``None``, which should be
         true for all cases except when pages are returned by an SQL generator
-        (like :py:meth:`category.get_members(use_sql=True)
+        (like :py:meth:`category.get_members()
         <earwigbot.wiki.category.Category.get_members>`).
 
         Raises :py:exc:`~earwigbot.exceptions.InvalidPageError` or
