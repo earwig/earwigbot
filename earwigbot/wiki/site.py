@@ -206,7 +206,7 @@ class Site(object):
             args.append(key + "=" + val)
         return "&".join(args)
 
-    def _api_query(self, params, tries=0, wait=5):
+    def _api_query(self, params, tries=0, wait=5, ignore_maxlag=False):
         """Do an API query with *params* as a dict of parameters.
 
         See the documentation for :py:meth:`api_query` for full implementation
@@ -220,7 +220,7 @@ class Site(object):
             sleep(wait_time)
         self._last_query_time = time()
 
-        url, data = self._build_api_query(params)
+        url, data = self._build_api_query(params, ignore_maxlag)
         self._logger.debug("{0} -> {1}".format(url, data))
 
         try:
@@ -243,7 +243,7 @@ class Site(object):
 
         return self._handle_api_query_result(result, params, tries, wait)
 
-    def _build_api_query(self, params):
+    def _build_api_query(self, params, ignore_maxlag):
         """Given API query params, return the URL to query and POST data."""
         if not self._base_url or self._script_path is None:
             e = "Tried to do an API query, but no API URL is known."
@@ -253,7 +253,8 @@ class Site(object):
         params["format"] = "json"  # This is the only format we understand
         if self._assert_edit:  # If requested, ensure that we're logged in
             params["assert"] = self._assert_edit
-        if self._maxlag:  # If requested, don't overload the servers
+        if self._maxlag and not ignore_maxlag:
+            # If requested, don't overload the servers:
             params["maxlag"] = self._maxlag
 
         data = self._urlencode_utf8(params)
@@ -678,15 +679,18 @@ class Site(object):
         combined with the ``maxlag`` API query param (added by config), in
         which queries will be halted and retried if the lag is too high,
         usually above five seconds.
+
+        With *showall*, will return a list of the lag for all servers in the
+        cluster, not just the one with the highest lag.
         """
+        params = {"action": "query", "meta": "siteinfo", "siprop": "dbrepllag"}
         if showall:
-            result = self.api_query(action="query", meta="siteinfo",
-                                    siprop="dbrepllag", sishowalldb=1)
+            params["sishowalldb"] = 1
+        with self._api_lock:
+            result = self._api_query(params, ignore_maxlag=True)
+        if showall:
             return [server["lag"] for server in result["query"]["dbrepllag"]]
-        else:
-            result = self.api_query(action="query", meta="siteinfo",
-                                    siprop="dbrepllag")
-            return result["query"]["dbrepllag"][0]["lag"]
+        return result["query"]["dbrepllag"][0]["lag"]
 
     def get_replag(self):
         """Return the estimated external database replication lag in seconds.
