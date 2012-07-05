@@ -81,6 +81,7 @@ class Site(object):
     - :py:meth:`get_page`:             returns a Page for the given title
     - :py:meth:`get_category`:         returns a Category for the given title
     - :py:meth:`get_user`:             returns a User object for the given name
+    - :py:meth:`delegate`:             controls when the API or SQL is used
     """
     SERVICE_API = 1
     SERVICE_SQL = 2
@@ -131,6 +132,7 @@ class Site(object):
         self._sql_data = sql
         self._sql_conn = None
         self._sql_lock = Lock()
+        self._sql_info_cache = {"replag": 0, "lastcheck": 0, "usable": None}
 
         # Attribute used in copyright violation checks (see CopyrightMixIn):
         self._search_config = search_config
@@ -525,7 +527,32 @@ class Site(object):
         self._sql_conn = oursql.connect(**args)
 
     def _get_service_order(self):
-        """DOCSTRING                                                                                            """
+        """Return a preferred order for using services (e.g. the API and SQL).
+
+        A list is returned, starting with the preferred service first and
+        ending with the least preferred one. Currently, there are only two
+        services. SERVICE_API will always be included since the API is expected
+        to be always usable. In normal circumstances, self.SERVICE_SQL will be
+        first (with the API second), since using SQL directly is easier on the
+        servers than making web queries with the API. self.SERVICE_SQL will be
+        second if replag is greater than ten minutes (a cached value updated
+        every five minutes at most). self.SERVICE_SQL will not be included in
+        the list if we cannot form a proper SQL connection.
+        """
+        if time() - self._sql_info_cache["lastcheck"] > 300:
+            self._sql_info_cache["lastcheck"] = time()
+            try:
+                self._sql_info_cache["replag"] = self.get_replag()
+            except exceptions.SQLError, oursql.Error:
+                self._sql_info_cache["usable"] = False
+                return [self.SERVICE_API]
+            self._sql_info_cache["usable"] = True
+        else:
+            if not self._sql_info_cache["usable"]:
+                return [self.SERVICE_API]
+
+        if self._sql_info_cache["replag"] > 600:
+            return [self.SERVICE_API, self.SERVICE_SQL]
         return [self.SERVICE_SQL, self.SERVICE_API]
 
     @property
@@ -747,7 +774,10 @@ class Site(object):
         return User(self, username)
 
     def delegate(self, services, args=None, kwargs=None):
-        """                                                                                             DOCSTRING"""
+        """Delegate a task to either the API or SQL depending on conditions.
+
+        *services* should be a dictionary of                                                            @@TODO
+        """
         if not args:
             args = ()
         if not kwargs:
