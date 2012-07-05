@@ -33,7 +33,7 @@ class Geolocate(Command):
     commands = ["geolocate", "locate", "geo", "ip"]
 
     def setup(self):
-        self.config.decrypt(self.config.commands, (self.name, "apiKey"))
+        self.config.decrypt(self.config.commands, self.name, "apiKey")
         try:
             self.key = self.config.commands[self.name]["apiKey"]
         except KeyError:
