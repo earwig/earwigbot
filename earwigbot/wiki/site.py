@@ -723,7 +723,6 @@ class Site(object):
         <get_page>`.
         """
         catname = self._unicodeify(catname)
-        name = name if isinstance(name, unicode) else name.decode("utf8")
         prefix = self.namespace_id_to_name(constants.NS_CATEGORY)
         pagename = u':'.join((prefix, catname))
         return Category(self, pagename, follow_redirects, pageid)
