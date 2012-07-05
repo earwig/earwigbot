@@ -37,6 +37,13 @@ class Category(Page):
     the category namespace; :py:meth:`~earwigbot.wiki.site.Site.get_category`
     is shorthand, accepting category names without the namespace prefix.
 
+    *Attributes:*
+
+    - :py:attr:`size`:    the total number of members in the category
+    - :py:attr:`pages`:   the number of pages in the category
+    - :py:attr:`files`:   the number of files in the category
+    - :py:attr:`subcats`: the number of subcategories in the category
+
     *Public methods:*
 
     - :py:meth:`get_members`: iterates over Pages in the category
@@ -96,6 +103,7 @@ class Category(Page):
                                       pageid=row[2])
 
     def _get_size_via_api(self, member_type):
+        """Return the size of the category using the API."""
         query = "SELECT COUNT(*) FROM categorylinks WHERE cl_to = ?"
         title = self.title.replace(" ", "_").split(":", 1)[1]
         if member_type == "size":
@@ -106,12 +114,14 @@ class Category(Page):
         return list(result)[0]
 
     def _get_size_via_sql(self, member_type):
+        """Return the size of the category using SQL."""
         result = self.site.api_query(action="query", prop="categoryinfo",
                                      cmtitle=self.title)
         info = result["query"]["pages"].values()[0]["categoryinfo"]
         return info[member_type]
 
     def _get_size(self, member_type):
+        """Return the size of the category."""
         services = {
             self.site.SERVICE_API: self._size_via_api,
             self.site.SERVICE_SQL: self._size_via_sql
@@ -120,18 +130,44 @@ class Category(Page):
 
     @property
     def size(self):
+        """The total number of members in the category.
+
+        Includes pages, files, and subcats. Equal to :py:attr:`pages` +
+        :py:attr:`files` + :py:attr:`subcats`. This will use either the API or
+        SQL depending on which are enabled and the amount of lag on each. This
+        is handled by :py:meth:`site.delegate()
+        <earwigbot.wiki.site.Site.delegate>`.
+        """
         return self._get_size("size")
 
     @property
     def pages(self):
+        """The number of pages in the category.
+
+        This will use either the API or SQL depending on which are enabled and
+        the amount of lag on each. This is handled by :py:meth:`site.delegate()
+        <earwigbot.wiki.site.Site.delegate>`.
+        """
         return self._get_size("pages")
 
     @property
     def files(self):
+        """The number of files in the category.
+
+        This will use either the API or SQL depending on which are enabled and
+        the amount of lag on each. This is handled by :py:meth:`site.delegate()
+        <earwigbot.wiki.site.Site.delegate>`.
+        """
         return self._get_size("files")
 
     @property
     def subcats(self):
+        """The number of subcategories in the category.
+
+        This will use either the API or SQL depending on which are enabled and
+        the amount of lag on each. This is handled by :py:meth:`site.delegate()
+        <earwigbot.wiki.site.Site.delegate>`.
+        """
         return self._get_size("subcats")
 
     def get_members(self, limit=None, follow_redirects=None):
