@@ -59,9 +59,9 @@ class Geolocate(Command):
         res = json.loads(query)
 
         try:
-            country = res["countryName"]
-            region = res["regionName"]
-            city = res["cityName"]
+            country = res["countryName"].title()
+            region = res["regionName"].title()
+            city = res["cityName"].title()
             latitude = res["latitude"]
             longitude = res["longitude"]
             utcoffset = res["timeZone"]
