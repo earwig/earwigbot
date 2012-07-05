@@ -66,7 +66,7 @@ class Data(object):
         self._args = self.msg.strip().split()[1:]
 
         try:
-            self._command = args[0].lower()
+            self._command = self.args[0].lower()
         except IndexError:
             return
 
