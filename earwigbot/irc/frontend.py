@@ -49,8 +49,6 @@ class Frontend(IRCConnection):
 
     def _process_message(self, line):
         """Process a single message from IRC."""
-        line = line.strip().split()
-
         if line[1] == "JOIN":
             data = Data(self.bot, self.nick, line, msgtype="JOIN")
             self.bot.commands.call("join", data)
@@ -62,9 +60,6 @@ class Frontend(IRCConnection):
             else:
                 self.bot.commands.call("msg_public", data)
             self.bot.commands.call("msg", data)
-
-        elif line[0] == "PING":  # If we are pinged, pong back
-            self.pong(line[1])
 
         elif line[1] == "376":  # On successful connection to the server
             # If we're supposed to auth to NickServ, do that:

@@ -50,8 +50,6 @@ class Watcher(IRCConnection):
 
     def _process_message(self, line):
         """Process a single message from IRC."""
-        line = line.strip().split()
-
         if line[1] == "PRIVMSG":
             chan = line[2]
 
@@ -64,10 +62,6 @@ class Watcher(IRCConnection):
             rc = RC(chan, msg)  # New RC object to store this event's data
             rc.parse()  # Parse a message into pagenames, usernames, etc.
             self._process_rc_event(rc)
-
-        # If we are pinged, pong back:
-        elif line[0] == "PING":
-            self.pong(line[1])
 
         # When we've finished starting up, join all watcher channels:
         elif line[1] == "376":

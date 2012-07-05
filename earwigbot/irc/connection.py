@@ -89,6 +89,12 @@ class IRCConnection(object):
         else:
             self._send("QUIT")
 
+    def _process_defaults(self, line):
+        """Default process hooks for lines received on IRC."""
+        self._last_recv = time()
+        if line[0] == "PING":  # If we are pinged, pong back
+            self.pong(line[1])
+
     @property
     def host(self):
         """The hostname of the IRC server, like ``"irc.freenode.net"``."""
@@ -175,10 +181,11 @@ class IRCConnection(object):
                 self._is_running = False
                 break
 
-            self._last_recv = time()
             lines = read_buffer.split("\n")
             read_buffer = lines.pop()
             for line in lines:
+                line = line.strip().split()
+                self._process_defaults(line)
                 self._process_message(line)
             if self.is_stopped():
                 break
@@ -190,9 +197,12 @@ class IRCConnection(object):
         now = time()
         if now - self._last_recv > 60:
             if self._last_ping < self._last_recv:
+                log = "Last message was received over 60 seconds ago. Pinging."
+                self.logger.debug(log)
                 self.ping(self.host)
                 self._last_ping = now
             elif now - self._last_ping > 60:
+                self.logger.debug("No ping response in 60 seconds. Stopping.")
                 self.stop()
 
     def stop(self, msg=None):
