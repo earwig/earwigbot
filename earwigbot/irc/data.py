@@ -46,7 +46,7 @@ class Data(object):
         self._chan = self.line[2]
 
         if msgtype == "PRIVMSG":
-            if self.chan == self.my_nick:
+            if self.chan.lower() == self.my_nick:
                 # This is a privmsg to us, so set 'chan' as the nick of the
                 # sender instead of the 'channel', which is ourselves:
                 self._chan = self._nick
