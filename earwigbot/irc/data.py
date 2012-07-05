@@ -63,10 +63,10 @@ class Data(object):
         bot's name); self.is_command will be set to True, and self.trigger will
         store the trigger string. Otherwise, is_command will be set to False.
         """
-        self._args = self.msg.strip().split()[1:]
+        self._args = self.msg.strip().split()
 
         try:
-            self._command = self.args[0].lower()
+            self._command = self.args.pop(0).lower()
         except IndexError:
             return
 
