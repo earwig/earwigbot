@@ -29,6 +29,7 @@ from re import escape as re_escape, match as re_match
 from StringIO import StringIO
 from threading import Lock
 from time import sleep, time
+from urllib import quote_plus
 from urllib2 import build_opener, HTTPCookieProcessor, URLError
 from urlparse import urlparse
 
@@ -38,7 +39,7 @@ except ImportError:
     oursql = None
 
 from earwigbot import exceptions
-from earwigbot.wiki import constants, unicodeify, urlencode_utf8
+from earwigbot.wiki import constants
 from earwigbot.wiki.category import Category
 from earwigbot.wiki.page import Page
 from earwigbot.wiki.user import User
@@ -184,6 +185,22 @@ class Site(object):
         res = "<Site {0} ({1}:{2}) at {3}>"
         return res.format(self.name, self.project, self.lang, self.domain)
 
+    def _unicodeify(self, value, encoding="utf8"):
+        """Return input as unicode if it's not unicode to begin with."""
+        if isinstance(value, unicode):
+            return value
+        return unicode(value, encoding)
+
+    def _urlencode_utf8(self, params):
+        """Implement urllib.urlencode() with support for unicode input."""
+        enc = lambda s: s.encode("utf8") if isinstance(s, unicode) else str(s)
+        args = []
+        for key, val in params.iteritems():
+            key = quote_plus(enc(key))
+            val = quote_plus(enc(val))
+            args.append(key + "=" + val)
+        return "&".join(args)
+
     def _api_query(self, params, tries=0, wait=5):
         """Do an API query with *params* as a dict of parameters.
 
@@ -234,7 +251,7 @@ class Site(object):
         if self._maxlag:  # If requested, don't overload the servers
             params["maxlag"] = self._maxlag
 
-        data = urlencode_utf8(params)
+        data = self._urlencode_utf8(params)
         return url, data
 
     def _handle_api_query_result(self, result, params, tries, wait):
@@ -690,7 +707,7 @@ class Site(object):
         redirect-following: :py:class:`~earwigbot.wiki.page.Page`'s methods
         provide that.
         """
-        title = unicodeify(title)
+        title = self._unicodeify(title)
         prefixes = self.namespace_id_to_name(constants.NS_CATEGORY, all=True)
         prefix = title.split(":", 1)[0]
         if prefix != title:  # Avoid a page that is simply "Category"
@@ -705,7 +722,7 @@ class Site(object):
         really just shorthand for :py:meth:`get_page("Category:" + catname)
         <get_page>`.
         """
-        catname = unicodeify(catname)
+        catname = self._unicodeify(catname)
         name = name if isinstance(name, unicode) else name.decode("utf8")
         prefix = self.namespace_id_to_name(constants.NS_CATEGORY)
         pagename = u':'.join((prefix, catname))
@@ -718,7 +735,7 @@ class Site(object):
         :py:class:`~earwigbot.wiki.user.User` object representing the currently
         logged-in (or anonymous!) user is returned.
         """
-        username = unicodeify(username)
+        username = self._unicodeify(username)
         if not username:
             username = self._get_username()
         return User(self, username)

@@ -43,26 +43,6 @@ of your :py:class:`~earwigbot.wiki.site.Site` (and thus,
 :py:class:`~earwigbot.wiki.user.User`) needs.
 """
 
-from urllib import quote_plus
-
-# Some helper functions:
-
-def unicodeify(value, encoding="utf8"):
-    """Return input as unicode if it's not unicode to begin with."""
-    if isinstance(value, unicode):
-        return value
-    return unicode(value, encoding)
-
-def urlencode_utf8(params):
-    """Implement urllib.urlencode() with support for unicode input."""
-    enc = lambda s: s.encode("utf8") if isinstance(s, unicode) else str(s)
-    args = []
-    for key, val in params.iteritems():
-        key = quote_plus(enc(key))
-        val = quote_plus(enc(val))
-        args.append(key + "=" + val)
-    return "&".join(args)
-
 from earwigbot.wiki.category import *
 from earwigbot.wiki.constants import *
 from earwigbot.wiki.page import *

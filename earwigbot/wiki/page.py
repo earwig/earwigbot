@@ -31,7 +31,6 @@ except ImportError:
     mwparserfromhell = None
 
 from earwigbot import exceptions
-from earwigbot.wiki import unicodeify
 from earwigbot.wiki.copyright import CopyrightMixIn
 
 __all__ = ["Page"]
@@ -150,7 +149,7 @@ class Page(CopyrightMixIn):
         contains "[") it will always be invalid, and cannot be edited.
         """
         if self._exists == self.PAGE_INVALID:
-            e = u"Page '{0}' is invalid.".format(unicodeify(self._title))
+            e = u"Page '{0}' is invalid.".format(self._title)
             raise exceptions.InvalidPageError(e)
 
     def _assert_existence(self):
@@ -162,7 +161,7 @@ class Page(CopyrightMixIn):
         """
         self._assert_validity()
         if self._exists == self.PAGE_MISSING:
-            e = u"Page '{0}' does not exist.".format(unicodeify(self._title))
+            e = u"Page '{0}' does not exist.".format(self._title)
             raise exceptions.PageNotFoundError(e)
 
     def _load(self):
