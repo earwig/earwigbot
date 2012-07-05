@@ -92,7 +92,7 @@ class _MarkovChainIntersection(_MarkovChain):
                         self.chain[word][node] = min(count1, count2)
 
 
-class CopyrightMixin(object):
+class CopyrightMixIn(object):
     """
     EarwigBot's Wiki Toolset: Copyright Violation Mixin
 
