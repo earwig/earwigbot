@@ -28,7 +28,7 @@ class RC(object):
     """Store data from an event received from our IRC watcher."""
     re_color = re.compile("\x03([0-9]{1,2}(,[0-9]{1,2})?)?")
     re_edit = re.compile("\A\[\[(.*?)\]\]\s(.*?)\s(http://.*?)\s\*\s(.*?)\s\*\s(.*?)\Z")
-    re_log = re.compile("\A\[\[(.*?)\]\]\s(.*?)\s\s\*\s(.*?)\s\*\s\s(.*?)\Z")
+    re_log = re.compile("\A\[\[(.*?)\]\]\s(.*?)\s\s\*\s(.*?)\s\*\s(.*?)\Z")
 
     pretty_edit = "\x02New {0}\x0F: \x0314[[\x0307{1}\x0314]]\x0306 * \x0303{2}\x0306 * \x0302{3}\x0306 * \x0310{4}"
     pretty_log = "\x02New {0}\x0F: \x0303{1}\x0306 * \x0302{2}\x0306 * \x0310{3}"
