@@ -55,7 +55,7 @@ class AFCSubmissions(Command):
 
         site = self.bot.wiki.get_site()
         category = site.get_category("Pending AfC submissions")
-        limit = number + len(self_ignore_list)
+        limit = number + len(self.ignore_list)
         members = category.get_members(use_sql=True, limit=limit)
         urls = [member.url for member in members if member.title not in self.ignore_list]
         pages = ", ".join(urls[:number])
