@@ -663,7 +663,7 @@ class AFCStatistics(Task):
                 return None, None, None
             try:
                 content = self.get_revision_content(revid)
-            except exceptions.SiteAPIError:
+            except exceptions.APIError:
                 msg = "API error interrupted SQL query in get_special() for page (id: {0}, chart: {1})"
                 self.logger.exception(msg.format(pageid, chart))
                 return None, None, None

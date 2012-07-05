@@ -82,7 +82,7 @@ class User(object):
 
     def __str__(self):
         """Return a nice string representation of the User."""
-        return '<User "{0}" of {1}>'.format(self._name, str(self._site))
+        return '<User "{0}" of {1}>'.format(self.name, str(self.site))
 
     def _get_attribute(self, attr):
         """Internally used to get an attribute by name.
@@ -107,8 +107,8 @@ class User(object):
         is not defined. This defines it.
         """
         props = "blockinfo|groups|rights|editcount|registration|emailable|gender"
-        result = self._site.api_query(action="query", list="users",
-                                      ususers=self._name, usprop=props)
+        result = self.site.api_query(action="query", list="users",
+                                     ususers=self._name, usprop=props)
         res = result["query"]["users"][0]
 
         # normalize our username in case it was entered oddly
@@ -275,9 +275,9 @@ class User(object):
         No checks are made to see if it exists or not. Proper site namespace
         conventions are followed.
         """
-        prefix = self._site.namespace_id_to_name(constants.NS_USER)
+        prefix = self.site.namespace_id_to_name(constants.NS_USER)
         pagename = ':'.join((prefix, self._name))
-        return Page(self._site, pagename)
+        return Page(self.site, pagename)
 
     def get_talkpage(self):
         """Return a Page object representing the user's talkpage.
@@ -285,6 +285,6 @@ class User(object):
         No checks are made to see if it exists or not. Proper site namespace
         conventions are followed.
         """
-        prefix = self._site.namespace_id_to_name(constants.NS_USER_TALK)
+        prefix = self.site.namespace_id_to_name(constants.NS_USER_TALK)
         pagename = ':'.join((prefix, self._name))
-        return Page(self._site, pagename)
+        return Page(self.site, pagename)

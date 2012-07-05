@@ -82,6 +82,8 @@ class Site(object):
     - :py:meth:`get_category`:         returns a Category for the given title
     - :py:meth:`get_user`:             returns a User object for the given name
     """
+    SERVICE_API = 1
+    SERVICE_SQL = 2
 
     def __init__(self, name=None, project=None, lang=None, base_url=None,
                  article_path=None, script_path=None, sql=None,
@@ -228,7 +230,7 @@ class Site(object):
                 e = e.format(error.code)
             else:
                 e = "API query failed."
-            raise exceptions.SiteAPIError(e)
+            raise exceptions.APIError(e)
 
         result = response.read()
         if response.headers.get("Content-Encoding") == "gzip":
@@ -242,7 +244,7 @@ class Site(object):
         """Given API query params, return the URL to query and POST data."""
         if not self._base_url or self._script_path is None:
             e = "Tried to do an API query, but no API URL is known."
-            raise exceptions.SiteAPIError(e)
+            raise exceptions.APIError(e)
 
         url = ''.join((self.url, self._script_path, "/api.php"))
         params["format"] = "json"  # This is the only format we understand
@@ -260,7 +262,7 @@ class Site(object):
             res = loads(result)  # Try to parse as a JSON object
         except ValueError:
             e = "API query failed: JSON could not be decoded."
-            raise exceptions.SiteAPIError(e)
+            raise exceptions.APIError(e)
 
         try:
             code = res["error"]["code"]
@@ -271,7 +273,7 @@ class Site(object):
         if code == "maxlag":  # We've been throttled by the server
             if tries >= self._max_retries:
                 e = "Maximum number of retries reached ({0})."
-                raise exceptions.SiteAPIError(e.format(self._max_retries))
+                raise exceptions.APIError(e.format(self._max_retries))
             tries += 1
             msg = 'Server says "{0}"; retrying in {1} seconds ({2}/{3})'
             self._logger.info(msg.format(info, wait, tries, self._max_retries))
@@ -279,7 +281,7 @@ class Site(object):
             return self._api_query(params, tries=tries, wait=wait*2)
         else:  # Some unknown error occurred
             e = 'API query failed: got error "{0}"; server says: "{1}".'
-            error = exceptions.SiteAPIError(e.format(code, info))
+            error = exceptions.APIError(e.format(code, info))
             error.code, error.info = code, info
             raise error
 
@@ -522,6 +524,10 @@ class Site(object):
 
         self._sql_conn = oursql.connect(**args)
 
+    def _get_service_order(self):
+        """DOCSTRING                                                                                            """
+        return [self.SERVICE_SQL, self.SERVICE_API]
+
     @property
     def name(self):
         """The Site's name (or "wikiid" in the API), like ``"enwiki"``."""
@@ -559,7 +565,7 @@ class Site(object):
         This will first attempt to construct an API url from
         :py:attr:`self._base_url` and :py:attr:`self._script_path`. We need
         both of these, or else we'll raise
-        :py:exc:`~earwigbot.exceptions.SiteAPIError`. If
+        :py:exc:`~earwigbot.exceptions.APIError`. If
         :py:attr:`self._base_url` is protocol-relative (introduced in MediaWiki
         1.18), we'll choose HTTPS only if :py:attr:`self._user_https` is
         ``True``, otherwise HTTP.
@@ -578,7 +584,7 @@ class Site(object):
         load it as a JSON object, and return it.
 
         If our request failed for some reason, we'll raise
-        :py:exc:`~earwigbot.exceptions.SiteAPIError` with details. If that
+        :py:exc:`~earwigbot.exceptions.APIError` with details. If that
         reason was due to maxlag, we'll sleep for a bit and then repeat the
         query until we exceed :py:attr:`self._max_retries`.
 
@@ -739,3 +745,16 @@ class Site(object):
         else:
             username = self._get_username()
         return User(self, username)
+
+    def delegate(self, services, args=None, kwargs=None):
+        """                                                                                             DOCSTRING"""
+        if not args:
+            args = ()
+        if not kwargs:
+            kwargs = {}
+
+        order = self._get_service_order()
+        for srv in order:
+            if srv in services:
+                return services[srv](*args, **kwargs)
+        raise exceptions.NoServiceError(services)

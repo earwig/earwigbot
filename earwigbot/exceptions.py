@@ -31,7 +31,9 @@ This module contains all exceptions used by EarwigBot::
      |    +-- BrokenSocketError
      +-- WikiToolsetError
           +-- SiteNotFoundError
-          +-- SiteAPIError
+          +-- NoServiceError
+          +-- APIError
+          +-- SQLError
           +-- LoginError
           +-- NamespaceNotFoundError
           +-- PageNotFoundError
@@ -45,7 +47,6 @@ This module contains all exceptions used by EarwigBot::
           |    +-- ContentTooBigError
           |    +-- SpamDetectedError
           |    +-- FilteredError
-          +-- SQLError
           +-- CopyvioCheckError
                +-- UnknownSearchEngineError
                +-- UnsupportedSearchEngineError
@@ -81,13 +82,25 @@ class SiteNotFoundError(WikiToolsetError):
     Raised by :py:class:`~earwigbot.wiki.sitesdb.SitesDB`.
     """
 
-class SiteAPIError(WikiToolsetError):
+class NoServiceError(WikiToolsetError):
+    """No service is functioning to handle a specific task.
+
+    Raised by :py:meth:`Site.delegate <earwigbot.wiki.site.Site.delegate>`.
+    """
+
+class APIError(WikiToolsetError):
     """Couldn't connect to a site's API.
 
     Perhaps the server doesn't exist, our URL is wrong or incomplete, or
     there are temporary problems on their end.
 
     Raised by :py:meth:`Site.api_query <earwigbot.wiki.site.Site.api_query>`.
+    """
+
+class SQLError(WikiToolsetError):
+    """Some error involving SQL querying occurred.
+
+    Raised by :py:meth:`Site.sql_query <earwigbot.wiki.site.Site.sql_query>`.
     """
 
 class LoginError(WikiToolsetError):
@@ -186,12 +199,6 @@ class FilteredError(EditError):
 
     Raised by :py:meth:`Page.edit <earwigbot.wiki.page.Page.edit>` and
     :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`.
-    """
-
-class SQLError(WikiToolsetError):
-    """Some error involving SQL querying occurred.
-
-    Raised by :py:meth:`Site.sql_query <earwigbot.wiki.site.Site.sql_query>`.
     """
 
 class CopyvioCheckError(WikiToolsetError):

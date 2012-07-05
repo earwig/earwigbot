@@ -49,7 +49,7 @@ class Category(Page):
 
     def __str__(self):
         """Return a nice string representation of the Category."""
-        return '<Category "{0}" of {1}>'.format(self.title, str(self._site))
+        return '<Category "{0}" of {1}>'.format(self.title, str(self.site))
 
     def _get_members_via_sql(self, limit, follow):
         """Iterate over Pages in the category using SQL."""
@@ -60,32 +60,32 @@ class Category(Page):
 
         if limit:
             query += " LIMIT ?"
-            result = self._site.sql_query(query, (title, limit))
+            result = self.site.sql_query(query, (title, limit))
         else:
-            result = self._site.sql_query(query, (title,))
+            result = self.site.sql_query(query, (title,))
 
         members = list(result)
         for row in members:
             base = row[0].replace("_", " ").decode("utf8")
-            namespace = self._site.namespace_id_to_name(row[1])
+            namespace = self.site.namespace_id_to_name(row[1])
             if namespace:
                 title = u":".join((namespace, base))
             else:  # Avoid doing a silly (albeit valid) ":Pagename" thing
                 title = base
-            yield self._site.get_page(title, follow_redirects=follow,
+            yield self.site.get_page(title, follow_redirects=follow,
                                       pageid=row[2])
 
     def _get_members_via_api(self, limit, follow):
         """Iterate over Pages in the category using the API."""
         params = {"action": "query", "list": "categorymembers",
-                  "cmtitle": self._title}
+                  "cmtitle": self.title}
 
         while 1:
             params["cmlimit"] = limit if limit else "max"
-            result = self._site.api_query(**params)
+            result = self.site.api_query(**params)
             for member in result["query"]["categorymembers"]:
                 title = member["title"]
-                yield self._site.get_page(title, follow_redirects=follow)
+                yield self.site.get_page(title, follow_redirects=follow)
 
             if "query-continue" in result:
                 qcontinue = result["query-continue"]["categorymembers"]
@@ -94,6 +94,45 @@ class Category(Page):
                     limit -= len(result["query"]["categorymembers"])
             else:
                 break
+
+    def _get_size_via_sql(self, member_type):
+        query = "SELECT COUNT(*) FROM categorylinks WHERE cl_to = ?"
+        title = self.title.replace(" ", "_").split(":", 1)[1]
+        if member_type == "size":
+            result = self.site.sql_query(query, (title,))
+        else:
+            query += " AND cl_type = ?"
+            result = self.site.sql_query(query, (title, member_type[:-1]))
+        return list(result)[0]
+
+    def _get_size_via_sql(self, member_type):
+        result = self.site.api_query(action="query", prop="categoryinfo",
+                                     cmtitle=self.title)
+        info = result["query"]["pages"].values()[0]["categoryinfo"]
+        return info[member_type]
+
+    def _get_size(self, member_type):
+        services = {
+            self.site.SERVICE_API: self._size_via_api,
+            self.site.SERVICE_SQL: self._size_via_sql
+        }
+        return self.site.delegate(services, (member_type,))
+
+    @property
+    def size(self):
+        return self._get_size("size")
+
+    @property
+    def pages(self):
+        return self._get_size("pages")
+
+    @property
+    def files(self):
+        return self._get_size("files")
+
+    @property
+    def subcats(self):
+        return self._get_size("subcats")
 
     def get_members(self, use_sql=False, limit=None, follow_redirects=None):
         """Iterate over Pages in the category.
