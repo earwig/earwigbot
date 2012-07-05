@@ -30,7 +30,7 @@ __all__ = ["Crypt"]
 
 class Crypt(Command):
     """Provides hash functions with !hash (!hash list for supported algorithms)
-    and blowfish encryption with !encrypt and !decrypt."""
+    and Blowfish encryption with !encrypt and !decrypt."""
     name = "crypt"
     commands = ["crypt", "hash", "encrypt", "decrypt"]
 
@@ -68,11 +68,11 @@ class Crypt(Command):
                 self.reply(data, msg.format(data.command))
                 return
 
-            cipher = Blowfish.new(hashlib.sha256(key))
+            cipher = Blowfish.new(hashlib.sha256(key).digest())
             try:
                 if data.command == "encrypt":
-                    self.reply(data, cipher.encrypt(text))
+                    self.reply(data, cipher.encrypt(text).encode("hex"))
                 else:
-                    self.reply(data, cipher.decrypt(text))
+                    self.reply(data, cipher.decrypt(text.decode("hex")))
             except ValueError as error:
                 self.reply(data, error.message)

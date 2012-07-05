@@ -734,7 +734,8 @@ class Site(object):
         :py:class:`~earwigbot.wiki.user.User` object representing the currently
         logged-in (or anonymous!) user is returned.
         """
-        username = self._unicodeify(username)
-        if not username:
+        if username:
+            username = self._unicodeify(username)
+        else:
             username = self._get_username()
         return User(self, username)

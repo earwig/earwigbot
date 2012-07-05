@@ -62,7 +62,7 @@ class Help(Command):
                 if command.__doc__:
                     doc = command.__doc__.replace("\n", "")
                     doc = re.sub("\s\s+", " ", doc)
-                    msg = "help for command \x0303{0}\x0301: \"{1}\""
+                    msg = 'help for command \x0303{0}\x0301: "{1}"'
                     self.reply(data, msg.format(target, doc))
                     return
 
