@@ -23,7 +23,7 @@
 from time import gmtime, strptime
 
 from earwigbot.exceptions import UserNotFoundError
-from earwigbot.wiki import constants
+from earwigbot.wiki import constants, unicodeify
 from earwigbot.wiki.page import Page
 
 __all__ = ["User"]
@@ -96,7 +96,7 @@ class User(object):
         if not hasattr(self, attr):
             self._load_attributes()
         if not self._exists:
-            e = u"User '{0}' does not exist.".format(self._name)
+            e = u"User '{0}' does not exist.".format(unicodeify(self._name))
             raise UserNotFoundError(e)
         return getattr(self, attr)
 
