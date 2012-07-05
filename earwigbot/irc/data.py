@@ -29,7 +29,7 @@ class Data(object):
 
     def __init__(self, bot, my_nick, line, msgtype):
         self._bot = bot
-        self._my_nick = my_nick
+        self._my_nick = my_nick.lower()
         self._line = line
 
         self._is_private = self._is_command = False
