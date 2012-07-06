@@ -75,13 +75,17 @@ class Site(object):
 
     - :py:meth:`api_query`:            does an API query with kwargs as params
     - :py:meth:`sql_query`:            does an SQL query and yields its results
-    - :py:meth:`get_replag`:           estimates the database replication lag
+    - :py:meth:`get_maxlag`:           returns the internal database lag
+    - :py:meth:`get_replag`:           estimates the external database lag
     - :py:meth:`namespace_id_to_name`: returns names associated with an NS id
     - :py:meth:`namespace_name_to_id`: returns the ID associated with a NS name
     - :py:meth:`get_page`:             returns a Page for the given title
     - :py:meth:`get_category`:         returns a Category for the given title
     - :py:meth:`get_user`:             returns a User object for the given name
+    - :py:meth:`delegate`:             controls when the API or SQL is used
     """
+    SERVICE_API = 1
+    SERVICE_SQL = 2
 
     def __init__(self, name=None, project=None, lang=None, base_url=None,
                  article_path=None, script_path=None, sql=None,
@@ -124,11 +128,13 @@ class Site(object):
         self._max_retries = 6
         self._last_query_time = 0
         self._api_lock = Lock()
+        self._api_info_cache = {"maxlag": 0, "lastcheck": 0}
 
         # Attributes used for SQL queries:
         self._sql_data = sql
         self._sql_conn = None
         self._sql_lock = Lock()
+        self._sql_info_cache = {"replag": 0, "lastcheck": 0, "usable": None}
 
         # Attribute used in copyright violation checks (see CopyrightMixIn):
         self._search_config = search_config
@@ -201,7 +207,7 @@ class Site(object):
             args.append(key + "=" + val)
         return "&".join(args)
 
-    def _api_query(self, params, tries=0, wait=5):
+    def _api_query(self, params, tries=0, wait=5, ignore_maxlag=False):
         """Do an API query with *params* as a dict of parameters.
 
         See the documentation for :py:meth:`api_query` for full implementation
@@ -215,7 +221,7 @@ class Site(object):
             sleep(wait_time)
         self._last_query_time = time()
 
-        url, data = self._build_api_query(params)
+        url, data = self._build_api_query(params, ignore_maxlag)
         self._logger.debug("{0} -> {1}".format(url, data))
 
         try:
@@ -228,7 +234,7 @@ class Site(object):
                 e = e.format(error.code)
             else:
                 e = "API query failed."
-            raise exceptions.SiteAPIError(e)
+            raise exceptions.APIError(e)
 
         result = response.read()
         if response.headers.get("Content-Encoding") == "gzip":
@@ -238,17 +244,18 @@ class Site(object):
 
         return self._handle_api_query_result(result, params, tries, wait)
 
-    def _build_api_query(self, params):
+    def _build_api_query(self, params, ignore_maxlag):
         """Given API query params, return the URL to query and POST data."""
         if not self._base_url or self._script_path is None:
             e = "Tried to do an API query, but no API URL is known."
-            raise exceptions.SiteAPIError(e)
+            raise exceptions.APIError(e)
 
         url = ''.join((self.url, self._script_path, "/api.php"))
         params["format"] = "json"  # This is the only format we understand
         if self._assert_edit:  # If requested, ensure that we're logged in
             params["assert"] = self._assert_edit
-        if self._maxlag:  # If requested, don't overload the servers
+        if self._maxlag and not ignore_maxlag:
+            # If requested, don't overload the servers:
             params["maxlag"] = self._maxlag
 
         data = self._urlencode_utf8(params)
@@ -260,7 +267,7 @@ class Site(object):
             res = loads(result)  # Try to parse as a JSON object
         except ValueError:
             e = "API query failed: JSON could not be decoded."
-            raise exceptions.SiteAPIError(e)
+            raise exceptions.APIError(e)
 
         try:
             code = res["error"]["code"]
@@ -271,7 +278,7 @@ class Site(object):
         if code == "maxlag":  # We've been throttled by the server
             if tries >= self._max_retries:
                 e = "Maximum number of retries reached ({0})."
-                raise exceptions.SiteAPIError(e.format(self._max_retries))
+                raise exceptions.APIError(e.format(self._max_retries))
             tries += 1
             msg = 'Server says "{0}"; retrying in {1} seconds ({2}/{3})'
             self._logger.info(msg.format(info, wait, tries, self._max_retries))
@@ -279,7 +286,7 @@ class Site(object):
             return self._api_query(params, tries=tries, wait=wait*2)
         else:  # Some unknown error occurred
             e = 'API query failed: got error "{0}"; server says: "{1}".'
-            error = exceptions.SiteAPIError(e.format(code, info))
+            error = exceptions.APIError(e.format(code, info))
             error.code, error.info = code, info
             raise error
 
@@ -522,6 +529,48 @@ class Site(object):
 
         self._sql_conn = oursql.connect(**args)
 
+    def _get_service_order(self):
+        """Return a preferred order for using services (e.g. the API and SQL).
+
+        A list is returned, starting with the most preferred service first and
+        ending with the least preferred one. Currently, there are only two
+        services. SERVICE_API will always be included since the API is expected
+        to be always usable. In normal circumstances, self.SERVICE_SQL will be
+        first (with the API second), since using SQL directly is easier on the
+        servers than making web queries with the API. self.SERVICE_SQL will be
+        second if replag is greater than three minutes (a cached value updated
+        every two minutes at most), *unless* API lag is also very high.
+        self.SERVICE_SQL will not be included in the list if we cannot form a
+        proper SQL connection.
+        """
+        now = time()
+        if now - self._sql_info_cache["lastcheck"] > 120:
+            self._sql_info_cache["lastcheck"] = now
+            try:
+                self._sql_info_cache["replag"] = sqllag = self.get_replag()
+            except (exceptions.SQLError, oursql.Error):
+                self._sql_info_cache["usable"] = False
+                return [self.SERVICE_API]
+            self._sql_info_cache["usable"] = True
+        else:
+            if not self._sql_info_cache["usable"]:
+                return [self.SERVICE_API]
+
+        if sqllag > 180:
+            if not self._maxlag:
+                return [self.SERVICE_API, self.SERVICE_SQL]
+            if now - self._api_info_cache["lastcheck"] > 120:
+                self._api_info_cache["lastcheck"] = now
+                try:
+                    self._api_info_cache["maxlag"] = apilag = self.get_maxlag()
+                except exceptions.APIError:
+                    self._api_info_cache["maxlag"] = apilag = 0
+            if sqllag / (180.0 / self._maxlag) < apilag:
+                return [self.SERVICE_SQL, self.SERVICE_API]
+            return [self.SERVICE_API, self.SERVICE_SQL]
+
+        return [self.SERVICE_SQL, self.SERVICE_API]
+
     @property
     def name(self):
         """The Site's name (or "wikiid" in the API), like ``"enwiki"``."""
@@ -559,7 +608,7 @@ class Site(object):
         This will first attempt to construct an API url from
         :py:attr:`self._base_url` and :py:attr:`self._script_path`. We need
         both of these, or else we'll raise
-        :py:exc:`~earwigbot.exceptions.SiteAPIError`. If
+        :py:exc:`~earwigbot.exceptions.APIError`. If
         :py:attr:`self._base_url` is protocol-relative (introduced in MediaWiki
         1.18), we'll choose HTTPS only if :py:attr:`self._user_https` is
         ``True``, otherwise HTTP.
@@ -578,7 +627,7 @@ class Site(object):
         load it as a JSON object, and return it.
 
         If our request failed for some reason, we'll raise
-        :py:exc:`~earwigbot.exceptions.SiteAPIError` with details. If that
+        :py:exc:`~earwigbot.exceptions.APIError` with details. If that
         reason was due to maxlag, we'll sleep for a bit and then repeat the
         query until we exceed :py:attr:`self._max_retries`.
 
@@ -635,8 +684,30 @@ class Site(object):
                 for result in cur:
                     yield result
 
+    def get_maxlag(self, showall=False):
+        """Return the internal database replication lag in seconds.
+
+        In a typical setup, this function returns the replication lag *within*
+        the WMF's cluster, *not* external replication lag affecting the
+        Toolserver (see :py:meth:`get_replag` for that). This is useful when
+        combined with the ``maxlag`` API query param (added by config), in
+        which queries will be halted and retried if the lag is too high,
+        usually above five seconds.
+
+        With *showall*, will return a list of the lag for all servers in the
+        cluster, not just the one with the highest lag.
+        """
+        params = {"action": "query", "meta": "siteinfo", "siprop": "dbrepllag"}
+        if showall:
+            params["sishowalldb"] = 1
+        with self._api_lock:
+            result = self._api_query(params, ignore_maxlag=True)
+        if showall:
+            return [server["lag"] for server in result["query"]["dbrepllag"]]
+        return result["query"]["dbrepllag"][0]["lag"]
+
     def get_replag(self):
-        """Return the estimated database replication lag in seconds.
+        """Return the estimated external database replication lag in seconds.
 
         Requires SQL access. This function only makes sense on a replicated
         database (e.g. the Wikimedia Toolserver) and on a wiki that receives a
@@ -739,3 +810,29 @@ class Site(object):
         else:
             username = self._get_username()
         return User(self, username)
+
+    def delegate(self, services, args=None, kwargs=None):
+        """Delegate a task to either the API or SQL depending on conditions.
+
+        *services* should be a dictionary in which the key is the service name
+        (:py:attr:`self.SERVICE_API <SERVICE_API>` or
+        :py:attr:`self.SERVICE_SQL <SERVICE_SQL>`), and the value is the
+        function to call for this service. All functions will be passed the
+        same arguments the tuple *args* and the dict **kwargs**, which are both
+        empty by default. The service order is determined by
+        :py:meth:`_get_service_order`.
+
+        Not every service needs an entry in the dictionary. Will raise
+        :py:exc:`~earwigbot.exceptions.NoServiceError` if an appropriate
+        service cannot be found.
+        """
+        if not args:
+            args = ()
+        if not kwargs:
+            kwargs = {}
+
+        order = self._get_service_order()
+        for srv in order:
+            if srv in services:
+                return services[srv](*args, **kwargs)
+        raise exceptions.NoServiceError(services)

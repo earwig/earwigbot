@@ -109,12 +109,9 @@ class AFCStatus(Command):
 
     def count_submissions(self):
         """Returns the number of open AFC submissions (count of CAT:PEND)."""
-        cat = self.site.get_category("Pending AfC submissions")
-        subs = len(cat.get_members(use_sql=True))
-
-        # Remove [[Wikipedia:Articles for creation/Redirects]] and
+        # Subtract two for [[Wikipedia:Articles for creation/Redirects]] and
         # [[Wikipedia:Files for upload]], which aren't real submissions:
-        return subs - 2
+        return self.site.get_category("Pending AfC submissions").pages - 2
 
     def count_redirects(self):
         """Returns the number of open redirect submissions. Calculated as the

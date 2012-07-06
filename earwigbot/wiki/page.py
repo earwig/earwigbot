@@ -117,7 +117,7 @@ class Page(CopyrightMixIn):
         prefix = self._title.split(":", 1)[0]
         if prefix != title:  # ignore a page that's titled "Category" or "User"
             try:
-                self._namespace = self._site.namespace_name_to_id(prefix)
+                self._namespace = self.site.namespace_name_to_id(prefix)
             except exceptions.NamespaceNotFoundError:
                 self._namespace = 0
         else:
@@ -137,7 +137,7 @@ class Page(CopyrightMixIn):
 
     def __str__(self):
         """Return a nice string representation of the Page."""
-        return '<Page "{0}" of {1}>'.format(self.title, str(self._site))
+        return '<Page "{0}" of {1}>'.format(self.title, str(self.site))
 
     def _assert_validity(self):
         """Used to ensure that our page's title is valid.
@@ -199,7 +199,7 @@ class Page(CopyrightMixIn):
         Assuming the API is sound, this should not raise any exceptions.
         """
         if not result:
-            query = self._site.api_query
+            query = self.site.api_query
             result = query(action="query", rvprop="user", intoken="edit",
                            prop="info|revisions", rvlimit=1, rvdir="newer",
                            titles=self._title, inprop="protection|url")
@@ -263,7 +263,7 @@ class Page(CopyrightMixIn):
         want to force content reloading.
         """
         if not result:
-            query = self._site.api_query
+            query = self.site.api_query
             result = query(action="query", prop="revisions", rvlimit=1,
                            rvprop="content|timestamp", titles=self._title)
 
@@ -310,8 +310,8 @@ class Page(CopyrightMixIn):
 
         # Try the API query, catching most errors with our handler:
         try:
-            result = self._site.api_query(**params)
-        except exceptions.SiteAPIError as error:
+            result = self.site.api_query(**params)
+        except exceptions.APIError as error:
             if not hasattr(error, "code"):
                 raise  # We can only handle errors with a code attribute
             result = self._handle_edit_errors(error, params, tries)
@@ -375,12 +375,12 @@ class Page(CopyrightMixIn):
 
         elif error.code in ["noedit-anon", "cantcreate-anon",
                             "noimageredirect-anon"]:
-            if not all(self._site._login_info):
+            if not all(self.site._login_info):
                 # Insufficient login info:
                 raise exceptions.PermissionsError(error.info)
             if tries == 0:
                 # We have login info; try to login:
-                self._site._login(self._site._login_info)
+                self.site._login(self.site._login_info)
                 self._token = None  # Need a new token; old one is invalid now
                 return self._edit(params=params, tries=1)
             else:
@@ -416,13 +416,13 @@ class Page(CopyrightMixIn):
         log in. Otherwise, raise PermissionsError with details.
         """
         if assertion == "user":
-            if not all(self._site._login_info):
+            if not all(self.site._login_info):
                 # Insufficient login info:
                 e = "AssertEdit: user assertion failed, and no login info was provided."
                 raise exceptions.PermissionsError(e)
             if tries == 0:
                 # We have login info; try to login:
-                self._site._login(self._site._login_info)
+                self.site._login(self.site._login_info)
                 self._token = None  # Need a new token; old one is invalid now
                 return self._edit(params=params, tries=1)
             else:
@@ -476,7 +476,7 @@ class Page(CopyrightMixIn):
         Makes an API query only if we haven't already made one and the *pageid*
         parameter to :py:meth:`__init__` was left as ``None``, which should be
         true for all cases except when pages are returned by an SQL generator
-        (like :py:meth:`category.get_members(use_sql=True)
+        (like :py:meth:`category.get_members()
         <earwigbot.wiki.category.Category.get_members>`).
 
         Raises :py:exc:`~earwigbot.exceptions.InvalidPageError` or
@@ -502,8 +502,8 @@ class Page(CopyrightMixIn):
             return self._fullurl
         else:
             slug = quote(self._title.replace(" ", "_"), safe="/:")
-            path = self._site._article_path.replace("$1", slug)
-            return ''.join((self._site.url, path))
+            path = self.site._article_path.replace("$1", slug)
+            return ''.join((self.site.url, path))
 
     @property
     def namespace(self):
@@ -580,7 +580,7 @@ class Page(CopyrightMixIn):
         otherwise missing or invalid.
         """
         if self._namespace < 0:
-            ns = self._site.namespace_id_to_name(self._namespace)
+            ns = self.site.namespace_id_to_name(self._namespace)
             e = u"Pages in the {0} namespace can't have talk pages.".format(ns)
             raise exceptions.InvalidPageError(e)
 
@@ -594,7 +594,7 @@ class Page(CopyrightMixIn):
         except IndexError:
             body = self._title
 
-        new_prefix = self._site.namespace_id_to_name(new_ns)
+        new_prefix = self.site.namespace_id_to_name(new_ns)
 
         # If the new page is in namespace 0, don't do ":Title" (it's correct,
         # but unnecessary), just do "Title":
@@ -605,7 +605,7 @@ class Page(CopyrightMixIn):
 
         if follow_redirects is None:
             follow_redirects = self._follow_redirects
-        return Page(self._site, new_title, follow_redirects)
+        return Page(self.site, new_title, follow_redirects)
 
     def get(self):
         """Return page content, which is cached if you try to call get again.
@@ -616,7 +616,7 @@ class Page(CopyrightMixIn):
         if self._exists == self.PAGE_UNKNOWN:
             # Kill two birds with one stone by doing an API query for both our
             # attributes and our page content:
-            query = self._site.api_query
+            query = self.site.api_query
             result = query(action="query", rvlimit=1, titles=self._title,
                            prop="info|revisions", inprop="protection|url",
                            intoken="edit", rvprop="content|timestamp")
@@ -680,7 +680,7 @@ class Page(CopyrightMixIn):
         if not self._creator:
             self._load()
             self._assert_existence()
-        return self._site.get_user(self._creator)
+        return self.site.get_user(self._creator)
 
     def parse(self):
         """Parse the page content for templates, links, etc.
