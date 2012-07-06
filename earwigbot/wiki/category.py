@@ -126,7 +126,7 @@ class Category(Page):
             self.site.SERVICE_API: self._get_size_via_api,
             self.site.SERVICE_SQL: self._get_size_via_sql
         }
-        return self.site.delegate(services, (member_type))
+        return self.site.delegate(services, (member_type,))
 
     @property
     def size(self):

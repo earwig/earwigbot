@@ -501,7 +501,8 @@ class Page(CopyrightMixIn):
         if self._fullurl:
             return self._fullurl
         else:
-            slug = quote(self._title.replace(" ", "_"), safe="/:")
+            encoded = self._title.encode("utf8").replace(" ", "_")
+            slug = quote(encoded, safe="/:")
             path = self.site._article_path.replace("$1", slug)
             return ''.join((self.site.url, path))
 
