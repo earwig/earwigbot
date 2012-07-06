@@ -83,6 +83,15 @@ class Data(object):
                 self._command = self.args.pop(0).lower()
             except IndexError:
                 self._command = ""
+            else:
+                try:
+                    if self.msg[-1] == "." and self.msg[-2] != ".":
+                        if self.args:
+                            self.args[-1] = self.args[-1][:-1]
+                        else:
+                            self._command = self.command[:-1]
+                except IndexError:
+                    pass
 
     def _parse_kwargs(self):
         """Parse keyword arguments embedded in self.args.
