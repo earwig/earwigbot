@@ -837,5 +837,8 @@ class Site(object):
         order = self._get_service_order()
         for srv in order:
             if srv in services:
-                return services[srv](*args, **kwargs)
+                try:
+                    return services[srv](*args, **kwargs)
+                except exceptions.ServiceError:
+                    continue
         raise exceptions.NoServiceError(services)

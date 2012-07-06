@@ -31,9 +31,10 @@ This module contains all exceptions used by EarwigBot::
      |    +-- BrokenSocketError
      +-- WikiToolsetError
           +-- SiteNotFoundError
+          +-- ServiceError
+          |    +-- APIError
+          |    +-- SQLError
           +-- NoServiceError
-          +-- APIError
-          +-- SQLError
           +-- LoginError
           +-- NamespaceNotFoundError
           +-- PageNotFoundError
@@ -82,13 +83,15 @@ class SiteNotFoundError(WikiToolsetError):
     Raised by :py:class:`~earwigbot.wiki.sitesdb.SitesDB`.
     """
 
-class NoServiceError(WikiToolsetError):
-    """No service is functioning to handle a specific task.
+class ServiceError(WikiToolsetError):
+    """Base exception class for an error within a service (the API or SQL).
 
-    Raised by :py:meth:`Site.delegate <earwigbot.wiki.site.Site.delegate>`.
+    This is caught by :py:meth:`Site.delegate
+    <earwigbot.wiki.site.Site.delegate>` to indicate a service is
+    non-functional so another, less-preferred one can be tried.
     """
 
-class APIError(WikiToolsetError):
+class APIError(ServiceError):
     """Couldn't connect to a site's API.
 
     Perhaps the server doesn't exist, our URL is wrong or incomplete, or
@@ -97,10 +100,16 @@ class APIError(WikiToolsetError):
     Raised by :py:meth:`Site.api_query <earwigbot.wiki.site.Site.api_query>`.
     """
 
-class SQLError(WikiToolsetError):
+class SQLError(ServiceError):
     """Some error involving SQL querying occurred.
 
     Raised by :py:meth:`Site.sql_query <earwigbot.wiki.site.Site.sql_query>`.
+    """
+
+class NoServiceError(WikiToolsetError):
+    """No service is functioning to handle a specific task.
+
+    Raised by :py:meth:`Site.delegate <earwigbot.wiki.site.Site.delegate>`.
     """
 
 class LoginError(WikiToolsetError):
