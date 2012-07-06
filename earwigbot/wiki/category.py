@@ -104,6 +104,13 @@ class Category(Page):
 
     def _get_size_via_api(self, member_type):
         """Return the size of the category using the API."""
+        result = self.site.api_query(action="query", prop="categoryinfo",
+                                     cmtitle=self.title)
+        info = result["query"]["pages"].values()[0]["categoryinfo"]
+        return info[member_type]
+
+    def _get_size_via_sql(self, member_type):
+        """Return the size of the category using SQL."""
         query = "SELECT COUNT(*) FROM categorylinks WHERE cl_to = ?"
         title = self.title.replace(" ", "_").split(":", 1)[1]
         if member_type == "size":
@@ -111,14 +118,7 @@ class Category(Page):
         else:
             query += " AND cl_type = ?"
             result = self.site.sql_query(query, (title, member_type[:-1]))
-        return list(result)[0]
-
-    def _get_size_via_sql(self, member_type):
-        """Return the size of the category using SQL."""
-        result = self.site.api_query(action="query", prop="categoryinfo",
-                                     cmtitle=self.title)
-        info = result["query"]["pages"].values()[0]["categoryinfo"]
-        return info[member_type]
+        return list(result)[0][0]
 
     def _get_size(self, member_type):
         """Return the size of the category."""
