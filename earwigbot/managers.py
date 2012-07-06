@@ -170,7 +170,12 @@ class CommandManager(_ResourceManager):
         """Respond to a hook type and a :py:class:`Data` object."""
         for command in self:
             if hook in command.hooks and self._wrap_check(command, data):
-                self._wrap_process(command, data)
+                thread = Thread(target=self._wrap_process,
+                                args=(command, data))
+                start_time = strftime("%b %d %H:%M:%S")
+                thread.name = "irc:{0} ({1})".format(command.name, start_time)
+                thread.daemon = True
+                thread.start()
                 return
 
 

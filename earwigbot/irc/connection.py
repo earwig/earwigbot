@@ -93,7 +93,7 @@ class IRCConnection(object):
         """Default process hooks for lines received on IRC."""
         self._last_recv = time()
         if line[0] == "PING":  # If we are pinged, pong back
-            self.pong(line[1])
+            self.pong(line[1][1:])
 
     @property
     def host(self):
@@ -195,9 +195,9 @@ class IRCConnection(object):
     def keep_alive(self):
         """Ensure that we stay connected, stopping if the connection breaks."""
         now = time()
-        if now - self._last_recv > 60:
+        if now - self._last_recv > 120:
             if self._last_ping < self._last_recv:
-                log = "Last message was received over 60 seconds ago. Pinging."
+                log = "Last message was received over 120 seconds ago. Pinging."
                 self.logger.debug(log)
                 self.ping(self.host)
                 self._last_ping = now

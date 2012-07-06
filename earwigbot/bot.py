@@ -124,20 +124,21 @@ class Bot(object):
         if self.watcher:
             self.watcher.stop(msg)
 
-    def _stop_task_threads(self):
-        """Notify the user of which task threads are going to be killed.
+    def _stop_daemon_threads(self):
+        """Notify the user of which threads are going to be killed.
 
-        Unfortunately, there is no method right now of stopping task threads
-        safely. This is because there is no way to tell them to stop like the
-        IRC components can be told; furthermore, they are run as daemons, and
-        daemon threads automatically stop without calling any __exit__ or
-        try/finally code when all non-daemon threads stop. They were originally
-        implemented as regular non-daemon threads, but this meant there was no
-        way to completely stop the bot if tasks were running, because all other
-        threads would exit and threading would absorb KeyboardInterrupts.
+        Unfortunately, there is no method right now of stopping command and
+        task threads safely. This is because there is no way to tell them to
+        stop like the IRC components can be told; furthermore, they are run as
+        daemons, and daemon threads automatically stop without calling any
+        __exit__ or try/finally code when all non-daemon threads stop. They
+        were originally implemented as regular non-daemon threads, but this
+        meant there was no way to completely stop the bot if tasks were
+        running, because all other threads would exit and threading would
+        absorb KeyboardInterrupts.
 
         The advantage of this is that stopping the bot is truly guarenteed to
-        *stop* the bot, while the disadvantage is that the tasks are given no
+        *stop* the bot, while the disadvantage is that the threads are given no
         advance warning of their forced shutdown.
         """
         tasks = []
@@ -146,7 +147,7 @@ class Bot(object):
             if thread.name not in non_tasks and thread.is_alive():
                 tasks.append(thread.name)
         if tasks:
-            log = "The following tasks will be killed: {0}"
+            log = "The following commands or tasks will be killed: {0}"
             self.logger.warn(log.format(" ".join(tasks)))
 
     def run(self):
@@ -200,4 +201,4 @@ class Bot(object):
         with self.component_lock:
             self._stop_irc_components(msg)
         self._keep_looping = False
-        self._stop_task_threads()
+        self._stop_daemon_threads()

@@ -67,7 +67,7 @@ class Threads(Command):
         threads = threading.enumerate()
 
         normal_threads = []
-        task_threads = []
+        daemon_threads = []
 
         for thread in threads:
             tname = thread.name
@@ -84,14 +84,15 @@ class Threads(Command):
             else:
                 tname, start_time = re.findall("^(.*?) \((.*?)\)$", tname)[0]
                 t = "\x0302{0}\x0301 (id {1}, since {2})"
-                task_threads.append(t.format(tname, thread.ident, start_time))
+                daemon_threads.append(t.format(tname, thread.ident,
+                                               start_time))
 
-        if task_threads:
-            msg = "\x02{0}\x0F threads active: {1}, and \x02{2}\x0F task threads: {3}."
+        if daemon_threads:
+            msg = "\x02{0}\x0F threads active: {1}, and \x02{2}\x0F command/task threads: {3}."
             msg = msg.format(len(threads), ', '.join(normal_threads),
-                             len(task_threads), ', '.join(task_threads))
+                             len(daemon_threads), ', '.join(daemon_threads))
         else:
-            msg = "\x02{0}\x0F threads active: {1}, and \x020\x0F task threads."
+            msg = "\x02{0}\x0F threads active: {1}, and \x020\x0F command/task threads."
             msg = msg.format(len(threads), ', '.join(normal_threads))
 
         self.reply(self.data, msg)
