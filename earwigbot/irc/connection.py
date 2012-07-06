@@ -72,7 +72,7 @@ class IRCConnection(object):
             raise BrokenSocketError()
         return data
 
-    def _send(self, msg):
+    def _send(self, msg, hidelog=False):
         """Send data to the server."""
         with self._send_lock:
             try:
@@ -80,7 +80,8 @@ class IRCConnection(object):
             except socket.error:
                 self._is_running = False
             else:
-                self.logger.debug(msg)
+                if not hidelog:
+                    self.logger.debug(msg)
 
     def _quit(self, msg=None):
         """Issue a quit message to the server. Doesn't close the connection."""
@@ -123,52 +124,52 @@ class IRCConnection(object):
         """Our realname (gecos field) on the server."""
         return self._realname
 
-    def say(self, target, msg):
+    def say(self, target, msg, hidelog=False):
         """Send a private message to a target on the server."""
         msg = "PRIVMSG {0} :{1}".format(target, msg)
-        self._send(msg)
+        self._send(msg, hidelog)
 
-    def reply(self, data, msg):
+    def reply(self, data, msg, hidelog=False):
         """Send a private message as a reply to a user on the server."""
         msg = "\x02{0}\x0f: {1}".format(data.nick, msg)
-        self.say(data.chan, msg)
+        self.say(data.chan, msg, hidelog)
 
-    def action(self, target, msg):
+    def action(self, target, msg, hidelog=False):
         """Send a private message to a target on the server as an action."""
         msg = "\x01ACTION {0}\x01".format(msg)
-        self.say(target, msg)
+        self.say(target, msg, hidelog)
 
-    def notice(self, target, msg):
+    def notice(self, target, msg, hidelog=False):
         """Send a notice to a target on the server."""
         msg = "NOTICE {0} :{1}".format(target, msg)
-        self._send(msg)
+        self._send(msg, hidelog)
 
-    def join(self, chan):
+    def join(self, chan, hidelog=False):
         """Join a channel on the server."""
         msg = "JOIN {0}".format(chan)
-        self._send(msg)
+        self._send(msg, hidelog)
 
-    def part(self, chan, msg=None):
+    def part(self, chan, msg=None, hidelog=False):
         """Part from a channel on the server, optionally using an message."""
         if msg:
-            self._send("PART {0} :{1}".format(chan, msg))
+            self._send("PART {0} :{1}".format(chan, msg), hidelog)
         else:
-            self._send("PART {0}".format(chan))
+            self._send("PART {0}".format(chan), hidelog)
 
-    def mode(self, target, level, msg):
+    def mode(self, target, level, msg, hidelog=False):
         """Send a mode message to the server."""
         msg = "MODE {0} {1} {2}".format(target, level, msg)
-        self._send(msg)
+        self._send(msg, hidelog)
 
-    def ping(self, target):
+    def ping(self, target, hidelog=False):
         """Ping another entity on the server."""
         msg = "PING {0}".format(target)
-        self._send(msg)
+        self._send(msg, hidelog)
 
-    def pong(self, target):
+    def pong(self, target, hidelog=False):
         """Pong another entity on the server."""
         msg = "PONG {0}".format(target)
-        self._send(msg)
+        self._send(msg, hidelog)
 
     def loop(self):
         """Main loop for the IRC connection."""

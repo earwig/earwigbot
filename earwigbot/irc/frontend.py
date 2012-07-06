@@ -70,7 +70,7 @@ class Frontend(IRCConnection):
                 pass
             else:
                 msg = "IDENTIFY {0} {1}".format(username, password)
-                self.say("NickServ", msg)
+                self.say("NickServ", msg, hidelog=True)
 
             # Join all of our startup channels:
             for chan in self.bot.config.irc["frontend"]["channels"]:

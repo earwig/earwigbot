@@ -222,7 +222,10 @@ class Site(object):
         self._last_query_time = time()
 
         url, data = self._build_api_query(params, ignore_maxlag)
-        self._logger.debug("{0} -> {1}".format(url, data))
+        if "lgpassword" in params:
+            self._logger.debug("{0} -> <hidden>".format(url))
+        else:
+            self._logger.debug("{0} -> {1}".format(url, data))
 
         try:
             response = self._opener.open(url, data)

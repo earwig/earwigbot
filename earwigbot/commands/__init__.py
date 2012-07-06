@@ -63,14 +63,15 @@ class Command(object):
         self.logger = bot.commands.logger.getChild(self.name)
 
         # Convenience functions:
-        self.say = lambda target, msg: self.bot.frontend.say(target, msg)
-        self.reply = lambda data, msg: self.bot.frontend.reply(data, msg)
-        self.action = lambda target, msg: self.bot.frontend.action(target, msg)
-        self.notice = lambda target, msg: self.bot.frontend.notice(target, msg)
-        self.join = lambda chan: self.bot.frontend.join(chan)
-        self.part = lambda chan, msg=None: self.bot.frontend.part(chan, msg)
-        self.mode = lambda t, level, msg: self.bot.frontend.mode(t, level, msg)
-        self.pong = lambda target: self.bot.frontend.pong(target)
+        self.say = lambda target, msg, hidelog=False: self.bot.frontend.say(target, msg, hidelog)
+        self.reply = lambda data, msg, hidelog=False: self.bot.frontend.reply(data, msg, hidelog)
+        self.action = lambda target, msg, hidelog=False: self.bot.frontend.action(target, msg, hidelog)
+        self.notice = lambda target, msg, hidelog=False: self.bot.frontend.notice(target, msg, hidelog)
+        self.join = lambda chan, hidelog=False: self.bot.frontend.join(chan, hidelog)
+        self.part = lambda chan, msg=None, hidelog=False: self.bot.frontend.part(chan, msg, hidelog)
+        self.mode = lambda t, level, msg, hidelog=False: self.bot.frontend.mode(t, level, msg, hidelog)
+        self.ping = lambda target, hidelog=False: self.bot.frontend.ping(target, hidelog)
+        self.pong = lambda target, hidelog=False: self.bot.frontend.pong(target, hidelog)
 
         self.setup()
 

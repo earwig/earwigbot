@@ -88,7 +88,10 @@ class Threads(Command):
                                                start_time))
 
         if daemon_threads:
-            msg = "\x02{0}\x0F threads active: {1}, and \x02{2}\x0F command/task threads: {3}."
+            if len(daemon_threads) > 1:
+                msg = "\x02{0}\x0F threads active: {1}, and \x02{2}\x0F command/task threads: {3}."
+            else:
+                msg = "\x02{0}\x0F threads active: {1}, and \x02{2}\x0F command/task thread: {3}."
             msg = msg.format(len(threads), ', '.join(normal_threads),
                              len(daemon_threads), ', '.join(daemon_threads))
         else:
