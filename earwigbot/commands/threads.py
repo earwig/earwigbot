@@ -25,8 +25,6 @@ import re
 
 from earwigbot.commands import Command
 
-__all__ = ["Threads"]
-
 class Threads(Command):
     """Manage wiki tasks from IRC, and check on thread status."""
     name = "threads"

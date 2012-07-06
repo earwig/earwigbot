@@ -22,8 +22,6 @@
 
 from earwigbot.commands import Command
 
-__all__ = ["Quit"]
-
 class Quit(Command):
     """Quit, restart, or reload components from the bot. Only the owners can
     run this command."""

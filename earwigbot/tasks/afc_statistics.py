@@ -32,8 +32,6 @@ from earwigbot import exceptions
 from earwigbot import wiki
 from earwigbot.tasks import Task
 
-__all__ = ["AFCStatistics"]
-
 class AFCStatistics(Task):
     """A task to generate statistics for WikiProject Articles for Creation.
 

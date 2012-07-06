@@ -26,8 +26,6 @@ import oursql
 
 from earwigbot.commands import Command
 
-__all__ = ["Replag"]
-
 class Replag(Command):
     """Return the replag for a specific database on the Toolserver."""
     name = "replag"

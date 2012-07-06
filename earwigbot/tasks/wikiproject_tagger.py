@@ -22,8 +22,6 @@
 
 from earwigbot.tasks import Task
 
-__all__ = ["WikiProjectTagger"]
-
 class WikiProjectTagger(Task):
     """A task to tag talk pages with WikiProject Banners."""
     name = "wikiproject_tagger"

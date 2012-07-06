@@ -22,8 +22,6 @@
 
 from earwigbot.commands import Command
 
-__all__ = ["Notes"]
-
 class Notes(Command):
     """A mini IRC-based wiki for storing notes, tips, and reminders."""
     name = "notes"

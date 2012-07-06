@@ -28,8 +28,6 @@ import oursql
 
 from earwigbot.tasks import Task
 
-__all__ = ["AFCCopyvios"]
-
 class AFCCopyvios(Task):
     """A task to check newly-edited [[WP:AFC]] submissions for copyright
     violations."""

@@ -22,8 +22,6 @@
 
 from earwigbot.commands import Command
 
-__all__ = ["ChanOps"]
-
 class ChanOps(Command):
     """Voice, devoice, op, or deop users in the channel, or join or part from
     other channels."""

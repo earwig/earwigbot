@@ -24,8 +24,6 @@ import random
 
 from earwigbot.commands import Command
 
-__all__ = ["Test"]
-
 class Test(Command):
     """Test the bot!"""
     name = "test"

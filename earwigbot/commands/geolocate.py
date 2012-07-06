@@ -25,8 +25,6 @@ import urllib2
 
 from earwigbot.commands import Command
 
-__all__ = ["Geolocate"]
-
 class Geolocate(Command):
     """Geolocate an IP address (via http://ipinfodb.com/)."""
     name = "geolocate"

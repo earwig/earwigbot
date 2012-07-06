@@ -22,8 +22,6 @@
 
 from earwigbot.tasks import Task
 
-__all__ = ["ImageDisplayResize"]
-
 class ImageDisplayResize(Task):
     """A task to resize upscaled portraits in infoboxes."""
     name = "image_display_resize"

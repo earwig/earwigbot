@@ -24,8 +24,6 @@ import re
 
 from earwigbot.commands import Command
 
-__all__ = ["AFCStatus"]
-
 class AFCStatus(Command):
     """Get the number of pending AfC submissions, open redirect requests, and
     open file upload requests."""

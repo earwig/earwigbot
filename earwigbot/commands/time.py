@@ -31,8 +31,6 @@ except ImportError:
 
 from earwigbot.commands import Command
 
-__all__ = ["Time"]
-
 class Time(Command):
     """Report the current time in any timezone (UTC default), or in beats."""
     name = "time"

@@ -22,8 +22,6 @@
 
 from earwigbot.tasks import Task
 
-__all__ = ["AFCUndated"]
-
 class AFCUndated(Task):
     """A task to clear [[Category:Undated AfC submissions]]."""
     name = "afc_undated"

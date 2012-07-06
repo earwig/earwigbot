@@ -25,8 +25,6 @@ from urllib import quote_plus
 from earwigbot import exceptions
 from earwigbot.commands import Command
 
-__all__ = ["Editcount"]
-
 class Editcount(Command):
     """Return a user's edit count."""
     name = "editcount"

@@ -22,8 +22,6 @@
 
 from earwigbot.commands import Command
 
-__all__ = ["AFCSubmissions"]
-
 class AFCSubmissions(Command):
     """Link the user directly to some pending AFC submissions."""
     name = "submissions"

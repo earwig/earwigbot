@@ -22,8 +22,6 @@
 
 from earwigbot.commands import Command
 
-__all__ = ["Praise"]
-
 class Praise(Command):
     """Praise people!"""
     name = "praise"

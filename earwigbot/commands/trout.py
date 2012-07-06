@@ -24,8 +24,6 @@ from unicodedata import normalize
 
 from earwigbot.commands import Command
 
-__all__ = ["Trout"]
-
 class Trout(Command):
     """Slap someone with a trout, or related fish."""
     name = "trout"

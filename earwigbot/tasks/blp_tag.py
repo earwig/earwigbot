@@ -22,8 +22,6 @@
 
 from earwigbot.tasks import Task
 
-__all__ = ["BLPTag"]
-
 class BLPTag(Task):
     """A task to add |blp=yes to ``{{WPB}}`` or ``{{WPBS}}`` when it is used
     along with ``{{WP Biography}}``."""

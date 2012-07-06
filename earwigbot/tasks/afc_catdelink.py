@@ -22,8 +22,6 @@
 
 from earwigbot.tasks import Task
 
-__all__ = ["AFCCatDelink"]
-
 class AFCCatDelink(Task):
     """A task to delink mainspace categories in declined [[WP:AFC]]
     submissions."""

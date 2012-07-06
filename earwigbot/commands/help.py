@@ -24,8 +24,6 @@ import re
 
 from earwigbot.commands import Command
 
-__all__ = ["Help"]
-
 class Help(Command):
     """Displays help information."""
     name = "help"

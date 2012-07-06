@@ -34,8 +34,6 @@ import oursql
 from earwigbot import wiki
 from earwigbot.tasks import Task
 
-__all__ = ["AFCHistory"]
-
 class AFCHistory(Task):
     """A task to generate charts about AfC submissions over time.
 

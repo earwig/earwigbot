@@ -26,8 +26,6 @@ from Crypto.Cipher import Blowfish
 
 from earwigbot.commands import Command
 
-__all__ = ["Crypt"]
-
 class Crypt(Command):
     """Provides hash functions with !hash (!hash list for supported algorithms)
     and Blowfish encryption with !encrypt and !decrypt."""

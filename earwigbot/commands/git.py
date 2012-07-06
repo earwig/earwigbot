@@ -26,8 +26,6 @@ import git
 
 from earwigbot.commands import Command
 
-__all__ = ["Git"]
-
 class Git(Command):
     """Commands to interface with the bot's git repository; use '!git' for a
     sub-command list."""

@@ -22,8 +22,6 @@
 
 from earwigbot.commands import Command
 
-__all__ = ["Langcode"]
-
 class Langcode(Command):
     """Convert a language code into its name and a list of WMF sites in that
     language."""

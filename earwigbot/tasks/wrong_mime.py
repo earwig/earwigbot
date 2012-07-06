@@ -22,8 +22,6 @@
 
 from earwigbot.tasks import Task
 
-__all__ = ["WrongMIME"]
-
 class WrongMIME(Task):
     """A task to tag files whose extensions do not agree with their MIME
     type."""
