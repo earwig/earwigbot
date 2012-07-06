@@ -37,6 +37,7 @@ setup(
                         "mwparserfromhell >= 0.1",  # Wikicode parsing
                         "oursql >= 0.9.3",  # Talking with MediaWiki databases
                         "oauth2 >= 1.5.211",  # Talking with Yahoo BOSS Search
+                        "py-bcrypt >= 0.2",  # Password hashing in config
                         "pycrypto >= 2.5",  # Storing bot passwords and keys
                         "pytz >= 2012c",  # Timezone handling
                         ],

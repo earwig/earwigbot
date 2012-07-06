@@ -27,6 +27,7 @@ import logging.handlers
 from os import mkdir, path
 
 from Crypto.Cipher import Blowfish
+import bcrypt
 import yaml
 
 from earwigbot.exceptions import NoConfigError
@@ -263,6 +264,8 @@ class BotConfig(object):
             if not self._decryption_cipher:
                 key = getpass("Enter key to decrypt bot passwords: ")
                 self._decryption_cipher = Blowfish.new(sha256(key).digest())
+            signature = self.metadata["signature"]
+            assert bcrypt.hashpw(key, signature) == signature
             for node, nodes in self._decryptable_nodes:
                 self._decrypt(node, nodes)
 
