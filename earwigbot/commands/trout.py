@@ -44,5 +44,5 @@ class Trout(Command):
         if normal in self.exceptions:
             self.reply(data, self.exceptions[normal])
         else:
-            msg = "slaps {0} around a bit with a large {1}."
+            msg = "slaps \x02{0}\x0F around a bit with a large {1}."
             self.action(data.chan, msg.format(target, animal))
