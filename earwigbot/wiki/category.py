@@ -126,7 +126,7 @@ class Category(Page):
             self.site.SERVICE_API: self._get_size_via_api,
             self.site.SERVICE_SQL: self._get_size_via_sql
         }
-        return self.site.delegate(services, (self, member_type,))
+        return self.site.delegate(services, (member_type))
 
     @property
     def size(self):
@@ -202,4 +202,4 @@ class Category(Page):
         }
         if follow_redirects is None:
             follow_redirects = self._follow_redirects
-        return self.site.delegate(services, (self, follow_redirects,))
+        return self.site.delegate(services, (limit, follow_redirects))
