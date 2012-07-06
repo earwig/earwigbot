@@ -108,6 +108,9 @@ and the following methods:
   the given title (sans namespace)
 - :py:meth:`get_user(username) <earwigbot.wiki.site.Site.get_user>`: returns a
   :py:class:`~earwigbot.wiki.user.User` object for the given username
+- :py:meth:`delegate(services, ...) <earwigbot.wiki.site.Site.delegate>`:
+  delegates a task to either the API or SQL depending on various conditions,
+  such as server lag
 
 Pages and categories
 ~~~~~~~~~~~~~~~~~~~~
@@ -166,9 +169,20 @@ Additionally, :py:class:`~earwigbot.wiki.category.Category` objects (created
 with :py:meth:`site.get_category(name) <earwigbot.wiki.site.Site.get_category>`
 or :py:meth:`site.get_page(title) <earwigbot.wiki.site.Site.get_page>` where
 ``title`` is in the ``Category:`` namespace) provide the following additional
-method:
+attributes:
 
-- :py:meth:`get_members(use_sql=False, limit=None, ...)
+- :py:attr:`~earwigbot.wiki.category.Category.size`: the total number of
+  members in the category
+- :py:attr:`~earwigbot.wiki.category.Category.pages`: the number of pages in
+  the category
+- :py:attr:`~earwigbot.wiki.category.Category.files`: the number of files in
+  the category
+- :py:attr:`~earwigbot.wiki.category.Category.subcats`: the number of
+  subcategories in the category
+
+And the following additional method:
+
+- :py:meth:`get_members(limit=None, ...)
   <earwigbot.wiki.category.Category.get_members>`: iterates over
   :py:class:`~earwigbot.wiki.page.Page`\ s in the category, until either the
   category is exhausted or (if given) ``limit`` is reached
