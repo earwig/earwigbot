@@ -63,6 +63,15 @@ class SitesDB(object):
         self._cookie_file = path.join(bot.config.root_dir, ".cookies")
         self._cookiejar = None
 
+    def __repr__(self):
+        """Return the canonical string representation of the SitesDB."""
+        res = "SitesDB(config={0!r}, sitesdb={1!r}, cookie_file={2!r})"
+        return res.format(self.config, self._sitesdb, self._cookie_file)
+
+    def __str__(self):
+        """Return a nice string representation of the SitesDB."""
+        return "<SitesDB at {0}>".format(self._sitesdb)
+
     def _get_cookiejar(self):
         """Return a LWPCookieJar object loaded from our .cookies file.
 

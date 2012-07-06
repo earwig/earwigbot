@@ -57,6 +57,16 @@ class _ResourceManager(object):
         self._resource_base = base  # e.g. Command or Task
         self._resource_access_lock = RLock()
 
+    def __repr__(self):
+        """Return the canonical string representation of the manager."""
+        res = "{0}(bot={1!r}, name={2!r}, base={3!r})"
+        return res.format(self.__class__.__name__, self.bot,
+                          self._resource_name, self._resource_base)
+
+    def __str__(self):
+        """Return a nice string representation of the manager."""
+        return "<{0} of {1}>".format(self.__class__.__name__, self.bot)
+
     def __iter__(self):
         with self.lock:
             for resource in self._resources.itervalues():

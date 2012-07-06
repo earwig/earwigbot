@@ -56,6 +56,16 @@ class Task(object):
         self.logger = bot.tasks.logger.getChild(self.name)
         self.setup()
 
+    def __repr__(self):
+        """Return the canonical string representation of the Task."""
+        res = "Task(name={0!r}, number={1!r}, bot={2!r})"
+        return res.format(self.name, self.number, self.bot)
+
+    def __str__(self):
+        """Return a nice string representation of the Task."""
+        res = "<Task {0} ({1}) of {2}>"
+        return res.format(self.name, self.number, self.bot)
+
     def setup(self):
         """Hook called immediately after the task is loaded.
 

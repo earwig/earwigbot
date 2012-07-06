@@ -75,6 +75,15 @@ class Command(object):
 
         self.setup()
 
+    def __repr__(self):
+        """Return the canonical string representation of the Command."""
+        res = "Command(name={0!r}, commands={1!r}, hooks={2!r}, bot={3!r})"
+        return res.format(self.name, self.commands, self.hooks, self.bot)
+
+    def __str__(self):
+        """Return a nice string representation of the Command."""
+        return "<Command {0} of {1}>".format(self.name, self.bot)
+
     def setup(self):
         """Hook called immediately after the command is loaded.
 

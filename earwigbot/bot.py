@@ -75,6 +75,14 @@ class Bot(object):
         self.commands.load()
         self.tasks.load()
 
+    def __repr__(self):
+        """Return the canonical string representation of the Bot."""
+        return "Bot(config={0!r})".format(self.config)
+
+    def __str__(self):
+        """Return a nice string representation of the Bot."""
+        return "<Bot at {0}>".format(self.config.root_dir)
+
     def _dispatch_irc_component(self, name, klass):
         """Create a new IRC component, record it internally, and start it."""
         component = klass(self)

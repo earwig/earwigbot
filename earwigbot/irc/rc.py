@@ -37,6 +37,14 @@ class RC(object):
         self.chan = chan
         self.msg = msg
 
+    def __repr__(self):
+        """Return the canonical string representation of the RC."""
+        return "RC(chan={0!r}, msg={1!r})".format(self.chan, self.msg)
+
+    def __str__(self):
+        """Return a nice string representation of the RC."""
+        return "<RC of {0!r} on {1}>".format(self.msg, self.chan)
+
     def parse(self):
         """Parse a recent change event into some variables."""
         # Strip IRC color codes; we don't want or need 'em:

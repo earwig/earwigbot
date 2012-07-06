@@ -39,6 +39,15 @@ class Data(object):
 
         self._parse(msgtype)
 
+    def __repr__(self):
+        """Return the canonical string representation of the Data."""
+        res = "Data(bot={0!r}, my_nick={1!r}, line={2!r})"
+        return res.format(self.bot, self.my_nick, self.line)
+
+    def __str__(self):
+        """Return a nice string representation of the Data."""
+        return "<Data of {0!r}>".format(" ".join(self.line))
+
     def _parse(self, msgtype):
         """Parse a line from IRC into its components as instance attributes."""
         sender = re.findall(":(.*?)!(.*?)@(.*?)\Z", self.line[0])[0]

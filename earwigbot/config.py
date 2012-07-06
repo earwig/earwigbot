@@ -87,6 +87,15 @@ class BotConfig(object):
             (self._irc, ("watcher", "nickservPassword")),
         ]
 
+    def __repr__(self):
+        """Return the canonical string representation of the BotConfig."""
+        res = "BotConfig(root_dir={0!r}, level={1!r})"
+        return res.format(self.root_dir, self.logging_level)
+
+    def __str__(self):
+        """Return a nice string representation of the BotConfig."""
+        return "<BotConfig at {0}>".format(self.root_dir)
+
     def _load(self):
         """Load data from our JSON config file (config.yml) into self._data."""
         filename = self._config_path

@@ -47,6 +47,17 @@ class Frontend(IRCConnection):
                       cf["realname"])
         self._connect()
 
+    def __repr__(self):
+        """Return the canonical string representation of the Frontend."""
+        res = "Frontend(host={0!r}, port={1!r}, nick={2!r}, ident={3!r}, realname={4!r}, bot={5!r})"
+        return res.format(self.host, self.port, self.nick, self.ident,
+                          self.realname, self.bot)
+
+    def __str__(self):
+        """Return a nice string representation of the Frontend."""
+        res = "<Frontend {0}!{1} at {2}:{3}>"
+        return res.format(self.nick, self.ident, self.host, self.port)
+
     def _process_message(self, line):
         """Process a single message from IRC."""
         if line[1] == "JOIN":

@@ -44,6 +44,17 @@ class IRCConnection(object):
         self._last_recv = time()
         self._last_ping = 0
 
+    def __repr__(self):
+        """Return the canonical string representation of the IRCConnection."""
+        res = "IRCConnection(host={0!r}, port={1!r}, nick={2!r}, ident={3!r}, realname={4!r})"
+        return res.format(self.host, self.port, self.nick, self.ident,
+                          self.realname)
+
+    def __str__(self):
+        """Return a nice string representation of the IRCConnection."""
+        res = "<IRCConnection {0}!{1} at {2}:{3}>"
+        return res.format(self.nick, self.ident, self.host, self.port)
+
     def _connect(self):
         """Connect to our IRC server."""
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
