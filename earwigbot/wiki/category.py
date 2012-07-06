@@ -105,7 +105,7 @@ class Category(Page):
     def _get_size_via_api(self, member_type):
         """Return the size of the category using the API."""
         result = self.site.api_query(action="query", prop="categoryinfo",
-                                     cmtitle=self.title)
+                                     titles=self.title)
         info = result["query"]["pages"].values()[0]["categoryinfo"]
         return info[member_type]
 
