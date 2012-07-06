@@ -164,6 +164,9 @@ and the following methods:
   <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_compare>`: checks the page like
   :py:meth:`~earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check`, but
   against a specific URL
+- :py:meth:`check_exclusion(username=None, optouts=None)
+  <earwigbot.wiki.page.Page.check_exclusion>`: checks whether or not we are
+  allowed to edit the page per ``{{bots}}``/``{{nobots}}``
 
 Additionally, :py:class:`~earwigbot.wiki.category.Category` objects (created
 with :py:meth:`site.get_category(name) <earwigbot.wiki.site.Site.get_category>`

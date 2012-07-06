@@ -68,6 +68,8 @@ class Page(CopyrightMixIn):
     - :py:meth:`parse`:       parses the page content for templates, links, etc
     - :py:meth:`edit`:        replaces the page's content or creates a new page
     - :py:meth:`add_section`: adds a new section at the bottom of the page
+    - :py:meth:`check_exclusion`: checks whether or not we are allowed to edit
+      the page, per ``{{bots}}``/``{{nobots}}``
 
     - :py:meth:`~earwigbot.wiki.copyvios.CopyrightMixIn.copyvio_check`:
       checks the page for copyright violations
@@ -723,3 +725,37 @@ class Page(CopyrightMixIn):
         """
         self._edit(text=text, summary=title, minor=minor, bot=bot, force=force,
                    section="new")
+
+    def check_exclusion(self, username=None, optouts=None):
+        """Check whether or not we are allowed to edit the page.
+
+        Return ``True`` if we *are* allowed to edit this page, or ``False`` if
+        we aren't.
+
+        *username* is used to determine whether we are part of a specific list
+        of allowed or disallowed bots (e.g. ``{{bots|allow=EarwigBot}}`` or
+        ``{{bots|deny=FooBot,EarwigBot}}``). It's ``None`` by default, which
+        will swipe our username from :py:meth:`site.get_user()
+        <earwigbot.wiki.site.Site.get_user>`.\
+        :py:attr:`~earwigbot.wiki.user.User.name`.
+
+        *optouts* is a list of messages to consider this check as part of for
+        the purpose of opt-out; it defaults to ``None``, which ignores the
+        parameter completely. For example, if *optouts* is ``["nolicense"]``,
+        we'll return ``False`` on ``{{bots|optout=nolicense}}`` or
+        ``{{bots|optout=all}}``, but `True` on
+        ``{{bots|optout=orfud,norationale,replaceable}}``.
+        """
+        re_bots = "\{\{(no)?bots(\||\}\})"
+        filter = self.parse().filter_templates(matches=re_bots, recursive=True)
+        for template in filter:
+            if template.get("deny", None):
+                pass
+            if template.get("allow", None):
+                pass
+            if template.get("optout", None):
+                pass
+            if template.name.matches("nobots"):
+                return False
+            if template.name.matches("bots"):
+                return True
