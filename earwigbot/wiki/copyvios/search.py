@@ -67,7 +67,7 @@ class YahooBOSSSearchEngine(BaseSearchEngine):
         """
         base_url = "http://yboss.yahooapis.com/ysearch/web"
         query = quote_plus(query.join('"', '"'))
-        params = {"q": query, "style": "raw", "format": "json"}
+        params = {"q": query, "type": "html,text", "format": "json"}
         url = "{0}?{1}".format(base_url, urlencode(params))
 
         consumer = oauth.Consumer(key=self.cred["key"],

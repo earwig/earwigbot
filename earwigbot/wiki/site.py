@@ -92,7 +92,7 @@ class Site(object):
                  namespaces=None, login=(None, None), cookiejar=None,
                  user_agent=None, use_https=False, assert_edit=None,
                  maxlag=None, wait_between_queries=3, logger=None,
-                 search_config=(None, None)):
+                 search_config=None):
         """Constructor for new Site instances.
 
         This probably isn't necessary to call yourself unless you're building a

@@ -87,6 +87,7 @@ class CopyvioMixIn(object):
     """
 
     def __init__(self, site):
+        self._search_config = site._search_config
         self._opener = build_opener()
         self._opener.addheaders = site._opener.addheaders
 
@@ -126,7 +127,8 @@ class CopyvioMixIn(object):
         unknown to us, and UnsupportedSearchEngineError if we are missing a
         required package or module, like oauth2 for "Yahoo! BOSS".
         """
-        engine, credentials = self._site._search_config
+        engine = self._search_config["engine"]
+        credentials = self._search_config["credentials"]
 
         if engine == "Yahoo! BOSS":
             if not oauth:
@@ -177,7 +179,7 @@ class CopyvioMixIn(object):
         best_chains = (empty, MarkovChainIntersection(empty, empty))
         parser = ArticleTextParser(self.get())
         clean = parser.strip()
-        chunks = parser.chunk(max_queries)
+        chunks = parser.chunk(max_queries, self._search_config["nltk_dir"])
         article_chain = MarkovChain(clean)
         last_query = time()
 

@@ -192,6 +192,10 @@ class SitesDB(object):
             user_agent = user_agent.replace("$1", __version__)
             user_agent = user_agent.replace("$2", python_version())
 
+        if search_config:
+            nltk_dir = path.join(self.config.root_dir, ".nltk")
+            search_config["nltk_dir"] = nltk_dir
+
         return Site(name=name, project=project, lang=lang, base_url=base_url,
                     article_path=article_path, script_path=script_path,
                     sql=sql, namespaces=namespaces, login=login,
@@ -360,14 +364,23 @@ class SitesDB(object):
         assert_edit = config.wiki.get("assert")
         maxlag = config.wiki.get("maxlag")
         wait_between_queries = config.wiki.get("waitTime", 5)
+        logger = self._logger.getChild(name)
         search_config = config.wiki.get("search")
+
+        if user_agent:
+            user_agent = user_agent.replace("$1", __version__)
+            user_agent = user_agent.replace("$2", python_version())
+
+        if search_config:
+            nltk_dir = path.join(self.config.root_dir, ".nltk")
+            search_config["nltk_dir"] = nltk_dir
 
         # Create a Site object to log in and load the other attributes:
         site = Site(base_url=base_url, script_path=script_path, sql=sql,
                     login=login, cookiejar=cookiejar, user_agent=user_agent,
                     use_https=use_https, assert_edit=assert_edit,
                     maxlag=maxlag, wait_between_queries=wait_between_queries,
-                    search_config=search_config)
+                    logger=logger, search_config=search_config)
 
         self._add_site_to_sitesdb(site)
         self._sites[site.name] = site

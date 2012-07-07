@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import htmlentitydefs
+from os import path
 
 try:
     from bs4 import BeautifulSoup
@@ -31,6 +31,11 @@ try:
     import mwparserfromhell
 except ImportError:
     mwparserfromhell = None
+
+try:
+    import nltk
+except ImportError:
+    nltk = None
 
 __all__ = ["BaseTextParser", "ArticleTextParser", "HTMLTextParser"]
 
@@ -68,17 +73,30 @@ class ArticleTextParser(BaseTextParser):
         self.clean = u" ".join(wikicode.normalize().ifilter_text())
         return self.clean
 
-    def chunk(self, max_chunks):
+    def chunk(self, max_chunks, nltk_dir):
         """Convert the clean article text into a list of web-searchable chunks.
 
         No greater than *max_chunks* will be returned. Each chunk will only be
-        a couple sentences long at most. The idea here is to return a
-        representative sample of the article text rather than the entire
-        article, so we'll probably pick and choose from its introduction, body,
-        and conclusion, especially if the article is large and *max_chunks* is
-        low, so we don't end up just searching for the first paragraph.
+        a sentence or two long at most. The idea here is to return a
+        representative sample of the article text rather than the whole, so
+        we'll probably pick and choose from its introduction, body, and
+        conclusion, especially if the article is large and *max_chunks* is low,
+        so we don't end up just searching for the first paragraph.
+
+        This is implemented using :py:mod:`nltk` (http://nltk.org/). A base
+        directory (*nltk_dir*) is required to store nltk's punctuation
+        database. This is typically located in the bot's working directory.
         """
-        return [self.text]                                                                          # TODO: NotImplemented
+        datafile = path.join(nltk_dir, "tokenizers", "punkt", "english.pickle")
+        try:
+            tokenizer = nltk.data.load(datafile)
+        except LookupError:
+            nltk.download("punkt", nltk_dir)
+            tokenizer = nltk.data.load(datafile)
+
+        sentences = tokenizer.tokenize(self.clean)
+        #if max_chunks >= len(sentences):
+        #    return sentences
 
 
 class HTMLTextParser(BaseTextParser):
