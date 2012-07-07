@@ -38,6 +38,8 @@ class Trout(Command):
     def process(self, data):
         animal = data.command
         target = " ".join(data.args) or data.nick
+        target = "himself" if target == "yourself"
+
         normal = normalize("NFKD", target.decode("utf8")).lower()
         if normal in self.exceptions:
             self.reply(data, self.exceptions[normal])
