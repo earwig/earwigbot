@@ -40,7 +40,7 @@ class MarkovChain(object):
         words = ([self.START] * padding) + words + ([self.END] * padding)
         for i in range(len(words) - self.degree + 1):
             last = i + self.degree - 1
-            self.chain[words[i:last]][last] += 1
+            self.chain[words[i:last]][words[last]] += 1
 
     def __repr__(self):
         """Return the canonical string representation of the MarkovChain."""
