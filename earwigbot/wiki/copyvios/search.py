@@ -37,6 +37,14 @@ class BaseSearchEngine(object):
         """Store credentials 'cred' for searching later on."""
         self.cred = cred
 
+    def __repr__(self):
+        """Return the canonical string representation of the search engine."""
+        return "{0}()".format(self.__class__.__name__)
+
+    def __str__(self):
+        """Return a nice string representation of the search engine."""
+        return "<{0}>".format(self.__class__.__name__)
+
     def search(self, query):
         """Use this engine to search for 'query'.
 

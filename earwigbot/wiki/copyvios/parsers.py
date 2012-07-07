@@ -23,6 +23,15 @@
 __all__ = ["BaseTextParser", "ArticleTextParser", "HTMLTextParser"]
 
 class BaseTextParser(object):
+    def __repr__(self):
+        """Return the canonical string representation of the text parser."""
+        return "{0}(text={1!r})".format(self.__class__.__name__, self.text)
+
+    def __str__(self):
+        """Return a nice string representation of the text parser."""
+        name = self.__class__.__name__
+        return "<{0} of text with size {1}>".format(name, len(text))
+
     def __init__(self, text):
         self.text = text
 

@@ -42,6 +42,14 @@ class MarkovChain(object):
         except KeyError:
             pass
 
+    def __repr__(self):
+        """Return the canonical string representation of the MarkovChain."""
+        return "MarkovChain(text={0!r})".format(self.text)
+
+    def __str__(self):
+        """Return a nice string representation of the MarkovChain."""
+        return "<MarkovChain of size {0}>".format(self.size())
+
     def size(self):
         count = 0
         for node in self.chain.itervalues():
@@ -53,6 +61,7 @@ class MarkovChain(object):
 class MarkovChainIntersection(MarkovChain):
     def __init__(self, mc1, mc2):
         self.chain = defaultdict(lambda: defaultdict(lambda: 0))
+        self.mc1, self.mc2 = mc1, mc2
         c1 = mc1.chain
         c2 = mc2.chain
 
@@ -63,3 +72,13 @@ class MarkovChainIntersection(MarkovChain):
                     if node in nodes2:
                         count2 = nodes2[node]
                         self.chain[word][node] = min(count1, count2)
+
+    def __repr__(self):
+        """Return the canonical string representation of the intersection."""
+        res = "MarkovChainIntersection(mc1={0!r}, mc2={1!r})"
+        return res.format(self.mc1, self.mc2)
+
+    def __str__(self):
+        """Return a nice string representation of the intersection."""
+        res = "<MarkovChainIntersection of size {0} ({1} ^ {2})>"
+        return res.format(self.size(), self.mc1, self.mc2)

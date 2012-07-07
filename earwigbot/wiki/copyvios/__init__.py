@@ -48,8 +48,15 @@ class CopyvioCheckResult(object):
         self.delta_chain = chains[1]
 
     def __repr__(self):
-        r = "CopyvioCheckResult(violation={0!r}, confidence={1!r}, url={2!r}, queries={3|r})"
-        return r.format(self.violation, self.confidence, self.url, self.queries)
+        """Return the canonical string representation of the result."""
+        res = "CopyvioCheckResult(violation={0!r}, confidence={1!r}, url={2!r}, queries={3|r})"
+        return res.format(self.violation, self.confidence, self.url,
+                          self.queries)
+
+    def __str__(self):
+        """Return a nice string representation of the result."""
+        res = "<CopyvioCheckResult ({0} with {1} conf)>"
+        return res.format(self.violation, self.confidence)
 
 
 class CopyvioMixIn(object):
