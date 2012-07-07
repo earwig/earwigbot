@@ -76,7 +76,6 @@ class Page(CopyrightMixIn):
     - :py:meth:`~earwigbot.wiki.copyvios.CopyrightMixIn.copyvio_compare`:
       checks the page like :py:meth:`copyvio_check`, but against a specific URL
     """
-
     PAGE_UNKNOWN = 0
     PAGE_INVALID = 1
     PAGE_MISSING = 2
@@ -757,8 +756,8 @@ class Page(CopyrightMixIn):
         username = username.lower()
         optouts = [optout.lower() for optout in optouts] if optouts else []
 
-        re_bots = "\{\{\s*(no)?bots\s*(\||\}\})"
-        filter = self.parse().filter_templates(matches=re_bots, recursive=True)
+        r_bots = "\{\{\s*(no)?bots\s*(\||\}\})"
+        filter = self.parse().ifilter_templates(matches=r_bots, recursive=True)
         for template in filter:
             if template.has_param("deny"):
                 denies = parse_param(template, "deny")
