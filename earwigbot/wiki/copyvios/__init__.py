@@ -31,9 +31,9 @@ except ImportError:
     oauth = None
 
 from earwigbot import exceptions
-from earwigbot.wiki.copyvios.markov import *
-from earwigbot.wiki.copyvios.parsers import *
-from earwigbot.wiki.copyvios.search import *
+from earwigbot.wiki.copyvios.markov import MarkovChain, MarkovChainIntersection
+from earwigbot.wiki.copyvios.parsers import ArticleTextParser, HTMLTextParser
+from earwigbot.wiki.copyvios.search import YahooBOSSSearchEngine
 
 __all__ = ["CopyvioCheckResult", "CopyvioMixIn"]
 
@@ -107,14 +107,16 @@ class CopyvioMixIn(object):
         if engine == "Yahoo! BOSS":
             if not oauth:
                 e = "The package 'oauth2' could not be imported"
-                raise UnsupportedSearchEngineError(e)
+                raise exceptions.UnsupportedSearchEngineError(e)
             return YahooBOSSSearchEngine(credentials)
 
-        raise UnknownSearchEngineError(engine)
+        raise exceptions.UnknownSearchEngineError(engine)
 
     def _copyvio_compare_content(self, article, url):
-        """
-        DOCSTRING NEEDED
+        """Return a number comparing an article and a URL.
+
+        The *article* is a Markov chain, whereas the URL is a string that we
+        will try to open ourselves.
         """
         html = self._open_url_ignoring_errors(url)
         if not html:

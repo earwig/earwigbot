@@ -28,7 +28,7 @@ try:
 except ImportError:
     oauth = None
 
-from earwigbot.wiki.exceptions import SearchQueryError
+from earwigbot.exceptions import SearchQueryError
 
 __all__ = ["BaseSearchEngine", "YahooBOSSSearchEngine"]
 
