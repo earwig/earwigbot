@@ -34,6 +34,8 @@ setup(
     entry_points = {"console_scripts": ["earwigbot = earwigbot.util:main"]},
     install_requires = ["GitPython >= 0.3.2.RC1",  # Interfacing with git
                         "PyYAML >= 3.10",  # Config parsing
+                        "beautifulsoup4 >= 4.1.1",  # HTML parsing/scraping
+                        "lxml >= 2.3.4",  # Faster parser for BeautifulSoup
                         "mwparserfromhell >= 0.1",  # Wikicode parsing
                         "oursql >= 0.9.3",  # Talking with MediaWiki databases
                         "oauth2 >= 1.5.211",  # Talking with Yahoo BOSS Search

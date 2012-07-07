@@ -20,6 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import htmlentitydefs
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    BeautifulSoup = None
+
 try:
     import mwparserfromhell
 except ImportError:
@@ -76,6 +83,24 @@ class ArticleTextParser(BaseTextParser):
 
 class HTMLTextParser(BaseTextParser):
     """A parser that can extract the text from an HTML document."""
+    hidden_tags = [
+        "script", "style"
+    ]
 
     def strip(self):
-        return self.text                                                                            # TODO: NotImplemented
+        """Return the actual text contained within an HTML document.
+
+        Implemented using :py:mod:`BeautifulSoup <bs4>`
+        (http://www.crummy.com/software/BeautifulSoup/).
+        """
+        try:
+            soup = BeautifulSoup(self.text, "lxml").body
+        except ValueError:
+            soup = BeautifulSoup(self.text).body
+
+        is_comment = lambda text: isinstance(text, bs4.element.Comment)
+        [comment.extract() for comment in soup.find_all(text=is_comment)]
+        for tag in self.hidden_tags:
+            [element.extract() for element in soup.find_all(tag)]
+
+        return "\n".join(soup.stripped_strings)
