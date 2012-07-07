@@ -26,22 +26,21 @@ from re import sub, UNICODE
 __all__ = ["MarkovChain", "MarkovChainIntersection"]
 
 class MarkovChain(object):
-    """Implements a basic bigram Markov chain of words."""
+    """Implements a basic ngram Markov chain of words."""
     START = -1
     END = -2
+    degree = 3  # 2 for bigrams, 3 for trigrams, etc.
 
     def __init__(self, text):
         self.text = text
         self.chain = defaultdict(lambda: defaultdict(lambda: 0))
         words = sub("[^\w\s-]", "", text.lower(), flags=UNICODE).split()
-        prev = self.START
-        for word in words:
-            self.chain[prev][word] += 1
-            prev = word
-        try:  # This won't work if the source text is completely blank
-            self.chain[word][self.END] += 1
-        except KeyError:
-            pass
+
+        padding = self.degree - 1
+        words = ([self.START] * padding) + words + ([self.END] * padding)
+        for i in range(len(words) - self.degree + 1):
+            last = i + self.degree - 1
+            self.chain[words[i:last]][last] += 1
 
     def __repr__(self):
         """Return the canonical string representation of the MarkovChain."""
