@@ -729,7 +729,7 @@ class Page(CopyrightMixIn):
     def check_exclusion(self, username=None, optouts=None):
         """Check whether or not we are allowed to edit the page.
 
-        Return ``True`` if we *are* allowed to edit this page, or ``False`` if
+        Return ``True`` if we *are* allowed to edit this page, and ``False`` if
         we aren't.
 
         *username* is used to determine whether we are part of a specific list
@@ -746,22 +746,30 @@ class Page(CopyrightMixIn):
         ``{{bots|optout=all}}``, but `True` on
         ``{{bots|optout=orfud,norationale,replaceable}}``.
         """
+        def parse_param(template, param):
+            value = template.get_param(param).value
+            return [item.strip().lower() for item in value.split(",")]
+
         if not username:
             username = self.site.get_user().name
+
+        # Lowercase everything:
+        username = username.lower()
+        optouts = [optout.lower() for optout in optouts] if optouts else []
 
         re_bots = "\{\{\s*(no)?bots\s*(\||\}\})"
         filter = self.parse().filter_templates(matches=re_bots, recursive=True)
         for template in filter:
             if template.has_param("deny"):
-                denies = template.get_param("deny").value.split(",")
+                denies = parse_param(template, "deny")
                 if "all" in denies or username in denies:
                     return False
             if template.has_param("allow"):
-                allows = template.get_param("allow").value.split(",")
+                allows = parse_param(template, "allow")
                 if "all" in allows or username in allows:
                     continue
             if optouts and template.has_param("optout"):
-                tasks = template.get_param("optout").value.split(",")
+                tasks = parse_param(template, "optout")
                 matches = [optout in tasks for optout in optouts]
                 if "all" in tasks or any(matches):
                     return False
