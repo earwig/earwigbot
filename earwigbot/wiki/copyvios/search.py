@@ -33,8 +33,10 @@ from earwigbot.exceptions import SearchQueryError
 __all__ = ["BaseSearchEngine", "YahooBOSSSearchEngine"]
 
 class BaseSearchEngine(object):
+    """Base class for a simple search engine interface."""
+
     def __init__(self, cred):
-        """Store credentials 'cred' for searching later on."""
+        """Store credentials *cred* for searching later on."""
         self.cred = cred
 
     def __repr__(self):
@@ -46,25 +48,30 @@ class BaseSearchEngine(object):
         return "<{0}>".format(self.__class__.__name__)
 
     def search(self, query):
-        """Use this engine to search for 'query'.
+        """Use this engine to search for *query*.
 
-        Not implemented in this base class; overridden in subclasses."""
+        Not implemented in this base class; overridden in subclasses.
+        """
         raise NotImplementedError()
 
 
 class YahooBOSSSearchEngine(BaseSearchEngine):
+    """A search engine interface with Yahoo! BOSS."""
+
     def search(self, query):
-        """Do a Yahoo! BOSS web search for 'query'.
+        """Do a Yahoo! BOSS web search for *query*.
 
         Returns a list of URLs, no more than fifty, ranked by relevance (as
-        determined by Yahoo). Raises SearchQueryError() on errors.
+        determined by Yahoo). Raises
+        :py:exc:`~earwigbot.exceptions.SearchQueryError` on errors.
         """
         base_url = "http://yboss.yahooapis.com/ysearch/web"
         query = quote_plus(query.join('"', '"'))
         params = {"q": query, "style": "raw", "format": "json"}
         url = "{0}?{1}".format(base_url, urlencode(params))
 
-        consumer = oauth.Consumer(key=self.cred["key"], secret=self.cred["secret"])
+        consumer = oauth.Consumer(key=self.cred["key"],
+                                  secret=self.cred["secret"])
         client = oauth.Client(consumer)
         headers, body = client.request(url, "GET")
 

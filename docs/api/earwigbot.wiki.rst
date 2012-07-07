@@ -22,13 +22,6 @@ wiki Package
     :members:
     :undoc-members:
 
-:mod:`copyright` Module
------------------------
-
-.. automodule:: earwigbot.wiki.copyright
-    :members:
-    :undoc-members:
-
 :mod:`page` Module
 ------------------
 
@@ -57,3 +50,10 @@ wiki Package
 .. automodule:: earwigbot.wiki.user
     :members:
     :undoc-members:
+
+Subpackages
+-----------
+
+.. toctree::
+
+    earwigbot.wiki.copyvios

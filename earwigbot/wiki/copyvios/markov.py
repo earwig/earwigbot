@@ -26,6 +26,7 @@ from re import sub, UNICODE
 __all__ = ["MarkovChain", "MarkovChainIntersection"]
 
 class MarkovChain(object):
+    """Implements a basic bigram Markov chain of words."""
     START = -1
     END = -2
 
@@ -51,6 +52,7 @@ class MarkovChain(object):
         return "<MarkovChain of size {0}>".format(self.size())
 
     def size(self):
+        """Return the size of the Markov chain: the total number of nodes."""
         count = 0
         for node in self.chain.itervalues():
             for hits in node.itervalues():
@@ -59,6 +61,8 @@ class MarkovChain(object):
 
 
 class MarkovChainIntersection(MarkovChain):
+    """Implements the intersection of two chains (i.e., their shared nodes)."""
+
     def __init__(self, mc1, mc2):
         self.chain = defaultdict(lambda: defaultdict(lambda: 0))
         self.mc1, self.mc2 = mc1, mc2

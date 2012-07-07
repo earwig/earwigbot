@@ -38,6 +38,22 @@ from earwigbot.wiki.copyvios.search import YahooBOSSSearchEngine
 __all__ = ["CopyvioCheckResult", "CopyvioMixIn"]
 
 class CopyvioCheckResult(object):
+    """
+    **EarwigBot: Wiki Toolset: Copyvio Check Result**
+
+    A class holding information about the results of a copyvio check.
+
+    *Attributes:*
+
+    - :py:attr:`violation`:     ``True`` if this is a violation, else ``False``
+    - :py:attr:`confidence`:    a float between 0 and 1 indicating accuracy
+    - :py:attr:`url`:           the URL of the violated page
+    - :py:attr:`queries`:       the number of queries used to reach a result
+    - :py:attr:`article_chain`: the MarkovChain of the article text
+    - :py:attr:`source_chain`:  the MarkovChain of the violated page text
+    - :py:attr:`delta_chain`:   the MarkovChainIntersection comparing the two
+    """
+
     def __init__(self, violation, confidence, url, queries, article, chains):
         self.violation = violation
         self.confidence = confidence
@@ -61,14 +77,15 @@ class CopyvioCheckResult(object):
 
 class CopyvioMixIn(object):
     """
-    EarwigBot's Wiki Toolset: Copyright Violation Mixin
+    **EarwigBot: Wiki Toolset: Copyright Violation MixIn**
 
-    This is a mixin that provides two public methods, copyvio_check() and
-    copyvio_compare(). The former checks the page for copyright violations
-    using a search engine API, and the latter compares the page against a
-    specified URL. Credentials for the search engine API are stored in the
-    site's config.
+    This is a mixin that provides two public methods, :py:meth:`copyvio_check`
+    and :py:meth:`copyvio_compare`. The former checks the page for copyright
+    violations using a search engine API, and the latter compares the page
+    against a given URL. Credentials for the search engine API are stored in
+    the :py:class:`~earwigbot.wiki.site.Site`'s config.
     """
+
     def __init__(self, site):
         self._opener = build_opener()
         self._opener.addheaders = site._opener.addheaders
@@ -100,10 +117,10 @@ class CopyvioMixIn(object):
     def _select_search_engine(self):
         """Return a function that can be called to do web searches.
 
-        The "function" is a functools.partial object that takes one argument, a
-        query, and returns a list of URLs, ranked by importance. The underlying
-        logic depends on the 'engine' argument; for example, if 'engine' is
-        "Yahoo! BOSS", we'll use self._yahoo_boss_query for querying.
+        The function takes one argument, a search query, and returns a list of
+        URLs, ranked by importance. The underlying logic depends on the
+        *engine* argument within our config; for example, if *engine* is
+        "Yahoo! BOSS", we'll use YahooBOSSSearchEngine for querying.
 
         Raises UnknownSearchEngineError if the 'engine' listed in our config is
         unknown to us, and UnsupportedSearchEngineError if we are missing a
@@ -122,8 +139,8 @@ class CopyvioMixIn(object):
     def _copyvio_compare_content(self, article, url):
         """Return a number comparing an article and a URL.
 
-        The *article* is a Markov chain, whereas the URL is a string that we
-        will try to open ourselves.
+        The *article* is a Markov chain, whereas the *url* is just a string
+        that we'll try to open and read ourselves.
         """
         html = self._open_url_ignoring_errors(url)
         if not html:
@@ -134,30 +151,22 @@ class CopyvioMixIn(object):
         return float(delta.size()) / article.size(), (source, delta)
 
     def copyvio_check(self, min_confidence=0.5, max_queries=-1,
-                      interquery_sleep=1, force=False):
+                      interquery_sleep=1):
         """Check the page for copyright violations.
 
-        Returns a _CopyvioCheckResult object with four useful attributes:
-        "violation", "confidence", "url", and "queries". "confidence" is a
-        number between 0 and 1; if it is less than "min_confidence", we could
-        not find any indication of a violation (so "violation" will be False
-        and "url" may or may not be None), otherwise it indicates the relative
-        faith in our results, "violation" will be True, and "url" will be the
-        place the article is suspected of being copied from. "queries" is the
-        number of queries used to determine the results.
+        Returns a :py:class:`~earwigbot.wiki.copyvios.CopyvioCheckResult`
+        object with information on the results of the check.
 
-        "max_queries" is self-explanatory; we will never make more than this
-        number of queries in a given check. If it's less than 0, we will not
-        limit our number of queries.
+        *max_queries* is self-explanatory; we will never make more than this
+        number of queries in a given check. If it's lower than 0, we will not
+        limit the number of queries.
 
-        "interquery_sleep" is the minimum amount of time we will sleep between
+        *interquery_sleep* is the minimum amount of time we will sleep between
         search engine queries, in seconds.
 
-        "force" is simply passed to page.get() - it has the same behavior there
-        as it does here.
-
-        Raises CopyvioCheckError or subclasses (UnknownSearchEngineError,
-        SearchQueryError, ...) on errors.
+        Raises :py:exc:`~earwigbot.exceptions.CopyvioCheckError` or subclasses
+        (:py:exc:`~earwigbot.exceptions.UnknownSearchEngineError`,
+        :py:exc:`~earwigbot.exceptions.SearchQueryError`, ...) on errors.
         """
         searcher = self._select_search_engine()
         handled_urls = []
@@ -166,9 +175,9 @@ class CopyvioMixIn(object):
         num_queries = 0
         empty = MarkovChain("")
         best_chains = (empty, MarkovChainIntersection(empty, empty))
-        content = self.get(force)
-        clean = ArticleTextParser(content).strip()
-        chunks = ArticleTextParser(clean).chunk(max_queries)
+        parser = ArticleTextParser(self.get())
+        clean = parser.strip()
+        chunks = parser.chunk(max_queries)
         article_chain = MarkovChain(clean)
         last_query = time()
 
@@ -200,13 +209,14 @@ class CopyvioMixIn(object):
         return CopyvioCheckResult(v, best_confidence, best_match, num_queries,
                                   article_chain, best_chains)
 
-    def copyvio_compare(self, url, min_confidence=0.5, force=False):
-        """Check the page like copyvio_check(), but against a specific URL.
+    def copyvio_compare(self, url, min_confidence=0.5):
+        """Check the page like :py:meth:`copyvio_check` against a specific URL.
 
         This is essentially a reduced version of the above - a copyivo
         comparison is made using Markov chains and the result is returned in a
-        _CopyvioCheckResult object - without using a search engine, as the
-        suspected "violated" URL is supplied from the start.
+        :py:class:`~earwigbot.wiki.copyvios.CopyvioCheckResult` object - but
+        without using a search engine, since the suspected "violated" URL is
+        supplied from the start.
 
         Its primary use is to generate a result when the URL is retrieved from
         a cache, like the one used in EarwigBot's Toolserver site. After a
@@ -217,10 +227,11 @@ class CopyvioMixIn(object):
         be stored for data retention reasons, so a fresh comparison is made
         using this function.
 
-        Since no searching is done, neither UnknownSearchEngineError nor
-        SearchQueryError will be raised.
+        Since no searching is done, neither
+        :py:exc:`~earwigbot.exceptions.UnknownSearchEngineError` nor
+        :py:exc:`~earwigbot.exceptions.SearchQueryError` will be raised.
         """
-        content = self.get(force)
+        content = self.get()
         clean = ArticleTextParser(content).strip()
         article_chain = MarkovChain(clean)
         confidence, chains = self._copyvio_compare_content(article_chain, url)

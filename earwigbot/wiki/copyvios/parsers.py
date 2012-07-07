@@ -20,9 +20,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+try:
+    import mwparserfromhell
+except ImportError:
+    mwparserfromhell = None
+
 __all__ = ["BaseTextParser", "ArticleTextParser", "HTMLTextParser"]
 
 class BaseTextParser(object):
+    """Base class for a parser that handles text."""
+
+    def __init__(self, text):
+        self.text = text
+
     def __repr__(self):
         """Return the canonical string representation of the text parser."""
         return "{0}(text={1!r})".format(self.__class__.__name__, self.text)
@@ -32,60 +42,40 @@ class BaseTextParser(object):
         name = self.__class__.__name__
         return "<{0} of text with size {1}>".format(name, len(text))
 
-    def __init__(self, text):
-        self.text = text
-
 
 class ArticleTextParser(BaseTextParser):
+    """A parser that can strip and chunk wikicode article text."""
+
     def strip(self):
         """Clean the page's raw text by removing templates and formatting.
 
-        Returns the page's text with all HTML and wikicode formatting removed,
-        including templates, tables, references, and the Bibliography/
-        References/Sources/See also section(s). It retains punctuation
+        Return the page's text with all HTML and wikicode formatting removed,
+        including templates, tables, and references. It retains punctuation
         (spacing, paragraphs, periods, commas, (semi)-colons, parentheses,
-        quotes) and original capitalization, but not brackets (square and
-        angular), abnormal spacing, nor anything else. HTML entities are
+        quotes), original capitalization, and so forth. HTML entities are
         replaced by their unicode equivalents.
 
-        The actual replacement is handled by a few private methods within this
-        class.
+        The actual stripping is handled by :py:mod:`mwparserfromhell`.
         """
-        text = self._strip_tags(self.text)
-        text = self._strip_templates(text)
-        text = self._strip_sections(text)
-        text = self._strip_wikicode(text)
-        text = self._normalize(text)
-        return text
+        wikicode = mwparserfromhell.parse(self.text)
+        self.clean = u" ".join(wikicode.normalize().ifilter_text())
+        return self.clean
 
     def chunk(self, max_chunks):
-        """Convert the article text into a list of web-searchable chunks.
+        """Convert the clean article text into a list of web-searchable chunks.
 
-        No greater than max_chunks will be returned. Each chunk will only be a
-        couple sentences long at most. The idea here is to return a
+        No greater than *max_chunks* will be returned. Each chunk will only be
+        a couple sentences long at most. The idea here is to return a
         representative sample of the article text rather than the entire
         article, so we'll probably pick and choose from its introduction, body,
-        and conclusion, especially if the article is large and max_chunks are
-        few, so we don't end up just searching for the first paragraph.
+        and conclusion, especially if the article is large and *max_chunks* is
+        low, so we don't end up just searching for the first paragraph.
         """
-        return [self.text]
-
-    def _strip_tags(self, text):
-        return text
-
-    def _strip_templates(self, text):
-        return text
-
-    def _strip_sections(self, text):
-        return text
-
-    def _strip_wikicode(self, text):
-        return text
-
-    def _normalize(self, text):
-        return text
+        return [self.text]                                                                          # TODO: NotImplemented
 
 
 class HTMLTextParser(BaseTextParser):
+    """A parser that can extract the text from an HTML document."""
+
     def strip(self):
-        return self.text
+        return self.text                                                                            # TODO: NotImplemented
