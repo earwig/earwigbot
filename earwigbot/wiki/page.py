@@ -35,7 +35,7 @@ from earwigbot.wiki.copyvios import CopyvioMixIn
 
 __all__ = ["Page"]
 
-class Page(CopyvioMixin):
+class Page(CopyvioMixIn):
     """
     **EarwigBot: Wiki Toolset: Page**
 
