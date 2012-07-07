@@ -746,16 +746,26 @@ class Page(CopyrightMixIn):
         ``{{bots|optout=all}}``, but `True` on
         ``{{bots|optout=orfud,norationale,replaceable}}``.
         """
-        re_bots = "\{\{(no)?bots(\||\}\})"
+        if not username:
+            username = self.site.get_user().name
+
+        re_bots = "\{\{\s*(no)?bots\s*(\||\}\})"
         filter = self.parse().filter_templates(matches=re_bots, recursive=True)
         for template in filter:
-            if template.get("deny", None):
-                pass
-            if template.get("allow", None):
-                pass
-            if template.get("optout", None):
-                pass
-            if template.name.matches("nobots"):
+            if template.has_param("deny"):
+                denies = template.get_param("deny").value.split(",")
+                if "all" in denies or username in denies:
+                    return False
+            if template.has_param("allow"):
+                allows = template.get_param("allow").value.split(",")
+                if "all" in allows or username in allows:
+                    continue
+            if optouts and template.has_param("optout"):
+                tasks = template.get_param("optout").value.split(",")
+                matches = [optout in tasks for optout in optouts]
+                if "all" in tasks or any(matches):
+                    return False
+            if template.name.strip().lower() == "nobots":
                 return False
-            if template.name.matches("bots"):
-                return True
+
+        return True
