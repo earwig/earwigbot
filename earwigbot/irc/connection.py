@@ -126,7 +126,7 @@ class IRCConnection(object):
     def ident(self):
         """Our ident on the server, like ``"earwig"``.
 
-        See `http://en.wikipedia.org/wiki/Ident`_.
+        See http://en.wikipedia.org/wiki/Ident.
         """
         return self._ident
 
