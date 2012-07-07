@@ -1,17 +1,17 @@
 # -*- coding: utf-8  -*-
 #
 # Copyright (C) 2009-2012 by Ben Kurtovic <ben.kurtovic@verizon.net>
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is 
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -20,119 +20,124 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""
-EarwigBot's Wiki Task Manager
+from earwigbot import exceptions
+from earwigbot import wiki
 
-This package provides the wiki bot "tasks" EarwigBot runs. Here in __init__,
-you can find some functions used to load and run these tasks.
-"""
+__all__ = ["Task"]
 
-import logging
-import os
-import sys
-import threading
-import time
-
-from earwigbot.classes import BaseTask
-from earwigbot.config import config
-
-__all__ = ["load", "schedule", "start", "get", "get_all"]
-
-# Base directory when searching for tasks:
-base_dir = os.path.dirname(os.path.abspath(__file__))
-
-# Store loaded tasks as a dict where the key is the task name and the value is
-# an instance of the task class:
-_tasks = {}
-
-# Logger for this module:
-logger = logging.getLogger("earwigbot.commands")
-
-def _load_task(filename):
-    """Try to load a specific task from a module, identified by file name."""
-    global _tasks
-
-    # Strip .py from the end of the filename and join with our package name:
-    name = ".".join(("tasks", filename[:-3]))
-    try:
-         __import__(name)
-    except:
-        logger.exception("Couldn't load file {0}:".format(filename))
-        return
-
-    task = sys.modules[name].Task()
-    task._setup_logger()
-    if not isinstance(task, BaseTask):
-        return
-
-    _tasks[task.name] = task
-    logger.debug("Added task {0}".format(task.name))
-
-def _wrapper(task, **kwargs):
-    """Wrapper for task classes: run the task and catch any errors."""
-    try:
-        task.run(**kwargs)
-    except:
-        error = "Task '{0}' raised an exception and had to stop"
-        logger.exception(error.format(task.name))
-    else:
-        logger.info("Task '{0}' finished without error".format(task.name))
-
-def load():
-    """Load all valid tasks from bot/tasks/, into the _tasks variable."""
-    files = os.listdir(base_dir)
-    files.sort()
-
-    for filename in files:
-        if filename.startswith("_") or not filename.endswith(".py"):
-            continue
-        try:
-            _load_task(filename)
-        except AttributeError:
-            pass  # The file is doesn't contain a task, so just move on
-
-    logger.info("Found {0} tasks: {1}".format(len(_tasks), ', '.join(_tasks.keys())))
-
-def schedule(now=time.gmtime()):
-    """Start all tasks that are supposed to be run at a given time."""
-    # Get list of tasks to run this turn:
-    tasks = config.schedule(now.tm_min, now.tm_hour, now.tm_mday, now.tm_mon,
-                            now.tm_wday)
-
-    for task in tasks:
-        if isinstance(task, list):     # they've specified kwargs
-            start(task[0], **task[1])  # so pass those to start_task
-        else:  # otherwise, just pass task_name
-            start(task)
-
-def start(task_name, **kwargs):
-    """Start a given task in a new thread. Pass args to the task's run()
-    function."""
-    logger.info("Starting task '{0}' in a new thread".format(task_name))
-
-    try:
-        task = _tasks[task_name]
-    except KeyError:
-        error = "Couldn't find task '{0}': bot/tasks/{0}.py does not exist"
-        logger.error(error.format(task_name))
-        return
-
-    task_thread = threading.Thread(target=lambda: _wrapper(task, **kwargs))
-    start_time = time.strftime("%b %d %H:%M:%S")
-    task_thread.name = "{0} ({1})".format(task_name, start_time)
-
-    # Stop bot task threads automagically if the main bot stops:
-    task_thread.daemon = True
-
-    task_thread.start()
-
-def get(task_name):
-    """Return the class instance associated with a certain task name.
-
-    Will raise KeyError if the task is not found.
+class Task(object):
     """
-    return _tasks[task_name]
+    **EarwigBot: Base Bot Task**
 
-def get_all():
-    """Return our dict of all loaded tasks."""
-    return _tasks
+    This package provides built-in wiki bot "tasks" EarwigBot runs. Additional
+    tasks can be installed as plugins in the bot's working directory.
+
+    This class (import with ``from earwigbot.tasks import Task``) can be
+    subclassed to create custom bot tasks.
+
+    To run a task, use :py:meth:`bot.tasks.start(name, **kwargs)
+    <earwigbot.managers.TaskManager.start>`. ``**kwargs`` get passed to the
+    Task's :meth:`run` method.
+    """
+    name = None
+    number = 0
+
+    def __init__(self, bot):
+        """Constructor for new tasks.
+
+        This is called once immediately after the task class is loaded by
+        the task manager (in :py:meth:`tasks.load()
+        <earwigbot.managers._ResourceManager.load>`). Don't override this
+        directly; if you do, remember to place ``super(Task, self).__init()``
+        first. Use :py:meth:`setup` for typical task-init/setup needs.
+        """
+        self.bot = bot
+        self.config = bot.config
+        self.logger = bot.tasks.logger.getChild(self.name)
+        self.setup()
+
+    def __repr__(self):
+        """Return the canonical string representation of the Task."""
+        res = "Task(name={0!r}, number={1!r}, bot={2!r})"
+        return res.format(self.name, self.number, self.bot)
+
+    def __str__(self):
+        """Return a nice string representation of the Task."""
+        res = "<Task {0} ({1}) of {2}>"
+        return res.format(self.name, self.number, self.bot)
+
+    def setup(self):
+        """Hook called immediately after the task is loaded.
+
+        Does nothing by default; feel free to override.
+        """
+        pass
+
+    def run(self, **kwargs):
+        """Main entry point to run a given task.
+
+        This is called directly by :py:meth:`tasks.start()
+        <earwigbot.managers.TaskManager.start>` and is the main way to make a
+        task do stuff. *kwargs* will be any keyword arguments passed to
+        :py:meth:`~earwigbot.managers.TaskManager.start`, which are entirely
+        optional.
+        """
+        pass
+
+    def make_summary(self, comment):
+        """Make an edit summary by filling in variables in a config value.
+
+        :py:attr:`config.wiki["summary"] <earwigbot.config.BotConfig.wiki>` is
+        used, where ``$2`` is replaced by the main summary body, given by the
+        *comment* argument, and ``$1`` is replaced by the task number.
+
+        If the config value is not found, we'll just return *comment* as-is.
+        """
+        try:
+            summary = self.bot.config.wiki["summary"]
+        except KeyError:
+            return comment
+        return summary.replace("$1", str(self.number)).replace("$2", comment)
+
+    def shutoff_enabled(self, site=None):
+        """Return whether on-wiki shutoff is enabled for this task.
+
+        We check a certain page for certain content. This is determined by
+        our config file: :py:attr:`config.wiki["shutoff"]["page"]
+        <earwigbot.config.BotConfig.wiki>` is used as the title, with any
+        embedded ``$1`` replaced by our username and ``$2``  replaced by the
+        task number; and :py:attr:`config.wiki["shutoff"]["disabled"]
+        <earwigbot.config.BotConfig.wiki>` is used as the content.
+
+        If the page has that exact content or the page does not exist, then
+        shutoff is "disabled", meaning the bot is supposed to run normally, and
+        we return  ``False``. If the page's content is something other than
+        what we expect, shutoff is enabled, and we return ``True``.
+
+        If a site is not provided, we'll try to use :py:attr:`self.site <site>`
+        if it's set. Otherwise, we'll use our default site.
+        """
+        if not site:
+            if hasattr(self, "site"):
+                site = getattr(self, "site")
+            else:
+                site = self.bot.wiki.get_site()
+
+        try:
+            cfg = self.config.wiki["shutoff"]
+        except KeyError:
+            return False
+        title = cfg.get("page", "User:$1/Shutoff/Task $2")
+        username = site.get_user().name
+        title = title.replace("$1", username).replace("$2", str(self.number))
+        page = site.get_page(title)
+
+        try:
+            content = page.get()
+        except exceptions.PageNotFoundError:
+            return False
+        if content == cfg.get("disabled", "run"):
+            return False
+
+        self.logger.warn("Emergency task shutoff has been enabled!")
+        return True

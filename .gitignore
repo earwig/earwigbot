@@ -1,19 +1,6 @@
-# Ignore python bytecode:
 *.pyc
-
-# Ignore bot-specific config file:
-config.json
-
-# Ignore logs directory:
-logs/
-
-# Ignore cookies file:
-.cookies
-
-# Ignore OS X's crud:
+*.egg
+*.egg-info
 .DS_Store
-
-# Ignore pydev's nonsense:
-.project
-.pydevproject
-.settings/
+build
+docs/_build

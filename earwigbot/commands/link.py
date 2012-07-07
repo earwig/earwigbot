@@ -1,17 +1,17 @@
 # -*- coding: utf-8  -*-
 #
 # Copyright (C) 2009-2012 by Ben Kurtovic <ben.kurtovic@verizon.net>
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is 
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -23,19 +23,11 @@
 import re
 from urllib import quote
 
-from earwigbot.classes import BaseCommand
+from earwigbot.commands import Command
 
-class Command(BaseCommand):
+class Link(Command):
     """Convert a Wikipedia page name into a URL."""
     name = "link"
-
-    def check(self, data):
-        # if ((data.is_command and data.command == "link") or
-        # (("[[" in data.msg and "]]" in data.msg) or
-        # ("{{" in data.msg and "}}" in data.msg))):
-        if data.is_command and data.command == "link":
-            return True
-        return False
 
     def process(self, data):
         msg = data.msg
@@ -43,15 +35,15 @@ class Command(BaseCommand):
         if re.search("(\[\[(.*?)\]\])|(\{\{(.*?)\}\})", msg):
             links = self.parse_line(msg)
             links = " , ".join(links)
-            self.connection.reply(data, links)
+            self.reply(data, links)
 
         elif data.command == "link":
             if not data.args:
-                self.connection.reply(data, "what do you want me to link to?")
+                self.reply(data, "what do you want me to link to?")
                 return
             pagename = ' '.join(data.args)
             link = self.parse_link(pagename)
-            self.connection.reply(data, link)
+            self.reply(data, link)
 
     def parse_line(self, line):
         results = []

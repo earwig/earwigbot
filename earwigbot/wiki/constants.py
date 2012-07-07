@@ -21,19 +21,23 @@
 # SOFTWARE.
 
 """
-EarwigBot's Wiki Toolset: Constants
+**EarwigBot: Wiki Toolset: Constants**
 
 This module defines some useful constants:
-* USER_AGENT  - our default User Agent when making API queries
-* NS_*        - default namespace IDs for easy lookup
 
-Import with `from earwigbot.wiki import constants` or `from earwigbot.wiki.constants import *`.
+- :py:const:`USER_AGENT`: our default User Agent when making API queries
+- :py:const:`NS_*`:       default namespace IDs for easy lookup
+
+Import directly with ``from earwigbot.wiki import constants`` or
+``from earwigbot.wiki.constants import *``. These are also available from
+:py:mod:`earwigbot.wiki` directly (e.g. ``earwigbot.wiki.USER_AGENT``).
 """
 
 # Default User Agent when making API queries:
 from earwigbot import __version__ as _v
 from platform import python_version as _p
-USER_AGENT = "EarwigBot/{0} (Python/{1}; https://github.com/earwig/earwigbot)".format(_v, _p())
+USER_AGENT = "EarwigBot/{0} (Python/{1}; https://github.com/earwig/earwigbot)"
+USER_AGENT = USER_AGENT.format(_v, _p())
 del _v, _p
 
 # Default namespace IDs:

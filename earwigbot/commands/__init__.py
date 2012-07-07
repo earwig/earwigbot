@@ -1,17 +1,17 @@
 # -*- coding: utf-8  -*-
 #
 # Copyright (C) 2009-2012 by Ben Kurtovic <ben.kurtovic@verizon.net>
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is 
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -20,92 +20,103 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""
-EarwigBot's IRC Command Manager
+__all__ = ["Command"]
 
-This package provides the IRC "commands" used by the bot's front-end component.
-In __init__, you can find some functions used to load and run these commands.
-"""
-
-import logging
-import os
-import sys
-
-from earwigbot.classes import BaseCommand
-from earwigbot.config import config
-
-__all__ = ["load", "get_all", "check"]
-
-# Base directory when searching for commands:
-base_dir = os.path.dirname(os.path.abspath(__file__))
-
-# Store commands in a dict, where the key is the command's name and the value
-# is an instance of the command's class:
-_commands = {}
-
-# Logger for this module:
-logger = logging.getLogger("earwigbot.tasks")
-
-def _load_command(connection, filename):
-    """Try to load a specific command from a module, identified by file name.
-
-    Given a Connection object and a filename, we'll first try to import it,
-    and if that works, make an instance of the 'Command' class inside (assuming
-    it is an instance of BaseCommand), add it to _commands, and report the
-    addition to the user. Any problems along the way will either be ignored or
-    reported.
+class Command(object):
     """
-    global _commands
+    **EarwigBot: Base IRC Command**
 
-    # Strip .py from the end of the filename and join with our package name:
-    name = ".".join(("commands", filename[:-3]))
-    try:
-         __import__(name)
-    except:
-        logger.exception("Couldn't load file {0}".format(filename))
-        return
+    This package provides built-in IRC "commands" used by the bot's front-end
+    component. Additional commands can be installed as plugins in the bot's
+    working directory.
 
-    command = sys.modules[name].Command(connection)
-    if not isinstance(command, BaseCommand):
-        return
+    This class (import with ``from earwigbot.commands import Command``), can be
+    subclassed to create custom IRC commands.
 
-    _commands[command.name] = command
-    logger.debug("Added command {0}".format(command.name))
-
-def load(connection):
-    """Load all valid commands into the _commands global variable.
-
-    `connection` is a Connection object that is given to each command's
-    constructor.
+    This docstring is reported to the user when they type ``"!help
+    <command>"``.
     """
-    files = os.listdir(base_dir)
-    files.sort()
+    # The command's name, as reported to the user when they use !help:
+    name = None
 
-    for filename in files:
-        if filename.startswith("_") or not filename.endswith(".py"):
-            continue
-        try:
-            _load_command(connection, filename)
-        except AttributeError:
-            pass  # The file is doesn't contain a command, so just move on
+    # A list of names that will trigger this command. If left empty, it will
+    # be triggered by the command's name and its name only:
+    commands = []
 
-    msg = "Found {0} commands: {1}"
-    logger.info(msg.format(len(_commands), ", ".join(_commands.keys())))
+    # Hooks are "msg", "msg_private", "msg_public", and "join". "msg" is the
+    # default behavior; if you wish to override that, change the value in your
+    # command subclass:
+    hooks = ["msg"]
 
-def get_all():
-    """Return our dict of all loaded commands."""
-    return _commands
+    def __init__(self, bot):
+        """Constructor for new commands.
 
-def check(hook, data):
-    """Given an event on IRC, check if there's anything we can respond to."""
-    # Parse command arguments into data.command and data.args:
-    data.parse_args()
+        This is called once when the command is loaded (from
+        :py:meth:`commands.load() <earwigbot.managers._ResourceManager.load>`).
+        *bot* is out base :py:class:`~earwigbot.bot.Bot` object. Don't override
+        this directly; if you do, remember to place
+        ``super(Command, self).__init()`` first. Use :py:meth:`setup` for
+        typical command-init/setup needs.
+        """
+        self.bot = bot
+        self.config = bot.config
+        self.logger = bot.commands.logger.getChild(self.name)
 
-    for command in _commands.values():
-        if hook in command.hooks:
-            if command.check(data):
-                try:
-                    command.process(data)
-                except:
-                    logger.exception("Error executing command '{0}'".format(data.command))
-                break
+        # Convenience functions:
+        self.say = lambda target, msg, hidelog=False: self.bot.frontend.say(target, msg, hidelog)
+        self.reply = lambda data, msg, hidelog=False: self.bot.frontend.reply(data, msg, hidelog)
+        self.action = lambda target, msg, hidelog=False: self.bot.frontend.action(target, msg, hidelog)
+        self.notice = lambda target, msg, hidelog=False: self.bot.frontend.notice(target, msg, hidelog)
+        self.join = lambda chan, hidelog=False: self.bot.frontend.join(chan, hidelog)
+        self.part = lambda chan, msg=None, hidelog=False: self.bot.frontend.part(chan, msg, hidelog)
+        self.mode = lambda t, level, msg, hidelog=False: self.bot.frontend.mode(t, level, msg, hidelog)
+        self.ping = lambda target, hidelog=False: self.bot.frontend.ping(target, hidelog)
+        self.pong = lambda target, hidelog=False: self.bot.frontend.pong(target, hidelog)
+
+        self.setup()
+
+    def __repr__(self):
+        """Return the canonical string representation of the Command."""
+        res = "Command(name={0!r}, commands={1!r}, hooks={2!r}, bot={3!r})"
+        return res.format(self.name, self.commands, self.hooks, self.bot)
+
+    def __str__(self):
+        """Return a nice string representation of the Command."""
+        return "<Command {0} of {1}>".format(self.name, self.bot)
+
+    def setup(self):
+        """Hook called immediately after the command is loaded.
+
+        Does nothing by default; feel free to override.
+        """
+        pass
+
+    def check(self, data):
+        """Return whether this command should be called in response to *data*.
+
+        Given a :py:class:`~earwigbot.irc.data.Data` instance, return ``True``
+        if we should respond to this activity, or ``False`` if we should ignore
+        it and move on. Be aware that since this is called for each message
+        sent on IRC, it should be cheap to execute and unlikely to throw
+        exceptions.
+
+        Most commands return ``True`` only if :py:attr:`data.command
+        <earwigbot.irc.data.Data.command>` ``==`` :py:attr:`self.name <name>`,
+        or :py:attr:`data.command <earwigbot.irc.data.Data.command>` is in
+        :py:attr:`self.commands <commands>` if that list is overriden. This is
+        the default behavior; you should only override it if you wish to change
+        that.
+        """
+        if self.commands:
+            return data.is_command and data.command in self.commands
+        return data.is_command and data.command == self.name
+
+    def process(self, data):
+        """Main entry point for doing a command.
+
+        Handle an activity (usually a message) on IRC. At this point, thanks
+        to :py:meth:`check` which is called automatically by the command
+        handler, we know this is something we should respond to. Place your
+        command's body here.
+        """
+        pass

@@ -1,17 +1,17 @@
 # -*- coding: utf-8  -*-
 #
 # Copyright (C) 2009-2012 by Ben Kurtovic <ben.kurtovic@verizon.net>
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is 
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -20,32 +20,29 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import random
+from earwigbot.commands import Command
 
-from earwigbot.classes import BaseCommand
-
-class Command(BaseCommand):
+class Praise(Command):
     """Praise people!"""
     name = "praise"
 
+    def setup(self):
+        try:
+            self.praises = self.config.commands[self.name]["praises"]
+        except KeyError:
+            self.praises = []
+
     def check(self, data):
-        commands = ["praise", "earwig", "leonard", "leonard^bloom", "groove",
-                  "groovedog"]
-        return data.is_command and data.command in commands
+        check = data.command == "praise" or data.command in self.praises
+        return data.is_command and check
 
     def process(self, data):
-        if data.command == "earwig":
-            msg = "\x02Earwig\x0F is the bestest Python programmer ever!"
-        elif data.command in ["leonard", "leonard^bloom"]:
-            msg = "\x02Leonard^Bloom\x0F is the biggest slacker ever!"
-        elif data.command in ["groove", "groovedog"]:
-            msg = "\x02GrooveDog\x0F is the bestest heh evar!"
-        else:
-            if not data.args:
-                msg = "You use this command to praise certain people. Who they are is a secret."
-            else:
-                msg = "You're doing it wrong."
-            self.connection.reply(data, msg)
+        if data.command in self.praises:
+            msg = self.praises[data.command]
+            self.say(data.chan, msg)
             return
-
-        self.connection.say(data.chan, msg)
+        if not data.args:
+            msg = "You use this command to praise certain people. Who they are is a secret."
+        else:
+            msg = "you're doing it wrong."
+        self.reply(data, msg)

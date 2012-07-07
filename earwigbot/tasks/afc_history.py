@@ -1,17 +1,17 @@
 # -*- coding: utf-8  -*-
 #
 # Copyright (C) 2009-2012 by Ben Kurtovic <ben.kurtovic@verizon.net>
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is 
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -32,16 +32,9 @@ from numpy import arange
 import oursql
 
 from earwigbot import wiki
-from earwigbot.classes import BaseTask
-from earwigbot.config import config
+from earwigbot.tasks import Task
 
-# Valid submission statuses:
-STATUS_NONE = 0
-STATUS_PEND = 1
-STATUS_DECLINE = 2
-STATUS_ACCEPT = 3
-
-class Task(BaseTask):
+class AFCHistory(Task):
     """A task to generate charts about AfC submissions over time.
 
     The main function of the task is to work through the "AfC submissions by
@@ -57,8 +50,14 @@ class Task(BaseTask):
     """
     name = "afc_history"
 
-    def __init__(self):
-        cfg = config.tasks.get(self.name, {})
+    # Valid submission statuses:
+    STATUS_NONE = 0
+    STATUS_PEND = 1
+    STATUS_DECLINE = 2
+    STATUS_ACCEPT = 3
+
+    def setup(self):
+        cfg = self.config.tasks.get(self.name, {})
         self.num_days = cfg.get("days", 90)
         self.categories = cfg.get("categories", {})
 
@@ -73,10 +72,10 @@ class Task(BaseTask):
         self.db_access_lock = Lock()
 
     def run(self, **kwargs):
-        self.site = wiki.get_site()
+        self.site = self.bot.wiki.get_site()
         with self.db_access_lock:
             self.conn = oursql.connect(**self.conn_data)
-            
+
             action = kwargs.get("action")
             try:
                 num_days = int(kwargs.get("days", self.num_days))
@@ -90,9 +89,9 @@ class Task(BaseTask):
     def update(self, num_days):
         self.logger.info("Updating past {0} days".format(num_days))
         generator = self.backwards_cat_iterator()
-        for d in xrange(num_days):
+        for i in xrange(num_days):
             category = generator.next()
-            date = category.title().split("/")[-1]
+            date = category.title.split("/")[-1]
             self.update_date(date, category)
             sleep(10)
         self.logger.info("Update complete")
@@ -101,9 +100,9 @@ class Task(BaseTask):
         self.logger.info("Generating chart for past {0} days".format(num_days))
         data = OrderedDict()
         generator = self.backwards_cat_iterator()
-        for d in xrange(num_days):
+        for i in xrange(num_days):
             category = generator.next()
-            date = category.title().split("/")[-1]
+            date = category.title.split("/")[-1]
             data[date] = self.get_date_counts(date)
 
         data = OrderedDict(reversed(data.items()))  # Oldest to most recent
@@ -122,14 +121,14 @@ class Task(BaseTask):
             current -= timedelta(1)  # Subtract one day from date
 
     def update_date(self, date, category):
-        msg = "Updating {0} ([[{1}]])".format(date, category.title())
+        msg = "Updating {0} ([[{1}]])".format(date, category.title)
         self.logger.debug(msg)
 
         q_select = "SELECT page_date, page_status FROM page WHERE page_id = ?"
         q_delete = "DELETE FROM page WHERE page_id = ?"
         q_update = "UPDATE page SET page_date = ?, page_status = ? WHERE page_id = ?"
         q_insert = "INSERT INTO page VALUES (?, ?, ?)"
-        members = category.members(use_sql=True)
+        members = category.get_members()
 
         with self.conn.cursor() as cursor:
             for title, pageid in members:
@@ -137,7 +136,7 @@ class Task(BaseTask):
                 stored = cursor.fetchall()
                 status = self.get_status(title, pageid)
 
-                if status == STATUS_NONE:
+                if status == self.STATUS_NONE:
                     if stored:
                         cursor.execute(q_delete, (pageid,))
                     continue
@@ -152,17 +151,17 @@ class Task(BaseTask):
 
     def get_status(self, title, pageid):
         page = self.site.get_page(title)
-        ns = page.namespace()
+        ns = page.namespace
 
         if ns == wiki.NS_FILE_TALK:  # Ignore accepted FFU requests
-            return STATUS_NONE
+            return self.STATUS_NONE
 
         if ns == wiki.NS_TALK:
             new_page = page.toggle_talk()
             sleep(2)
-            if new_page.is_redirect():
-                return STATUS_NONE  # Ignore accepted AFC/R requests
-            return STATUS_ACCEPT
+            if new_page.is_redirect:
+                return self.STATUS_NONE  # Ignore accepted AFC/R requests
+            return self.STATUS_ACCEPT
 
         cats = self.categories
         sq = self.site.sql_query
@@ -170,16 +169,16 @@ class Task(BaseTask):
         match = lambda cat: list(sq(query, (cat.replace(" ", "_"), pageid)))
 
         if match(cats["pending"]):
-            return STATUS_PEND
+            return self.STATUS_PEND
         elif match(cats["unsubmitted"]):
-            return STATUS_NONE
+            return self.STATUS_NONE
         elif match(cats["declined"]):
-            return STATUS_DECLINE
-        return STATUS_NONE
+            return self.STATUS_DECLINE
+        return self.STATUS_NONE
 
     def get_date_counts(self, date):
         query = "SELECT COUNT(*) FROM page WHERE page_date = ? AND page_status = ?"
-        statuses = [STATUS_PEND, STATUS_DECLINE, STATUS_ACCEPT]
+        statuses = [self.STATUS_PEND, self.STATUS_DECLINE, self.STATUS_ACCEPT]
         counts = {}
         with self.conn.cursor() as cursor:
             for status in statuses:
@@ -193,9 +192,9 @@ class Task(BaseTask):
         plt.xlabel(self.graph.get("xaxis", "Date"))
         plt.ylabel(self.graph.get("yaxis", "Submissions"))
 
-        pends = [d[STATUS_PEND] for d in data.itervalues()]
-        declines = [d[STATUS_DECLINE] for d in data.itervalues()]
-        accepts = [d[STATUS_ACCEPT] for d in data.itervalues()]
+        pends = [d[self.STATUS_PEND] for d in data.itervalues()]
+        declines = [d[self.STATUS_DECLINE] for d in data.itervalues()]
+        accepts = [d[self.STATUS_ACCEPT] for d in data.itervalues()]
         pends_declines = [p + d for p, d in zip(pends, declines)]
         ind = arange(len(data))
         xsize = self.graph.get("xsize", 1200)

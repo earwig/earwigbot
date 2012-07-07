@@ -30,12 +30,12 @@ try:
 except ImportError:
     oauth = None
 
+from earwigbot import exceptions
 from earwigbot.wiki.copyvios.markov import *
 from earwigbot.wiki.copyvios.parsers import *
 from earwigbot.wiki.copyvios.search import *
-from earwigbot.wiki.exceptions import *
 
-__all__ = ["CopyvioCheckResult", "CopyvioMixin"]
+__all__ = ["CopyvioCheckResult", "CopyvioMixIn"]
 
 class CopyvioCheckResult(object):
     def __init__(self, violation, confidence, url, queries, article, chains):
@@ -52,7 +52,7 @@ class CopyvioCheckResult(object):
         return r.format(self.violation, self.confidence, self.url, self.queries)
 
 
-class CopyvioMixin(object):
+class CopyvioMixIn(object):
     """
     EarwigBot's Wiki Toolset: Copyright Violation Mixin
 

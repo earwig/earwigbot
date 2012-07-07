@@ -1,17 +1,17 @@
 # -*- coding: utf-8  -*-
 #
 # Copyright (C) 2009-2012 by Ben Kurtovic <ben.kurtovic@verizon.net>
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is 
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,18 +26,16 @@ from threading import Lock
 
 import oursql
 
-from earwigbot import wiki
-from earwigbot.classes import BaseTask
-from earwigbot.config import config
+from earwigbot.tasks import Task
 
-class Task(BaseTask):
+class AFCCopyvios(Task):
     """A task to check newly-edited [[WP:AFC]] submissions for copyright
     violations."""
     name = "afc_copyvios"
     number = 1
 
-    def __init__(self):
-        cfg = config.tasks.get(self.name, {})
+    def setup(self):
+        cfg = self.config.tasks.get(self.name, {})
         self.template = cfg.get("template", "AfC suspected copyvio")
         self.ignore_list = cfg.get("ignoreList", [])
         self.min_confidence = cfg.get("minConfidence", 0.5)
@@ -63,20 +61,20 @@ class Task(BaseTask):
         if self.shutoff_enabled():
             return
         title = kwargs["page"]
-        page = wiki.get_site().get_page(title)
+        page = self.bot.wiki.get_site().get_page(title)
         with self.db_access_lock:
             self.conn = oursql.connect(**self.conn_data)
             self.process(page)
 
     def process(self, page):
         """Detect copyvios in 'page' and add a note if any are found."""
-        title = page.title()
+        title = page.title
         if title in self.ignore_list:
             msg = "Skipping page in ignore list: [[{0}]]"
             self.logger.info(msg.format(title))
             return
 
-        pageid = page.pageid()
+        pageid = page.pageid
         if self.has_been_processed(pageid):
             msg = "Skipping check on already processed page [[{0}]]"
             self.logger.info(msg.format(title))
@@ -89,9 +87,9 @@ class Task(BaseTask):
 
         if result.violation:
             content = page.get()
-            template = "\{\{{0}|url={1}|confidence={2}\}\}"
+            template = "\{\{{0}|url={1}|confidence={2}\}\}\n"
             template = template.format(self.template, url, confidence)
-            newtext = "\n".join((template, content))
+            newtext = template + content
             if "{url}" in self.summary:
                 page.edit(newtext, self.summary.format(url=url))
             else:
@@ -140,10 +138,10 @@ class Task(BaseTask):
         be) retained for one day; this task does not remove old entries (that
         is handled by the Toolserver component).
 
-        This will only be called if "cache_results" == True in the task's,
+        This will only be called if "cache_results" == True in the task's
         config, which is False by default.
         """
-        pageid = page.pageid()
+        pageid = page.pageid
         hash = sha256(page.get()).hexdigest()
         query1 = "SELECT 1 FROM cache WHERE cache_id = ?"
         query2 = "DELETE FROM cache WHERE cache_id = ?"
