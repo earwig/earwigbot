@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from logging import getLogger, NullHandler
 from time import gmtime, strptime
 
 from earwigbot.exceptions import UserNotFoundError
@@ -60,7 +61,7 @@ class User(object):
       talkpage
     """
 
-    def __init__(self, site, name):
+    def __init__(self, site, name, logger=None):
         """Constructor for new User instances.
 
         Takes two arguments, a Site object (necessary for doing API queries),
@@ -75,6 +76,13 @@ class User(object):
         """
         self._site = site
         self._name = name
+
+        # Set up our internal logger:
+        if logger:
+            self._logger = logger
+        else:  # Just set up a null logger to eat up our messages:
+            self._logger = getLogger("earwigbot.wiki")
+            self._logger.addHandler(NullHandler())
 
     def __repr__(self):
         """Return the canonical string representation of the User."""

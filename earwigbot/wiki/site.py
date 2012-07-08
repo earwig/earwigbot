@@ -789,8 +789,9 @@ class Site(object):
         prefix = title.split(":", 1)[0]
         if prefix != title:  # Avoid a page that is simply "Category"
             if prefix in prefixes:
-                return Category(self, title, follow_redirects, pageid)
-        return Page(self, title, follow_redirects, pageid)
+                return Category(self, title, follow_redirects, pageid,
+                                self._logger)
+        return Page(self, title, follow_redirects, pageid, self._logger)
 
     def get_category(self, catname, follow_redirects=False, pageid=None):
         """Return a :py:class:`Category` object for the given category name.
@@ -802,7 +803,7 @@ class Site(object):
         catname = self._unicodeify(catname)
         prefix = self.namespace_id_to_name(constants.NS_CATEGORY)
         pagename = u':'.join((prefix, catname))
-        return Category(self, pagename, follow_redirects, pageid)
+        return Category(self, pagename, follow_redirects, pageid, self._logger)
 
     def get_user(self, username=None):
         """Return a :py:class:`User` object for the given username.
@@ -815,7 +816,7 @@ class Site(object):
             username = self._unicodeify(username)
         else:
             username = self._get_username()
-        return User(self, username)
+        return User(self, username, self._logger)
 
     def delegate(self, services, args=None, kwargs=None):
         """Delegate a task to either the API or SQL depending on conditions.
