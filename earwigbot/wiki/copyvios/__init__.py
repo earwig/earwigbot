@@ -179,7 +179,7 @@ class CopyvioMixIn(object):
         best_chains = (empty, MarkovChainIntersection(empty, empty))
         parser = ArticleTextParser(self.get())
         clean = parser.strip()
-        chunks = parser.chunk(max_queries, self._search_config["nltk_dir"])
+        chunks = parser.chunk(self._search_config["nltk_dir"], max_queries)
         article_chain = MarkovChain(clean)
         last_query = time()
 

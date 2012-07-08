@@ -560,10 +560,10 @@ class Site(object):
                 return [self.SERVICE_API]
             sqllag = self._sql_info_cache["replag"]
 
-        if sqllag > 180:
+        if sqllag > 300:
             if not self._maxlag:
                 return [self.SERVICE_API, self.SERVICE_SQL]
-            if now - self._api_info_cache["lastcheck"] > 120:
+            if now - self._api_info_cache["lastcheck"] > 300:
                 self._api_info_cache["lastcheck"] = now
                 try:
                     self._api_info_cache["maxlag"] = apilag = self.get_maxlag()
@@ -571,7 +571,7 @@ class Site(object):
                     self._api_info_cache["maxlag"] = apilag = 0
             else:
                 apilag = self._api_info_cache["maxlag"]
-            if sqllag / (180.0 / self._maxlag) < apilag:
+            if apilag > self._maxlag:
                 return [self.SERVICE_SQL, self.SERVICE_API]
             return [self.SERVICE_API, self.SERVICE_SQL]
 

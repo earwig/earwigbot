@@ -30,6 +30,7 @@ class Link(Command):
     name = "link"
 
     def process(self, data):
+        self.site = self.bot.wiki.get_site()
         msg = data.msg
 
         if re.search("(\[\[(.*?)\]\])|(\{\{(.*?)\}\})", msg):
@@ -41,8 +42,8 @@ class Link(Command):
             if not data.args:
                 self.reply(data, "what do you want me to link to?")
                 return
-            pagename = ' '.join(data.args)
-            link = self.parse_link(pagename)
+            pagename = " ".join(data.args)
+            link = self.site.get_page(pagename).url
             self.reply(data, link)
 
     def parse_line(self, line):
@@ -56,8 +57,7 @@ class Link(Command):
         if links:
             # re.findall() returns a list of tuples, but we only want the 2nd
             # item in each tuple:
-            links = [i[1] for i in links]
-            results = map(self.parse_link, links)
+            results = [self.site.get_page(name[1]).url for name in links]
 
         # Find all {{templates}}
         templates = re.findall("(\{\{(.*?)(\||\}\}))", line)
@@ -67,10 +67,6 @@ class Link(Command):
 
         return results
 
-    def parse_link(self, pagename):
-        link = quote(pagename.replace(" ", "_"), safe="/:")
-        return "".join(("http://enwp.org/", link))
-
     def parse_template(self, pagename):
         pagename = "".join(("Template:", pagename))
-        return self.parse_link(pagename)
+        return self.site.get_page(pagename).url

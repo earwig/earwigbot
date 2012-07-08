@@ -70,18 +70,18 @@ class ArticleTextParser(BaseTextParser):
         The actual stripping is handled by :py:mod:`mwparserfromhell`.
         """
         wikicode = mwparserfromhell.parse(self.text)
-        self.clean = u" ".join(wikicode.normalize().ifilter_text())
+        self.clean = wikicode.strip_code(normalize=True)
         return self.clean
 
-    def chunk(self, max_chunks, nltk_dir):
+    def chunk(self, nltk_dir, max_chunks, max_query=256):
         """Convert the clean article text into a list of web-searchable chunks.
 
         No greater than *max_chunks* will be returned. Each chunk will only be
-        a sentence or two long at most. The idea here is to return a
-        representative sample of the article text rather than the whole, so
-        we'll probably pick and choose from its introduction, body, and
-        conclusion, especially if the article is large and *max_chunks* is low,
-        so we don't end up just searching for the first paragraph.
+        a sentence or two long at most (no more than *max_query*). The idea is
+        to return a sample of the article text rather than the whole, so we'll
+        pick and choose from parts of it, especially if the article is large
+        and *max_chunks* is low, so we don't end up just searching for just the
+        first paragraph.
 
         This is implemented using :py:mod:`nltk` (http://nltk.org/). A base
         directory (*nltk_dir*) is required to store nltk's punctuation
@@ -89,14 +89,38 @@ class ArticleTextParser(BaseTextParser):
         """
         datafile = path.join(nltk_dir, "tokenizers", "punkt", "english.pickle")
         try:
-            tokenizer = nltk.data.load(datafile)
+            tokenizer = nltk.data.load("file:" + datafile)
         except LookupError:
             nltk.download("punkt", nltk_dir)
-            tokenizer = nltk.data.load(datafile)
+            tokenizer = nltk.data.load("file:" + datafile)
 
-        sentences = tokenizer.tokenize(self.clean)
-        #if max_chunks >= len(sentences):
-        #    return sentences
+        sentences = []
+        for sentence in tokenizer.tokenize(self.clean):
+            if len(sentence) > max_query:
+                words = sentence.split()
+                while len(" ".join(words)) > max_query:
+                    words.pop()
+                sentence = " ".join(words)
+            sentences.append(sentence)
+
+        if max_chunks >= len(sentences):
+            return sentences
+
+        chunks = []
+        while len(chunks) < max_chunks:
+            if len(chunks) % 5 == 0:
+                chunk = sentences.pop(0)  # Pop from beginning
+            elif len(chunks) % 5 == 1:
+                chunk = sentences.pop()  # Pop from end
+            elif len(chunks) % 5 == 2:
+                chunk = sentences.pop(len(sentences) / 2)  # Pop from Q2
+            elif len(chunks) % 5 == 3:
+                chunk = sentences.pop(len(sentences) / 4)  # Pop from Q1
+            else:
+                chunk = sentences.pop(3 * len(sentences) / 4)  # Pop from Q3
+            chunks.append(chunk)
+
+        return chunks
 
 
 class HTMLTextParser(BaseTextParser):
