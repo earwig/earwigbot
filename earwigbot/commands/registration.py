@@ -42,7 +42,7 @@ class Registration(Command):
         try:
             reg = user.registration
         except exceptions.UserNotFoundError:
-            msg = "the user \x0302{0}\x0301 does not exist."
+            msg = "the user \x0302{0}\x0F does not exist."
             self.reply(data, msg.format(name))
             return
 
@@ -56,7 +56,7 @@ class Registration(Command):
         else:
             gender = "They're"  # Singluar they?
 
-        msg = "\x0302{0}\x0301 registered on {1}. {2} {3} old."
+        msg = "\x0302{0}\x0F registered on {1}. {2} {3} old."
         self.reply(data, msg.format(name, date, gender, age))
 
     def get_diff(self, t1, t2):

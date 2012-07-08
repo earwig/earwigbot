@@ -53,5 +53,5 @@ class Replag(Command):
             replag = int(cursor.fetchall()[0][0])
         conn.close()
 
-        msg = "replag on \x0302{0}\x0301 is \x02{1}\x0F seconds."
+        msg = "replag on \x0302{0}\x0F is \x02{1}\x0F seconds."
         self.reply(data, msg.format(args["db"], replag))

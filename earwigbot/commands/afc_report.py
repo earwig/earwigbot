@@ -66,7 +66,7 @@ class AFCReport(Command):
         if page:
             return self.report(page)
 
-        self.reply(data, "submission \x0302{0}\x0301 not found.".format(title))
+        self.reply(data, "submission \x0302{0}\x0F not found.".format(title))
 
     def get_page(self, title):
         page = self.site.get_page(title, follow_redirects=False)
@@ -81,11 +81,11 @@ class AFCReport(Command):
         user_name = user.name
         user_url = user.get_talkpage().url
 
-        msg1 = "AfC submission report for \x0302{0}\x0301 ({1}):"
-        msg2 = "Status: \x0303{0}\x0301"
-        msg3 = "Submitted by \x0302{0}\x0301 ({1})"
+        msg1 = "AfC submission report for \x0302{0}\x0F ({1}):"
+        msg2 = "Status: \x0303{0}\x0F"
+        msg3 = "Submitted by \x0302{0}\x0F ({1})"
         if status == "accepted":
-            msg3 = "Reviewed by \x0302{0}\x0301 ({1})"
+            msg3 = "Reviewed by \x0302{0}\x0F ({1})"
 
         self.reply(self.data, msg1.format(short, url))
         self.say(self.data.chan, msg2.format(status))

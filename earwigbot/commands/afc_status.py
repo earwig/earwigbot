@@ -54,17 +54,17 @@ class AFCStatus(Command):
             action = data.args[0].lower()
             if action.startswith("sub") or action == "s":
                 subs = self.count_submissions()
-                msg = "there are \x0305{0}\x0301 pending AfC submissions (\x0302WP:AFC\x0301)."
+                msg = "there are \x0305{0}\x0F pending AfC submissions (\x0302WP:AFC\x0F)."
                 self.reply(data, msg.format(subs))
 
             elif action.startswith("redir") or action == "r":
                 redirs = self.count_redirects()
-                msg = "there are \x0305{0}\x0301 open redirect requests (\x0302WP:AFC/R\x0301)."
+                msg = "there are \x0305{0}\x0F open redirect requests (\x0302WP:AFC/R\x0F)."
                 self.reply(data, msg.format(redirs))
 
             elif action.startswith("file") or action == "f":
                 files = self.count_redirects()
-                msg = "there are \x0305{0}\x0301 open file upload requests (\x0302WP:FFU\x0301)."
+                msg = "there are \x0305{0}\x0F open file upload requests (\x0302WP:FFU\x0F)."
                 self.reply(data, msg.format(files))
 
             elif action.startswith("agg") or action == "a":
@@ -75,18 +75,18 @@ class AFCStatus(Command):
                                 self.count_redirects(), self.count_files())
                     agg_num = self.get_aggregate_number(agg_data)
                 except ValueError:
-                    msg = "\x0303{0}\x0301 isn't a number!"
+                    msg = "\x0303{0}\x0F isn't a number!"
                     self.reply(data, msg.format(data.args[1]))
                     return
                 aggregate = self.get_aggregate(agg_num)
-                msg = "aggregate is \x0305{0}\x0301 (AfC {1})."
+                msg = "aggregate is \x0305{0}\x0F (AfC {1})."
                 self.reply(data, msg.format(agg_num, aggregate))
 
             elif action.startswith("nocolor") or action == "n":
                 self.reply(data, self.get_status(color=False))
 
             else:
-                msg = "unknown argument: \x0303{0}\x0301. Valid args are 'subs', 'redirs', 'files', 'agg', 'nocolor'."
+                msg = "unknown argument: \x0303{0}\x0F. Valid args are 'subs', 'redirs', 'files', 'agg', 'nocolor'."
                 self.reply(data, msg.format(data.args[0]))
 
         else:
@@ -100,7 +100,7 @@ class AFCStatus(Command):
         aggregate = self.get_aggregate(agg_num)
 
         if color:
-            msg = "Articles for creation {0} (\x0302AFC\x0301: \x0305{1}\x0301; \x0302AFC/R\x0301: \x0305{2}\x0301; \x0302FFU\x0301: \x0305{3}\x0301)."
+            msg = "Articles for creation {0} (\x0302AFC\x0F: \x0305{1}\x0F; \x0302AFC/R\x0F: \x0305{2}\x0F; \x0302FFU\x0F: \x0305{3}\x0F)."
         else:
             msg = "Articles for creation {0} (AFC: {1}; AFC/R: {2}; FFU: {3})."
         return msg.format(aggregate, subs, redirs, files)
@@ -140,19 +140,19 @@ class AFCStatus(Command):
         FFU (for example) indicates that our work is *not* done and the
         project-wide backlog is most certainly *not* clear."""
         if num == 0:
-            return "is \x02\x0303clear\x0301\x0F"
+            return "is \x02\x0303clear\x0F"
         elif num <= 200:
-            return "is \x0303almost clear\x0301"
+            return "is \x0303almost clear\x0F"
         elif num <= 400:
-            return "is \x0312normal\x0301"
+            return "is \x0312normal\x0F"
         elif num <= 600:
-            return "is \x0307lightly backlogged\x0301"
+            return "is \x0307lightly backlogged\x0F"
         elif num <= 900:
-            return "is \x0304backlogged\x0301"
+            return "is \x0304backlogged\x0F"
         elif num <= 1200:
-            return "is \x02\x0304heavily backlogged\x0301\x0F"
+            return "is \x02\x0304heavily backlogged\x0F"
         else:
-            return "is \x02\x1F\x0304severely backlogged\x0301\x0F"
+            return "is \x02\x1F\x0304severely backlogged\x0F"
 
     def get_aggregate_number(self, (subs, redirs, files)):
         """Returns an 'aggregate number' based on the real number of pending

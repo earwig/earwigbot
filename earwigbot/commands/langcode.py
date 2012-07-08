@@ -46,8 +46,8 @@ class Langcode(Command):
                 if name != localname:
                     name += " ({0})".format(localname)
                 sites = ", ".join([s["url"] for s in site["site"]])
-                msg = "\x0302{0}\x0301 is {1} ({2})".format(code, name, sites)
+                msg = "\x0302{0}\x0F is {1} ({2})".format(code, name, sites)
                 self.reply(data, msg)
                 return
 
-        self.reply(data, "language \x0302{0}\x0301 not found.".format(code))
+        self.reply(data, "language \x0302{0}\x0F not found.".format(code))

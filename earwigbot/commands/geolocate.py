@@ -45,7 +45,7 @@ class Geolocate(Command):
             return
 
         if not self.key:
-            msg = 'I need an API key for http://ipinfodb.com/ stored as \x0303config.commands["{0}"]["apiKey"]\x0301.'
+            msg = 'I need an API key for http://ipinfodb.com/ stored as \x0303config.commands["{0}"]["apiKey"]\x0F.'
             log = 'Need an API key for http://ipinfodb.com/ stored as config.commands["{0}"]["apiKey"]'
             self.reply(data, msg.format(self.name) + ".")
             self.logger.error(log.format(self.name))
@@ -64,7 +64,7 @@ class Geolocate(Command):
             longitude = res["longitude"]
             utcoffset = res["timeZone"]
         except KeyError:
-            self.reply(data, "IP \x0302{0}\x0301 not found.".format(address))
+            self.reply(data, "IP \x0302{0}\x0F not found.".format(address))
             return
 
         msg = "{0}, {1}, {2} ({3}, {4}), UTC {5}"

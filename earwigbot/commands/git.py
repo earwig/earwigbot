@@ -78,12 +78,12 @@ class Git(Command):
         elif command == "status":
             self.do_status()
         else:  # They asked us to do something we don't know
-            msg = "unknown argument: \x0303{0}\x0301.".format(data.args[0])
+            msg = "unknown argument: \x0303{0}\x0F.".format(data.args[0])
             self.reply(data, msg)
 
     def get_repos(self):
         data = self.repos.iteritems()
-        repos = ["\x0302{0}\x0301 ({1})".format(k, v) for k, v in data]
+        repos = ["\x0302{0}\x0F ({1})".format(k, v) for k, v in data]
         return ", ".join(repos)
 
     def get_remote(self):
@@ -94,7 +94,7 @@ class Git(Command):
         try:
             return getattr(self.repo.remotes, remote_name)
         except AttributeError:
-            msg = "unknown remote: \x0302{0}\x0301.".format(remote_name)
+            msg = "unknown remote: \x0302{0}\x0F.".format(remote_name)
             self.reply(self.data, msg)
 
     def get_time_since(self, date):
@@ -119,21 +119,21 @@ class Git(Command):
         }
         subcommands = ""
         for key in sorted(help.keys()):
-            subcommands += "\x0303{0}\x0301 ({1}), ".format(key, help[key])
+            subcommands += "\x0303{0}\x0F ({1}), ".format(key, help[key])
         subcommands = subcommands[:-2]  # Trim last comma and space
-        msg = "sub-commands are: {0}; repos are: {1}. Syntax: !git \x0303subcommand\x0301 \x0302repo\x0301."
+        msg = "sub-commands are: {0}; repos are: {1}. Syntax: !git \x0303subcommand\x0F \x0302repo\x0F."
         self.reply(self.data, msg.format(subcommands, self.get_repos()))
 
     def do_branch(self):
         """Get our current branch."""
         branch = self.repo.active_branch.name
-        msg = "currently on branch \x0302{0}\x0301.".format(branch)
+        msg = "currently on branch \x0302{0}\x0F.".format(branch)
         self.reply(self.data, msg)
 
     def do_branches(self):
         """Get a list of branches."""
         branches = [branch.name for branch in self.repo.branches]
-        msg = "branches: \x0302{0}\x0301.".format(", ".join(branches))
+        msg = "branches: \x0302{0}\x0F.".format(", ".join(branches))
         self.reply(self.data, msg)
 
     def do_checkout(self):
@@ -146,18 +146,18 @@ class Git(Command):
 
         current_branch = self.repo.active_branch.name
         if target == current_branch:
-            msg = "already on \x0302{0}\x0301!".format(target)
+            msg = "already on \x0302{0}\x0F!".format(target)
             self.reply(self.data, msg)
             return
 
         try:
             ref = getattr(self.repo.branches, target)
         except AttributeError:
-            msg = "branch \x0302{0}\x0301 doesn't exist!".format(target)
+            msg = "branch \x0302{0}\x0F doesn't exist!".format(target)
             self.reply(self.data, msg)
         else:
             ref.checkout()
-            ms = "switched from branch \x0302{0}\x0301 to \x0302{1}\x0301."
+            ms = "switched from branch \x0302{0}\x0F to \x0302{1}\x0F."
             msg = ms.format(current_branch, target)
             self.reply(self.data, msg)
             log = "{0} checked out branch {1} of {2}"
@@ -181,11 +181,11 @@ class Git(Command):
         try:
             ref = getattr(self.repo.branches, target)
         except AttributeError:
-            msg = "branch \x0302{0}\x0301 doesn't exist!".format(target)
+            msg = "branch \x0302{0}\x0F doesn't exist!".format(target)
             self.reply(self.data, msg)
         else:
             self.repo.git.branch("-d", ref)
-            msg = "branch \x0302{0}\x0301 has been deleted locally."
+            msg = "branch \x0302{0}\x0F has been deleted locally."
             self.reply(self.data, msg.format(target))
             log = "{0} deleted branch {1} of {2}"
             logmsg = log.format(self.data.nick, target, self.repo.working_dir)
@@ -194,7 +194,7 @@ class Git(Command):
     def do_pull(self):
         """Pull from our remote repository."""
         branch = self.repo.active_branch.name
-        msg = "pulling from remote (currently on \x0302{0}\x0301)..."
+        msg = "pulling from remote (currently on \x0302{0}\x0F)..."
         self.reply(self.data, msg.format(branch))
 
         remote = self.get_remote()
@@ -205,7 +205,7 @@ class Git(Command):
 
         if updated:
             branches = ", ".join([info.ref.remote_head for info in updated])
-            msg = "done; updates to \x0302{0}\x0301 (from {1})."
+            msg = "done; updates to \x0302{0}\x0F (from {1})."
             self.reply(self.data, msg.format(branches, remote.url))
             log = "{0} pulled {1} of {2} (updates to {3})"
             self.logger.info(log.format(self.data.nick, remote.name,
@@ -227,7 +227,7 @@ class Git(Command):
 
         if updated:
             branches = ", ".join([info.ref.remote_head for info in updated])
-            msg = "last local commit was \x02{0}\x0F ago; updates to \x0302{1}\x0301."
+            msg = "last local commit was \x02{0}\x0F ago; updates to \x0302{1}\x0F."
             self.reply(self.data, msg.format(since, branches))
             log = "{0} got status of {1} of {2} (updates to {3})"
             self.logger.info(log.format(self.data.nick, remote.name,
