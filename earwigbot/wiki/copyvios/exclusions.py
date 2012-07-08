@@ -52,6 +52,15 @@ class ExclusionsDB(object):
         self._logger = logger
         self._db_access_lock = Lock()
 
+    def __repr__(self):
+        """Return the canonical string representation of the ExclusionsDB."""
+        res = "ExclusionsDB(sitesdb={0!r}, dbfile={1!r}, logger={2!r})"
+        return res.format(self._sitesdb, self._dbfile, self._logger)
+
+    def __str__(self):
+        """Return a nice string representation of the ExclusionsDB."""
+        return "<ExclusionsDB at {0}>".format(self._dbfile)
+
     def _create(self):
         """Initialize the exclusions database with its necessary tables."""
         script = """
