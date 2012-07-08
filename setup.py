@@ -25,6 +25,25 @@ from setuptools import setup, find_packages
 
 from earwigbot import __version__
 
+# Not all of these dependencies are required, particularly the copyvio-specific
+# ones (bs4, lxml, nltk, and oauth2) or the command-specific ones (GitPython,
+# pytz). The bot should run fine without them, but will raise an exception if
+# you try to detect copyvios or run a command that requries one.
+
+dependencies = [
+    "GitPython >= 0.3.2.RC1",  # Interfacing with git for !git and __version__
+    "PyYAML >= 3.10",  # Parsing config files
+    "beautifulsoup4 >= 4.1.1",  # Parsing/scraping HTML for copyvios
+    "lxml >= 2.3.4",  # Faster parser for BeautifulSoup
+    "mwparserfromhell >= 0.1",  # Parsing wikicode for manipulation
+    "nltk >= 2.0.2",  # Parsing sentences to split article content for copyvios
+    "oursql >= 0.9.3",  # Interfacing with MediaWiki databases
+    "oauth2 >= 1.5.211",  # Interfacing with Yahoo! BOSS Search for copyvios
+    "py-bcrypt >= 0.2",  # Hashing the bot key in the config file
+    "pycrypto >= 2.5",  # Storing bot passwords and keys in the config file
+    "pytz >= 2012c",  # Handling timezones for the !time IRC command
+]
+
 with open("README.rst") as fp:
     long_docs = fp.read()
 
@@ -32,15 +51,7 @@ setup(
     name = "earwigbot",
     packages = find_packages(exclude=("tests",)),
     entry_points = {"console_scripts": ["earwigbot = earwigbot.util:main"]},
-    install_requires = ["GitPython >= 0.3.2.RC1",  # Interfacing with git
-                        "PyYAML >= 3.10",  # Config parsing
-                        "mwparserfromhell >= 0.1",  # Wikicode parsing
-                        "oursql >= 0.9.3",  # Talking with MediaWiki databases
-                        "oauth2 >= 1.5.211",  # Talking with Yahoo BOSS Search
-                        "py-bcrypt >= 0.2",  # Password hashing in config
-                        "pycrypto >= 2.5",  # Storing bot passwords and keys
-                        "pytz >= 2012c",  # Timezone handling
-                        ],
+    install_requires = dependencies,
     test_suite = "tests",
     version = __version__,
     author = "Ben Kurtovic",

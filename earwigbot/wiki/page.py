@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 from hashlib import md5
+from logging import getLogger, NullHandler
 import re
 from time import gmtime, strftime
 from urllib import quote
@@ -31,11 +32,11 @@ except ImportError:
     mwparserfromhell = None
 
 from earwigbot import exceptions
-from earwigbot.wiki.copyright import CopyrightMixIn
+from earwigbot.wiki.copyvios import CopyvioMixIn
 
 __all__ = ["Page"]
 
-class Page(CopyrightMixIn):
+class Page(CopyvioMixIn):
     """
     **EarwigBot: Wiki Toolset: Page**
 
@@ -81,7 +82,8 @@ class Page(CopyrightMixIn):
     PAGE_MISSING = 2
     PAGE_EXISTS = 3
 
-    def __init__(self, site, title, follow_redirects=False, pageid=None):
+    def __init__(self, site, title, follow_redirects=False, pageid=None,
+                 logger=None):
         """Constructor for new Page instances.
 
         Takes four arguments: a Site object, the Page's title (or pagename),
@@ -100,6 +102,14 @@ class Page(CopyrightMixIn):
         self._follow_redirects = self._keep_following = follow_redirects
         self._pageid = pageid
 
+        # Set up our internal logger:
+        if logger:
+            self._logger = logger
+        else:  # Just set up a null logger to eat up our messages:
+            self._logger = getLogger("earwigbot.wiki")
+            self._logger.addHandler(NullHandler())
+
+        # Attributes to be loaded through the API:
         self._exists = self.PAGE_UNKNOWN
         self._is_redirect = None
         self._lastrevid = None

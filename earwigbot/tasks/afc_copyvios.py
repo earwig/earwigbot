@@ -23,6 +23,7 @@
 from hashlib import sha256
 from os.path import expanduser
 from threading import Lock
+from urllib import quote
 
 import oursql
 
@@ -70,35 +71,36 @@ class AFCCopyvios(Task):
         """Detect copyvios in 'page' and add a note if any are found."""
         title = page.title
         if title in self.ignore_list:
-            msg = "Skipping page in ignore list: [[{0}]]"
+            msg = u"Skipping page in ignore list: [[{0}]]"
             self.logger.info(msg.format(title))
             return
 
         pageid = page.pageid
         if self.has_been_processed(pageid):
-            msg = "Skipping check on already processed page [[{0}]]"
+            msg = u"Skipping check on already processed page [[{0}]]"
             self.logger.info(msg.format(title))
             return
 
-        self.logger.info("Checking [[{0}]]".format(title))
+        self.logger.info(u"Checking [[{0}]]".format(title))
         result = page.copyvio_check(self.min_confidence, self.max_queries)
         url = result.url
         confidence = "{0}%".format(round(result.confidence * 100, 2))
 
         if result.violation:
+            safeurl = quote(url.encode("utf8"), safe="/:").decode("utf8")
             content = page.get()
-            template = "\{\{{0}|url={1}|confidence={2}\}\}\n"
-            template = template.format(self.template, url, confidence)
+            template = u"\{\{{0}|url={1}|confidence={2}\}\}\n"
+            template = template.format(self.template, safeurl, confidence)
             newtext = template + content
             if "{url}" in self.summary:
                 page.edit(newtext, self.summary.format(url=url))
             else:
                 page.edit(newtext, self.summary)
-            msg = "Found violation: [[{0}]] -> {1} ({2} confidence)"
-            self.logger.warn(msg.format(title, url, confidence))
+            msg = u"Found violation: [[{0}]] -> {1} ({2} confidence)"
+            self.logger.info(msg.format(title, url, confidence))
         else:
-            msg = "No violations detected (best: {1} at {2} confidence)"
-            self.logger.debug(msg.format(url, confidence))
+            msg = u"No violations detected in [[{0}]] (best: {1} at {2} confidence)"
+            self.logger.info(msg.format(title, url, confidence))
 
         self.log_processed(pageid)
         if self.cache_results:
@@ -110,9 +112,7 @@ class AFCCopyvios(Task):
         with self.conn.cursor() as cursor:
             cursor.execute(query, (pageid,))
             results = cursor.fetchall()
-        if results:
-            return True
-        return False
+            return True if results else False
 
     def log_processed(self, pageid):
         """Adds pageid to our database of processed pages.
@@ -138,8 +138,8 @@ class AFCCopyvios(Task):
         be) retained for one day; this task does not remove old entries (that
         is handled by the Toolserver component).
 
-        This will only be called if "cache_results" == True in the task's
-        config, which is False by default.
+        This will only be called if ``cache_results == True`` in the task's
+        config, which is ``False`` by default.
         """
         pageid = page.pageid
         hash = sha256(page.get()).hexdigest()

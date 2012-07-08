@@ -29,6 +29,7 @@ import sqlite3 as sqlite
 
 from earwigbot import __version__
 from earwigbot.exceptions import SiteNotFoundError
+from earwigbot.wiki.copyvios.exclusions import ExclusionsDB
 from earwigbot.wiki.site import Site
 
 __all__ = ["SitesDB"]
@@ -58,10 +59,15 @@ class SitesDB(object):
         """Set up the manager with an attribute for the base Bot object."""
         self.config = bot.config
         self._logger = bot.logger.getChild("wiki")
+
         self._sites = {}  # Internal site cache
         self._sitesdb = path.join(bot.config.root_dir, "sites.db")
         self._cookie_file = path.join(bot.config.root_dir, ".cookies")
         self._cookiejar = None
+
+        excl_db = path.join(bot.config.root_dir, "exclusions.db")
+        excl_logger = self._logger.getChild("exclusionsdb")
+        self._exclusions_db = ExclusionsDB(self, excl_db, excl_logger)
 
     def __repr__(self):
         """Return the canonical string representation of the SitesDB."""
@@ -191,6 +197,17 @@ class SitesDB(object):
         if user_agent:
             user_agent = user_agent.replace("$1", __version__)
             user_agent = user_agent.replace("$2", python_version())
+
+        if search_config:
+            nltk_dir = path.join(self.config.root_dir, ".nltk")
+            search_config["nltk_dir"] = nltk_dir
+            search_config["exclusions_db"] = self._exclusions_db
+
+        if not sql:
+            sql = config.wiki.get("sql", {})
+            for key, value in sql.iteritems():
+                if "$1" in value:
+                    sql[key] = value.replace("$1", name)
 
         return Site(name=name, project=project, lang=lang, base_url=base_url,
                     article_path=article_path, script_path=script_path,
@@ -332,13 +349,12 @@ class SitesDB(object):
         the script path (meaning the API is located at
         ``"{base_url}{script_path}/api.php"`` ->
         ``"//{lang}.{project}.org/w/api.php"``), so this is the default. If
-        your wiki is different, provide the script_path as an argument. The
-        only other argument to :py:class:`~earwigbot.wiki.site.Site` that we
-        can't get from config files or by querying the wiki itself is SQL
-        connection info, so provide a dict of kwargs as *sql* and Site will
-        pass it to :py:func:`oursql.connect(**sql) <oursql.connect>`, allowing
-        you to make queries with :py:meth:`site.sql_query
-        <earwigbot.wiki.site.Site.sql_query>`.
+        your wiki is different, provide the script_path as an argument. SQL
+        connection settings are guessed automatically using config's template
+        value. If this is wrong or not specified, provide a dict of kwargs as
+        *sql* and Site will pass it to :py:func:`oursql.connect(**sql)
+        <oursql.connect>`, allowing you to make queries with
+        :py:meth:`site.sql_query <earwigbot.wiki.site.Site.sql_query>`.
 
         Returns ``True`` if the site was added successfully or ``False`` if the
         site is already in our sitesdb (this can be done purposefully to update
@@ -359,15 +375,31 @@ class SitesDB(object):
         use_https = config.wiki.get("useHTTPS", False)
         assert_edit = config.wiki.get("assert")
         maxlag = config.wiki.get("maxlag")
-        wait_between_queries = config.wiki.get("waitTime", 5)
+        wait_between_queries = config.wiki.get("waitTime", 3)
+        logger = self._logger.getChild(name)
         search_config = config.wiki.get("search")
+
+        if user_agent:
+            user_agent = user_agent.replace("$1", __version__)
+            user_agent = user_agent.replace("$2", python_version())
+
+        if search_config:
+            nltk_dir = path.join(self.config.root_dir, ".nltk")
+            search_config["nltk_dir"] = nltk_dir
+            search_config["exclusions_db"] = self._exclusions_db
+
+        if not sql:
+            sql = config.wiki.get("sql", {})
+            for key, value in sql.iteritems():
+                if "$1" in value:
+                    sql[key] = value.replace("$1", name)
 
         # Create a Site object to log in and load the other attributes:
         site = Site(base_url=base_url, script_path=script_path, sql=sql,
                     login=login, cookiejar=cookiejar, user_agent=user_agent,
                     use_https=use_https, assert_edit=assert_edit,
                     maxlag=maxlag, wait_between_queries=wait_between_queries,
-                    search_config=search_config)
+                    logger=logger, search_config=search_config)
 
         self._add_site_to_sitesdb(site)
         self._sites[site.name] = site
