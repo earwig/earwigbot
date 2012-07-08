@@ -70,17 +70,17 @@ class AFCCopyvios(Task):
         """Detect copyvios in 'page' and add a note if any are found."""
         title = page.title
         if title in self.ignore_list:
-            msg = "Skipping page in ignore list: [[{0}]]"
+            msg = u"Skipping page in ignore list: [[{0}]]"
             self.logger.info(msg.format(title))
             return
 
         pageid = page.pageid
         if self.has_been_processed(pageid):
-            msg = "Skipping check on already processed page [[{0}]]"
+            msg = u"Skipping check on already processed page [[{0}]]"
             self.logger.info(msg.format(title))
             return
 
-        self.logger.info("Checking [[{0}]]".format(title))
+        self.logger.info(u"Checking [[{0}]]".format(title))
         result = page.copyvio_check(self.min_confidence, self.max_queries)
         url = result.url
         confidence = "{0}%".format(round(result.confidence * 100, 2))
@@ -94,11 +94,11 @@ class AFCCopyvios(Task):
                 page.edit(newtext, self.summary.format(url=url))
             else:
                 page.edit(newtext, self.summary)
-            msg = "Found violation: [[{0}]] -> {1} ({2} confidence)"
-            self.logger.warn(msg.format(title, url, confidence))
+            msg = u"Found violation: [[{0}]] -> {1} ({2} confidence)"
+            self.logger.info(msg.format(title, url, confidence))
         else:
-            msg = "No violations detected (best: {1} at {2} confidence)"
-            self.logger.debug(msg.format(url, confidence))
+            msg = u"No violations detected in [[{0}]] (best: {1} at {2} confidence)"
+            self.logger.info(msg.format(title, url, confidence))
 
         self.log_processed(pageid)
         if self.cache_results:

@@ -34,6 +34,7 @@ __all__ = ["BaseSearchEngine", "YahooBOSSSearchEngine"]
 
 class BaseSearchEngine(object):
     """Base class for a simple search engine interface."""
+    name = "Base"
 
     def __init__(self, cred):
         """Store credentials *cred* for searching later on."""
@@ -57,6 +58,7 @@ class BaseSearchEngine(object):
 
 class YahooBOSSSearchEngine(BaseSearchEngine):
     """A search engine interface with Yahoo! BOSS."""
+    name = "Yahoo! BOSS"
 
     def search(self, query):
         """Do a Yahoo! BOSS web search for *query*.

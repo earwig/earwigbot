@@ -155,7 +155,10 @@ class CopyvioMixIn(object):
 
         while (chunks and best_confidence < min_confidence and
                (max_queries < 0 or num_queries < max_queries)):
-            urls = searcher.search(chunks.pop(0))
+            chunk = chunks.pop(0)
+            log = u"[[{0}]] -> querying {1} for {2!r}"
+            self._logger.debug(log.format(self.title, searcher.name, chunk))
+            urls = searcher.search(chunk)
             urls = [url for url in urls if url not in handled_urls]
             for url in urls:
                 handled_urls.append(url)
@@ -172,12 +175,19 @@ class CopyvioMixIn(object):
                 sleep(interquery_sleep - diff)
             last_query = time()
 
-        if best_confidence >= min_confidence:  # violation?
-            v = True
+        if best_confidence >= min_confidence:
+            is_violation = True
+            log = u"Violation detected for [[{0}]] (confidence: {1}; URL: {2}; using {3} queries)"
+            self._logger.debug(log.format(self.title, best_confidence,
+                                          best_match, num_queries))
         else:
-            v = False
-        return CopyvioCheckResult(v, best_confidence, best_match, num_queries,
-                                  article_chain, best_chains)
+            is_violation = False
+            log = u"No violation for [[{0}]] (confidence: {1}; using {2} queries)"
+            self._logger.debug(log.format(self.title, best_confidence,
+                                          num_queries))
+
+        return CopyvioCheckResult(is_violation, best_confidence, best_match,
+                                  num_queries, article_chain, best_chains)
 
     def copyvio_compare(self, url, min_confidence=0.5):
         """Check the page like :py:meth:`copyvio_check` against a specific URL.
@@ -208,7 +218,12 @@ class CopyvioMixIn(object):
 
         if confidence >= min_confidence:
             is_violation = True
+            log = u"Violation detected for [[{0}]] (confidence: {1}; URL: {2})"
+            self._logger.debug(log.format(self.title, confidence, url))
         else:
             is_violation = False
+            log = u"No violation for [[{0}]] (confidence: {1}; URL: {2})"
+            self._logger.debug(log.format(self.title, confidence, url))
+
         return CopyvioCheckResult(is_violation, confidence, url, 0,
                                   article_chain, chains)

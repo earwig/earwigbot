@@ -138,11 +138,11 @@ class ExclusionsDB(object):
         max_staleness = 60 * 60 * 24 * 30
         time_since_update = int(time() - self._get_last_update())
         if time_since_update > max_staleness:
-            log = "Updating stale database: {0} (last updated {1} seconds ago)"
+            log = u"Updating stale database: {0} (last updated {1} seconds ago)"
             self._logger.info(log.format(sitename, time_since_update))
             self._update(sitename)
         else:
-            log = "Database for {0} is still fresh (last updated {1} seconds ago)"
+            log = u"Database for {0} is still fresh (last updated {1} seconds ago)"
             self._logger.debug(log.format(sitename, time_since_update))
 
     def check(self, sitename, url):
@@ -155,10 +155,10 @@ class ExclusionsDB(object):
         with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
             for row in conn.execute(query, (sitename,)):
                 if normalized.startswith(row[0]):
-                    log = "Exclusion detected in {0} for {1}"
+                    log = u"Exclusion detected in {0} for {1}"
                     self._logger.debug(log.format(sitename, url))
                     return True
 
-        log = "No exclusions in {0} for {1}".format(sitename, url)
+        log = u"No exclusions in {0} for {1}".format(sitename, url)
         self._logger.debug(log)
         return False
