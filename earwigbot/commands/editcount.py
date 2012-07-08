@@ -42,12 +42,12 @@ class Editcount(Command):
         try:
             count = user.editcount
         except exceptions.UserNotFoundError:
-            msg = "the user \x0302{0}\x0301 does not exist."
+            msg = "the user \x0302{0}\x0399 does not exist."
             self.reply(data, msg.format(name))
             return
 
         safe = quote_plus(user.name.encode("utf8"))
         url = "http://toolserver.org/~tparis/pcount/index.php?name={0}&lang={1}&wiki={2}"
         fullurl = url.format(safe, site.lang, site.project)
-        msg = "\x0302{0}\x0301 has {1} edits ({2})."
+        msg = "\x0302{0}\x0399 has {1} edits ({2})."
         self.reply(data, msg.format(name, count, fullurl))
