@@ -48,9 +48,9 @@ wikis, you can usually use code like this::
 
 This works because EarwigBot assumes that the URL for the site is
 ``"//{lang}.{project}.org"``, the API is at ``/w/api.php``, and the SQL
-connection info (if any) are stored as ``config.wiki["sql"]``. This might
-change if you're dealing with non-WMF wikis, where the code might look
-something more like::
+connection info (if any) is stored as ``config.wiki["sql"]``. This might change
+if you're dealing with non-WMF wikis, where the code might look something more
+like::
 
     project, lang = "mywiki", "it"
     try:

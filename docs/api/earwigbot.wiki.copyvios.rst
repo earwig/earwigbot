@@ -8,6 +8,13 @@ copyvios Package
     :members:
     :undoc-members:
 
+:mod:`exclusions` Module
+------------------------
+
+.. automodule:: earwigbot.wiki.copyvios.exclusions
+    :members:
+    :undoc-members:
+
 :mod:`markov` Module
 --------------------
 
@@ -23,6 +30,13 @@ copyvios Package
     :members:
     :undoc-members:
     :show-inheritance:
+
+:mod:`result` Module
+--------------------
+
+.. automodule:: earwigbot.wiki.copyvios.result
+    :members:
+    :undoc-members:
 
 :mod:`search` Module
 --------------------

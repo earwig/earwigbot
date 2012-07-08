@@ -33,47 +33,10 @@ except ImportError:
 from earwigbot import exceptions
 from earwigbot.wiki.copyvios.markov import MarkovChain, MarkovChainIntersection
 from earwigbot.wiki.copyvios.parsers import ArticleTextParser, HTMLTextParser
+from earwigbot.wiki.copyvios.result import CopyvioCheckResult
 from earwigbot.wiki.copyvios.search import YahooBOSSSearchEngine
 
-__all__ = ["CopyvioCheckResult", "CopyvioMixIn"]
-
-class CopyvioCheckResult(object):
-    """
-    **EarwigBot: Wiki Toolset: Copyvio Check Result**
-
-    A class holding information about the results of a copyvio check.
-
-    *Attributes:*
-
-    - :py:attr:`violation`:     ``True`` if this is a violation, else ``False``
-    - :py:attr:`confidence`:    a float between 0 and 1 indicating accuracy
-    - :py:attr:`url`:           the URL of the violated page
-    - :py:attr:`queries`:       the number of queries used to reach a result
-    - :py:attr:`article_chain`: the MarkovChain of the article text
-    - :py:attr:`source_chain`:  the MarkovChain of the violated page text
-    - :py:attr:`delta_chain`:   the MarkovChainIntersection comparing the two
-    """
-
-    def __init__(self, violation, confidence, url, queries, article, chains):
-        self.violation = violation
-        self.confidence = confidence
-        self.url = url
-        self.queries = queries
-        self.article_chain = article
-        self.source_chain = chains[0]
-        self.delta_chain = chains[1]
-
-    def __repr__(self):
-        """Return the canonical string representation of the result."""
-        res = "CopyvioCheckResult(violation={0!r}, confidence={1!r}, url={2!r}, queries={3|r})"
-        return res.format(self.violation, self.confidence, self.url,
-                          self.queries)
-
-    def __str__(self):
-        """Return a nice string representation of the result."""
-        res = "<CopyvioCheckResult ({0} with {1} conf)>"
-        return res.format(self.violation, self.confidence)
-
+__all__ = ["CopyvioMixIn"]
 
 class CopyvioMixIn(object):
     """
@@ -88,6 +51,7 @@ class CopyvioMixIn(object):
 
     def __init__(self, site):
         self._search_config = site._search_config
+        self._exclusions_db = self._search_config["exclusions_db"]
         self._opener = build_opener()
         self._opener.addheaders = site._opener.addheaders
 
@@ -156,8 +120,9 @@ class CopyvioMixIn(object):
                       interquery_sleep=1):
         """Check the page for copyright violations.
 
-        Returns a :py:class:`~earwigbot.wiki.copyvios.CopyvioCheckResult`
-        object with information on the results of the check.
+        Returns a
+        :py:class:`~earwigbot.wiki.copyvios.result.CopyvioCheckResult` object
+        with information on the results of the check.
 
         *max_queries* is self-explanatory; we will never make more than this
         number of queries in a given check. If it's lower than 0, we will not
@@ -171,6 +136,7 @@ class CopyvioMixIn(object):
         :py:exc:`~earwigbot.exceptions.SearchQueryError`, ...) on errors.
         """
         searcher = self._select_search_engine()
+        self._exclusions_db.sync(self.site.name)
         handled_urls = []
         best_confidence = 0
         best_match = None
@@ -193,6 +159,8 @@ class CopyvioMixIn(object):
             urls = [url for url in urls if url not in handled_urls]
             for url in urls:
                 handled_urls.append(url)
+                if self._exclusions_db.check(self.site.name, url):
+                    continue
                 conf, chains = self._copyvio_compare_content(article_chain, url)
                 if conf > best_confidence:
                     best_confidence = conf
@@ -216,9 +184,9 @@ class CopyvioMixIn(object):
 
         This is essentially a reduced version of the above - a copyivo
         comparison is made using Markov chains and the result is returned in a
-        :py:class:`~earwigbot.wiki.copyvios.CopyvioCheckResult` object - but
-        without using a search engine, since the suspected "violated" URL is
-        supplied from the start.
+        :py:class:`~earwigbot.wiki.copyvios.result.CopyvioCheckResult` object -
+        but without using a search engine, since the suspected "violated" URL
+        is supplied from the start.
 
         Its primary use is to generate a result when the URL is retrieved from
         a cache, like the one used in EarwigBot's Toolserver site. After a

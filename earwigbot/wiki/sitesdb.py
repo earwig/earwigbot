@@ -29,6 +29,7 @@ import sqlite3 as sqlite
 
 from earwigbot import __version__
 from earwigbot.exceptions import SiteNotFoundError
+from earwigbot.wiki.copyvios.exclusions import ExclusionsDB
 from earwigbot.wiki.site import Site
 
 __all__ = ["SitesDB"]
@@ -58,10 +59,15 @@ class SitesDB(object):
         """Set up the manager with an attribute for the base Bot object."""
         self.config = bot.config
         self._logger = bot.logger.getChild("wiki")
+
         self._sites = {}  # Internal site cache
         self._sitesdb = path.join(bot.config.root_dir, "sites.db")
         self._cookie_file = path.join(bot.config.root_dir, ".cookies")
         self._cookiejar = None
+
+        excl_db = path.join(bot.config.root_dir, "exclusions.db")
+        excl_logger = self._logger.getChild("exclusionsdb")
+        self._exclusions_db = ExclusionsDB(self, excl_db, excl_logger)
 
     def __repr__(self):
         """Return the canonical string representation of the SitesDB."""
@@ -195,6 +201,7 @@ class SitesDB(object):
         if search_config:
             nltk_dir = path.join(self.config.root_dir, ".nltk")
             search_config["nltk_dir"] = nltk_dir
+            search_config["exclusions_db"] = self._exclusions_db
 
         if not sql:
             sql = config.wiki.get("sql", {})
@@ -379,6 +386,7 @@ class SitesDB(object):
         if search_config:
             nltk_dir = path.join(self.config.root_dir, ".nltk")
             search_config["nltk_dir"] = nltk_dir
+            search_config["exclusions_db"] = self._exclusions_db
 
         if not sql:
             sql = config.wiki.get("sql", {})
