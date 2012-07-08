@@ -47,7 +47,8 @@ wikis, you can usually use code like this::
         site = bot.wiki.add_site(project=project, lang=lang)
 
 This works because EarwigBot assumes that the URL for the site is
-``"//{lang}.{project}.org"`` and the API is at ``/w/api.php``; this might
+``"//{lang}.{project}.org"``, the API is at ``/w/api.php``, and the SQL
+connection info (if any) are stored as ``config.wiki["sql"]``. This might
 change if you're dealing with non-WMF wikis, where the code might look
 something more like::
 

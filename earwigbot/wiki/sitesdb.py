@@ -196,6 +196,12 @@ class SitesDB(object):
             nltk_dir = path.join(self.config.root_dir, ".nltk")
             search_config["nltk_dir"] = nltk_dir
 
+        if not sql:
+            sql = config.wiki.get("sql", {})
+            for key, value in sql.iteritems():
+                if "$1" in value:
+                    sql[key] = value.replace("$1", name)
+
         return Site(name=name, project=project, lang=lang, base_url=base_url,
                     article_path=article_path, script_path=script_path,
                     sql=sql, namespaces=namespaces, login=login,
@@ -336,13 +342,12 @@ class SitesDB(object):
         the script path (meaning the API is located at
         ``"{base_url}{script_path}/api.php"`` ->
         ``"//{lang}.{project}.org/w/api.php"``), so this is the default. If
-        your wiki is different, provide the script_path as an argument. The
-        only other argument to :py:class:`~earwigbot.wiki.site.Site` that we
-        can't get from config files or by querying the wiki itself is SQL
-        connection info, so provide a dict of kwargs as *sql* and Site will
-        pass it to :py:func:`oursql.connect(**sql) <oursql.connect>`, allowing
-        you to make queries with :py:meth:`site.sql_query
-        <earwigbot.wiki.site.Site.sql_query>`.
+        your wiki is different, provide the script_path as an argument. SQL
+        connection settings are guessed automatically using config's template
+        value. If this is wrong or not specified, provide a dict of kwargs as
+        *sql* and Site will pass it to :py:func:`oursql.connect(**sql)
+        <oursql.connect>`, allowing you to make queries with
+        :py:meth:`site.sql_query <earwigbot.wiki.site.Site.sql_query>`.
 
         Returns ``True`` if the site was added successfully or ``False`` if the
         site is already in our sitesdb (this can be done purposefully to update
@@ -374,6 +379,12 @@ class SitesDB(object):
         if search_config:
             nltk_dir = path.join(self.config.root_dir, ".nltk")
             search_config["nltk_dir"] = nltk_dir
+
+        if not sql:
+            sql = config.wiki.get("sql", {})
+            for key, value in sql.iteritems():
+                if "$1" in value:
+                    sql[key] = value.replace("$1", name)
 
         # Create a Site object to log in and load the other attributes:
         site = Site(base_url=base_url, script_path=script_path, sql=sql,
