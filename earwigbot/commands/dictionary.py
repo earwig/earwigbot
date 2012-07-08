@@ -30,18 +30,18 @@ class Dictionary(Command):
 
     def process(self, data):
         if not data.args:
-        	self.reply(data, "what do you want me to define?")
+            self.reply(data, "what do you want me to define?")
             return
 
         term = " ".join(data.args)
         lang = self.bot.wiki.get_site().lang
         try:
-            definition = self.define(term, lang)
+            defined = self.define(term, lang)
         except exceptions.APIError:
             msg = "cannot find a {0}-language Wiktionary."
             self.reply(data, msg.format(lang))
         else:
-            self.reply(data, "{0}: {1}".format(term, definition))
+            self.reply(data, "{0}: {1}".format(term, defined.encode("utf8")))
 
     def define(self, term, lang):
         try:
