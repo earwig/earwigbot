@@ -23,6 +23,7 @@
 from hashlib import sha256
 from os.path import expanduser
 from threading import Lock
+from urllib import quote
 
 import oursql
 
@@ -86,9 +87,10 @@ class AFCCopyvios(Task):
         confidence = "{0}%".format(round(result.confidence * 100, 2))
 
         if result.violation:
+            safeurl = quote(url.encode("utf8"), safe="/:").decode("utf8")
             content = page.get()
-            template = "\{\{{0}|url={1}|confidence={2}\}\}\n"
-            template = template.format(self.template, url, confidence)
+            template = u"\{\{{0}|url={1}|confidence={2}\}\}\n"
+            template = template.format(self.template, safeurl, confidence)
             newtext = template + content
             if "{url}" in self.summary:
                 page.edit(newtext, self.summary.format(url=url))
@@ -110,9 +112,7 @@ class AFCCopyvios(Task):
         with self.conn.cursor() as cursor:
             cursor.execute(query, (pageid,))
             results = cursor.fetchall()
-        if results:
-            return True
-        return False
+            return True if results else False
 
     def log_processed(self, pageid):
         """Adds pageid to our database of processed pages.
@@ -138,8 +138,8 @@ class AFCCopyvios(Task):
         be) retained for one day; this task does not remove old entries (that
         is handled by the Toolserver component).
 
-        This will only be called if "cache_results" == True in the task's
-        config, which is False by default.
+        This will only be called if ``cache_results == True`` in the task's
+        config, which is ``False`` by default.
         """
         pageid = page.pageid
         hash = sha256(page.get()).hexdigest()
