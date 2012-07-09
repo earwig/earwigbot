@@ -20,13 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import re
+
 from earwigbot import exceptions
 from earwigbot.commands import Command
 
 class Dictionary(Command):
     """Define words and stuff."""
     name = "dictionary"
-    commands = ["dict", "dictionary"]
+    commands = ["dict", "dictionary", "define"]
 
     def process(self, data):
         if not data.args:
@@ -41,7 +43,7 @@ class Dictionary(Command):
             msg = "cannot find a {0}-language Wiktionary."
             self.reply(data, msg.format(lang))
         else:
-            self.reply(data, "{0}: {1}".format(term, defined.encode("utf8")))
+            self.reply(data, defined.encode("utf8"))
 
     def define(self, term, lang):
         try:
@@ -55,4 +57,93 @@ class Dictionary(Command):
         except (exceptions.PageNotFoundError, exceptions.InvalidPageError):
             return "no definition found."
 
-        return entry
+        languages = self.get_languages(entry)
+        if not languages:
+            return u"couldn't parse {0}!".format(page.url)
+
+        result = []
+        for lang, section in sorted(languages.items()):
+            this = u"({0}) {1}".format(lang, self.get_definition(section))
+            result.append(this)
+        return u"; ".join(result)
+
+    def get_languages(self, entry):
+        regex = r"(?:\A|\n)==\s*([a-zA-Z0-9_ ]*?)\s*==(?:\Z|\n)"
+        split = re.split(regex, entry)
+        if len(split) % 2 == 0:
+            return None
+
+        split.pop(0)
+        languages = {}
+        for i in xrange(0, len(split), 2):
+            languages[split[i]] = split[i + 1]
+        return languages
+
+    def get_definition(self, section):
+        parts_of_speech = {
+            "v.": "Verb",
+            "n.": "Noun",
+            "pron.": "Pronoun",
+            "adj.": "Adjective",
+            "adv.": "Adverb",
+            "prep.": "Preposition",
+            "conj.": "Conjunction",
+            "inter.": "Interjection",
+            "symbol": "Symbol",
+            "suffix": "Suffix",
+            "initialism": "Initialism",
+            "phrase": "Phrase",
+            "proverb": "Proverb",
+        }
+        defs = []
+        for part, fullname in parts_of_speech.iteritems():
+            if re.search("===\s*" + fullname + "\s*===", section):
+                regex = "===\s*" + fullname + "\s*===(.*?)(?:(?:===)|\Z)"
+                body = re.findall(regex, section, re.DOTALL)
+                if body:
+                    definition = self.parse_body(body[0])
+                    if definition:
+                        defs.append("\x02{0}\x0F {1}".format(part, definition))
+
+        return "; ".join(defs)
+
+    def parse_body(self, body):
+        senses = []
+        for line in body.splitlines():
+            line = line.strip()
+            if re.match("#\s*[^:*]", line):
+                line = re.sub("\[\[(.*?)\|(.*?)\]\]", r"\2", line)
+                line = self.strip_templates(line)
+                line = line[1:].replace("'''", "").replace("''", "")
+                line = line.replace("[[", "").replace("]]", "")
+                senses.append(line.strip())
+
+        if not senses:
+            return None
+        if len(senses) == 1:
+            return senses[0]
+
+        result = []  # Number the senses incrementally
+        for i, sense in enumerate(senses):
+            result.append(u"{0}. {1}".format(i + 1, sense))
+        return " ".join(result)
+
+    def strip_templates(self, line):
+        line = list(line)
+        stripped = ""
+        depth = 0
+        while line:
+            this = line.pop(0)
+            if line:
+                next = line[0]
+            else:
+                next = ""
+            if this == "{" and next == "{":
+                line.pop(0)
+                depth += 1
+            elif this == "}" and next == "}":
+                line.pop(0)
+                depth -= 1
+            elif depth == 0:
+                stripped += this
+        return stripped
