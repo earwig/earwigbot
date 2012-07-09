@@ -131,13 +131,19 @@ class Site(object):
         self._api_info_cache = {"maxlag": 0, "lastcheck": 0}
 
         # Attributes used for SQL queries:
-        self._sql_data = sql
+        if sql:
+            self._sql_data = sql
+        else:
+            self._sql_data = {}
         self._sql_conn = None
         self._sql_lock = Lock()
         self._sql_info_cache = {"replag": 0, "lastcheck": 0, "usable": None}
 
         # Attribute used in copyright violation checks (see CopyrightMixIn):
-        self._search_config = search_config
+        if search_config:
+            self._search_config = search_config
+        else:
+            self._search_config = {}
 
         # Set up cookiejar and URL opener for making API queries:
         if cookiejar:
@@ -150,15 +156,15 @@ class Site(object):
         self._opener.addheaders = [("User-Agent", user_agent),
                                    ("Accept-Encoding", "gzip")]
 
-        # Get all of the above attributes that were not specified as arguments:
-        self._load_attributes()
-
         # Set up our internal logger:
         if logger:
             self._logger = logger
         else:  # Just set up a null logger to eat up our messages:
             self._logger = getLogger("earwigbot.wiki")
             self._logger.addHandler(NullHandler())
+
+        # Get all of the above attributes that were not specified as arguments:
+        self._load_attributes()
 
         # If we have a name/pass and the API says we're not logged in, log in:
         self._login_info = name, password = login

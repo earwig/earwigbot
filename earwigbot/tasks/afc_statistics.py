@@ -269,7 +269,8 @@ class AFCStatistics(Task):
         tracked = [i[0] for i in cursor.fetchall()]
 
         category = self.site.get_category(self.pending_cat)
-        for title, pageid in category.get_members():
+        for page in category.get_members():
+            title, pageid = page.title, page.pageid
             if title in self.ignore_list:
                 continue
             if pageid not in tracked:

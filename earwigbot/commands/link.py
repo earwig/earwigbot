@@ -35,15 +35,15 @@ class Link(Command):
 
         if re.search("(\[\[(.*?)\]\])|(\{\{(.*?)\}\})", msg):
             links = self.parse_line(msg)
-            links = " , ".join(links)
-            self.reply(data, links)
+            links = u" , ".join(links)
+            self.reply(data, links.encode("utf8"))
 
         elif data.command == "link":
             if not data.args:
                 self.reply(data, "what do you want me to link to?")
                 return
             pagename = " ".join(data.args)
-            link = self.site.get_page(pagename).url
+            link = self.site.get_page(pagename).url.encode("utf8")
             self.reply(data, link)
 
     def parse_line(self, line):
@@ -68,5 +68,4 @@ class Link(Command):
         return results
 
     def parse_template(self, pagename):
-        pagename = "".join(("Template:", pagename))
-        return self.site.get_page(pagename).url
+        return self.site.get_page("Template:" + pagename).url

@@ -513,9 +513,9 @@ class Page(CopyvioMixIn):
             return self._fullurl
         else:
             encoded = self._title.encode("utf8").replace(" ", "_")
-            slug = quote(encoded, safe="/:")
+            slug = quote(encoded, safe="/:").decode("utf8")
             path = self.site._article_path.replace("$1", slug)
-            return ''.join((self.site.url, path))
+            return u"".join((self.site.url, path))
 
     @property
     def namespace(self):

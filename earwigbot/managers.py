@@ -78,7 +78,7 @@ class _ResourceManager(object):
         try:
             resource = klass(self.bot)  # Create instance of resource
         except Exception:
-            e = "Error instantiating {0} class in {1} (from {2})"
+            e = "Error instantiating {0} class in '{1}' (from {2})"
             self.logger.exception(e.format(res_type, name, path))
         else:
             self._resources[resource.name] = resource
@@ -98,7 +98,7 @@ class _ResourceManager(object):
         try:
             module = imp.load_module(name, f, path, desc)
         except Exception:
-            e = "Couldn't load module {0} (from {1})"
+            e = "Couldn't load module '{0}' (from {1})"
             self.logger.exception(e.format(name, path))
             return
         finally:

@@ -278,6 +278,7 @@ class SitesDB(object):
             else:
                 conn.execute("DELETE FROM sql_data WHERE sql_site = ?", (name,))
                 conn.execute("DELETE FROM namespaces WHERE ns_site = ?", (name,))
+                self._logger.info("Removed site '{0}'".format(name))
                 return True
 
     def get_site(self, name=None, project=None, lang=None):
@@ -376,34 +377,20 @@ class SitesDB(object):
         assert_edit = config.wiki.get("assert")
         maxlag = config.wiki.get("maxlag")
         wait_between_queries = config.wiki.get("waitTime", 3)
-        logger = self._logger.getChild(name)
-        search_config = config.wiki.get("search")
 
         if user_agent:
             user_agent = user_agent.replace("$1", __version__)
             user_agent = user_agent.replace("$2", python_version())
 
-        if search_config:
-            nltk_dir = path.join(self.config.root_dir, ".nltk")
-            search_config["nltk_dir"] = nltk_dir
-            search_config["exclusions_db"] = self._exclusions_db
-
-        if not sql:
-            sql = config.wiki.get("sql", {})
-            for key, value in sql.iteritems():
-                if "$1" in value:
-                    sql[key] = value.replace("$1", name)
-
         # Create a Site object to log in and load the other attributes:
         site = Site(base_url=base_url, script_path=script_path, sql=sql,
                     login=login, cookiejar=cookiejar, user_agent=user_agent,
                     use_https=use_https, assert_edit=assert_edit,
-                    maxlag=maxlag, wait_between_queries=wait_between_queries,
-                    logger=logger, search_config=search_config)
+                    maxlag=maxlag, wait_between_queries=wait_between_queries)
 
+        self._logger.info("Added site '{0}'".format(site.name))
         self._add_site_to_sitesdb(site)
-        self._sites[site.name] = site
-        return site
+        return self._get_site_object(site.name)
 
     def remove_site(self, name=None, project=None, lang=None):
         """Remove a site from the sitesdb.
