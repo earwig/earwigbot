@@ -74,12 +74,13 @@ class AFCReport(Command):
             return page
 
     def report(self, page):
-        url = page.url.replace("en.wikipedia.org/wiki", "enwp.org")
+        url = page.url.encode("utf8")
+        url = url.replace("en.wikipedia.org/wiki", "enwp.org")
         short = self.statistics.get_short_title(page.title)
         status = self.get_status(page)
         user = page.get_creator()
         user_name = user.name
-        user_url = user.get_talkpage().url
+        user_url = user.get_talkpage().url.encode("utf8")
 
         msg1 = "AfC submission report for \x0302{0}\x0F ({1}):"
         msg2 = "Status: \x0303{0}\x0F"
