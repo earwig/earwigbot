@@ -192,7 +192,7 @@ class SitesDB(object):
         maxlag = config.wiki.get("maxlag")
         wait_between_queries = config.wiki.get("waitTime", 3)
         logger = self._logger.getChild(name)
-        search_config = config.wiki.get("search")
+        search_config = config.wiki.get("search", {}).copy()
 
         if user_agent:
             user_agent = user_agent.replace("$1", __version__)
