@@ -118,6 +118,7 @@ class Dictionary(Command):
         substitutions = [
             ("\[\[(.*?)\|(.*?)\]\]", r"\2"),
             ("\{\{alternative spelling of\|(.*?)\}\}", r"Alternative spelling of \1."),
+            ("\{\{synonym of\|(.*?)\}\}", r"Synonym of \1."),
         ]
 
         senses = []
