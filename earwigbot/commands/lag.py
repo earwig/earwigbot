@@ -20,38 +20,55 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from os.path import expanduser
-
-import oursql
-
+from earwigbot import exceptions
 from earwigbot.commands import Command
 
 class Lag(Command):
     """Return the replag for a specific database on the Toolserver."""
     name = "lag"
-
-    def setup(self):
-        try:
-            self.default = self.config.commands[self.name]["default"]
-        except KeyError:
-            self.default = None
+    commands = ["lag", "replag", "maxlag"]
 
     def process(self, data):
-        args = {}
-        if not data.args:
-            args["db"] = self.default or self.bot.wiki.get_site().name + "_p"
+        if data.kwargs and "project" in data.kwargs and "lang" in data.kwargs:
+            project, lang = data.kwargs["project"], data.kwargs["lang"]
+            site = self.get_site(data, project, lang)
+            if not site:
+                return
+        elif data.args:
+            if len(data.args) > 1:
+                name = " ".join(data.args)
+                self.reply(data, "unknown site: \x0302{0}\x0F.".format(name))
+                return
+            name = data.args[0]
+            if "." name:
+                lang, project = name.split(".")[:2]
+            elif ":" in name:
+                project, lang = name.split(":")[:2]
+            else:
+                try:
+                    site = self.bot.wiki.get_site(name)
+                except exceptions.SiteNotFoundError:
+                    msg = "unknown site: \x0302{0}\x0F.".format(name)
+                    self.reply(data, msg)
+                    return
+            site = self.get_site(data, project, lang)
+            if not site:
+                return
         else:
-            args["db"] = data.args[0]
-        args["host"] = args["db"].replace("_", "-") + ".rrdb.toolserver.org"
-        args["read_default_file"] = expanduser("~/.my.cnf")
+            site = self.bot.wiki.get_site()
 
-        conn = oursql.connect(**args)
-        with conn.cursor() as cursor:
-            query = """SELECT UNIX_TIMESTAMP() - UNIX_TIMESTAMP(rc_timestamp)
-                       FROM recentchanges ORDER BY rc_timestamp DESC LIMIT 1"""
-            cursor.execute(query)
-            replag = int(cursor.fetchall()[0][0])
-        conn.close()
+        msg = "\x0302{0}\x0F: replag is {1} seconds; maxlag is {2} seconds"
+        msg = msg.format(site.name, site.get_replag(), site.get_maxlag())
+        self.reply(data, msg)
 
-        msg = "replag on \x0302{0}\x0F is \x02{1}\x0F seconds."
-        self.reply(data, msg.format(args["db"], replag))
+    def get_site(self, data, project, lang):
+        try:
+            site = self.bot.wiki.get_site(project=project, lang=lang)
+        except exceptions.SiteNotFoundError:
+            try:
+                site = self.bot.wiki.add_site(project=project, lang=lang)
+            except exceptions.APIError:
+                msg = "site \x0302{0}:{1}\x0F not found."
+                self.reply(data, msg.format(project, lang))
+                return
+        return site
