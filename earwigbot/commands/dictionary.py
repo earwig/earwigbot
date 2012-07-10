@@ -45,7 +45,7 @@ class Dictionary(Command):
         else:
             self.reply(data, defined.encode("utf8"))
 
-    def define(self, term, lang):
+    def define(self, term, lang, tries=2):
         try:
             site = self.bot.wiki.get_site(project="wiktionary", lang=lang)
         except exceptions.SiteNotFoundError:
@@ -55,10 +55,10 @@ class Dictionary(Command):
         try:
             entry = page.get()
         except (exceptions.PageNotFoundError, exceptions.InvalidPageError):
-            if term.lower() != term:
-                return self.define(term.lower(), lang)
-            if term.capitalize() != term:
-                return self.define(term.capitalize(), lang)
+            if term.lower() != term and tries:
+                return self.define(term.lower(), lang, tries - 1)
+            if term.capitalize() != term and tries:
+                return self.define(term.capitalize(), lang, tries - 1)
             return "no definition found."
 
         languages = self.get_languages(entry)
