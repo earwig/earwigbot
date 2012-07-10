@@ -130,7 +130,7 @@ class Dictionary(Command):
             ("\{\{alternative spelling of\|(.*?)\}\}",
                 r"Alternative spelling of \1."),
             ("\{\{synonym of\|(.*?)\}\}", r"Synonym of \1."),
-            ("\{\{surname(\||\}\})", r"A surname."),
+            ("\{\{surname(.*?)\}\}", r"A surname."),
             ("\{\{given name\|(.*?)(\||\}\})", r"A \1 given name."),
         ]
 
