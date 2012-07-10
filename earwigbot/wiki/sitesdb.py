@@ -204,7 +204,7 @@ class SitesDB(object):
             search_config["exclusions_db"] = self._exclusions_db
 
         if not sql:
-            sql = config.wiki.get("sql", {})
+            sql = config.wiki.get("sql", {}).copy()
             for key, value in sql.iteritems():
                 if isinstance(value, basestring) and "$1" in value:
                     sql[key] = value.replace("$1", name)
