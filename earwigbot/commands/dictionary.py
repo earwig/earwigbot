@@ -95,6 +95,7 @@ class Dictionary(Command):
             "phrase": "Phrase",
             "proverb": "Proverb",
             "prop. n.": "Proper noun",
+            "abbr.": "\{\{abbreviation\}\}",
         }
         defs = []
         for part, fullname in parts_of_speech.iteritems():
