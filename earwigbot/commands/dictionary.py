@@ -61,29 +61,33 @@ class Dictionary(Command):
                 return self.define(term.capitalize(), lang, tries - 1)
             return "no definition found."
 
-        languages = self.get_languages(entry)
+        level, languages = self.get_languages(entry)
         if not languages:
             return u"couldn't parse {0}!".format(page.url)
 
         result = []
         for lang, section in sorted(languages.items()):
-            this = u"({0}) {1}".format(lang, self.get_definition(section))
-            result.append(this)
+            definition = self.get_definition(section, level)
+            result.append(u"({0}) {1}".format(lang, definition))
         return u"; ".join(result)
 
-    def get_languages(self, entry):
+    def get_languages(self, entry, level=2):
         regex = r"(?:\A|\n)==\s*([a-zA-Z0-9_ ]*?)\s*==(?:\Z|\n)"
         split = re.split(regex, entry)
         if len(split) % 2 == 0:
-            return None
+            if level == 2:
+                return self.get_languages(entry, level=3)
+            else:
+                return 3, None
+            return 2, None
 
         split.pop(0)
         languages = {}
         for i in xrange(0, len(split), 2):
             languages[split[i]] = split[i + 1]
-        return languages
+        return level, languages
 
-    def get_definition(self, section):
+    def get_definition(self, section, level):
         parts_of_speech = {
             "v.": "Verb",
             "n.": "Noun",
@@ -101,21 +105,25 @@ class Dictionary(Command):
             "prop. n.": "Proper noun",
             "abbr.": "\{\{abbreviation\}\}",
         }
+        blocks = "=" * (level + 1)
         defs = []
         for part, fullname in parts_of_speech.iteritems():
-            if re.search("===\s*" + fullname + "\s*===", section):
-                regex = "===\s*" + fullname + "\s*===(.*?)(?:(?:===)|\Z)"
-                body = re.findall(regex, section, re.DOTALL)
-                if body:
-                    definition = self.parse_body(body[0])
-                    if definition:
-                        msg = u"\x02{0}\x0F {1}"
-                        defs.append(msg.format(part, definition))
+            if re.search("{0}\s*{1}\s*{0}".format(blocks, fullname), section):
+                regex = "{0}\s*{1}\s*{0}(.*?)(?:(?:{0})|\Z)"
+                regex = regex.format(blocks, fullname)
+                bodies = re.findall(regex, section, re.DOTALL)
+                if bodies:
+                    for body in bodies:
+                        definition = self.parse_body(body)
+                        if definition:
+                            msg = u"\x02{0}\x0F {1}"
+                            defs.append(msg.format(part, definition))
 
         return "; ".join(defs)
 
     def parse_body(self, body):
         substitutions = [
+            ("<!--(.*?)-->", ""),
             ("\[\[(.*?)\|(.*?)\]\]", r"\2"),
             ("\{\{alternative spelling of\|(.*?)\}\}", r"Alternative spelling of \1."),
             ("\{\{synonym of\|(.*?)\}\}", r"Synonym of \1."),
