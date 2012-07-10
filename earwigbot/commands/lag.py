@@ -40,7 +40,7 @@ class Lag(Command):
                 self.reply(data, "unknown site: \x0302{0}\x0F.".format(name))
                 return
             name = data.args[0]
-            if "." name:
+            if "." in name:
                 lang, project = name.split(".")[:2]
             elif ":" in name:
                 project, lang = name.split(":")[:2]
@@ -57,7 +57,7 @@ class Lag(Command):
         else:
             site = self.bot.wiki.get_site()
 
-        msg = "\x0302{0}\x0F: replag is {1} seconds; maxlag is {2} seconds"
+        msg = "\x0302{0}\x0F: Toolserver replag is {1} seconds; database maxlag is {2} seconds"
         msg = msg.format(site.name, site.get_replag(), site.get_maxlag())
         self.reply(data, msg)
 
