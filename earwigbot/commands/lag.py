@@ -37,7 +37,7 @@ class Lag(Command):
         msg = msg.format(site.name, site.get_replag(), site.get_maxlag())
         self.reply(data, msg)
 
-    def get_site(self):
+    def get_site(self, data):
         if data.kwargs and "project" in data.kwargs and "lang" in data.kwargs:
             project, lang = data.kwargs["project"], data.kwargs["lang"]
             return self.get_site_from_proj_and_lang(data, project, lang)
