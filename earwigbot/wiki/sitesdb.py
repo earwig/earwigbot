@@ -206,7 +206,7 @@ class SitesDB(object):
         if not sql:
             sql = config.wiki.get("sql", {})
             for key, value in sql.iteritems():
-                if "$1" in value:
+                if isinstance(value, basestring) and "$1" in value:
                     sql[key] = value.replace("$1", name)
 
         return Site(name=name, project=project, lang=lang, base_url=base_url,
