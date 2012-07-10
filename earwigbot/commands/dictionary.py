@@ -103,7 +103,8 @@ class Dictionary(Command):
                 if body:
                     definition = self.parse_body(body[0])
                     if definition:
-                        defs.append("\x02{0}\x0F {1}".format(part, definition))
+                        msg = u"\x02{0}\x0F {1}"
+                        defs.append(msg.format(part, definition))
 
         return "; ".join(defs)
 

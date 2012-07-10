@@ -26,9 +26,9 @@ import oursql
 
 from earwigbot.commands import Command
 
-class Replag(Command):
+class Lag(Command):
     """Return the replag for a specific database on the Toolserver."""
-    name = "replag"
+    name = "lag"
 
     def setup(self):
         try:
