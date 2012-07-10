@@ -55,6 +55,10 @@ class Dictionary(Command):
         try:
             entry = page.get()
         except (exceptions.PageNotFoundError, exceptions.InvalidPageError):
+            if term.lower() != term:
+                return self.define(term.lower(), lang)
+            if term.capitalize() != term:
+                return self.define(term.capitalize(), lang)
             return "no definition found."
 
         languages = self.get_languages(entry)
@@ -111,11 +115,17 @@ class Dictionary(Command):
         return "; ".join(defs)
 
     def parse_body(self, body):
+        substitutions = [
+            ("\[\[(.*?)\|(.*?)\]\]", r"\2"),
+            ("\{\{alternative spelling of\|(.*?)\}\}", r"Alternative spelling of \1."),
+        ]
+
         senses = []
         for line in body.splitlines():
             line = line.strip()
             if re.match("#\s*[^:*]", line):
-                line = re.sub("\[\[(.*?)\|(.*?)\]\]", r"\2", line)
+                for regex, repl in substitutions:
+                    line = re.sub(regex, repl, line)
                 line = self.strip_templates(line)
                 line = line[1:].replace("'''", "").replace("''", "")
                 line = line.replace("[[", "").replace("]]", "")
