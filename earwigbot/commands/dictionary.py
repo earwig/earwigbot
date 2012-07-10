@@ -127,9 +127,7 @@ class Dictionary(Command):
         substitutions = [
             ("<!--(.*?)-->", ""),
             ("\[\[(.*?)\|(.*?)\]\]", r"\2"),
-            ("\{\{alternative spelling of\|(.*?)\}\}",
-                r"Alternative spelling of \1."),
-            ("\{\{synonym of\|(.*?)\}\}", r"Synonym of \1."),
+            ("\{\{(.*?) of\|(.*?)\}\}", r"\1 of \2."),
             ("\{\{surname(.*?)\}\}", r"A surname."),
             ("\{\{given name\|(.*?)(\||\}\})", r"A \1 given name."),
         ]
@@ -143,7 +141,8 @@ class Dictionary(Command):
                 line = self.strip_templates(line)
                 line = line[1:].replace("'''", "").replace("''", "")
                 line = line.replace("[[", "").replace("]]", "")
-                senses.append(line.strip())
+                if line:
+                    senses.append(line.strip()[0].upper() + line.strip()[1:])
 
         if not senses:
             return None
