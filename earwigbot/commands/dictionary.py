@@ -113,7 +113,7 @@ class Dictionary(Command):
                 blocks + "\s*\{\{" + fullname + "\}\}\s*" + blocks,
                 blocks + "\s*\{\{" + fullname.lower() + "\}\}\s*" + blocks,
             ]
-            for regex in regex:
+            for regex in regexes:
                 if re.search(regex, section):
                     regex = "{0}\s*{1}\s*{0}(.*?)(?:(?:{0})|\Z)"
                     regex = regex.format(blocks, fullname)
