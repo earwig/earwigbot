@@ -104,6 +104,7 @@ class Dictionary(Command):
             "proverb": "Proverb",
             "prop. n.": "Proper noun",
             "abbr.": "Abbreviation",
+            "punct.": "Punctuation mark",
         }
         blocks = "=" * (level + 1)
         defs = []
