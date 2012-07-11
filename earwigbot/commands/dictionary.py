@@ -110,8 +110,8 @@ class Dictionary(Command):
         for part, fullname in parts_of_speech.iteritems():
             regexes = [
                 "{0}\s*{1}\s*{0}".format(blocks, fullname),
-                "{0}\s*\{\{{1}\}\}\s*{0}".format(blocks, fullname),
-                "{0}\s*\{\{{1}\}\}\s*{0}".format(blocks, fullname.lower()),
+                blocks + "\s*\{\{" + fullname + "\}\}\s*" + blocks,
+                blocks + "\s*\{\{" + fullname.lower() + "\}\}\s*" + blocks,
             ]
             for regex in regex:
                 if re.search(regex, section):
