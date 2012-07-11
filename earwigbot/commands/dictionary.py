@@ -144,7 +144,7 @@ class Dictionary(Command):
                 line = self.strip_templates(line)
                 line = line[1:].replace("'''", "").replace("''", "")
                 line = line.replace("[[", "").replace("]]", "")
-                if line:
+                if line.strip():
                     senses.append(line.strip()[0].upper() + line.strip()[1:])
 
         if not senses:
