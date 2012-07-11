@@ -107,16 +107,14 @@ class Dictionary(Command):
         }
         blocks = "=" * (level + 1)
         defs = []
-        for part, fullname in parts_of_speech.iteritems():
-            regexes = [
-                "{0}\s*{1}\s*{0}".format(blocks, fullname),
-                blocks + "\s*\{\{" + fullname + "\}\}\s*" + blocks,
-                blocks + "\s*\{\{" + fullname.lower() + "\}\}\s*" + blocks,
-            ]
-            for regex in regexes:
+        for part, basename in parts_of_speech.iteritems():
+            fullnames = [fullname, "\{\{" + fullname + "\}\}",
+                         "\{\{" + fullname.lower() + "\}\}"]
+            for fullname in fullnames:
+                regex = blocks + "\s*\{\{" + fullname + "\}\}\s*" + blocks
                 if re.search(regex, section):
-                    regex = "{0}\s*{1}\s*{0}(.*?)(?:(?:{0})|\Z)"
-                    regex = regex.format(blocks, fullname)
+                    regex = blocks + "\s*" + fullname
+                    regex += "\s*{0}(.*?)(?:(?:{0})|\Z)".format(blocks)
                     bodies = re.findall(regex, section, re.DOTALL)
                     if bodies:
                         for body in bodies:
