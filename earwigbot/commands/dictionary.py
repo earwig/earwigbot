@@ -89,27 +89,31 @@ class Dictionary(Command):
 
     def get_definition(self, section, level):
         parts_of_speech = {
-            "v.": ["Verb"],
-            "n.": ["Noun"],
-            "pron.": ["Pronoun"],
-            "adj.": ["Adjective"],
-            "adv.": ["Adverb"],
-            "prep.": ["Preposition"],
-            "conj.": ["Conjunction"],
-            "inter.": ["Interjection"],
-            "symbol": ["Symbol"],
-            "suffix": ["Suffix"],
-            "initialism": ["Initialism"],
-            "phrase": ["Phrase"],
-            "proverb": ["Proverb"],
-            "prop. n.": ["Proper noun"],
-            "abbr.": ["Abbreviation", "\{\{abbreviation\}\}"],
+            "v.": "Verb",
+            "n.": "Noun",
+            "pron.": "Pronoun",
+            "adj.": "Adjective",
+            "adv.": "Adverb",
+            "prep.": "Preposition",
+            "conj.": "Conjunction",
+            "inter.": "Interjection",
+            "symbol": "Symbol",
+            "suffix": "Suffix",
+            "initialism": "Initialism",
+            "phrase": "Phrase",
+            "proverb": "Proverb",
+            "prop. n.": "Proper noun",
+            "abbr.": "Abbreviation",
         }
         blocks = "=" * (level + 1)
         defs = []
-        for part, fullnames in parts_of_speech.iteritems():
-            for fullname in fullnames:
-                regex = "{0}\s*{1}\s*{0}".format(blocks, fullname)
+        for part, fullname in parts_of_speech.iteritems():
+            regexes = [
+                "{0}\s*{1}\s*{0}".format(blocks, fullname),
+                "{0}\s*\{\{{1}\}\}\s*{0}".format(blocks, fullname),
+                "{0}\s*\{\{{1}\}\}\s*{0}".format(blocks, fullname.lower()),
+            ]
+            for regex in regex:
                 if re.search(regex, section):
                     regex = "{0}\s*{1}\s*{0}(.*?)(?:(?:{0})|\Z)"
                     regex = regex.format(blocks, fullname)
@@ -128,6 +132,7 @@ class Dictionary(Command):
             ("<!--(.*?)-->", ""),
             ("\[\[(.*?)\|(.*?)\]\]", r"\2"),
             ("\{\{(.*?) of\|(.*?)\}\}", r"\1 of \2."),
+            ("\{\{w\|(.*?)\}\}", r"\1"),
             ("\{\{surname(.*?)\}\}", r"A surname."),
             ("\{\{given name\|(.*?)(\||\}\})", r"A \1 given name."),
         ]
