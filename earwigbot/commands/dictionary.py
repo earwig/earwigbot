@@ -138,7 +138,7 @@ class Dictionary(Command):
         senses = []
         for line in body.splitlines():
             line = line.strip()
-            if re.match("#\s*[^:*]", line):
+            if re.match("#\s*[^:*#]", line):
                 for regex, repl in substitutions:
                     line = re.sub(regex, repl, line)
                 line = self.strip_templates(line)
