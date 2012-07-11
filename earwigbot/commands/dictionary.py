@@ -111,7 +111,7 @@ class Dictionary(Command):
             fullnames = [basename, "\{\{" + basename + "\}\}",
                          "\{\{" + basename.lower() + "\}\}"]
             for fullname in fullnames:
-                regex = blocks + "\s*\{\{" + fullname + "\}\}\s*" + blocks
+                regex = blocks + "\s*" + fullname + "\s*" + blocks
                 if re.search(regex, section):
                     regex = blocks + "\s*" + fullname
                     regex += "\s*{0}(.*?)(?:(?:{0})|\Z)".format(blocks)
