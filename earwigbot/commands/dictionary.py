@@ -129,6 +129,7 @@ class Dictionary(Command):
     def parse_body(self, body):
         substitutions = [
             ("<!--(.*?)-->", ""),
+            ("<ref>(.*?)</ref>", ""),
             ("\[\[[^\]|]*?\|([^\]|]*?)\]\]", r"\1"),
             ("\{\{unsupported\|(.*?)\}\}", r"\1"),
             ("\{\{(.*?) of\|([^}|]*?)(\|(.*?))?\}\}", r"\1 of \2."),
