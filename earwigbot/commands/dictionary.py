@@ -108,8 +108,8 @@ class Dictionary(Command):
         blocks = "=" * (level + 1)
         defs = []
         for part, basename in parts_of_speech.iteritems():
-            fullnames = [fullname, "\{\{" + fullname + "\}\}",
-                         "\{\{" + fullname.lower() + "\}\}"]
+            fullnames = [basename, "\{\{" + basename + "\}\}",
+                         "\{\{" + basename.lower() + "\}\}"]
             for fullname in fullnames:
                 regex = blocks + "\s*\{\{" + fullname + "\}\}\s*" + blocks
                 if re.search(regex, section):
