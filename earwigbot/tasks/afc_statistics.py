@@ -171,7 +171,8 @@ class AFCStatistics(Task):
         table, where keys are column names and values are their cell contents.
         """
         row = "{0}|s={page_status}|t={page_title}|h={page_short}|z={page_size}|"
-        row += "sr={page_special_user}|sd={page_special_time}|si={page_special_oldid}|"
+        if page["page_special_oldid"]:
+            row += "sr={page_special_user}|sd={page_special_time}|si={page_special_oldid}|"
         row += "mr={page_modify_user}|md={page_modify_time}|mi={page_modify_oldid}"
 
         page["page_special_time"] = self.format_time(page["page_special_time"])
@@ -443,10 +444,12 @@ class AFCStatistics(Task):
         s_user, s_time, s_id = self.get_special(pageid, chart)
         if s_id != result["page_special_oldid"]:
             cursor.execute(query2, (s_user, s_time, s_id, pageid))
+            if result["page_special_user"]:
+                old_s_user = result["page_special_user"].decode("utf8")
+            else:
+                old_s_user = None
             msg = u"{0}: special: {1} / {2} / {3} -> {4} / {5} / {6}"
-            msg = msg.format(pageid,
-                             result["page_special_user"].decode("utf8"),
-                             result["page_special_time"],
+            msg = msg.format(pageid, old_s_user, result["page_special_time"],
                              result["page_special_oldid"], s_user, s_time, s_id)
             self.logger.debug(msg)
 
