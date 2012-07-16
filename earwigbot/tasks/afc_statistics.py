@@ -698,7 +698,7 @@ class AFCStatistics(Task):
         """Return any special notes or warnings about this page.
 
         resubmit:   submission was resubmitted after a previous decline
-        short:      submission is fewer than 500 bytes
+        short:      submission is fewer than 1000 bytes
         no-inline:  submission has no inline citations
         unsourced:  submission lacks references completely
         old:        submission has not been touched in > 4 days
@@ -714,7 +714,7 @@ class AFCStatistics(Task):
         if "D" in statuses and chart != self.CHART_MISPLACE:
             notes += "|nr=1"  # Submission was resubmitted
 
-        if len(content) < 500:
+        if len(content) < 1000:
             notes += "|ns=1"  # Submission is short
 
         if not re.search("\<ref\s*(.*?)\>(.*?)\</ref\>", content, re.I | re.S):
