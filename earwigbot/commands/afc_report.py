@@ -41,7 +41,7 @@ class AFCReport(Command):
             return
 
         if not data.args:
-            msg = "what submission do you want me to give information about?"
+            msg = "What submission do you want me to give information about?"
             self.reply(data, msg)
             return
 
