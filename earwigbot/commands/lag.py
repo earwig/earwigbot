@@ -33,7 +33,7 @@ class Lag(Command):
         if not site:
             return
 
-        msg = "\x0302{0}\x0F: Toolserver replag is {1} seconds; database maxlag is {2} seconds."
+        msg = "\x0302{0}\x0F: Toolserver replag is {1}; database maxlag is {2}."
         replag, maxlag = site.get_replag(), site.get_maxlag()
         msg = msg.format(site.name, self.format(replag), self.format(maxlag))
         self.reply(data, msg)

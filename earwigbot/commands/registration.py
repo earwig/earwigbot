@@ -64,7 +64,7 @@ class Registration(Command):
                  ("minute", 60), ("second", 1)]
         msg = []
         for name, size in parts:
-            num = (t2 - t1) / size
+            num = int(t2 - t1) / size
             t1 += num * size
             if num:
                 chunk = "{0} {1}".format(num, name if num == 1 else name + "s")
