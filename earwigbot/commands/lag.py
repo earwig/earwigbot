@@ -34,7 +34,8 @@ class Lag(Command):
             return
 
         msg = "\x0302{0}\x0F: Toolserver replag is {1} seconds; database maxlag is {2} seconds."
-        msg = msg.format(site.name, site.get_replag(), site.get_maxlag())
+        replag, maxlag = site.get_replag(), site.get_maxlag()
+        msg = msg.format(site.name, self.format(replag), self.format(maxlag))
         self.reply(data, msg)
 
     def get_site(self, data):
@@ -74,3 +75,15 @@ class Lag(Command):
                 self.reply(data, msg.format(project, lang))
                 return
         return site
+
+    def format(self, seconds):
+        parts = [("year", 31536000), ("day", 86400), ("hour", 3600),
+                 ("minute", 60), ("second", 1)]
+        msg = []
+        for name, size in parts:
+            num = seconds / size
+            seconds -= num * size
+            if num:
+                chunk = "{0} {1}".format(num, name if num == 1 else name + "s")
+                msg.append(chunk)
+        return ", ".join(msg) if msg else "0 seconds"

@@ -60,17 +60,13 @@ class Registration(Command):
         self.reply(data, msg.format(name, date, gender, age))
 
     def get_diff(self, t1, t2):
-        parts = {"years": 31536000, "days": 86400, "hours": 3600,
-                 "minutes": 60, "seconds": 1}
+        parts = [("year", 31536000), ("day", 86400), ("hour", 3600),
+                 ("minute", 60), ("second", 1)]
         msg = []
-
-        order = sorted(parts.items(), key=lambda x: x[1], reverse=True)
-        for key, value in order:
-            num = 0
-            while t2 - t1 > value:
-                t1 += value
-                num += 1
-            if num or (not num and msg):
-                msg.append(" ".join((str(num), key)))
-
-        return ", ".join(msg)
+        for name, size in parts:
+            num = (t2 - t1) / size
+            t1 += num * size
+            if num:
+                chunk = "{0} {1}".format(num, name if num == 1 else name + "s")
+                msg.append(chunk)
+        return ", ".join(msg) if msg else "0 seconds"
