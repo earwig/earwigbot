@@ -42,10 +42,10 @@ class AFCSubmissions(Command):
             try:
                 number = int(data.args[0])
             except ValueError:
-                self.reply(data, "argument must be a number.")
+                self.reply(data, "Argument must be a number.")
                 return
             if number > 5:
-                msg = "cannot get more than five submissions at a time."
+                msg = "Cannot get more than five submissions at a time."
                 self.reply(data, msg)
                 return
         else:
