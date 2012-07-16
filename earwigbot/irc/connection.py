@@ -142,8 +142,11 @@ class IRCConnection(object):
 
     def reply(self, data, msg, hidelog=False):
         """Send a private message as a reply to a user on the server."""
-        msg = "\x02{0}\x0F: {1}".format(data.nick, msg)
-        self.say(data.chan, msg, hidelog)
+        if data.is_private:
+            self.say(data.chan, msg, hidelog)
+        else:
+            msg = "\x02{0}\x0F: {1}".format(data.nick, msg)
+            self.say(data.chan, msg, hidelog)
 
     def action(self, target, msg, hidelog=False):
         """Send a private message to a target on the server as an action."""
