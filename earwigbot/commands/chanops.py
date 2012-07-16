@@ -30,11 +30,11 @@ class ChanOps(Command):
 
     def process(self, data):
         if data.command == "chanops":
-            msg = "available commands are !voice, !devoice, !op, !deop, !join, and !part."
+            msg = "Available commands are !voice, !devoice, !op, !deop, !join, and !part."
             self.reply(data, msg)
             return
         if data.host not in self.config.irc["permissions"]["admins"]:
-            self.reply(data, "you must be a bot admin to use this command.")
+            self.reply(data, "You must be a bot admin to use this command.")
             return
 
         if data.command == "join":
@@ -59,7 +59,7 @@ class ChanOps(Command):
             if not channel.startswith("#"):
                 channel = "#" + channel
         else:
-            msg = "you must specify a channel to join or part from."
+            msg = "You must specify a channel to join or part from."
             self.reply(data, msg)
             return
 
