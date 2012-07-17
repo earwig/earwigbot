@@ -32,7 +32,7 @@ class Dictionary(Command):
 
     def process(self, data):
         if not data.args:
-            self.reply(data, "what do you want me to define?")
+            self.reply(data, "What do you want me to define?")
             return
 
         term = " ".join(data.args)
@@ -40,7 +40,7 @@ class Dictionary(Command):
         try:
             defined = self.define(term, lang)
         except exceptions.APIError:
-            msg = "cannot find a {0}-language Wiktionary."
+            msg = "Cannot find a {0}-language Wiktionary."
             self.reply(data, msg.format(lang))
         else:
             self.reply(data, defined.encode("utf8"))
@@ -59,11 +59,11 @@ class Dictionary(Command):
                 return self.define(term.lower(), lang, tries - 1)
             if term.capitalize() != term and tries:
                 return self.define(term.capitalize(), lang, tries - 1)
-            return "no definition found."
+            return "No definition found."
 
         level, languages = self.get_languages(entry)
         if not languages:
-            return u"couldn't parse {0}!".format(page.url)
+            return u"Couldn't parse {0}!".format(page.url)
 
         result = []
         for lang, section in sorted(languages.items()):
