@@ -42,7 +42,7 @@ class Editcount(Command):
         try:
             count = user.editcount
         except exceptions.UserNotFoundError:
-            msg = "the user \x0302{0}\x0F does not exist."
+            msg = "The user \x0302{0}\x0F does not exist."
             self.reply(data, msg.format(name))
             return
 
