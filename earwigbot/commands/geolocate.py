@@ -41,7 +41,7 @@ class Geolocate(Command):
 
     def process(self, data):
         if not data.args:
-            self.reply(data, "please specify an IP to lookup.")
+            self.reply(data, "Please specify an IP to lookup.")
             return
 
         if not self.key:
