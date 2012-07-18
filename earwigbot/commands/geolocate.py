@@ -56,15 +56,17 @@ class Geolocate(Command):
         query = urllib2.urlopen(url.format(self.key, address)).read()
         res = json.loads(query)
 
-        try:
-            country = res["countryName"].title()
-            region = res["regionName"].title()
-            city = res["cityName"].title()
-            latitude = res["latitude"]
-            longitude = res["longitude"]
-            utcoffset = res["timeZone"]
-        except KeyError:
+        country = res["countryName"].title()
+        region = res["regionName"].title()
+        city = res["cityName"].title()
+        latitude = res["latitude"]
+        longitude = res["longitude"]
+        utcoffset = res["timeZone"]
+        if not country and not region and not city:
             self.reply(data, "IP \x0302{0}\x0F not found.".format(address))
+            return
+        if country == "-" and region == "-" and city == "-":
+            self.reply(data, "IP \x0302{0}\x0F is reserved.".format(address))
             return
 
         msg = "{0}, {1}, {2} ({3}, {4}), UTC {5}"
