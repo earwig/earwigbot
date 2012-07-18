@@ -54,17 +54,17 @@ class AFCStatus(Command):
             action = data.args[0].lower()
             if action.startswith("sub") or action == "s":
                 subs = self.count_submissions()
-                msg = "there are \x0305{0}\x0F pending AfC submissions (\x0302WP:AFC\x0F)."
+                msg = "There are \x0305{0}\x0F pending AfC submissions (\x0302WP:AFC\x0F)."
                 self.reply(data, msg.format(subs))
 
             elif action.startswith("redir") or action == "r":
                 redirs = self.count_redirects()
-                msg = "there are \x0305{0}\x0F open redirect requests (\x0302WP:AFC/R\x0F)."
+                msg = "There are \x0305{0}\x0F open redirect requests (\x0302WP:AFC/R\x0F)."
                 self.reply(data, msg.format(redirs))
 
             elif action.startswith("file") or action == "f":
                 files = self.count_redirects()
-                msg = "there are \x0305{0}\x0F open file upload requests (\x0302WP:FFU\x0F)."
+                msg = "There are \x0305{0}\x0F open file upload requests (\x0302WP:FFU\x0F)."
                 self.reply(data, msg.format(files))
 
             elif action.startswith("agg") or action == "a":
@@ -79,14 +79,14 @@ class AFCStatus(Command):
                     self.reply(data, msg.format(data.args[1]))
                     return
                 aggregate = self.get_aggregate(agg_num)
-                msg = "aggregate is \x0305{0}\x0F (AfC {1})."
+                msg = "Aggregate is \x0305{0}\x0F (AfC {1})."
                 self.reply(data, msg.format(agg_num, aggregate))
 
             elif action.startswith("nocolor") or action == "n":
                 self.reply(data, self.get_status(color=False))
 
             else:
-                msg = "unknown argument: \x0303{0}\x0F. Valid args are 'subs', 'redirs', 'files', 'agg', 'nocolor'."
+                msg = "Unknown argument: \x0303{0}\x0F. Valid args are 'subs', 'redirs', 'files', 'agg', 'nocolor'."
                 self.reply(data, msg.format(data.args[0]))
 
         else:

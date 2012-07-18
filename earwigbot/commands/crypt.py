@@ -34,12 +34,12 @@ class Crypt(Command):
 
     def process(self, data):
         if data.command == "crypt":
-            msg = "available commands are !hash, !encrypt, and !decrypt."
+            msg = "Available commands are !hash, !encrypt, and !decrypt."
             self.reply(data, msg)
             return
 
         if not data.args:
-            msg = "what do you want me to {0}?".format(data.command)
+            msg = "What do you want me to {0}?".format(data.command)
             self.reply(data, msg)
             return
 
@@ -47,14 +47,14 @@ class Crypt(Command):
             algo = data.args[0]
             if algo == "list":
                 algos = ', '.join(hashlib.algorithms)
-                msg = algos.join(("supported algorithms: ", "."))
+                msg = algos.join(("Supported algorithms: ", "."))
                 self.reply(data, msg)
             elif algo in hashlib.algorithms:
                 string = ' '.join(data.args[1:])
                 result = getattr(hashlib, algo)(string).hexdigest()
                 self.reply(data, result)
             else:
-                msg = "unknown algorithm: '{0}'.".format(algo)
+                msg = "Unknown algorithm: '{0}'.".format(algo)
                 self.reply(data, msg)
 
         else:
@@ -62,7 +62,7 @@ class Crypt(Command):
             text = " ".join(data.args[1:])
 
             if not text:
-                msg = "a key was provided, but text to {0} was not."
+                msg = "A key was provided, but text to {0} was not."
                 self.reply(data, msg.format(data.command))
                 return
 

@@ -30,7 +30,7 @@ class Quit(Command):
 
     def process(self, data):
         if data.host not in self.config.irc["permissions"]["owners"]:
-            self.reply(data, "you must be a bot owner to use this command.")
+            self.reply(data, "You must be a bot owner to use this command.")
             return
         if data.command == "quit":
             self.do_quit(data)
@@ -45,7 +45,7 @@ class Quit(Command):
             reason = " ".join(args)
         else:
             if not args or args[0].lower() != data.my_nick:
-                self.reply(data, "to confirm this action, the first argument must be my name.")
+                self.reply(data, "To confirm this action, the first argument must be my name.")
                 return
             reason = " ".join(args[1:])
 

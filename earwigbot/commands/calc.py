@@ -32,7 +32,7 @@ class Calc(Command):
 
     def process(self, data):
         if not data.args:
-            self.reply(data, "what do you want me to calculate?")
+            self.reply(data, "What do you want me to calculate?")
             return
 
         query = ' '.join(data.args)

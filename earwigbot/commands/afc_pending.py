@@ -28,7 +28,7 @@ class AFCPending(Command):
     commands = ["pending", "pend"]
 
     def process(self, data):
-        msg1 = "pending submissions status page: http://enwp.org/WP:AFC/ST"
-        msg2 = "pending submissions category: http://enwp.org/CAT:PEND"
+        msg1 = "Pending submissions status page: http://enwp.org/WP:AFC/ST"
+        msg2 = "Pending submissions category: http://enwp.org/CAT:PEND"
         self.reply(data, msg1)
         self.reply(data, msg2)

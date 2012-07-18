@@ -34,4 +34,4 @@ class Test(Command):
         if hey:
             self.say(data.chan, "Hey {0}!".format(user))
         else:
-            self.say(data.chan, "'sup {0}?".format(user))
+            self.say(data.chan, "'Sup {0}?".format(user))

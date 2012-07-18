@@ -33,7 +33,7 @@ class Threads(Command):
     def process(self, data):
         self.data = data
         if data.host not in self.config.irc["permissions"]["owners"]:
-            msg = "you must be a bot owner to use this command."
+            msg = "You must be a bot owner to use this command."
             self.reply(data, msg)
             return
 
@@ -41,7 +41,7 @@ class Threads(Command):
             if data.command == "tasklist":
                 self.do_list()
             else:
-                msg = "no arguments provided. Maybe you wanted '!{0} list', '!{0} start', or '!{0} listall'?"
+                msg = "No arguments provided. Maybe you wanted '!{0} list', '!{0} start', or '!{0} listall'?"
                 self.reply(data, msg.format(data.command))
             return
 
@@ -55,7 +55,7 @@ class Threads(Command):
             self.do_listall()
 
         else:  # They asked us to do something we don't know
-            msg = "unknown argument: \x0303{0}\x0F.".format(data.args[0])
+            msg = "Unknown argument: \x0303{0}\x0F.".format(data.args[0])
             self.reply(data, msg)
 
     def do_list(self):
@@ -128,16 +128,16 @@ class Threads(Command):
         try:
             task_name = data.args[1]
         except IndexError:  # No task name given
-            self.reply(data, "what task do you want me to start?")
+            self.reply(data, "What task do you want me to start?")
             return
 
         if task_name not in [task.name for task in self.bot.tasks]:
             # This task does not exist or hasn't been loaded:
-            msg = "task could not be found; either it doesn't exist, or it wasn't loaded correctly."
+            msg = "Task could not be found; either it doesn't exist, or it wasn't loaded correctly."
             self.reply(data, msg.format(task_name))
             return
 
         data.kwargs["fromIRC"] = True
         self.bot.tasks.start(task_name, **data.kwargs)
-        msg = "task \x0302{0}\x0F started.".format(task_name)
+        msg = "Task \x0302{0}\x0F started.".format(task_name)
         self.reply(data, msg)

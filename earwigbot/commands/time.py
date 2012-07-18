@@ -56,13 +56,13 @@ class Time(Command):
 
     def do_time(self, data, timezone):
         if not pytz:
-            msg = "this command requires the 'pytz' module: http://pytz.sourceforge.net/"
+            msg = "This command requires the 'pytz' module: http://pytz.sourceforge.net/"
             self.reply(data, msg)
             return
         try:
             tzinfo = pytz.timezone(timezone)
         except pytz.exceptions.UnknownTimeZoneError:
-            self.reply(data, "unknown timezone: {0}.".format(timezone))
+            self.reply(data, "Unknown timezone: {0}.".format(timezone))
             return
         now = pytz.utc.localize(datetime.utcnow()).astimezone(tzinfo)
         self.reply(data, now.strftime("%Y-%m-%d %H:%M:%S %Z"))
