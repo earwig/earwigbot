@@ -23,9 +23,9 @@
 from os import path
 
 try:
-    from bs4 import BeautifulSoup
+    import bs4
 except ImportError:
-    BeautifulSoup = None
+    bs4 = None
 
 try:
     import mwparserfromhell
@@ -52,7 +52,7 @@ class BaseTextParser(object):
     def __str__(self):
         """Return a nice string representation of the text parser."""
         name = self.__class__.__name__
-        return "<{0} of text with size {1}>".format(name, len(text))
+        return "<{0} of text with size {1}>".format(name, len(self.text))
 
 
 class ArticleTextParser(BaseTextParser):
@@ -136,9 +136,9 @@ class HTMLTextParser(BaseTextParser):
         (http://www.crummy.com/software/BeautifulSoup/).
         """
         try:
-            soup = BeautifulSoup(self.text, "lxml").body
+            soup = bs4.BeautifulSoup(self.text, "lxml").body
         except ValueError:
-            soup = BeautifulSoup(self.text).body
+            soup = bs4.BeautifulSoup(self.text).body
 
         is_comment = lambda text: isinstance(text, bs4.element.Comment)
         [comment.extract() for comment in soup.find_all(text=is_comment)]

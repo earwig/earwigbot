@@ -39,12 +39,10 @@ class Watcher(IRCConnection):
 
     def __init__(self, bot):
         self.bot = bot
-        self.logger = bot.logger.getChild("watcher")
-
         cf = bot.config.irc["watcher"]
         base = super(Watcher, self)
         base.__init__(cf["host"], cf["port"], cf["nick"], cf["ident"],
-                      cf["realname"])
+                      cf["realname"], bot.logger.getChild("watcher"))
         self._prepare_process_hook()
         self._connect()
 

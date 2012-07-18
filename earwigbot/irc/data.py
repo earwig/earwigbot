@@ -42,7 +42,7 @@ class Data(object):
     def __repr__(self):
         """Return the canonical string representation of the Data."""
         res = "Data(bot={0!r}, my_nick={1!r}, line={2!r})"
-        return res.format(self.bot, self.my_nick, self.line)
+        return res.format(self._bot, self.my_nick, self.line)
 
     def __str__(self):
         """Return a nice string representation of the Data."""

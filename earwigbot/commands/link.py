@@ -21,7 +21,6 @@
 # SOFTWARE.
 
 import re
-from urllib import quote
 
 from earwigbot.commands import Command
 

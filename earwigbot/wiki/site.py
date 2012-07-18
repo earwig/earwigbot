@@ -185,9 +185,9 @@ class Site(object):
         name, password = self._login_info
         login = "({0}, {1})".format(repr(name), "hidden" if password else None)
         cookies = self._cookiejar.__class__.__name__
-        try:
-            cookies += "({0!r})".format(self._cookiejar.filename)
-        except AttributeError:
+        if hasattr(self._cookiejar, "filename"):
+            cookies += "({0!r})".format(getattr(self._cookiejar, "filename"))
+        else:
             cookies += "()"
         agent = self._opener.addheaders[0][1]
         return res.format(login, cookies, agent, **self.__dict__)
@@ -445,10 +445,11 @@ class Site(object):
         FileCookieJar raises NotImplementedError) or no default filename was
         given (LWPCookieJar and MozillaCookieJar raise ValueError).
         """
-        try:
-            self._cookiejar.save()
-        except (AttributeError, NotImplementedError, ValueError):
-            pass
+        if hasattr(self._cookiejar, "save"):
+            try:
+                gettattr(self._cookiejar, "save")()
+            except (NotImplementedError, ValueError):
+                pass
 
     def _login(self, login, token=None, attempt=0):
         """Safely login through the API.

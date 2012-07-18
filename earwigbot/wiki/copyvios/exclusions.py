@@ -114,7 +114,7 @@ class ExclusionsDB(object):
                 else:
                     conn.execute(query3, (sitename, url))
             conn.executemany(query4, [(sitename, url) for url in urls])
-            if conn.execute(query5, (name,)).fetchone():
+            if conn.execute(query5, (sitename,)).fetchone():
                 conn.execute(query6, (time(), sitename))
             else:
                 conn.execute(query7, (sitename, time()))
@@ -136,7 +136,7 @@ class ExclusionsDB(object):
         This only updates the exclusions database for the *sitename* site.
         """
         max_staleness = 60 * 60 * 24 * 30
-        time_since_update = int(time() - self._get_last_update())
+        time_since_update = int(time() - self._get_last_update(sitename))
         if time_since_update > max_staleness:
             log = u"Updating stale database: {0} (last updated {1} seconds ago)"
             self._logger.info(log.format(sitename, time_since_update))

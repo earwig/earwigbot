@@ -323,7 +323,7 @@ class SitesDB(object):
         # Name arg given, but don't look at others unless `name` isn't found:
         if name:
             try:
-               return self._get_site_object(name)
+                return self._get_site_object(name)
             except SiteNotFoundError:
                 if project and lang:
                     name = self._get_site_name_from_sitesdb(project, lang)

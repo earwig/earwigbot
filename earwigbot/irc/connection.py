@@ -31,12 +31,13 @@ __all__ = ["IRCConnection"]
 class IRCConnection(object):
     """Interface with an IRC server."""
 
-    def __init__(self, host, port, nick, ident, realname):
+    def __init__(self, host, port, nick, ident, realname, logger):
         self._host = host
         self._port = port
         self._nick = nick
         self._ident = ident
         self._realname = realname
+        self.logger = logger
 
         self._is_running = False
         self._send_lock = Lock()
