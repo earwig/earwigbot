@@ -40,7 +40,7 @@ class Link(Command):
 
         elif data.command == "link":
             if not data.args:
-                self.reply(data, "what do you want me to link to?")
+                self.reply(data, "What do you want me to link to?")
                 return
             pagename = " ".join(data.args)
             link = self.site.get_page(pagename).url.encode("utf8")
