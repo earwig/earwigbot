@@ -697,10 +697,11 @@ class AFCStatistics(Task):
     def get_notes(self, chart, content, m_time, s_user):
         """Return any special notes or warnings about this page.
 
-        resubmit:   submission was resubmitted after a previous decline
-        short:      submission is fewer than 1000 bytes
-        no-inline:  submission has no inline citations
+        copyvio:    submission is a suspected copyright violation
         unsourced:  submission lacks references completely
+        no-inline:  submission has no inline citations
+        short:      submission is less than a kilobyte in length
+        resubmit:   submission was resubmitted after a previous decline
         old:        submission has not been touched in > 4 days
         blocked:    submitter is currently blocked
         """
@@ -710,12 +711,10 @@ class AFCStatistics(Task):
         if chart in ignored_charts:
             return notes
 
-        statuses = self.get_statuses(content)
-        if "D" in statuses and chart != self.CHART_MISPLACE:
-            notes += "|nr=1"  # Submission was resubmitted
-
-        if len(content) < 1000:
-            notes += "|ns=1"  # Submission is short
+        copyvios = self.config.tasks.get("afc_copyvios", {})
+        regex = "\{\{\s*" + copyvios.get("template", "AfC suspected copyvio")
+        if re.search(regex, content):
+            notes += "|nc=1"  # Submission is a suspected copyvio
 
         if not re.search("\<ref\s*(.*?)\>(.*?)\</ref\>", content, re.I | re.S):
             regex = "(https?:)|\[//(?!{0})([^ \]\\t\\n\\r\\f\\v]+?)"
@@ -724,6 +723,13 @@ class AFCStatistics(Task):
                 notes += "|ni=1"  # Submission has no inline citations
             else:
                 notes += "|nu=1"  # Submission is completely unsourced
+
+        if len(content) < 1000:
+            notes += "|ns=1"  # Submission is short
+
+        statuses = self.get_statuses(content)
+        if "D" in statuses and chart != self.CHART_MISPLACE:
+            notes += "|nr=1"  # Submission was resubmitted
 
         time_since_modify = (datetime.now() - m_time).total_seconds()
         max_time = 4 * 24 * 60 * 60
