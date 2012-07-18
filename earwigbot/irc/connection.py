@@ -108,6 +108,10 @@ class IRCConnection(object):
         if line[0] == "PING":  # If we are pinged, pong back
             self.pong(line[1][1:])
 
+    def _process_message(self, line):
+        """To be overridden in subclasses."""
+        raise NotImplementedError()
+
     @property
     def host(self):
         """The hostname of the IRC server, like ``"irc.freenode.net"``."""
