@@ -41,7 +41,7 @@ class AFCReport(Command):
             return
 
         if not data.args:
-            msg = "what submission do you want me to give information about?"
+            msg = "What submission do you want me to give information about?"
             self.reply(data, msg)
             return
 
@@ -66,7 +66,7 @@ class AFCReport(Command):
         if page:
             return self.report(page)
 
-        self.reply(data, "submission \x0302{0}\x0F not found.".format(title))
+        self.reply(data, "Submission \x0302{0}\x0F not found.".format(title))
 
     def get_page(self, title):
         page = self.site.get_page(title, follow_redirects=False)

@@ -60,11 +60,11 @@ class Help(Command):
                 if command.__doc__:
                     doc = command.__doc__.replace("\n", "")
                     doc = re.sub("\s\s+", " ", doc)
-                    msg = 'help for command \x0303{0}\x0F: "{1}"'
+                    msg = 'Help for command \x0303{0}\x0F: "{1}"'
                     self.reply(data, msg.format(target, doc))
                     return
 
-        msg = "sorry, no help for \x0303{0}\x0F.".format(target)
+        msg = "Sorry, no help for \x0303{0}\x0F.".format(target)
         self.reply(data, msg)
 
     def do_hello(self, data):

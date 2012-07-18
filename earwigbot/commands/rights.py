@@ -40,7 +40,7 @@ class Rights(Command):
         try:
             rights = user.groups
         except exceptions.UserNotFoundError:
-            msg = "the user \x0302{0}\x0F does not exist."
+            msg = "The user \x0302{0}\x0F does not exist."
             self.reply(data, msg.format(name))
             return
 
@@ -48,5 +48,5 @@ class Rights(Command):
             rights.remove("*")  # Remove the '*' group given to everyone
         except ValueError:
             pass
-        msg = "the rights for \x0302{0}\x0F are {1}."
+        msg = "The rights for \x0302{0}\x0F are {1}."
         self.reply(data, msg.format(name, ', '.join(rights)))

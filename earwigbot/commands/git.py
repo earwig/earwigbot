@@ -40,14 +40,14 @@ class Git(Command):
     def process(self, data):
         self.data = data
         if data.host not in self.config.irc["permissions"]["owners"]:
-            msg = "you must be a bot owner to use this command."
+            msg = "You must be a bot owner to use this command."
             self.reply(data, msg)
             return
         if not data.args or data.args[0] == "help":
             self.do_help()
             return
         if not self.repos:
-            self.reply(data, "no repos are specified in the config file.")
+            self.reply(data, "No repos are specified in the config file.")
             return
 
         command = data.args[0]
@@ -55,12 +55,12 @@ class Git(Command):
             repo_name = data.args[1]
         except IndexError:
             repos = self.get_repos()
-            msg = "which repo do you want to work with (options are {0})?"
+            msg = "Which repo do you want to work with (options are {0})?"
             self.reply(data, msg.format(repos))
             return
         if repo_name not in self.repos:
             repos = self.get_repos()
-            msg = "repository must be one of the following: {0}."
+            msg = "Repository must be one of the following: {0}."
             self.reply(data, msg.format(repos))
             return
         self.repo = git.Repo(self.repos[repo_name])
@@ -78,7 +78,7 @@ class Git(Command):
         elif command == "status":
             self.do_status()
         else:  # They asked us to do something we don't know
-            msg = "unknown argument: \x0303{0}\x0F.".format(data.args[0])
+            msg = "Ynknown argument: \x0303{0}\x0F.".format(data.args[0])
             self.reply(data, msg)
 
     def get_repos(self):
@@ -94,7 +94,7 @@ class Git(Command):
         try:
             return getattr(self.repo.remotes, remote_name)
         except AttributeError:
-            msg = "unknown remote: \x0302{0}\x0F.".format(remote_name)
+            msg = "Unknown remote: \x0302{0}\x0F.".format(remote_name)
             self.reply(self.data, msg)
 
     def get_time_since(self, date):
@@ -121,19 +121,19 @@ class Git(Command):
         for key in sorted(help.keys()):
             subcommands += "\x0303{0}\x0F ({1}), ".format(key, help[key])
         subcommands = subcommands[:-2]  # Trim last comma and space
-        msg = "sub-commands are: {0}; repos are: {1}. Syntax: !git \x0303subcommand\x0F \x0302repo\x0F."
+        msg = "Sub-commands are: {0}; repos are: {1}. Syntax: !git \x0303subcommand\x0F \x0302repo\x0F."
         self.reply(self.data, msg.format(subcommands, self.get_repos()))
 
     def do_branch(self):
         """Get our current branch."""
         branch = self.repo.active_branch.name
-        msg = "currently on branch \x0302{0}\x0F.".format(branch)
+        msg = "Currently on branch \x0302{0}\x0F.".format(branch)
         self.reply(self.data, msg)
 
     def do_branches(self):
         """Get a list of branches."""
         branches = [branch.name for branch in self.repo.branches]
-        msg = "branches: \x0302{0}\x0F.".format(", ".join(branches))
+        msg = "Branches: \x0302{0}\x0F.".format(", ".join(branches))
         self.reply(self.data, msg)
 
     def do_checkout(self):
@@ -141,23 +141,23 @@ class Git(Command):
         try:
             target = self.data.args[2]
         except IndexError:  # No branch name provided
-            self.reply(self.data, "switch to which branch?")
+            self.reply(self.data, "Wwitch to which branch?")
             return
 
         current_branch = self.repo.active_branch.name
         if target == current_branch:
-            msg = "already on \x0302{0}\x0F!".format(target)
+            msg = "Already on \x0302{0}\x0F!".format(target)
             self.reply(self.data, msg)
             return
 
         try:
             ref = getattr(self.repo.branches, target)
         except AttributeError:
-            msg = "branch \x0302{0}\x0F doesn't exist!".format(target)
+            msg = "Branch \x0302{0}\x0F doesn't exist!".format(target)
             self.reply(self.data, msg)
         else:
             ref.checkout()
-            ms = "switched from branch \x0302{0}\x0F to \x0302{1}\x0F."
+            ms = "Switched from branch \x0302{0}\x0F to \x0302{1}\x0F."
             msg = ms.format(current_branch, target)
             self.reply(self.data, msg)
             log = "{0} checked out branch {1} of {2}"
@@ -169,23 +169,23 @@ class Git(Command):
         try:
             target = self.data.args[2]
         except IndexError:  # No branch name provided
-            self.reply(self.data, "delete which branch?")
+            self.reply(self.data, "Delete which branch?")
             return
 
         current_branch = self.repo.active_branch.name
         if current_branch == target:
-            msg = "you're currently on this branch; please checkout to a different branch before deleting."
+            msg = "You're currently on this branch; please checkout to a different branch before deleting."
             self.reply(self.data, msg)
             return
 
         try:
             ref = getattr(self.repo.branches, target)
         except AttributeError:
-            msg = "branch \x0302{0}\x0F doesn't exist!".format(target)
+            msg = "Branch \x0302{0}\x0F doesn't exist!".format(target)
             self.reply(self.data, msg)
         else:
             self.repo.git.branch("-d", ref)
-            msg = "branch \x0302{0}\x0F has been deleted locally."
+            msg = "Branch \x0302{0}\x0F has been deleted locally."
             self.reply(self.data, msg.format(target))
             log = "{0} deleted branch {1} of {2}"
             logmsg = log.format(self.data.nick, target, self.repo.working_dir)
@@ -194,7 +194,7 @@ class Git(Command):
     def do_pull(self):
         """Pull from our remote repository."""
         branch = self.repo.active_branch.name
-        msg = "pulling from remote (currently on \x0302{0}\x0F)..."
+        msg = "Pulling from remote (currently on \x0302{0}\x0F)..."
         self.reply(self.data, msg.format(branch))
 
         remote = self.get_remote()
@@ -205,13 +205,13 @@ class Git(Command):
 
         if updated:
             branches = ", ".join([info.ref.remote_head for info in updated])
-            msg = "done; updates to \x0302{0}\x0F (from {1})."
+            msg = "Done; updates to \x0302{0}\x0F (from {1})."
             self.reply(self.data, msg.format(branches, remote.url))
             log = "{0} pulled {1} of {2} (updates to {3})"
             self.logger.info(log.format(self.data.nick, remote.name,
                                         self.repo.working_dir, branches))
         else:
-            self.reply(self.data, "done; no new changes.")
+            self.reply(self.data, "Done; no new changes.")
             log = "{0} pulled {1} of {2} (no updates)"
             self.logger.info(log.format(self.data.nick, remote.name,
                                         self.repo.working_dir))
@@ -227,13 +227,13 @@ class Git(Command):
 
         if updated:
             branches = ", ".join([info.ref.remote_head for info in updated])
-            msg = "last local commit was \x02{0}\x0F ago; updates to \x0302{1}\x0F."
+            msg = "Last local commit was \x02{0}\x0F ago; updates to \x0302{1}\x0F."
             self.reply(self.data, msg.format(since, branches))
             log = "{0} got status of {1} of {2} (updates to {3})"
             self.logger.info(log.format(self.data.nick, remote.name,
                                         self.repo.working_dir, branches))
         else:
-            msg = "last commit was \x02{0}\x0F ago. Local copy is up-to-date with remote."
+            msg = "Last commit was \x02{0}\x0F ago. Local copy is up-to-date with remote."
             self.reply(self.data, msg.format(since))
             log = "{0} pulled {1} of {2} (no updates)"
             self.logger.info(log.format(self.data.nick, remote.name,

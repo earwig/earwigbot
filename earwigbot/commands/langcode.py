@@ -30,7 +30,7 @@ class Langcode(Command):
 
     def process(self, data):
         if not data.args:
-            self.reply(data, "please specify a language code.")
+            self.reply(data, "Please specify a language code.")
             return
 
         code = data.args[0]
@@ -50,4 +50,4 @@ class Langcode(Command):
                 self.reply(data, msg)
                 return
 
-        self.reply(data, "language \x0302{0}\x0F not found.".format(code))
+        self.reply(data, "Language \x0302{0}\x0F not found.".format(code))
