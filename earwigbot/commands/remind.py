@@ -32,19 +32,19 @@ class Remind(Command):
 
     def process(self, data):
         if not data.args:
-            msg = "please specify a time (in seconds) and a message in the following format: !remind <time> <msg>."
+            msg = "Please specify a time (in seconds) and a message in the following format: !remind <time> <msg>."
             self.reply(data, msg)
             return
 
         try:
             wait = int(data.args[0])
         except ValueError:
-            msg = "the time must be given as an integer, in seconds."
+            msg = "The time must be given as an integer, in seconds."
             self.reply(data, msg)
             return
         message = ' '.join(data.args[1:])
         if not message:
-            msg = "what message do you want me to give you when time is up?"
+            msg = "What message do you want me to give you when time is up?"
             self.reply(data, msg)
             return
 
