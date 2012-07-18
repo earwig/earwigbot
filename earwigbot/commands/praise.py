@@ -44,5 +44,5 @@ class Praise(Command):
         if not data.args:
             msg = "You use this command to praise certain people. Who they are is a secret."
         else:
-            msg = "you're doing it wrong."
+            msg = "You're doing it wrong."
         self.reply(data, msg)
