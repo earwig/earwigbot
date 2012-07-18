@@ -47,7 +47,7 @@ class Lag(Command):
 
         if len(data.args) > 1:
             name = " ".join(data.args)
-            self.reply(data, "unknown site: \x0302{0}\x0F.".format(name))
+            self.reply(data, "Unknown site: \x0302{0}\x0F.".format(name))
             return
         name = data.args[0]
         if "." in name:
@@ -58,7 +58,7 @@ class Lag(Command):
             try:
                 return self.bot.wiki.get_site(name)
             except exceptions.SiteNotFoundError:
-                msg = "unknown site: \x0302{0}\x0F.".format(name)
+                msg = "Unknown site: \x0302{0}\x0F.".format(name)
                 self.reply(data, msg)
                 return
         return self.get_site_from_proj_and_lang(data, project, lang)
@@ -70,7 +70,7 @@ class Lag(Command):
             try:
                 site = self.bot.wiki.add_site(project=project, lang=lang)
             except exceptions.APIError:
-                msg = "site \x0302{0}:{1}\x0F not found."
+                msg = "Site \x0302{0}:{1}\x0F not found."
                 self.reply(data, msg.format(project, lang))
                 return
         return site
