@@ -54,7 +54,7 @@ class Registration(Command):
         elif user.gender == "female":
             gender = "She's"
         else:
-            gender = "They're"  # Singluar they?
+            gender = "They're"  # Singular they?
 
         msg = "\x0302{0}\x0F registered on {1}. {2} {3} old."
         self.reply(data, msg.format(name, date, gender, age))
