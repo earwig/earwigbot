@@ -36,7 +36,7 @@ default_sources = {
         "Wikipedia:Mirrors and forks/Ghi", "Wikipedia:Mirrors and forks/Jkl",
         "Wikipedia:Mirrors and forks/Mno", "Wikipedia:Mirrors and forks/Pqr",
         "Wikipedia:Mirrors and forks/Stu", "Wikipedia:Mirrors and forks/Vwxyz",
-        "User:EarwigBot/Copyvios/Exclusion list"
+        "User:EarwigBot/Copyvios/Exclusions"
     ]
 }
 
