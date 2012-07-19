@@ -93,7 +93,8 @@ class AFCCopyvios(Task):
             confirm = page.copyvio_compare(url, self.min_confidence)
             new_conf = "{0}%".format(round(confirm.confidence * 100, 2))
             if not confirm.violation:
-                msg = u"A violation was detected in [[{0}]], but couldn't be confirmed. It may have just been edited (best: {1} at {2} -> {3} confidence)"
+                msg = u"A violation was detected in [[{0}]], but couldn't be confirmed."
+                msg += u" It may have just been edited (best: {1} at {2} -> {3} confidence)"
                 self.logger.info(msg.format(title, url, orig_conf, new_conf))
 
             safeurl = quote(url.encode("utf8"), safe="/:").decode("utf8")
