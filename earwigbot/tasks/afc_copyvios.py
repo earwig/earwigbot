@@ -145,8 +145,8 @@ class AFCCopyvios(Task):
         The cache saves time and money by saving the result of the web search
         but neither the result of the comparison nor any actual text (which
         could violate data retention policy). Cache entries are (intended to
-        be) retained for one day; this task does not remove old entries (that
-        is handled by the Toolserver component).
+        be) retained for three days; this task does not remove old entries
+        (that is handled by the Toolserver component).
 
         This will only be called if ``cache_results == True`` in the task's
         config, which is ``False`` by default.
