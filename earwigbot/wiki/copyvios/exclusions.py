@@ -24,6 +24,7 @@ import re
 import sqlite3 as sqlite
 from threading import Lock
 from time import time
+from urlparse import urlparse
 
 from earwigbot import exceptions
 
@@ -34,7 +35,8 @@ default_sources = {
         "Wikipedia:Mirrors and forks/Abc", "Wikipedia:Mirrors and forks/Def",
         "Wikipedia:Mirrors and forks/Ghi", "Wikipedia:Mirrors and forks/Jkl",
         "Wikipedia:Mirrors and forks/Mno", "Wikipedia:Mirrors and forks/Pqr",
-        "Wikipedia:Mirrors and forks/Stu", "Wikipedia:Mirrors and forks/Vwxyz"
+        "Wikipedia:Mirrors and forks/Stu", "Wikipedia:Mirrors and forks/Vwxyz",
+        "User:EarwigBot/Copyvios/Exclusion list"
     ]
 }
 
@@ -131,11 +133,11 @@ class ExclusionsDB(object):
             return result[0] if result else 0
 
     def sync(self, sitename):
-        """Update the database if it hasn't been updated in the past month.
+        """Update the database if it hasn't been updated in the past week.
 
         This only updates the exclusions database for the *sitename* site.
         """
-        max_staleness = 60 * 60 * 24 * 30
+        max_staleness = 60 * 60 * 24 * 7
         time_since_update = int(time() - self._get_last_update(sitename))
         if time_since_update > max_staleness:
             log = u"Updating stale database: {0} (last updated {1} seconds ago)"
@@ -153,8 +155,13 @@ class ExclusionsDB(object):
         normalized = re.sub("https?://", "", url.lower())
         query = "SELECT exclusion_url FROM exclusions WHERE exclusion_sitename = ?"
         with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
-            for row in conn.execute(query, (sitename,)):
-                if normalized.startswith(row[0]):
+            for (excl,) in conn.execute(query, (sitename,)):
+                if excl.startswith("*."):
+                    netloc = urlparse(url.lower()).netloc
+                    matches = True if excl[2:] in netloc else False
+                else:
+                    matches = True if normalized.startswith(excl) else False
+                if matches:
                     log = u"Exclusion detected in {0} for {1}"
                     self._logger.debug(log.format(sitename, url))
                     return True

@@ -42,7 +42,7 @@ class AFCCopyvios(Task):
         self.min_confidence = cfg.get("minConfidence", 0.5)
         self.max_queries = cfg.get("maxQueries", 10)
         self.cache_results = cfg.get("cacheResults", False)
-        default_summary = "Tagging suspected [[WP:COPYVIO|copyright violation]] of {url}"
+        default_summary = "Tagging suspected [[WP:COPYVIO|copyright violation]] of {url}."
         self.summary = self.make_summary(cfg.get("summary", default_summary))
 
         # Connection data for our SQL database:
