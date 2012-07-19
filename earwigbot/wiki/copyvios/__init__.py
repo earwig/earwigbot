@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 from gzip import GzipFile
+from socket import timeout
 from StringIO import StringIO
 from time import sleep, time
 from urllib2 import build_opener, URLError
@@ -64,8 +65,8 @@ class CopyvioMixIn(object):
         ignored, and the original content is returned.
         """
         try:
-            response = self._opener.open(url)
-        except URLError:
+            response = self._opener.open(url, timeout=5)
+        except (URLError, timeout):
             return None
         result = response.read()
 
