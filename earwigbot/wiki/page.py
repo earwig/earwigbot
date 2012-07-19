@@ -442,8 +442,19 @@ class Page(CopyvioMixIn):
                 raise exceptions.LoginError(e)
 
         elif assertion == "bot":
-            e = "AssertEdit: bot assertion failed; we don't have a bot flag!"
-            raise exceptions.PermissionsError(e)
+            if not all(self.site._login_info):
+                # Insufficient login info:
+                e = "AssertEdit: bot assertion failed, and no login info was provided."
+                raise exceptions.PermissionsError(e)
+            if tries == 0:
+                # Try to log in if we got logged out:
+                self.site._login(self.site._login_info)
+                self._token = None  # Need a new token; old one is invalid now
+                return self._edit(params=params, tries=1)
+            else:
+                # We already tried to log in, so we don't have a bot flag:
+                e = "AssertEdit: bot assertion failed: we don't have a bot flag!"
+                raise exceptions.PermissionsError(e)
 
         # Unknown assertion, maybe "true", "false", or "exists":
         e = "AssertEdit: assertion '{0}' failed.".format(assertion)
