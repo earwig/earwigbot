@@ -84,23 +84,32 @@ class AFCCopyvios(Task):
         self.logger.info(u"Checking [[{0}]]".format(title))
         result = page.copyvio_check(self.min_confidence, self.max_queries)
         url = result.url
-        confidence = "{0}%".format(round(result.confidence * 100, 2))
+        orig_conf = "{0}%".format(round(result.confidence * 100, 2))
 
         if result.violation:
+            # Things can change in the minute that it takes to do a check.
+            # Confirm that a violation still holds true:
+            page.load()
+            confirm = page.copyvio_compare(url, self.min_confidence)
+            new_conf = "{0}%".format(round(confirm.confidence * 100, 2))
+            if not confirm.violation:
+                msg = u"A violation was detected in [[{0}]], but couldn't be confirmed. It may have just been edited (best: {1} at {2} -> {3} confidence)"
+                self.logger.info(msg.format(title, url, orig_conf, new_conf))
+
             safeurl = quote(url.encode("utf8"), safe="/:").decode("utf8")
             content = page.get()
             template = u"\{\{{0}|url={1}|confidence={2}\}\}\n"
-            template = template.format(self.template, safeurl, confidence)
+            template = template.format(self.template, safeurl, new_conf)
             newtext = template + content
             if "{url}" in self.summary:
                 page.edit(newtext, self.summary.format(url=url))
             else:
                 page.edit(newtext, self.summary)
             msg = u"Found violation: [[{0}]] -> {1} ({2} confidence)"
-            self.logger.info(msg.format(title, url, confidence))
+            self.logger.info(msg.format(title, url, new_conf))
         else:
             msg = u"No violations detected in [[{0}]] (best: {1} at {2} confidence)"
-            self.logger.info(msg.format(title, url, confidence))
+            self.logger.info(msg.format(title, url, orig_conf))
 
         self.log_processed(pageid)
         if self.cache_results:
@@ -150,4 +159,5 @@ class AFCCopyvios(Task):
             cursor.execute(query1, (pageid,))
             if cursor.fetchall():
                 cursor.execute(query2, (pageid,))
-            cursor.execute(query3, (pageid, hash, result.url, result.queries, 0))
+            args = (pageid, hash, result.url, result.queries, 0)
+            cursor.execute(query3, args)
