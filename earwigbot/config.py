@@ -123,12 +123,11 @@ class BotConfig(object):
         logger = logging.getLogger("earwigbot")
         logger.handlers = []  # Remove any handlers already attached to us
         logger.setLevel(logging.DEBUG)
+        color_formatter = _BotFormatter(color=True)
+        formatter = _BotFormatter()
 
         if self.metadata.get("enableLogging"):
             hand = logging.handlers.TimedRotatingFileHandler
-            formatter = _BotFormatter()
-            color_formatter = _BotFormatter(color=True)
-
             logfile = lambda f: path.join(log_dir, f)
 
             if not path.isdir(log_dir):
