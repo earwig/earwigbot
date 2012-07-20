@@ -120,11 +120,11 @@ class AFCStatistics(Task):
                 return
             summary = self.summary
 
-        statistics = self.compile_charts().encode("utf8")
+        statistics = self.compile_charts()
 
         page = self.site.get_page(self.pagename)
-        text = page.get().encode("utf8")
-        newtext = re.sub("<!-- stat begin -->(.*?)<!-- stat end -->",
+        text = page.get()
+        newtext = re.sub(u"<!-- stat begin -->(.*?)<!-- stat end -->",
                          "<!-- stat begin -->\n" + statistics + "\n<!-- stat end -->",
                          text, flags=re.DOTALL)
         if newtext == text:
@@ -159,7 +159,7 @@ class AFCStatistics(Task):
         with self.conn.cursor(oursql.DictCursor) as cursor:
             cursor.execute(query, (chart_id,))
             for page in cursor:
-                chart += "\n" + self.compile_chart_row(page).decode("utf8")
+                chart += "\n" + self.compile_chart_row(page)
 
         chart += "\n{{" + self.tl_footer + "}}"
         return chart
@@ -170,7 +170,7 @@ class AFCStatistics(Task):
         'page' is a dict of page information, taken as a row from the page
         table, where keys are column names and values are their cell contents.
         """
-        row = "{0}|s={page_status}|t={page_title}|h={page_short}|z={page_size}|"
+        row = u"{0}|s={page_status}|t={page_title}|h={page_short}|z={page_size}|"
         if page["page_special_oldid"]:
             row += "sr={page_special_user}|sd={page_special_time}|si={page_special_oldid}|"
         row += "mr={page_modify_user}|md={page_modify_time}|mi={page_modify_oldid}"
@@ -239,7 +239,6 @@ class AFCStatistics(Task):
                 self.untrack_page(cursor, pageid)
                 continue
 
-            title = title.decode("utf8")  # SQL gives strings; we want Unicode
             real_oldid = result[0][0]
             if oldid != real_oldid:
                 msg = u"Updating page [[{0}]] (id: {1}) @ {2}"
@@ -384,7 +383,7 @@ class AFCStatistics(Task):
         size = self.get_size(content)
         m_user, m_time, m_id = self.get_modify(pageid)
 
-        if title != result["page_title"].decode("utf8"):
+        if title != result["page_title"]:
             self.update_page_title(cursor, result, pageid, title)
 
         if m_id != result["page_modify_oldid"]:
@@ -396,10 +395,7 @@ class AFCStatistics(Task):
                                               chart)
             s_user = special[0]
         else:
-            try:
-                s_user = result["page_special_user"].decode("utf8")
-            except AttributeError:  # Happens if page_special_user is None
-                s_user = result["page_special_user"]
+            s_user = result["page_special_user"]
 
         notes = self.get_notes(chart, content, m_time, s_user)
         if notes != result["page_notes"]:
@@ -412,8 +408,7 @@ class AFCStatistics(Task):
         cursor.execute(query, (title, short, pageid))
 
         msg = u"  {0}: title: {1} -> {2}"
-        old_title = result["page_title"].decode("utf8")
-        self.logger.debug(msg.format(pageid, old_title, title))
+        self.logger.debug(msg.format(pageid, result["page_title"], title))
 
     def update_page_modify(self, cursor, result, pageid, size, m_user, m_time, m_id):
         """Update the last modified information of a page in our database."""
@@ -423,7 +418,7 @@ class AFCStatistics(Task):
         cursor.execute(query, (size, m_user, m_time, m_id, pageid))
 
         msg = u"  {0}: modify: {1} / {2} / {3} -> {4} / {5} / {6}"
-        msg = msg.format(pageid, result["page_modify_user"].decode("utf8"),
+        msg = msg.format(pageid, result["page_modify_user"],
                          result["page_modify_time"],
                          result["page_modify_oldid"], m_user, m_time, m_id)
         self.logger.debug(msg)
@@ -444,12 +439,9 @@ class AFCStatistics(Task):
         s_user, s_time, s_id = self.get_special(pageid, chart)
         if s_id != result["page_special_oldid"]:
             cursor.execute(query2, (s_user, s_time, s_id, pageid))
-            if result["page_special_user"]:
-                old_s_user = result["page_special_user"].decode("utf8")
-            else:
-                old_s_user = None
             msg = u"{0}: special: {1} / {2} / {3} -> {4} / {5} / {6}"
-            msg = msg.format(pageid, old_s_user, result["page_special_time"],
+            msg = msg.format(pageid, result["page_special_user"],
+                             result["page_special_time"],
                              result["page_special_oldid"], s_user, s_time, s_id)
             self.logger.debug(msg)
 
@@ -692,7 +684,7 @@ class AFCStatistics(Task):
         result = self.site.sql_query(query, (pageid,))
         c_user, c_time, c_id = list(result)[0]
         timestamp = datetime.strptime(c_time, "%Y%m%d%H%M%S")
-        return c_user.encode("utf8"), timestamp, c_id
+        return c_user.decode("utf8"), timestamp, c_id
 
     def get_notes(self, chart, content, m_time, s_user):
         """Return any special notes or warnings about this page.
