@@ -4,6 +4,10 @@
 -- ------------------------------------------------------
 -- Server version       5.1.59
 
+CREATE DATABASE `u_earwig_afc_statistics`
+  DEFAULT CHARACTER SET utf8
+  DEFAULT COLLATE utf8_unicode_ci;
+
 --
 -- Table structure for table `chart`
 --
@@ -11,10 +15,10 @@
 DROP TABLE IF EXISTS `chart`;
 CREATE TABLE `chart` (
   `chart_id` tinyint(3) unsigned NOT NULL AUTO_INCREMENT,
-  `chart_title` varchar(255) DEFAULT NULL,
-  `chart_special_title` varchar(255) DEFAULT NULL,
+  `chart_title` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `chart_special_title` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`chart_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
 -- Dumping data for table `chart`
@@ -38,7 +42,7 @@ CREATE TABLE `row` (
   `row_id` int(10) unsigned NOT NULL,
   `row_chart` tinyint(3) unsigned DEFAULT NULL,
   PRIMARY KEY (`row_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
 -- Table structure for table `page`
@@ -47,18 +51,18 @@ CREATE TABLE `row` (
 DROP TABLE IF EXISTS `page`;
 CREATE TABLE `page` (
   `page_id` int(10) unsigned NOT NULL,
-  `page_status` varchar(16) DEFAULT NULL,
-  `page_title` varchar(512) DEFAULT NULL,
-  `page_short` varchar(512) DEFAULT NULL,
-  `page_size` varchar(16) DEFAULT NULL,
-  `page_notes` tinytext,
-  `page_modify_user` varchar(255) DEFAULT NULL,
+  `page_status` varchar(16) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `page_title` varchar(512) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `page_short` varchar(512) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `page_size` varchar(16) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `page_notes` tinytext COLLATE utf8_unicode_ci,
+  `page_modify_user` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   `page_modify_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `page_modify_oldid` int(10) unsigned DEFAULT NULL,
-  `page_special_user` varchar(255) DEFAULT NULL,
+  `page_special_user` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   `page_special_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `page_special_oldid` int(10) unsigned DEFAULT NULL,
   PRIMARY KEY (`page_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
--- Dump completed on 2012-07-20 17:57:36
+-- Dump completed on 2012-07-20 20:25:10
