@@ -117,9 +117,9 @@ class ExclusionsDB(object):
                     conn.execute(query3, (sitename, url))
             conn.executemany(query4, [(sitename, url) for url in urls])
             if conn.execute(query5, (sitename,)).fetchone():
-                conn.execute(query6, (time(), sitename))
+                conn.execute(query6, (int(time()), sitename))
             else:
-                conn.execute(query7, (sitename, time()))
+                conn.execute(query7, (sitename, int(time())))
 
     def _get_last_update(self, sitename):
         """Return the UNIX timestamp of the last time the db was updated."""
