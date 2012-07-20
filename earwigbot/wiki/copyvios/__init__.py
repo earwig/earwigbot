@@ -65,7 +65,7 @@ class CopyvioMixIn(object):
         ignored, and the original content is returned.
         """
         try:
-            response = self._opener.open(url, timeout=5)
+            response = self._opener.open(url.encode("utf8"), timeout=5)
         except (URLError, timeout):
             return None
         result = response.read()
