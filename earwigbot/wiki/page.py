@@ -345,7 +345,8 @@ class Page(CopyvioMixIn):
     def _build_edit_params(self, text, summary, minor, bot, force, section,
                            captcha_id, captcha_word):
         """Given some keyword arguments, build an API edit query string."""
-        hashed = md5(text).hexdigest()  # Checksum to ensure text is correct
+        unitxt = text.encode("utf8") if isinstance(text, unicode) else text
+        hashed = md5(unitxt).hexdigest()  # Checksum to ensure text is correct
         params = {"action": "edit", "title": self._title, "text": text,
                   "token": self._token, "summary": summary, "md5": hashed}
 
