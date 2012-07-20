@@ -447,7 +447,7 @@ class Site(object):
         """
         if hasattr(self._cookiejar, "save"):
             try:
-                gettattr(self._cookiejar, "save")()
+                getattr(self._cookiejar, "save")()
             except (NotImplementedError, ValueError):
                 pass
 
