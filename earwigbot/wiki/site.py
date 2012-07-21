@@ -29,7 +29,7 @@ from re import escape as re_escape, match as re_match
 from StringIO import StringIO
 from threading import Lock
 from time import sleep, time
-from urllib import quote_plus
+from urllib import quote_plus, unquote_plus
 from urllib2 import build_opener, HTTPCookieProcessor, URLError
 from urlparse import urlparse
 
@@ -170,7 +170,7 @@ class Site(object):
         self._login_info = name, password = login
         if name and password:
             logged_in_as = self._get_username_from_cookies()
-            if not logged_in_as or name != logged_in_as:
+            if not logged_in_as or name.replace("_", " ") != logged_in_as:
                 self._login(login)
 
     def __repr__(self):
@@ -392,7 +392,7 @@ class Site(object):
             name = ''.join((self._name, "UserName"))
             user_name = self._get_cookie(name, self.domain)
             if user_name:
-                return user_name.value
+                return unquote_plus(user_name.value)
 
         name = "centralauth_Token"
         for cookie in self._cookiejar:
@@ -405,7 +405,7 @@ class Site(object):
             if re_match(search, self.domain):  # Test it against our site
                 user_name = self._get_cookie("centralauth_User", cookie.domain)
                 if user_name:
-                    return user_name.value
+                    return unquote_plus(user_name.value)
 
     def _get_username_from_api(self):
         """Do a simple API query to get our username and return it.
