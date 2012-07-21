@@ -101,7 +101,7 @@ class Site(object):
         based on your config file and the sites database. We accept a bunch of
         kwargs, but the only ones you really "need" are *base_url* and
         *script_path*; this is enough to figure out an API url. *login*, a
-        tuple of (username, password), is highly recommended. *cookiejar will
+        tuple of (username, password), is highly recommended. *cookiejar* will
         be used to store cookies, and we'll use a normal CookieJar if none is
         given.
 
@@ -146,7 +146,7 @@ class Site(object):
             self._search_config = {}
 
         # Set up cookiejar and URL opener for making API queries:
-        if cookiejar:
+        if cookiejar is not None:
             self._cookiejar = cookiejar
         else:
             self._cookiejar = CookieJar()
