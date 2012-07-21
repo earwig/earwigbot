@@ -220,14 +220,27 @@ class SitesDB(object):
     def _get_site_name_from_sitesdb(self, project, lang):
         """Return the name of the first site with the given project and lang.
 
+        If we can't find the site with the given information, we'll also try
+        searching for a site whose base_url contains "{lang}.{project}". There
+        are a few sites, like the French Wikipedia, that set their project to
+        something other than the expected "wikipedia" ("wikipédia" in this
+        case), but we should correctly find them when doing get_site(lang="fr",
+        project="wikipedia").
+
         If the site is not found, return None. An empty sitesdb will be created
         if none exists.
         """
-        query = "SELECT site_name FROM sites WHERE site_project = ? and site_lang = ?"
+        query1 = "SELECT site_name FROM sites WHERE site_project = ? and site_lang = ?"
+        query2 = "SELECT site_name FROM sites WHERE site_base_url LIKE ?"
         with sqlite.connect(self._sitesdb) as conn:
             try:
-                site = conn.execute(query, (project, lang)).fetchone()
-                return site[0] if site else None
+                site = conn.execute(query1, (project, lang)).fetchone()
+                if site:
+                    return site[0]
+                else:
+                    url = "%{0}.{1}%".format(lang, project)
+                    site = conn.execute(query2, (url,)).fetchone()
+                    return site[0] if site else None
             except sqlite.OperationalError:
                 self._create_sitesdb()
 
