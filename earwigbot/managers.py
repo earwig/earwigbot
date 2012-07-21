@@ -155,9 +155,12 @@ class _ResourceManager(object):
                 self._load_directory(builtin_dir)  # Built-in resources
             self._load_directory(plugins_dir)  # Custom resources, aka plugins
 
-        msg = "Loaded {0} {1}: {2}"
-        resources = ", ".join(self._resources.keys())
-        self.logger.info(msg.format(len(self._resources), name, resources))
+        if self._resources:
+            msg = "Loaded {0} {1}: {2}"
+            resources = ", ".join(self._resources.keys())
+            self.logger.info(msg.format(len(self._resources), name, resources))
+        else:
+            self.logger.info("Loaded 0 {0}".format(name))
 
     def get(self, key):
         """Return the class instance associated with a certain resource.
