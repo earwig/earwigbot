@@ -25,7 +25,6 @@ from gzip import GzipFile
 from json import loads
 from logging import getLogger, NullHandler
 from os.path import expanduser
-from re import escape as re_escape, match as re_match
 from StringIO import StringIO
 from threading import Lock
 from time import sleep, time
@@ -394,15 +393,13 @@ class Site(object):
             if user_name:
                 return unquote_plus(user_name.value)
 
-        name = "centralauth_Token"
         for cookie in self._cookiejar:
-            if not cookie.domain_initial_dot or cookie.is_expired():
+            if cookie.name != "centralauth_Token" or cookie.is_expired():
                 continue
-            if cookie.name != name:
-                continue
-            # Build a regex that will match domains this cookie affects:
-            search = ''.join(("(.*?)", re_escape(cookie.domain)))
-            if re_match(search, self.domain):  # Test it against our site
+            base = cookie.domain
+            if base.startswith(".") and not cookie.domain_initial_dot:
+                base = base[1:]
+            if self.domain.endswith(base):
                 user_name = self._get_cookie("centralauth_User", cookie.domain)
                 if user_name:
                     return unquote_plus(user_name.value)
