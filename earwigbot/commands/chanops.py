@@ -33,7 +33,9 @@ class ChanOps(Command):
             msg = "Available commands are !voice, !devoice, !op, !deop, !join, and !part."
             self.reply(data, msg)
             return
-        if data.host not in self.config.irc["permissions"]["admins"]:
+        if data.command[:2] == "de" and not data.args:
+            target = data.nick
+        elif data.host not in self.config.irc["permissions"]["admins"]:
             self.reply(data, "You must be a bot admin to use this command.")
             return
 
