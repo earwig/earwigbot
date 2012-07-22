@@ -33,7 +33,7 @@ class ChanOps(Command):
             msg = "Available commands are !voice, !devoice, !op, !deop, !join, and !part."
             self.reply(data, msg)
             return
-        de_escalate = data.command[:2] in ["devoice", "deop"]
+        de_escalate = data.command in ["devoice", "deop"]
         if de_escalate and (not data.args or data.args[0] == data.nick):
             target = data.nick
         elif data.host not in self.config.irc["permissions"]["admins"]:
