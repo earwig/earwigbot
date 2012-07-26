@@ -70,7 +70,8 @@ class ArticleTextParser(BaseTextParser):
         The actual stripping is handled by :py:mod:`mwparserfromhell`.
         """
         wikicode = mwparserfromhell.parse(self.text)
-        self.clean = wikicode.strip_code(normalize=True)
+        clean = wikicode.strip_code(normalize=True, collapse=True)
+        self.clean = clean.replace("\n\n", "\n")  # Collapse extra newlines.
         return self.clean
 
     def chunk(self, nltk_dir, max_chunks, max_query=256):
