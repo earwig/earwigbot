@@ -32,10 +32,10 @@ class Lag(Command):
         site = self.get_site(data)
         if not site:
             return
-        if self.command == "replag":
+        if data.command == "replag":
             base = "\x0302{0}\x0F: {1}."
             msg = base.format(site.name, self.get_replag(site))
-        elif self.command == "maxlag":
+        elif data.command == "maxlag":
             base = "\x0302{0}\x0F: {1}."
             msg = base.format(site.name, self.get_maxlag(site).capitalize())
         else:
