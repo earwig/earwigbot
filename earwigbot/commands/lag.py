@@ -32,11 +32,23 @@ class Lag(Command):
         site = self.get_site(data)
         if not site:
             return
-
-        msg = "\x0302{0}\x0F: Toolserver replag is {1}; database maxlag is {2}."
-        replag, maxlag = site.get_replag(), site.get_maxlag()
-        msg = msg.format(site.name, self.format(replag), self.format(maxlag))
+        if self.command == "replag":
+            base = "\x0302{0}\x0F: {1}."
+            msg = base.format(site.name, self.get_replag(site))
+        elif self.command == "maxlag":
+            base = "\x0302{0}\x0F: {1}."
+            msg = base.format(site.name, self.get_maxlag(site).capitalize())
+        else:
+            base = "\x0302{0}\x0F: {1}; {2}."
+            msg = base.format(site.name, self.get_replag(site),
+                              self.get_maxlag(site))
         self.reply(data, msg)
+
+    def get_replag(self, site):
+        return "Toolserver replag is {0}".format(self.time(site.get_replag()))
+
+    def get_maxlag(self, site):
+        return "database maxlag is {0}".format(self.time(site.get_maxlag()))
 
     def get_site(self, data):
         if data.kwargs and "project" in data.kwargs and "lang" in data.kwargs:
@@ -76,7 +88,7 @@ class Lag(Command):
                 return
         return site
 
-    def format(self, seconds):
+    def time(self, seconds):
         parts = [("year", 31536000), ("day", 86400), ("hour", 3600),
                  ("minute", 60), ("second", 1)]
         msg = []
