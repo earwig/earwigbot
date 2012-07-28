@@ -20,4 +20,14 @@ CREATE TABLE `case` (
   PRIMARY KEY (`case_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
+--
+-- Table structure for table `volunteer`
+--
+
+DROP TABLE IF EXISTS `volunteer`;
+CREATE TABLE `volunteer` (
+  `volunteer_username` varchar(512) COLLATE utf8_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`volunteer_username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
 -- Dump completed on 2012-07-27 00:00:00

@@ -53,6 +53,7 @@ class DRNClerkBot(Task):
         # Set some wiki-related attributes:
         self.title = cfg.get("title", "Wikipedia:Dispute resolution noticeboard")
         self.talk = cfg.get("talk", "Wikipedia talk:Dispute resolution noticeboard")
+        self.volunteer_title = cfg.get("volunteers", "Wikipedia:Dispute resolution noticeboard/Volunteering")
         default_summary = "Updating $3 cases for the [[WP:DRN|dispute resolution noticeboard]]."
         self.summary = self.make_summary(cfg.get("summary", default_summary))
 
@@ -76,70 +77,47 @@ class DRNClerkBot(Task):
         if not self.db_access_lock.acquire(False):  # Non-blocking
             self.logger.info("A job is already ongoing; aborting")
             return
-
-        with self.db_access_lock:
-            self.logger.info(u"Starting update to [[{0}]]".format(self.title))
+        action = kwargs.get("action", "all")
+        try:
             start = time()
             conn = oursql.connect(**self.conn_data)
-            cases = self.read_database(conn)
             site = self.bot.wiki.get_site()
-            page = site.get_page(self.title)
-            text = page.get()
-            self.read_page(conn, cases, text)
-            noticies = self.clerk(cases)
-            self.save(page, cases)
-            self.send_notices(site, notices)
-
-    def save(self, page, cases):
-        """Save any changes to the noticeboard."""
-        newtext = text = page.get()
-        counter = 0
-        for case in cases:
-            if case.old != case.body:
-                newtext = newtext.replace(case.old, case.body)
-                counter += 1
-        if newtext == text:
-            self.logger.info(u"Nothing to edit on [[{0}]]".format(page.title))
-            return
-
-        worktime = time() - start
-        if worktime < 60:
-            sleep(60 - worktime)
-        page.reload()
-        if page.get() != text:
-            log = "Someone has edited the page while we were working; restarting"
-            self.logger.warn(log)
-            return self.run()
-        summary = self.summary.replace("$3", str(counter))
-        page.edit(text, summary, minor=True, bot=True)
-        self.logger.info(u"Saved page [[{0}]]".format(page.title))
-
-    def send_notices(self, site, notices):
-        """Send out any templated notices to users or pages."""
-        if not notices:
-            self.logger.info("No notices to send; finishing")
-            return
-        for notice in notices:
-            target, template = notice.target, notice.template
-            log = u"Notifying [[{0}]] with {1}".format(target, template)
-            self.logger.info(log)
-            page = site.get_page(target)
-            try:
-                text = page.get()
-            except exceptions.PageNotFoundError:
-                text = ""
-            if notice.too_late in text:
-                log = u"Skipping [[{0}]]; was already notified".format(target)
+            if action in ["all", "update_volunteers"]:
+                self.update_volunteers(conn, site)
+            if action in ["all", "clerk"]:
+                log = u"Starting update to [[{0}]]".format(self.title)
                 self.logger.info(log)
-            text += ("\n" if text else "") + template
-            try:
-                page.edit(text, summary, minor=False, bot=True)
-            except exceptions.EditError as error:
-                name, msg = type(error).name, error.message
-                log = u"Couldn't leave notice on {0} because of {1}: {2}"
-                self.logger.error(log.format(page.title, name, msg))
+                cases = self.read_database(conn)
+                page = site.get_page(self.title)
+                text = page.get()
+                self.read_page(conn, cases, text)
+                noticies = self.clerk(conn, cases)
+                self.save(page, cases, kwargs)
+                self.send_notices(site, notices)
+        finally:
+            self.db_access_lock.release()
 
-        self.logger.info("Done sending notices")
+    def update_volunteers(self, conn, site):
+        """Updates and stores the list of dispute resolution volunteers."""
+        log = u"Updating volunteer list from [[{0}]]"
+        self.logger.info(log.format(self.volunteer_title))
+        page = site.get_page(self.volunteer_title)
+        try:
+            text = page.get()
+        except exceptions.PageNotFoundError:
+            text = ""
+        marker = "<!-- please don't remove this comment (used by EarwigBot) -->"
+        if marker not in text:
+            log = u"The marker ({0}) wasn't found in the volunteer list at [[{1}]]!"
+            self.logger.error(log.format(marker, page.title))
+        text = text.split(marker)[1]
+        users = set()
+        for line in text.splitlines():
+            user = re.search("\# \{\{User\|(.*?)\}\}", line)
+            if user:
+                users.add(user.group(1))
+
+        # SYNCHRONIZE USERS WITH DATABASE
 
     def read_database(self, conn):
         """Return a list of _Cases from the database."""
@@ -148,7 +126,8 @@ class DRNClerkBot(Task):
         with conn.cursor() as cursor:
             cursor.execute(query)
             for id_, name, status in cursor:
-                cases.append(_Case(id_, title, status))
+                case = _Case(id_, title, status)
+                cases.append(case)
         return cases
 
     def read_page(self, conn, cases, text):
@@ -181,6 +160,7 @@ class DRNClerkBot(Task):
                     self.update_case_title(conn, id_, title)
                     case.title = title
             case.body, case.old = body, old
+            case.apparent_status = status
 
     def select_next_id(self, conn):
         """Return the next incremental ID for a case."""
@@ -218,10 +198,71 @@ class DRNClerkBot(Task):
         with conn.cursor() as cursor:
             cursor.execute(query, (title, id_))
 
-    def clerk(self):
+    def clerk(self, conn, cases):
         """Actually go through cases and modify those to be updated."""
+        query = "SELECT volunteer_username FROM volunteer"
+        with conn.cursor() as cursor:
+            cursor.execute(query)
+            volunteers = [name for (name,) in cursor.fetchall()]
         notices = []
+        for case in cases:
+            notices += self.clerk_case(conn, case, volunteers)
         return notices
+
+    def clerk_case(self, conn, case, volunteers):
+        """Clerk a particular case and return a list of any notices to send."""
+        case                                                                                    # TODO
+
+    def save(self, page, cases, kwargs):
+        """Save any changes to the noticeboard."""
+        newtext = text = page.get()
+        counter = 0
+        for case in cases:
+            if case.old != case.body:
+                newtext = newtext.replace(case.old, case.body)
+                counter += 1
+        if newtext == text:
+            self.logger.info(u"Nothing to edit on [[{0}]]".format(page.title))
+            return
+
+        worktime = time() - start
+        if worktime < 60:
+            sleep(60 - worktime)
+        page.reload()
+        if page.get() != text:
+            log = "Someone has edited the page while we were working; restarting"
+            self.logger.warn(log)
+            return self.run(**kwargs)
+        summary = self.summary.replace("$3", str(counter))
+        page.edit(text, summary, minor=True, bot=True)
+        self.logger.info(u"Saved page [[{0}]]".format(page.title))
+
+    def send_notices(self, site, notices):
+        """Send out any templated notices to users or pages."""
+        if not notices:
+            self.logger.info("No notices to send; finishing")
+            return
+        for notice in notices:
+            target, template = notice.target, notice.template
+            log = u"Notifying [[{0}]] with {1}".format(target, template)
+            self.logger.info(log)
+            page = site.get_page(target)
+            try:
+                text = page.get()
+            except exceptions.PageNotFoundError:
+                text = ""
+            if notice.too_late in text:
+                log = u"Skipping [[{0}]]; was already notified".format(target)
+                self.logger.info(log)
+            text += ("\n" if text else "") + template
+            try:
+                page.edit(text, summary, minor=False, bot=True)
+            except exceptions.EditError as error:
+                name, msg = type(error).name, error.message
+                log = u"Couldn't leave notice on {0} because of {1}: {2}"
+                self.logger.error(log.format(page.title, name, msg))
+
+        self.logger.info("Done sending notices")
 
 
 class _Case(object):
@@ -233,6 +274,7 @@ class _Case(object):
 
         self.body = None
         self.old = None
+        self.apparent_status = None
 
 
 class _Notice(object):
