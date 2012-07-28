@@ -65,6 +65,7 @@ class DRNClerkBot(Task):
         self.title = cfg.get("title", "Wikipedia:Dispute resolution noticeboard")
         self.talk = cfg.get("talk", "Wikipedia talk:Dispute resolution noticeboard")
         self.volunteer_title = cfg.get("volunteers", "Wikipedia:Dispute resolution noticeboard/Volunteering")
+        self.very_old_title = cfg.get("veryOldTitle", "User talk:Szhang (WMF)")
         default_summary = "Updating $3 cases for the [[WP:DRN|dispute resolution noticeboard]]."
         self.summary = self.make_summary(cfg.get("summary", default_summary))
 
@@ -301,8 +302,10 @@ class DRNClerkBot(Task):
     def clerk_review_case(self, case):
         if time() - case.file_time > 60 * 60 * 24 * 7:
             if not case.very_old_notified:
+                template = "{{subst:" + self.tl_notify_stale + "|zhang}} ~~~~"
+                notice = _Notice(self.very_old_title, template)
                 case.very_old_notified = True
-                return SEND_MESSAGE_TO_ZHANG                                        # TODO
+                return [notice]
         return []
 
     def clerk_closed_case(self, case, signatures):
