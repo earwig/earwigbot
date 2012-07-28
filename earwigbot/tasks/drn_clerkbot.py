@@ -27,6 +27,7 @@ from time import sleep, time
 
 import oursql
 
+from earwigbot import exceptions
 from earwigbot.tasks import Task
 
 class DRNClerkBot(Task):
@@ -50,7 +51,8 @@ class DRNClerkBot(Task):
         cfg = self.config.tasks.get(self.name, {})
 
         # Set some wiki-related attributes:
-        self.title = cfg.get("page", "Wikipedia:Dispute resolution noticeboard")
+        self.title = cfg.get("title", "Wikipedia:Dispute resolution noticeboard")
+        self.talk = cfg.get("talk", "Wikipedia talk:Dispute resolution noticeboard")
         default_summary = "Updating $3 cases for the [[WP:DRN|dispute resolution noticeboard]]."
         self.summary = self.make_summary(cfg.get("summary", default_summary))
 
@@ -79,23 +81,26 @@ class DRNClerkBot(Task):
             self.logger.info(u"Starting update to [[{0}]]".format(self.title))
             start = time()
             conn = oursql.connect(**self.conn_data)
-            cases = read_database(conn)
-            page = self.bot.wiki.get_site().get_page(self.title)
+            cases = self.read_database(conn)
+            site = self.bot.wiki.get_site()
+            page = site.get_page(self.title)
             text = page.get()
-            read_page(conn, cases, text)
-
-            # Work!
-            # Send messages!
-
+            self.read_page(conn, cases, text)
+            noticies = self.clerk(cases)
             self.save(page, cases)
+            self.send_notices(site, notices)
 
     def save(self, page, cases):
+        """Save any changes to the noticeboard."""
         newtext = text = page.get()
         counter = 0
         for case in cases:
             if case.old != case.body:
                 newtext = newtext.replace(case.old, case.body)
                 counter += 1
+        if newtext == text:
+            self.logger.info(u"Nothing to edit on [[{0}]]".format(page.title))
+            return
 
         worktime = time() - start
         if worktime < 60:
@@ -106,8 +111,35 @@ class DRNClerkBot(Task):
             self.logger.warn(log)
             return self.run()
         summary = self.summary.replace("$3", str(counter))
-        page.edit(text, summary, minor=False, bot=True)
+        page.edit(text, summary, minor=True, bot=True)
         self.logger.info(u"Saved page [[{0}]]".format(page.title))
+
+    def send_notices(self, site, notices):
+        """Send out any templated notices to users or pages."""
+        if not notices:
+            self.logger.info("No notices to send; finishing")
+            return
+        for notice in notices:
+            target, template = notice.target, notice.template
+            log = u"Notifying [[{0}]] with {1}".format(target, template)
+            self.logger.info(log)
+            page = site.get_page(target)
+            try:
+                text = page.get()
+            except exceptions.PageNotFoundError:
+                text = ""
+            if notice.too_late in text:
+                log = u"Skipping [[{0}]]; was already notified".format(target)
+                self.logger.info(log)
+            text += ("\n" if text else "") + template
+            try:
+                page.edit(text, summary, minor=False, bot=True)
+            except exceptions.EditError as error:
+                name, msg = type(error).name, error.message
+                log = u"Couldn't leave notice on {0} because of {1}: {2}"
+                self.logger.error(log.format(page.title, name, msg))
+
+        self.logger.info("Done sending notices")
 
     def read_database(self, conn):
         """Return a list of _Cases from the database."""
@@ -176,9 +208,14 @@ class DRNClerkBot(Task):
                 return option
         return self.STATUS_UNKNOWN
 
+    def clerk(self):
+        """Actually go through cases and modify those to be updated."""
+        notices = []
+        return notices
+
 
 class _Case(object):
-    """A simple object representing a dispute resolution case."""
+    """A object representing a dispute resolution case."""
     def __init__(self, id_, title, status):
         self.id = id_
         self.title = title
@@ -186,3 +223,11 @@ class _Case(object):
 
         self.body = None
         self.old = None
+
+
+class _Notice(object):
+    """An object representing a notice to be sent to a user or a page."""
+    def __init__(self, target, template, too_late):
+        self.target = target
+        self.template = template
+        self.too_late = too_late
