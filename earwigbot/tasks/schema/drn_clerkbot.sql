@@ -19,6 +19,7 @@ CREATE TABLE `case` (
   `case_status` int(2) unsigned DEFAULT NULL,
   `case_last_action` int(2) unsigned DEFAULT NULL,
   `case_file_time` int(10) unsigned DEFAULT NULL,
+  `case_modify_time` int(10) unsigned DEFAULT NULL,
   `case_parties_notified` tinyint(1) unsigned DEFAULT NULL,
   `case_very_old_notified` tinyint(1) unsigned DEFAULT NULL,
   PRIMARY KEY (`case_id`)
