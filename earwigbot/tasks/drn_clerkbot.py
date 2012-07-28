@@ -150,7 +150,7 @@ class DRNClerkBot(Task):
         with conn.cursor() as cursor:
             cursor.execute("SELECT * FROM case")
             for row in cursor:
-                case = _Case(*row, new=False)
+                case = _Case(*row)
                 cases.append(case)
         return cases
 
@@ -179,7 +179,7 @@ class DRNClerkBot(Task):
                 repl = ur"\1 <!-- Bot Case ID (please don't modify): {0} -->"
                 body = re.sub(re_id2, repl.format(id_), body)
                 case = _Case(id_, title, status, self.STATUS_UNKNOWN, time(),
-                             0, False, False, new=True)
+                             0, False, False, 0, new=True)
                 cases.append(case)
             else:
                 case.status = status
@@ -231,15 +231,18 @@ class DRNClerkBot(Task):
         notices = []
         signatures = self.read_signatures(case.body)
         storedsigs = self.get_signatures_from_db(conn, case)
+        newsigs = set(signatures) - set(storedsigs)
+        if any([editor in volunteers for (editor, timestamp) in newsigs]):
+            case.last_volunteer_size = len(case.body)
+
         if case.status == self.STATUS_NEW:
             notices = self.clerk_new_case(case, volunteers, signatures)
         elif case.status == self.STATUS_OPEN:
             notices = self.clerk_open_case(case, signatures)
         elif case.status == self.STATUS_NEEDASSIST:
-            notices = self.clerk_needassist_case(case, volunteers, signatures,
-                                                 storedsigs)
+            notices = self.clerk_needassist_case(case, volunteers, newsigs)
         elif case.status == self.STATUS_STALE:
-            notices = self.clerk_stale_case(case, signatures, storedsigs)
+            notices = self.clerk_stale_case(case, newsigs)
         elif case.status == self.STATUS_REVIEW:
             notices = self.clerk_review_case(case)
         elif case.status in [self.STATUS_RESOLVED, self.STATUS_CLOSED]:
@@ -263,7 +266,7 @@ class DRNClerkBot(Task):
         if flagged:
             return flagged
 
-        if len(case.body) - SIZE_WHEN_LAST_VOLUNTEER_EDIT > 15000:                  # TODO
+        if len(case.body) - case.last_volunteer_size > 15000:
             if case.last_action != self.STATUS_NEEDASSIST:
                 case.status = self.STATUS_NEEDASSIST
                 return self.build_talk_notice(self.STATUS_NEEDASSIST)
@@ -275,23 +278,22 @@ class DRNClerkBot(Task):
                 return self.build_talk_notice(self.STATUS_STALE)
         return []
 
-    def clerk_needassist_case(self, case, volunteers, signatures, storedsigs):
+    def clerk_needassist_case(self, case, volunteers, newsigs):
         flagged = self.check_for_review(case):
         if flagged:
             return flagged
 
-        newsigs = set(signatures) - set(storedsigs)
         if any([editor in volunteers for (editor, timestamp) in newsigs]):
             if case.last_action != self.STATUS_OPEN:
                 case.status = self.STATUS_OPEN
         return []
 
-    def clerk_stale_case(self, case, signatures, storedsigs):
+    def clerk_stale_case(self, case, newsigs):
         flagged = self.check_for_review(case):
         if flagged:
             return flagged
 
-        if set(signatures) - set(storedsigs)
+        if newsigs:
             if case.last_action != self.STATUS_OPEN:
                 case.status = self.STATUS_OPEN
         return []
@@ -340,6 +342,8 @@ class DRNClerkBot(Task):
     def notify_parties(self, case):
         if case.parties_notified:
             return
+        template = "{{subst:" + self.tl_notify_party
+        template += "|thread=" + case.title + "}} ~~~~"
         raise NotImplementedError()                                                 # TODO
         case.parties_notified = True
 
@@ -394,7 +398,8 @@ class DRNClerkBot(Task):
                 ("case_last_action", case.last_action),
                 ("case_close_time", case.close_time),
                 ("case_parties_notified", case.parties_notified),
-                ("case_very_old_notified", case.very_old_notified)
+                ("case_very_old_notified", case.very_old_notified),
+                ("case_last_volunteer_size", case.last_volunteer_size)
             ]
             for column, data in fields_to_check:
                 if data != stored[column]:
@@ -461,7 +466,8 @@ class DRNClerkBot(Task):
 class _Case(object):
     """A object representing a dispute resolution case."""
     def __init__(self, id_, title, status, last_action, file_time, close_time,
-                 parties_notified, very_old_notified, new):
+                 parties_notified, very_old_notified, last_volunteer_size,
+                 new=False):
         self.id = id_
         self.title = title
         self.status = status
@@ -470,6 +476,7 @@ class _Case(object):
         self.close_time = close_time
         self.parties_notified = parties_notified
         self.very_old_notified = very_old_notified
+        self.last_volunteer_size = last_volunteer_size
         self.new = new
 
         self.original_status = status
