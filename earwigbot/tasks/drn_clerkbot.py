@@ -226,7 +226,27 @@ class DRNClerkBot(Task):
 
     def clerk_case(self, conn, case, volunteers):
         """Clerk a particular case and return a list of any notices to send."""
-        case                                                                                    # TODO
+        if case.apparent_status == self.STATUS_NEW:
+            # NOTIFY ALL PARTIES
+            # SET STATUS TO OPEN IF VOLUNTEER EDITS
+        elif case.apparent_status == self.STATUS_OPEN:
+            # OPEN FOR OVER FOUR DAYS: SET STATUS TO REVIEW
+                # SEND MESSAGE TO WT:DRN
+            # ELSE OVER 10K TEXT SINCE LAST VOLUNTEER EDIT: SET STATUS TO NEEDASSIST
+                # SEND MESSAGE TO WT:DRN
+            # ELSE NO EDITS IN ONE DAY: SET STATUS TO STALE
+                # SEND MESSAGE TO WT:DRN
+        elif case.apparent_status == self.STATUS_NEEDASSIST:
+            # OPEN FOR OVER FOUR DAYS: SET STATUS TO REVIEW
+            # ELSE VOLUNTEER EDIT SINCE STATUS SET: SET STATUS OPEN
+        elif case.apparent_status == self.STATUS_STALE:
+            # OPEN FOR OVER FOUR DAYS: SET STATUS TO REVIEW
+            # ELSE EDITS SINCE STATUS SET: SET STATUS OPEN
+        elif case.apparent_status == self.STATUS_REVIEW:
+            # OPEN FOR OVER SEVEN DAYS: SEND MESSAGE TO ZHANG
+        elif case.apparent_status in [self.STATUS_RESOLVED, self.STATUS_CLOSED]:
+            # ONE DAY SINCE STATUS SET: SET STATUS ARCHIVED
+                # ADD ARCHIVE TEMPLATE, REMOVE NOARCHIVE
 
     def save(self, page, cases, kwargs):
         """Save any changes to the noticeboard."""
