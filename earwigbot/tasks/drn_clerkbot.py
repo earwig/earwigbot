@@ -22,6 +22,8 @@
 
 from os import expanduser
 import re
+from threading import RLock
+from time import sleep, time
 
 import oursql
 
@@ -46,9 +48,13 @@ class DRNClerkBot(Task):
     def setup(self):
         """Hook called immediately after the task is loaded."""
         cfg = self.config.tasks.get(self.name, {})
-        self.title = cfg.get("page", "Wikipedia:Dispute resolution noticeboard")
 
-        # Templates used in chart generation:
+        # Set some wiki-related attributes:
+        self.title = cfg.get("page", "Wikipedia:Dispute resolution noticeboard")
+        default_summary = "Updating $3 cases for the [[WP:DRN|dispute resolution noticeboard]]."
+        self.summary = self.make_summary(cfg.get("summary", default_summary))
+
+        # Templates used:
         templates = cfg.get("templates", {})
         self.tl_status = templates.get("status", "DR case status")
         self.tl_notify_party = templates.get("notifyParty", "DRN-notice")
@@ -61,16 +67,47 @@ class DRNClerkBot(Task):
         kwargs = cfg.get("sql", {})
         kwargs["read_default_file"] = expanduser("~/.my.cnf")
         self.conn_data = kwargs
-        self.db_access_lock = Lock()
+        self.db_access_lock = RLock()
 
     def run(self, **kwargs):
         """Entry point for a task event."""
+        if not self.db_access_lock.acquire(False):  # Non-blocking
+            self.logger.info("A job is already ongoing; aborting")
+            return
+
         with self.db_access_lock:
+            self.logger.info(u"Starting update to [[{0}]]".format(self.title))
+            start = time()
             conn = oursql.connect(**self.conn_data)
             cases = read_database(conn)
             page = self.bot.wiki.get_site().get_page(self.title)
             text = page.get()
-            current = read_page(cases, text)
+            read_page(conn, cases, text)
+
+            # Work!
+            # Send messages!
+
+            self.save(page, cases)
+
+    def save(self, page, cases):
+        newtext = text = page.get()
+        counter = 0
+        for case in cases:
+            if case.old != case.body:
+                newtext = newtext.replace(case.old, case.body)
+                counter += 1
+
+        worktime = time() - start
+        if worktime < 60:
+            sleep(60 - worktime)
+        page.reload()
+        if page.get() != text:
+            log = "Someone has edited the page while we were working; restarting"
+            self.logger.warn(log)
+            return self.run()
+        summary = self.summary.replace("$3", str(counter))
+        page.edit(text, summary, minor=False, bot=True)
+        self.logger.info(u"Saved page [[{0}]]".format(page.title))
 
     def read_database(self, conn):
         """Return a list of _Cases from the database."""
@@ -82,24 +119,42 @@ class DRNClerkBot(Task):
                 cases.append(_Case(id_, title, status))
         return cases
 
-    def read_page(self, cases, text):
+    def read_page(self, conn, cases, text):
         """Read the noticeboard content and update the list of _Cases."""
+        tl_status_esc = re.escape(self.tl_status)
         split = re.split("(^==\s*[^=]+?\s*==$)", text, flags=re.M|re.U)
-        cases = []
-        case = None
-        for item in split:
-            if item.startswith("=="):
-                if case:
-                    cases.append(case)
-                case = _Case()
-                case.title = item[2:-2].strip()
-            else:
-                templ = re.escape(self.tl_status)
-                if case and re.match("\s*\{\{" + templ, item, re.U):
-                    case.body = case.old_body = item
-                    case.status = self.read_status(body)
-        if case:
-            cases.append(case)
+        for i in xrange(len(split)):
+            if i + 1 == len(split):
+                break
+            if not split[i].startswith("=="):
+                continue
+            title = split[i][2:-2].strip()
+            body = old = split[i + 1]
+            if not re.search("\s*\{\{" + tl_status_esc, body, re.U):
+                continue
+            status = self.read_status(body)
+            re_id = "<!-- EarwigBot Case ID \(please don't modify me\): (.*?) -->"
+            try:
+                id_ = re.search(re_id, body).group(1)
+                case = [case for case in cases if case.id == id_][0]
+            except (AttributeError, IndexError):
+                id_ = self.select_next_id(conn)
+                re_id2 = "(\{\{" + tl_status_esc + "(.*?)\}\})(<!-- Case ID \(please don't modify\): .*? -->)?"
+                repl = ur"\1 <!-- Case ID (please don't modify): {0} -->"
+                body = re.sub(re_id2, repl.format(id_), body)
+                case = _Case(id_, title, status)
+                cases.append(case)
+            case.body, case.old = body, old
+
+    def select_next_id(self, conn):
+        """Return the next incremental ID for a case."""
+        query = "SELECT MAX(case_id) FROM case"
+        with conn.cursor() as cursor:
+            cursor.execute(query)
+            current = cursor.fetchone()[0]
+            if current:
+                return current + 1
+            return 1
 
     def read_status(self, body):
         """Parse the current status from a case body."""
@@ -130,3 +185,4 @@ class _Case(object):
         self.status = status
 
         self.body = None
+        self.old = None
