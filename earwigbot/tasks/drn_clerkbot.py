@@ -327,7 +327,10 @@ class DRNClerkBot(Task):
         return [(username, timestamp_datetime)...]
 
     def get_signatures_from_db(self, conn, case):
-        raise NotImplementedError()                                                 # TODO
+        query = "SELECT signature_username, signature_timestamp FROM signature WHERE signature_case = ?"
+        with conn.cursor() as cursor:
+            cursor.execute(query, (case.id,))
+            return cursor.fetchall()
 
     def build_talk_notice(self, status):
         param = self.ALIASES[status][0]
