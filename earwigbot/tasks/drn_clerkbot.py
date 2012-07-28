@@ -246,7 +246,10 @@ class DRNClerkBot(Task):
             log = u"Unsure of how to deal with case {0} (title: {1})"
             self.logger.error(log.format(case.id, case.title))
             return notices
+        self.save_case_updates(conn, case)
+        return notices
 
+    def save_case_updates(self, conn, case):
         if case.status != case.original_status:
             case.last_action = case.status
             new = self.ALIASES[case.status][0]
@@ -256,14 +259,19 @@ class DRNClerkBot(Task):
             case.body = re.sub(search, repl, case.body)
 
         if case.new:
-            with conn.cursor() as cursor:
-                query = "INSERT INTO case VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-                cursor.execute(query, (case.id, case.title, case.status,
-                                       case.last_action, case.file_time,
-                                       case.close_time, case.parties_notified,
-                                       case.very_old_notified))
-            return notices
+            self.save_new_case(conn, case)
+        else:
+            self.save_existing_case(conn, case)
 
+    def save_new_case(self, conn, case):
+        args = (case.id, case.title, case.status, case.last_action,
+                case.file_time, case.close_time, case.parties_notified,
+                case.very_old_notified)
+        with conn.cursor() as cursor:
+            query = "INSERT INTO case VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            cursor.execute(query, args)
+
+    def save_existing_case(self, conn, case):
         with conn.cursor(oursql.DictCursor) as cursor:
             query = "SELECT * FROM case WHERE case_id = ?"
             cursor.execute(query, (case.id,))
@@ -286,7 +294,6 @@ class DRNClerkBot(Task):
                 args.append(case.id)
                 query = "UPDATE case SET {0} WHERE case_id = ?".format(changes)
                 cursor.execute(query, args)
-        return notices
 
     def clerk_new_case(self, case, volunteers, signatures):
         notices = self.notify_parties(case)
