@@ -167,7 +167,7 @@ class DRNClerkBot(Task):
             if not re.search("\s*\{\{" + tl_status_esc, body, re.U):
                 continue
             status = self.read_status(body)
-            re_id = "<!-- Bot Case ID \(please don't modify me\): (.*?) -->"
+            re_id = "<!-- Bot Case ID \(please don't modify\): (.*?) -->"
             try:
                 id_ = re.search(re_id, body).group(1)
                 case = [case for case in cases if case.id == id_][0]
@@ -178,7 +178,7 @@ class DRNClerkBot(Task):
                 repl = ur"\1 <!-- Bot Case ID (please don't modify): {0} -->"
                 body = re.sub(re_id2, repl.format(id_), body)
                 case = _Case(id_, title, status, self.STATUS_UNKNOWN, time(),
-                             time(), False, False)
+                             0, False, False)
                 cases.append(case)
             else:
                 case.status = status
@@ -232,7 +232,7 @@ class DRNClerkBot(Task):
         if case.status == self.STATUS_NEW:
             notices = self.clerk_new_case(case, volunteers, signatures)
         elif case.status == self.STATUS_OPEN:
-            notices = self.clerk_open_case(case)
+            notices = self.clerk_open_case(case, signatures)
         elif case.status == self.STATUS_NEEDASSIST:
             notices = self.clerk_needassist_case(case, volunteers, signatures)
         elif case.status == self.STATUS_STALE:
@@ -240,7 +240,7 @@ class DRNClerkBot(Task):
         elif case.status == self.STATUS_REVIEW:
             notices = self.clerk_review_case(case)
         elif case.status in [self.STATUS_RESOLVED, self.STATUS_CLOSED]:
-            self.clerk_closed_case(conn)
+            self.clerk_closed_case(conn, signatures)
         else:
             log = u"Unsure of how to deal with case {0} (title: {1})"
             self.logger.error(log.format(case.id, case.title))
@@ -252,12 +252,12 @@ class DRNClerkBot(Task):
 
     def clerk_new_case(self, case, volunteers, signatures):
         notices = self.notify_parties(case)
-        if any([editor in volunteers for (editor, time) in signatures]):
+        if any([editor in volunteers for (editor, timestamp) in signatures]):
             if case.last_action != self.STATUS_OPEN:
                 case.status = self.STATUS_OPEN
         return notices
 
-    def clerk_open_case(self, case):
+    def clerk_open_case(self, case, signatures):
         flagged = self.check_for_review(case):
         if flagged:
             return flagged
@@ -267,7 +267,8 @@ class DRNClerkBot(Task):
                 case.status = self.STATUS_NEEDASSIST
                 return self.build_talk_notice(self.STATUS_NEEDASSIST)
 
-        if time() - case.modify_time > 60 * 60 * 24 * 2:
+        timestamps = [timestamp for (editor, timestamp) in signatures]
+        if time() - max(timestamps) > 60 * 60 * 24 * 2:
             if case.last_action != self.STATUS_STALE:
                 case.status = self.STATUS_STALE
                 return self.build_talk_notice(self.STATUS_STALE)
@@ -279,7 +280,7 @@ class DRNClerkBot(Task):
             return flagged
 
         newsigs = signatures - SIGNATURES_FROM_DATABASE
-        if any([editor in volunteers for (editor, time) in newsigs]):
+        if any([editor in volunteers for (editor, timestamp) in newsigs]):
             if case.last_action != self.STATUS_OPEN:
                 case.status = self.STATUS_OPEN
         return []
@@ -297,11 +298,17 @@ class DRNClerkBot(Task):
     def clerk_review_case(self, case):
         if time() - case.file_time > 60 * 60 * 24 * 7:
             if not case.very_old_notified:
+                case.very_old_notified = True
                 return SEND_MESSAGE_TO_ZHANG
         return []
 
-    def clerk_closed_case(self, case):
-        if time() - TIME_STATUS_SET > 60 * 60 * 24 and time() - case.modify_time > 60 * 60 * 24:
+    def clerk_closed_case(self, case, signatures):
+        if not case.close_time:
+            case.close_time = time()
+        timestamps = [timestamp for (editor, timestamp) in signatures]
+        closed_long_ago = time() - case.close_time > 60 * 60 * 24
+        modified_long_ago = time() - max(timestamps) > 60 * 60 * 24
+        if closed_long_ago and modified_long_ago:
             case.status = self.STATUS_ARCHIVE
             ADD_ARCHIVE_TEMPLATE
             REMOVE_NOARCHIVE
@@ -314,6 +321,7 @@ class DRNClerkBot(Task):
 
     def read_signatures(self, text):
         raise NotImplementedError()                                                     # TODO
+        return [(username, timestamp_datetime)...]
 
     def build_talk_notice(self, status):
         param = self.ALIASES[status][0]
@@ -380,14 +388,14 @@ class DRNClerkBot(Task):
 
 class _Case(object):
     """A object representing a dispute resolution case."""
-    def __init__(self, id_, title, status, last_action, file_time, modify_time,
+    def __init__(self, id_, title, status, last_action, file_time, close_time,
                  parties_notified, very_old_notified):
         self.id = id_
         self.title = title
         self.status = status
         self.last_action = last_action
         self.file_time = file_time
-        self.modify_time = modify_time
+        self.close_time = close_time
         self.parties_notified = parties_notified
         self.very_old_notified = very_old_notified
 
