@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from datetime import datetime
 from os import expanduser
 import re
 from threading import RLock
@@ -246,8 +247,8 @@ class DRNClerkBot(Task):
             self.logger.error(log.format(case.id, case.title))
             return notices
 
-        STORE UPDATES IN DATABASE
-        APPLY STATUS UPDATES TO CASE BODY
+        STORE UPDATES IN DATABASE                                                   # TODO
+        APPLY STATUS UPDATES TO CASE BODY                                           # TODO
         return notices
 
     def clerk_new_case(self, case, volunteers, signatures):
@@ -262,7 +263,7 @@ class DRNClerkBot(Task):
         if flagged:
             return flagged
 
-        if len(case.body) - SIZE_WHEN_LAST_VOLUNTEER_EDIT > 15000:
+        if len(case.body) - SIZE_WHEN_LAST_VOLUNTEER_EDIT > 15000:                  # TODO
             if case.last_action != self.STATUS_NEEDASSIST:
                 case.status = self.STATUS_NEEDASSIST
                 return self.build_talk_notice(self.STATUS_NEEDASSIST)
@@ -279,7 +280,7 @@ class DRNClerkBot(Task):
         if flagged:
             return flagged
 
-        newsigs = signatures - SIGNATURES_FROM_DATABASE
+        newsigs = signatures - SIGNATURES_FROM_DATABASE                             # TODO
         if any([editor in volunteers for (editor, timestamp) in newsigs]):
             if case.last_action != self.STATUS_OPEN:
                 case.status = self.STATUS_OPEN
@@ -290,7 +291,7 @@ class DRNClerkBot(Task):
         if flagged:
             return flagged
 
-        if signatures - SIGNATURES_FROM_DATABASE:
+        if signatures - SIGNATURES_FROM_DATABASE:                                   # TODO
             if case.last_action != self.STATUS_OPEN:
                 case.status = self.STATUS_OPEN
         return []
@@ -299,7 +300,7 @@ class DRNClerkBot(Task):
         if time() - case.file_time > 60 * 60 * 24 * 7:
             if not case.very_old_notified:
                 case.very_old_notified = True
-                return SEND_MESSAGE_TO_ZHANG
+                return SEND_MESSAGE_TO_ZHANG                                        # TODO
         return []
 
     def clerk_closed_case(self, case, signatures):
@@ -310,8 +311,10 @@ class DRNClerkBot(Task):
         modified_long_ago = time() - max(timestamps) > 60 * 60 * 24
         if closed_long_ago and modified_long_ago:
             case.status = self.STATUS_ARCHIVE
-            ADD_ARCHIVE_TEMPLATE
-            REMOVE_NOARCHIVE
+            case.body = "{{" + self.tl_archive_top + "}}\n" + case.body
+            case.body += "\n{{" + self.tl_archive_bottom + "}}"
+            reg = "<!-- \[\[User:DoNotArchiveUntil\]\] .*? -->(<!-- .*? -->)?"
+            case.body = re.sub(reg, "", case.body)
 
     def check_for_review(self, case):
         if time() - case.file_time > 60 * 60 * 24 * 4:
@@ -320,7 +323,7 @@ class DRNClerkBot(Task):
                 return self.build_talk_notice(self.STATUS_REVIEW)
 
     def read_signatures(self, text):
-        raise NotImplementedError()                                                     # TODO
+        raise NotImplementedError()                                                 # TODO
         return [(username, timestamp_datetime)...]
 
     def build_talk_notice(self, status):
@@ -331,7 +334,7 @@ class DRNClerkBot(Task):
     def notify_parties(self, case):
         if case.parties_notified:
             return
-        raise NotImplementedError()                                                     # TODO
+        raise NotImplementedError()                                                 # TODO
         case.parties_notified = True
 
     def save(self, page, cases, kwargs):
