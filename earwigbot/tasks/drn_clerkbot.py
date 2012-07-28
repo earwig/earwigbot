@@ -263,38 +263,25 @@ class DRNClerkBot(Task):
         return notices
 
     def clerk_open_case(self, case, signatures):
-        flagged = self.check_for_review(case):
-        if flagged:
-            return flagged
-
+        self.check_for_review(case):
         if len(case.body) - case.last_volunteer_size > 15000:
             if case.last_action != self.STATUS_NEEDASSIST:
                 case.status = self.STATUS_NEEDASSIST
-                return self.build_talk_notice(self.STATUS_NEEDASSIST,
-                                              case.title)
-
         timestamps = [timestamp for (editor, timestamp) in signatures]
         if time() - max(timestamps) > 60 * 60 * 24 * 2:
             if case.last_action != self.STATUS_STALE:
                 case.status = self.STATUS_STALE
-                return self.build_talk_notice(self.STATUS_STALE, case.title)
         return []
 
     def clerk_needassist_case(self, case, volunteers, newsigs):
-        flagged = self.check_for_review(case):
-        if flagged:
-            return flagged
-
+        self.check_for_review(case):
         if any([editor in volunteers for (editor, timestamp) in newsigs]):
             if case.last_action != self.STATUS_OPEN:
                 case.status = self.STATUS_OPEN
         return []
 
     def clerk_stale_case(self, case, newsigs):
-        flagged = self.check_for_review(case):
-        if flagged:
-            return flagged
-
+        self.check_for_review(case):
         if newsigs:
             if case.last_action != self.STATUS_OPEN:
                 case.status = self.STATUS_OPEN
@@ -303,8 +290,8 @@ class DRNClerkBot(Task):
     def clerk_review_case(self, case):
         if time() - case.file_time > 60 * 60 * 24 * 7:
             if not case.very_old_notified:
-                template = "{{subst:" + self.tl_notify_stale + "|zhang|2="
-                template += case.title.replace("|", "&#124;") + "}} ~~~~"
+                template = "{{subst:" + self.tl_notify_stale
+                template += case.title.replace("|", "&#124;") + "}}"
                 notice = _Notice(self.very_old_title, template)
                 case.very_old_notified = True
                 return [notice]
@@ -327,7 +314,6 @@ class DRNClerkBot(Task):
         if time() - case.file_time > 60 * 60 * 24 * 4:
             if case.last_action != self.STATUS_REVIEW:
                 case.status = self.STATUS_REVIEW
-                return self.build_talk_notice(self.STATUS_REVIEW, case.title)
 
     def read_signatures(self, text):
         regex = r"\[\[(?:User(?:\stalk)?\:|Special\:Contributions\/)(.*?)(?:\||\]\]).{,256}?(\d{2}:\d{2},\s\d{2}\s\w+\s\d{4}\s\(UTC\))"
@@ -344,12 +330,6 @@ class DRNClerkBot(Task):
         with conn.cursor() as cursor:
             cursor.execute(query, (case.id,))
             return cursor.fetchall()
-
-    def build_talk_notice(self, status, title):
-        param = self.ALIASES[status][0]
-        template = "{{subst:" + self.tl_notify_stale + "|" + param
-        template += "|2=" + title.replace("|", "&#124;")  +"}} ~~~~"
-        return _Notice(self.talk, template)
 
     def notify_parties(self, case):
         if case.parties_notified:
