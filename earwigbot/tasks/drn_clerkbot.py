@@ -227,15 +227,15 @@ class DRNClerkBot(Task):
         """Clerk a particular case and return a list of any notices to send."""
         notices = []
         if case.status == self.STATUS_NEW:
-            notices = self.clerk_new_case(conn, case, volunteers)
+            notices = self.clerk_new_case(case, volunteers)
         elif case.status == self.STATUS_OPEN:
-            notices = self.clerk_open_case(conn, case, volunteers)
+            notices = self.clerk_open_case(case)
         elif case.status == self.STATUS_NEEDASSIST:
-            notices = self.clerk_needassist_case(conn, case, volunteers)
+            notices = self.clerk_needassist_case(case, volunteers)
         elif case.status == self.STATUS_STALE:
-            notices = self.clerk_stale_case(conn, case, volunteers)
+            notices = self.clerk_stale_case(case)
         elif case.status == self.STATUS_REVIEW:
-            notices = self.clerk_review_case(conn, case, volunteers)
+            notices = self.clerk_review_case(case)
         elif case.status in [self.STATUS_RESOLVED, self.STATUS_CLOSED]:
             self.clerk_closed_case(conn)
         else:
@@ -246,19 +246,24 @@ class DRNClerkBot(Task):
         # APPLY STATUS UPDATES TO CASE BODY
         return notices
 
-    def clerk_new_case(self, conn, case, volunteers):
-        notices = self.notify_parties(conn, case)
+    def check_for_review(self, case):
+        if time() - case.file_time > 60 * 60 * 24 * 4:
+            if case.last_action != self.STATUS_REVIEW:
+                case.status = self.STATUS_REVIEW
+                return SEND_MESSAGE_TO_WT:DRN
+
+    def clerk_new_case(self, case, volunteers):
+        notices = self.notify_parties(case)
         signatures = self.read_signatures(case.body)
         if any([editor in volunteers for (editor, time) in signatures]):
             if case.last_action != self.STATUS_OPEN:
                 case.status = self.STATUS_OPEN
         return notices
 
-    def clerk_open_case(self, conn, case, volunteers):
-        if time() - case.file_time > 60 * 60 * 24 * 4:
-            if case.last_action != self.STATUS_REVIEW:
-                case.status = self.STATUS_REVIEW
-                return SEND_MESSAGE_TO_WT:DRN
+    def clerk_open_case(self, case):
+        flagged = self.check_for_review(case):
+        if flagged:
+            return flagged
 
         if len(case.body) - SIZE_WHEN_LAST_VOLUNTEER_EDIT > 15000:
             if case.last_action != self.STATUS_NEEDASSIST:
@@ -271,11 +276,10 @@ class DRNClerkBot(Task):
                 return SEND_MESSAGE_TO_WT:DRN
         return []
 
-    def clerk_needassist_case(self, conn, case, volunteers):
-        if time() - case.file_time > 60 * 60 * 24 * 4:
-            if case.last_action != self.STATUS_REVIEW:
-                case.status = self.STATUS_REVIEW
-                return SEND_MESSAGE_TO_WT:DRN
+    def clerk_needassist_case(self, case, volunteers):
+        flagged = self.check_for_review(case):
+        if flagged:
+            return flagged
 
         signatures = self.read_signatures(case.body)
         newsigs = signatures - SIGNATURES_FROM_DATABASE
@@ -284,11 +288,10 @@ class DRNClerkBot(Task):
                 case.status = self.STATUS_OPEN
         return []
 
-    def clerk_stale_case(self, conn, case, volunteers):
-        if time() - case.file_time > 60 * 60 * 24 * 4:
-            if case.last_action != self.STATUS_REVIEW:
-                case.status = self.STATUS_REVIEW
-                return SEND_MESSAGE_TO_WT:DRN
+    def clerk_stale_case(self, case):
+        flagged = self.check_for_review(case):
+        if flagged:
+            return flagged
 
         signatures = self.read_signatures(case.body)
         if signatures - SIGNATURES_FROM_DATABASE:
@@ -296,7 +299,7 @@ class DRNClerkBot(Task):
                 case.status = self.STATUS_OPEN
         return []
 
-    def clerk_review_case(self, conn, case, volunteers):
+    def clerk_review_case(self, case):
         if time() - case.file_time > 60 * 60 * 24 * 7:
             if not case.very_old_notified:
                 return SEND_MESSAGE_TO_ZHANG
@@ -311,10 +314,11 @@ class DRNClerkBot(Task):
     def read_signatures(self, text):
         raise NotImplementedError()
 
-    def notify_parties(self, conn, case):
+    def notify_parties(self, case):
         if case.parties_notified:
             return
         raise NotImplementedError()
+        case.parties_notified = True
 
     def save(self, page, cases, kwargs):
         """Save any changes to the noticeboard."""
