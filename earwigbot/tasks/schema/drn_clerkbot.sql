@@ -16,7 +16,11 @@ DROP TABLE IF EXISTS `case`;
 CREATE TABLE `case` (
   `case_id` int(10) unsigned NOT NULL,
   `case_title` varchar(512) COLLATE utf8_unicode_ci DEFAULT NULL,
-  `case_status` int(2) unsigned NOT NULL,
+  `case_status` int(2) unsigned DEFAULT NULL,
+  `case_last_action` int(2) unsigned DEFAULT NULL,
+  `case_file_time` int(10) unsigned DEFAULT NULL,
+  `case_parties_notified` tinyint(1) unsigned DEFAULT NULL,
+  `case_very_old_notified` tinyint(1) unsigned DEFAULT NULL,
   PRIMARY KEY (`case_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 

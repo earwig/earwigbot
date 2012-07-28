@@ -136,11 +136,10 @@ class DRNClerkBot(Task):
     def read_database(self, conn):
         """Return a list of _Cases from the database."""
         cases = []
-        query = "SELECT case_id, case_title, case_status FROM case"
         with conn.cursor() as cursor:
-            cursor.execute(query)
-            for id_, name, status in cursor:
-                case = _Case(id_, title, status)
+            cursor.execute("SELECT * FROM case")
+            for row in cursor:
+                case = _Case(*row)
                 cases.append(case)
         return cases
 
@@ -168,14 +167,14 @@ class DRNClerkBot(Task):
                 re_id2 += "(.*?)\}\})(<!-- Bot Case ID \(please don't modify\): .*? -->)?"
                 repl = ur"\1 <!-- Bot Case ID (please don't modify): {0} -->"
                 body = re.sub(re_id2, repl.format(id_), body)
-                case = _Case(id_, title, status)
+                case = _Case(id_, title, status, time())
                 cases.append(case)
             else:
+                case.status = status
                 if case.title != title:
                     self.update_case_title(conn, id_, title)
                     case.title = title
             case.body, case.old = body, old
-            case.apparent_status = status
 
     def select_next_id(self, conn):
         """Return the next incremental ID for a case."""
@@ -226,27 +225,96 @@ class DRNClerkBot(Task):
 
     def clerk_case(self, conn, case, volunteers):
         """Clerk a particular case and return a list of any notices to send."""
-        if case.apparent_status == self.STATUS_NEW:
-            # NOTIFY ALL PARTIES
-            # SET STATUS TO OPEN IF VOLUNTEER EDITS
-        elif case.apparent_status == self.STATUS_OPEN:
-            # OPEN FOR OVER FOUR DAYS: SET STATUS TO REVIEW
-                # SEND MESSAGE TO WT:DRN
-            # ELSE OVER 10K TEXT SINCE LAST VOLUNTEER EDIT: SET STATUS TO NEEDASSIST
-                # SEND MESSAGE TO WT:DRN
-            # ELSE NO EDITS IN ONE DAY: SET STATUS TO STALE
-                # SEND MESSAGE TO WT:DRN
-        elif case.apparent_status == self.STATUS_NEEDASSIST:
-            # OPEN FOR OVER FOUR DAYS: SET STATUS TO REVIEW
-            # ELSE VOLUNTEER EDIT SINCE STATUS SET: SET STATUS OPEN
-        elif case.apparent_status == self.STATUS_STALE:
-            # OPEN FOR OVER FOUR DAYS: SET STATUS TO REVIEW
-            # ELSE EDITS SINCE STATUS SET: SET STATUS OPEN
-        elif case.apparent_status == self.STATUS_REVIEW:
-            # OPEN FOR OVER SEVEN DAYS: SEND MESSAGE TO ZHANG
-        elif case.apparent_status in [self.STATUS_RESOLVED, self.STATUS_CLOSED]:
-            # ONE DAY SINCE STATUS SET: SET STATUS ARCHIVED
-                # ADD ARCHIVE TEMPLATE, REMOVE NOARCHIVE
+        notices = []
+        if case.status == self.STATUS_NEW:
+            notices = self.clerk_new_case(conn, case, volunteers)
+        elif case.status == self.STATUS_OPEN:
+            notices = self.clerk_open_case(conn, case, volunteers)
+        elif case.status == self.STATUS_NEEDASSIST:
+            notices = self.clerk_needassist_case(conn, case, volunteers)
+        elif case.status == self.STATUS_STALE:
+            notices = self.clerk_stale_case(conn, case, volunteers)
+        elif case.status == self.STATUS_REVIEW:
+            notices = self.clerk_review_case(conn, case, volunteers)
+        elif case.status in [self.STATUS_RESOLVED, self.STATUS_CLOSED]:
+            self.clerk_closed_case(conn)
+        else:
+            LOG NOT SURE HOW TO DEAL WITH CASE
+            return notices
+
+        # STORE UPDATES IN DATABASE
+        # APPLY STATUS UPDATES TO CASE BODY
+        return notices
+
+    def clerk_new_case(self, conn, case, volunteers):
+        notices = self.notify_parties(conn, case)
+        signatures = self.read_signatures(case.body)
+        if any([editor in volunteers for (editor, time) in signatures]):
+            if case.last_action != self.STATUS_OPEN:
+                case.status = self.STATUS_OPEN
+        return notices
+
+    def clerk_open_case(self, conn, case, volunteers):
+        if time() - case.file_time > 60 * 60 * 24 * 4:
+            if case.last_action != self.STATUS_REVIEW:
+                case.status = self.STATUS_REVIEW
+                return SEND_MESSAGE_TO_WT:DRN
+
+        if len(case.body) - SIZE_WHEN_LAST_VOLUNTEER_EDIT > 15000:
+            if case.last_action != self.STATUS_NEEDASSIST:
+                case.status = self.STATUS_NEEDASSIST
+                return SEND_MESSAGE_TO_WT:DRN
+
+        if time() - LAST_EDIT > 60 * 60 * 24 * 2:
+            if case.last_action != self.STATUS_STALE:
+                case.status = self.STATUS_STALE
+                return SEND_MESSAGE_TO_WT:DRN
+        return []
+
+    def clerk_needassist_case(self, conn, case, volunteers):
+        if time() - case.file_time > 60 * 60 * 24 * 4:
+            if case.last_action != self.STATUS_REVIEW:
+                case.status = self.STATUS_REVIEW
+                return SEND_MESSAGE_TO_WT:DRN
+
+        signatures = self.read_signatures(case.body)
+        newsigs = signatures - SIGNATURES_FROM_DATABASE
+        if any([editor in volunteers for (editor, time) in newsigs]):
+            if case.last_action != self.STATUS_OPEN:
+                case.status = self.STATUS_OPEN
+        return []
+
+    def clerk_stale_case(self, conn, case, volunteers):
+        if time() - case.file_time > 60 * 60 * 24 * 4:
+            if case.last_action != self.STATUS_REVIEW:
+                case.status = self.STATUS_REVIEW
+                return SEND_MESSAGE_TO_WT:DRN
+
+        signatures = self.read_signatures(case.body)
+        if signatures - SIGNATURES_FROM_DATABASE:
+            if case.last_action != self.STATUS_OPEN:
+                case.status = self.STATUS_OPEN
+        return []
+
+    def clerk_review_case(self, conn, case, volunteers):
+        if time() - case.file_time > 60 * 60 * 24 * 7:
+            if not case.very_old_notified:
+                return SEND_MESSAGE_TO_ZHANG
+        return []
+
+    def clerk_closed_case(self, case):
+        if time() - TIME_STATUS_SET AND LAST_EDIT > 60 * 60 * 24:
+            case.status = self.STATUS_ARCHIVE
+            ADD_ARCHIVE_TEMPLATE
+            REMOVE_NOARCHIVE
+
+    def read_signatures(self, text):
+        raise NotImplementedError()
+
+    def notify_parties(self, conn, case):
+        if case.parties_notified:
+            return
+        raise NotImplementedError()
 
     def save(self, page, cases, kwargs):
         """Save any changes to the noticeboard."""
@@ -302,14 +370,19 @@ class DRNClerkBot(Task):
 
 class _Case(object):
     """A object representing a dispute resolution case."""
-    def __init__(self, id_, title, status):
+    def __init__(self, id_, title, status, last_action, file_time,
+                 parties_notified, very_old_notified):
         self.id = id_
         self.title = title
         self.status = status
+        self.last_action = last_action
+        self.file_time = file_time
+        self.parties_notified = parties_notified
+        self.very_old_notified = very_old_notified
 
+        self.original_status = status
         self.body = None
         self.old = None
-        self.apparent_status = None
 
 
 class _Notice(object):
