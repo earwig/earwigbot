@@ -176,6 +176,10 @@ class DRNClerkBot(Task):
                 body = re.sub(re_id2, repl.format(id_), body)
                 case = _Case(id_, title, status)
                 cases.append(case)
+            else:
+                if case.title != title:
+                    self.update_case_title(conn, id_, title)
+                    case.title = title
             case.body, case.old = body, old
 
     def select_next_id(self, conn):
@@ -207,6 +211,12 @@ class DRNClerkBot(Task):
             if status.group(1).lower() in names:
                 return option
         return self.STATUS_UNKNOWN
+
+    def update_case_title(self, conn, id_, title):
+        """Update a case title in the database."""
+        query = "UPDATE case SET case_title = ? WHERE case_id = ?"
+        with conn.cursor() as cursor:
+            cursor.execute(query, (title, id_))
 
     def clerk(self):
         """Actually go through cases and modify those to be updated."""
