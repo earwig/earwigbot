@@ -66,11 +66,24 @@ class DRNClerkBot(Task):
     def run(self, **kwargs):
         """Entry point for a task event."""
         with self.db_access_lock:
+            conn = oursql.connect(**self.conn_data)
+            cases = read_database(conn)
             page = self.bot.wiki.get_site().get_page(self.title)
             text = page.get()
-            current = read_page(text)
+            current = read_page(cases, text)
 
-    def read_page(self, text):
+    def read_database(self, conn):
+        """Return a list of _Cases from the database."""
+        cases = []
+        query = "SELECT case_id, case_title, case_status FROM case"
+        with conn.cursor() as cursor:
+            cursor.execute(query)
+            for id_, name, status in cursor:
+                cases.append(_Case(id_, title, status))
+        return cases
+
+    def read_page(self, cases, text):
+        """Read the noticeboard content and update the list of _Cases."""
         split = re.split("(^==\s*[^=]+?\s*==$)", text, flags=re.M|re.U)
         cases = []
         case = None
@@ -87,9 +100,9 @@ class DRNClerkBot(Task):
                     case.status = self.read_status(body)
         if case:
             cases.append(case)
-        return cases
 
     def read_status(self, body):
+        """Parse the current status from a case body."""
         aliases = {
             self.STATUS_NEW: ("",),
             self.STATUS_OPEN: ("open", "active", "inprogress"),
@@ -110,7 +123,10 @@ class DRNClerkBot(Task):
 
 
 class _Case(object):
-    def __init__(self):
-        self.title = None
+    """A simple object representing a dispute resolution case."""
+    def __init__(self, id_, title, status):
+        self.id = id_
+        self.title = title
+        self.status = status
+
         self.body = None
-        self.status = None

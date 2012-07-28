@@ -15,7 +15,8 @@ CREATE DATABASE `u_earwig_drn_clerkbot`
 DROP TABLE IF EXISTS `case`;
 CREATE TABLE `case` (
   `case_id` int(10) unsigned NOT NULL,
-  `case_name` varchar(512) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `case_title` varchar(512) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `case_status` int(2) unsigned NOT NULL,
   PRIMARY KEY (`case_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
