@@ -344,11 +344,23 @@ class DRNClerkBot(Task):
 
     def notify_parties(self, case):
         if case.parties_notified:
-            return
+            return []
+
+        notices = []
         template = "{{subst:" + self.tl_notify_party
         template += "|thread=" + case.title + "}} ~~~~"
-        raise NotImplementedError()                                                 # TODO
+        too_late = "<!--Template:DRN-notice-->"
+
+        re_parties = "<span.*?>'''Users involved'''</span>(.*?)<span.*?>"
+        text = re.search(re_parties, case, re.S|re.U)
+        for line in text.group(1).splitlines():
+            user = re.search("\# \{\{User\|(.*?)\}\}", line)
+            if user:
+                party = user.group(1).strip()
+                notice = _Notice("User talk:" + party, template, too_late)
+
         case.parties_notified = True
+        return notices
 
     def save_case_updates(self, conn, case, signatures, storedsigs):
         if case.status != case.original_status:
