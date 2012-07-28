@@ -33,6 +33,7 @@ DROP TABLE IF EXISTS `signature`;
 CREATE TABLE `signature` (
   `signature_id` int(10) unsigned NOT NULL,
   `signature_case` int(10) unsigned NOT NULL,
+  `signature_username` varchar(512) COLLATE utf8_unicode_ci DEFAULT NULL,
   `signature_timestamp` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   PRIMARY KEY (`signature_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;

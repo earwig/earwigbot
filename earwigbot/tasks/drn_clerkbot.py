@@ -173,7 +173,7 @@ class DRNClerkBot(Task):
                 id_ = re.search(re_id, body).group(1)
                 case = [case for case in cases if case.id == id_][0]
             except (AttributeError, IndexError):
-                id_ = self.select_next_id(conn)
+                id_ = self.select_next_id(conn, "case_id", "case")
                 re_id2 = "(\{\{" + tl_status_esc
                 re_id2 += "(.*?)\}\})(<!-- Bot Case ID \(please don't modify\): .*? -->)?"
                 repl = ur"\1 <!-- Bot Case ID (please don't modify): {0} -->"
@@ -188,11 +188,11 @@ class DRNClerkBot(Task):
                     case.title = title
             case.body, case.old = body, old
 
-    def select_next_id(self, conn):
+    def select_next_id(self, conn, column, table):
         """Return the next incremental ID for a case."""
-        query = "SELECT MAX(case_id) FROM case"
+        query = "SELECT MAX(?) FROM ?"
         with conn.cursor() as cursor:
-            cursor.execute(query)
+            cursor.execute(query, (column, table))
             current = cursor.fetchone()[0]
             if current:
                 return current + 1
@@ -230,14 +230,16 @@ class DRNClerkBot(Task):
         """Clerk a particular case and return a list of any notices to send."""
         notices = []
         signatures = self.read_signatures(case.body)
+        storedsigs = self.get_signatures_from_db(conn, case)
         if case.status == self.STATUS_NEW:
             notices = self.clerk_new_case(case, volunteers, signatures)
         elif case.status == self.STATUS_OPEN:
             notices = self.clerk_open_case(case, signatures)
         elif case.status == self.STATUS_NEEDASSIST:
-            notices = self.clerk_needassist_case(case, volunteers, signatures)
+            notices = self.clerk_needassist_case(case, volunteers, signatures,
+                                                 storedsigs)
         elif case.status == self.STATUS_STALE:
-            notices = self.clerk_stale_case(case, signatures)
+            notices = self.clerk_stale_case(case, signatures, storedsigs)
         elif case.status == self.STATUS_REVIEW:
             notices = self.clerk_review_case(case)
         elif case.status in [self.STATUS_RESOLVED, self.STATUS_CLOSED]:
@@ -246,54 +248,8 @@ class DRNClerkBot(Task):
             log = u"Unsure of how to deal with case {0} (title: {1})"
             self.logger.error(log.format(case.id, case.title))
             return notices
-        self.save_case_updates(conn, case)
+        self.save_case_updates(conn, case, signatures, storedsigs)
         return notices
-
-    def save_case_updates(self, conn, case):
-        if case.status != case.original_status:
-            case.last_action = case.status
-            new = self.ALIASES[case.status][0]
-            tl_status_esc = re.escape(self.tl_status)
-            search = "\{\{" + tl_status_esc + "(\|?.*?)\}\}"
-            repl = "{{" + self.tl_status + "|" + new + "}}"
-            case.body = re.sub(search, repl, case.body)
-
-        if case.new:
-            self.save_new_case(conn, case)
-        else:
-            self.save_existing_case(conn, case)
-
-    def save_new_case(self, conn, case):
-        args = (case.id, case.title, case.status, case.last_action,
-                case.file_time, case.close_time, case.parties_notified,
-                case.very_old_notified)
-        with conn.cursor() as cursor:
-            query = "INSERT INTO case VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-            cursor.execute(query, args)
-
-    def save_existing_case(self, conn, case):
-        with conn.cursor(oursql.DictCursor) as cursor:
-            query = "SELECT * FROM case WHERE case_id = ?"
-            cursor.execute(query, (case.id,))
-            stored = cursor.fetchone()
-        with conn.cursor() as cursor:
-            changes, args = [], []
-            fields_to_check = [
-                ("case_status", case.status),
-                ("case_last_action", case.last_action),
-                ("case_close_time", case.close_time),
-                ("case_parties_notified", case.parties_notified),
-                ("case_very_old_notified", case.very_old_notified)
-            ]
-            for column, data in fields_to_check:
-                if data != stored[column]:
-                    changes.append(column + " = ?")
-                    args.append(data)
-            if changes:
-                changes = ", ".join(changes)
-                args.append(case.id)
-                query = "UPDATE case SET {0} WHERE case_id = ?".format(changes)
-                cursor.execute(query, args)
 
     def clerk_new_case(self, case, volunteers, signatures):
         notices = self.notify_parties(case)
@@ -319,23 +275,23 @@ class DRNClerkBot(Task):
                 return self.build_talk_notice(self.STATUS_STALE)
         return []
 
-    def clerk_needassist_case(self, case, volunteers, signatures):
+    def clerk_needassist_case(self, case, volunteers, signatures, storedsigs):
         flagged = self.check_for_review(case):
         if flagged:
             return flagged
 
-        newsigs = signatures - SIGNATURES_FROM_DATABASE                             # TODO
+        newsigs = set(signatures) - set(storedsigs)
         if any([editor in volunteers for (editor, timestamp) in newsigs]):
             if case.last_action != self.STATUS_OPEN:
                 case.status = self.STATUS_OPEN
         return []
 
-    def clerk_stale_case(self, case, signatures):
+    def clerk_stale_case(self, case, signatures, storedsigs):
         flagged = self.check_for_review(case):
         if flagged:
             return flagged
 
-        if signatures - SIGNATURES_FROM_DATABASE:                                   # TODO
+        if set(signatures) - set(storedsigs)
             if case.last_action != self.STATUS_OPEN:
                 case.status = self.STATUS_OPEN
         return []
@@ -370,6 +326,9 @@ class DRNClerkBot(Task):
         raise NotImplementedError()                                                 # TODO
         return [(username, timestamp_datetime)...]
 
+    def get_signatures_from_db(self, conn, case):
+        raise NotImplementedError()                                                 # TODO
+
     def build_talk_notice(self, status):
         param = self.ALIASES[status][0]
         template = "{{subst:" + self.tl_notify_stale + "|" + param + "}} ~~~~"
@@ -380,6 +339,69 @@ class DRNClerkBot(Task):
             return
         raise NotImplementedError()                                                 # TODO
         case.parties_notified = True
+
+    def save_case_updates(self, conn, case, signatures, storedsigs):
+        if case.status != case.original_status:
+            case.last_action = case.status
+            new = self.ALIASES[case.status][0]
+            tl_status_esc = re.escape(self.tl_status)
+            search = "\{\{" + tl_status_esc + "(\|?.*?)\}\}"
+            repl = "{{" + self.tl_status + "|" + new + "}}"
+            case.body = re.sub(search, repl, case.body)
+
+        if case.new:
+            self.save_new_case(conn, case)
+        else:
+            self.save_existing_case(conn, case)
+
+        with conn.cursor() as cursor:
+            query1 = "DELETE FROM signature WHERE signature_case = ? AND signature_username = ? AND signature_timestamp = ?"
+            query2 = "INSERT INTO signature VALUES (?, ?, ?, ?)"
+            removals = set(storedsigs) - set(signatures)
+            additions = set(signatures) - set(storedsigs)
+            if removals:
+                args = [(case.id, name, stamp) for (name, stamp) in removals]
+                cursor.execute(query1, args)
+            if additions:
+                nextid = self.select_next_id(conn, "signature_id", "signature")
+                args = []
+                for name, stamp in additions:
+                    args.append((nextid, case.id, name, stamp))
+                    nextid += 1
+                cursor.execute(query2, args)
+
+    def save_new_case(self, conn, case):
+        args = (case.id, case.title, case.status, case.last_action,
+                case.file_time, case.close_time, case.parties_notified,
+                case.very_old_notified)
+        with conn.cursor() as cursor:
+            query = "INSERT INTO case VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            cursor.execute(query, args)
+
+    def save_existing_case(self, conn, case):
+        with conn.cursor(oursql.DictCursor) as cursor:
+            query = "SELECT * FROM case WHERE case_id = ?"
+            cursor.execute(query, (case.id,))
+            stored = cursor.fetchone()
+
+        with conn.cursor() as cursor:
+            changes, args = [], []
+            fields_to_check = [
+                ("case_status", case.status),
+                ("case_last_action", case.last_action),
+                ("case_close_time", case.close_time),
+                ("case_parties_notified", case.parties_notified),
+                ("case_very_old_notified", case.very_old_notified)
+            ]
+            for column, data in fields_to_check:
+                if data != stored[column]:
+                    changes.append(column + " = ?")
+                    args.append(data)
+            if changes:
+                changes = ", ".join(changes)
+                args.append(case.id)
+                query = "UPDATE case SET {0} WHERE case_id = ?".format(changes)
+                cursor.execute(query, args)
 
     def save(self, page, cases, kwargs):
         """Save any changes to the noticeboard."""
