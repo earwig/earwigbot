@@ -150,7 +150,7 @@ class DRNClerkBot(Task):
         with conn.cursor() as cursor:
             cursor.execute("SELECT * FROM case")
             for row in cursor:
-                case = _Case(*row)
+                case = _Case(*row, new=False)
                 cases.append(case)
         return cases
 
@@ -179,7 +179,7 @@ class DRNClerkBot(Task):
                 repl = ur"\1 <!-- Bot Case ID (please don't modify): {0} -->"
                 body = re.sub(re_id2, repl.format(id_), body)
                 case = _Case(id_, title, status, self.STATUS_UNKNOWN, time(),
-                             0, False, False)
+                             0, False, False, new=True)
                 cases.append(case)
             else:
                 case.status = status
@@ -247,8 +247,45 @@ class DRNClerkBot(Task):
             self.logger.error(log.format(case.id, case.title))
             return notices
 
-        STORE UPDATES IN DATABASE                                                   # TODO
-        APPLY STATUS UPDATES TO CASE BODY                                           # TODO
+        if case.status != case.original_status:
+            case.last_action = case.status
+            new = self.ALIASES[case.status][0]
+            tl_status_esc = re.escape(self.tl_status)
+            search = "\{\{" + tl_status_esc + "(\|?.*?)\}\}"
+            repl = "{{" + self.tl_status + "|" + new + "}}"
+            case.body = re.sub(search, repl, case.body)
+
+        if case.new:
+            with conn.cursor() as cursor:
+                query = "INSERT INTO case VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                cursor.execute(query, (case.id, case.title, case.status,
+                                       case.last_action, case.file_time,
+                                       case.close_time, case.parties_notified,
+                                       case.very_old_notified))
+            return notices
+
+        with conn.cursor(oursql.DictCursor) as cursor:
+            query = "SELECT * FROM case WHERE case_id = ?"
+            cursor.execute(query, (case.id,))
+            stored = cursor.fetchone()
+        with conn.cursor() as cursor:
+            changes, args = [], []
+            fields_to_check = [
+                ("case_status", case.status),
+                ("case_last_action", case.last_action),
+                ("case_close_time", case.close_time),
+                ("case_parties_notified", case.parties_notified),
+                ("case_very_old_notified", case.very_old_notified)
+            ]
+            for column, data in fields_to_check:
+                if data != stored[column]:
+                    changes.append(column + " = ?")
+                    args.append(data)
+            if changes:
+                changes = ", ".join(changes)
+                args.append(case.id)
+                query = "UPDATE case SET {0} WHERE case_id = ?".format(changes)
+                cursor.execute(query, args)
         return notices
 
     def clerk_new_case(self, case, volunteers, signatures):
@@ -392,7 +429,7 @@ class DRNClerkBot(Task):
 class _Case(object):
     """A object representing a dispute resolution case."""
     def __init__(self, id_, title, status, last_action, file_time, close_time,
-                 parties_notified, very_old_notified):
+                 parties_notified, very_old_notified, new):
         self.id = id_
         self.title = title
         self.status = status
@@ -401,6 +438,7 @@ class _Case(object):
         self.close_time = close_time
         self.parties_notified = parties_notified
         self.very_old_notified = very_old_notified
+        self.new = new
 
         self.original_status = status
         self.body = None
