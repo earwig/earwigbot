@@ -111,13 +111,27 @@ class DRNClerkBot(Task):
             log = u"The marker ({0}) wasn't found in the volunteer list at [[{1}]]!"
             self.logger.error(log.format(marker, page.title))
         text = text.split(marker)[1]
-        users = set()
+        additions = set()
         for line in text.splitlines():
             user = re.search("\# \{\{User\|(.*?)\}\}", line)
             if user:
-                users.add(user.group(1))
+                additions.add((user.group(1)))
 
-        # SYNCHRONIZE USERS WITH DATABASE
+        removals = set()
+        query1 = "SELECT volunteer_username FROM volunteer"
+        query2 = "DELETE FROM volunteer WHERE volunteer_username = ?"
+        query3 = "INSERT INTO volunteer VALUES (?)"
+        with conn.cursor() as cursor:
+            cursor.execute(query1)
+            for row in cursor:
+                if row in additions:
+                    additions.remove(row)
+                else:
+                    removals.add(row)
+            if removals:
+                cursor.executemany(query2, removals)
+            if additions:
+                cursor.executemany(query3, additions)
 
     def read_database(self, conn):
         """Return a list of _Cases from the database."""
@@ -144,14 +158,15 @@ class DRNClerkBot(Task):
             if not re.search("\s*\{\{" + tl_status_esc, body, re.U):
                 continue
             status = self.read_status(body)
-            re_id = "<!-- EarwigBot Case ID \(please don't modify me\): (.*?) -->"
+            re_id = "<!-- Bot Case ID \(please don't modify me\): (.*?) -->"
             try:
                 id_ = re.search(re_id, body).group(1)
                 case = [case for case in cases if case.id == id_][0]
             except (AttributeError, IndexError):
                 id_ = self.select_next_id(conn)
-                re_id2 = "(\{\{" + tl_status_esc + "(.*?)\}\})(<!-- Case ID \(please don't modify\): .*? -->)?"
-                repl = ur"\1 <!-- Case ID (please don't modify): {0} -->"
+                re_id2 = "(\{\{" + tl_status_esc
+                re_id2 += "(.*?)\}\})(<!-- Bot Case ID \(please don't modify\): .*? -->)?"
+                repl = ur"\1 <!-- Bot Case ID (please don't modify): {0} -->"
                 body = re.sub(re_id2, repl.format(id_), body)
                 case = _Case(id_, title, status)
                 cases.append(case)
