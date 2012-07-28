@@ -328,8 +328,14 @@ class DRNClerkBot(Task):
                 return self.build_talk_notice(self.STATUS_REVIEW)
 
     def read_signatures(self, text):
-        raise NotImplementedError()                                                 # TODO
-        return [(username, timestamp_datetime)...]
+        regex = r"\[\[(?:User(?:\stalk)?\:|Special\:Contributions\/)(.*?)(?:\||\]\]).{,256}?(\d{2}:\d{2},\s\d{2}\s\w+\s\d{4}\s\(UTC\))"
+        matches = re.findall(regex, text, re.U)
+        signatures = []
+        for userlink, stamp in matches:
+            username = userlink.split("/", 1)[0].replace("_", " ")
+            timestamp = datetime.strptime("%H:%M, %d %B %Y (UTC)", stamp)
+            signatures.append((username, timestamp))
+        return signatures
 
     def get_signatures_from_db(self, conn, case):
         query = "SELECT signature_username, signature_timestamp FROM signature WHERE signature_case = ?"
