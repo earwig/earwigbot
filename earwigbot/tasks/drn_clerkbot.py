@@ -24,7 +24,7 @@ from datetime import datetime
 from os import expanduser
 import re
 from threading import RLock
-from time import sleep, time
+from time import mktime, sleep, time
 
 import oursql
 
@@ -55,6 +55,7 @@ class DRNClerkBot(Task):
         STATUS_REVIEW: ("review",),
         STATUS_RESOLVED: ("resolved", "resolve"),
         STATUS_CLOSED: ("closed", "close"),
+        STATUS_ARCHIVE: ("archive",)
     }
 
     def setup(self):
@@ -62,9 +63,11 @@ class DRNClerkBot(Task):
         cfg = self.config.tasks.get(self.name, {})
 
         # Set some wiki-related attributes:
-        self.title = cfg.get("title", "Wikipedia:Dispute resolution noticeboard")
-        self.talk = cfg.get("talk", "Wikipedia talk:Dispute resolution noticeboard")
-        self.volunteer_title = cfg.get("volunteers", "Wikipedia:Dispute resolution noticeboard/Volunteering")
+        self.title = cfg.get("title",
+                             "Wikipedia:Dispute resolution noticeboard")
+        self.chart_title = cfg.get("chartTitle", "Template:DRN case status")
+        self.volunteer_title = cfg.get("volunteers",
+                                       "Wikipedia:Dispute resolution noticeboard/Volunteering")
         self.very_old_title = cfg.get("veryOldTitle", "User talk:Szhang (WMF)")
         default_summary = "Updating $3 cases for the [[WP:DRN|dispute resolution noticeboard]]."
         self.summary = self.make_summary(cfg.get("summary", default_summary))
@@ -77,6 +80,11 @@ class DRNClerkBot(Task):
         self.tl_archive_top = templates.get("archiveTop", "DRN archive top")
         self.tl_archive_bottom = templates.get("archiveBottom",
                                                "DRN archive bottom")
+        self.tl_chart_header = templates.get("chartHeader",
+                                             "DRN case status/header")
+        self.tl_chart_row = templates.get("chartRow", "DRN case status/row")
+        self.tl_chart_footer = templates.get("chartFooter",
+                                             "DRN case status/footer")
 
         # Connection data for our SQL database:
         kwargs = cfg.get("sql", {})
@@ -106,6 +114,8 @@ class DRNClerkBot(Task):
                 noticies = self.clerk(conn, cases)
                 self.save(page, cases, kwargs)
                 self.send_notices(site, notices)
+            if action in ["all", "update_chart"]:
+                self.update_chart(conn)
         finally:
             self.db_access_lock.release()
 
@@ -176,11 +186,20 @@ class DRNClerkBot(Task):
             except (AttributeError, IndexError):
                 id_ = self.select_next_id(conn, "case_id", "case")
                 re_id2 = "(\{\{" + tl_status_esc
-                re_id2 += "(.*?)\}\})(<!-- Bot Case ID \(please don't modify\): .*? -->)?"
+                re_id2 += r"(.*?)\}\})(<!-- Bot Case ID \(please don't modify\): .*? -->)?"
                 repl = ur"\1 <!-- Bot Case ID (please don't modify): {0} -->"
                 body = re.sub(re_id2, repl.format(id_), body)
-                case = _Case(id_, title, status, self.STATUS_UNKNOWN, time(),
-                             0, False, False, 0, new=True)
+                re_f = r"\{\{drn filing editor\|(.*?)\|(\d{2}:\d{2},\s\d{2}\s\w+\s\d{4}\s\(UTC\))\}\}"
+                match = re.search(re_f, body, re.U)
+                if match:
+                    f_user = match.group(1).split("/", 1)[0].replace("_", " ")
+                    strp = "%H:%M, %d %B %Y (UTC)"
+                    f_time = datetime.strptime(strp, match.group(2))
+                else:
+                    f_user, f_time = None, datetime.utcnow()
+                case = _Case(id_, title, status, self.STATUS_UNKNOWN, f_user,
+                             f_time, "", 0, "", 0, 0, False, False, 0,
+                             new=True)
                 cases.append(case)
             else:
                 case.status = status
@@ -252,7 +271,7 @@ class DRNClerkBot(Task):
             log = u"Unsure of how to deal with case {0} (title: {1})"
             self.logger.error(log.format(case.id, case.title))
             return notices
-        self.save_case_updates(conn, case, signatures, storedsigs)
+        self.save_case_updates(conn, case, volunteers, signatures, storedsigs)
         return notices
 
     def clerk_new_case(self, case, volunteers, signatures):
@@ -351,7 +370,7 @@ class DRNClerkBot(Task):
         case.parties_notified = True
         return notices
 
-    def save_case_updates(self, conn, case, signatures, storedsigs):
+    def save_case_updates(self, conn, case, volunteers, sigs, storedsigs):
         if case.status != case.original_status:
             case.last_action = case.status
             new = self.ALIASES[case.status][0]
@@ -359,6 +378,16 @@ class DRNClerkBot(Task):
             search = "\{\{" + tl_status_esc + "(\|?.*?)\}\}"
             repl = "{{" + self.tl_status + "|" + new + "}}"
             case.body = re.sub(search, repl, case.body)
+
+        newest_ts = max([stamp for (user, stamp) in sigs])
+        newest_user = [usr for (usr, stamp) in sigs if stamp == newest_ts][0]
+        case.modify_user = newest_ts
+        case.modify_time = newest_user
+
+        newest_vts = max([stamp for (usr, stamp) in sigs if usr in volunteers])
+        newest_vuser = [usr for (usr, stamp) in sigs if stamp == newest_vts][0]
+        case.volunteer_user = newest_vol
+        case.volunteer_time = volsigs[1]
 
         if case.new:
             self.save_new_case(conn, case)
@@ -368,8 +397,8 @@ class DRNClerkBot(Task):
         with conn.cursor() as cursor:
             query1 = "DELETE FROM signature WHERE signature_case = ? AND signature_username = ? AND signature_timestamp = ?"
             query2 = "INSERT INTO signature VALUES (?, ?, ?, ?)"
-            removals = set(storedsigs) - set(signatures)
-            additions = set(signatures) - set(storedsigs)
+            removals = set(storedsigs) - set(sigs)
+            additions = set(sigs) - set(storedsigs)
             if removals:
                 args = [(case.id, name, stamp) for (name, stamp) in removals]
                 cursor.execute(query1, args)
@@ -466,17 +495,87 @@ class DRNClerkBot(Task):
 
         self.logger.info("Done sending notices")
 
+    def update_chart(self, conn, site):
+        page = site.get_page(self.chart_title)
+        self.logger.info(u"Updating case status at [[{0}]]".format(page.title))
+        statuses = self.compile_chart(conn)
+        text = page.get()
+        newtext = re.sub(u"<!-- status begin -->(.*?)<!-- status end -->",
+                         "<!-- status begin -->\n" + statuses + "\n<!-- status end -->",
+                         text, flags=re.DOTALL)
+        if newtext == text:
+            self.logger.info("Chart unchanged; not saving")
+            return
+
+        newtext = re.sub("<!-- sig begin -->(.*?)<!-- sig end -->",
+                         "<!-- sig begin -->~~~ at ~~~~~<!-- sig end -->",
+                         newtext)
+        page.edit(newtext, summary, minor=True, bot=True)
+        self.logger.info(u"Chart saved to [[{0}]]".format(page.title))
+
+    def compile_chart(self, conn):
+        chart = "{{" + self.tl_chart_header + "}}\n"
+        query = "SELECT case_title, case_status, case_file_time FROM case"
+        with conn.cursor(oursql.DictCursor) as cursor:
+            cursor.execute(query)
+            for case in query:
+                chart += self.compile_row(case)
+        chart += "{{" + self.tl_chart_footer + "}}"
+        return chart
+
+    def compile_row(self, case):
+        data = "|t={case_title}|s={status}"
+        data += "|cu={case_file_user}|cs={file_sortkey}|ct={file_time}"
+        if case["volunteer_user"]:
+            data += "|vu={case_volunteer_user}|vs={volunteer_sortkey}|vt={volunteer_time}"
+            case["volunteer_time"] = self.format_time(case["case_volunteer_time"])
+            case["volunteer_sortkey"] = int(mktime(case["case_volunteer_time"].timetuple()))
+        data += "|mu={case_modify_user}|ms={modify_sortkey}|mt={modify_time}"
+
+        case["case_title"] = case["case_title"].replace("|", "&#124;")
+        case["status"] = self.translate_status(case["case_status"])
+        case["file_time"] = self.format_time(case["case_file_time"])
+        case["file_sortkey"] = int(mktime(case["case_file_time"].timetuple()))
+        case["modify_time"] = self.format_time(case["case_modify_time"])
+        case["modify_sortkey"] = int(mktime(case["case_modify_time"].timetuple()))
+        row = "{{" + self.tl_chart_row + data.format(**case) + "}}\n"
+        return row
+
+    def translate_status(self, num):
+        translations = {
+            STATUS_UNKNOWN: "u",
+            STATUS_NEW: "n",
+            STATUS_OPEN: "o",
+            STATUS_STALE: "s",
+            STATUS_NEEDASSIST: "e",
+            STATUS_REVIEW: "r",
+            STATUS_RESOLVED: "d",
+            STATUS_CLOSED: "c",
+            STATUS_ARCHIVE: "a"
+        }
+        return translations[num]
+
+    def format_time(self, dt):
+        """Format a datetime into the standard MediaWiki timestamp format."""
+        return dt.strftime("%H:%M, %d %b %Y")
+
 
 class _Case(object):
     """A object representing a dispute resolution case."""
-    def __init__(self, id_, title, status, last_action, file_time, close_time,
-                 parties_notified, very_old_notified, last_volunteer_size,
-                 new=False):
+    def __init__(self, id_, title, status, last_action, file_user, file_time,
+                 modify_user, modify_time, volunteer_user, volunteer_time,
+                 close_time, parties_notified, very_old_notified,
+                 last_volunteer_size, new=False):
         self.id = id_
         self.title = title
         self.status = status
         self.last_action = last_action
+        self.file_user = file_user
         self.file_time = file_time
+        self.modify_user = modify_user
+        self.modify_time = modify_time
+        self.volunteer_user = volunteer_user
+        self.volunteer_time = volunteer_time
         self.close_time = close_time
         self.parties_notified = parties_notified
         self.very_old_notified = very_old_notified
