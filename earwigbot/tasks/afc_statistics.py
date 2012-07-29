@@ -723,7 +723,7 @@ class AFCStatistics(Task):
         if "D" in statuses and chart != self.CHART_MISPLACE:
             notes += "|nr=1"  # Submission was resubmitted
 
-        time_since_modify = (datetime.now() - m_time).total_seconds()
+        time_since_modify = (datetime.utcnow() - m_time).total_seconds()
         max_time = 4 * 24 * 60 * 60
         if time_since_modify > max_time:
             notes += "|no=1"  # Submission hasn't been touched in over 4 days

@@ -197,8 +197,9 @@ class DRNClerkBot(Task):
                     f_time = datetime.strptime(strp, match.group(2))
                 else:
                     f_user, f_time = None, datetime.utcnow()
+                zero = datetime.min
                 case = _Case(id_, title, status, self.STATUS_UNKNOWN, f_user,
-                             f_time, "", 0, "", 0, 0, False, False, 0,
+                             f_time, "", zero, "", zero, zero, False, False, 0,
                              new=True)
                 cases.append(case)
             else:
@@ -287,7 +288,8 @@ class DRNClerkBot(Task):
             if case.last_action != self.STATUS_NEEDASSIST:
                 case.status = self.STATUS_NEEDASSIST
         timestamps = [timestamp for (editor, timestamp) in signatures]
-        if time() - max(timestamps) > 60 * 60 * 24 * 2:
+        age = (datetime.utcnow() - max(timestamps)).total_seconds()
+        if age > 60 * 60 * 24 * 2:
             if case.last_action != self.STATUS_STALE:
                 case.status = self.STATUS_STALE
         return []
@@ -307,7 +309,8 @@ class DRNClerkBot(Task):
         return []
 
     def clerk_review_case(self, case):
-        if time() - case.file_time > 60 * 60 * 24 * 7:
+        age = (datetime.utcnow() - case.file_time).total_seconds()
+        if age > 60 * 60 * 24 * 7:
             if not case.very_old_notified:
                 template = "{{subst:" + self.tl_notify_stale
                 template += case.title.replace("|", "&#124;") + "}}"
@@ -318,11 +321,11 @@ class DRNClerkBot(Task):
 
     def clerk_closed_case(self, case, signatures):
         if not case.close_time:
-            case.close_time = time()
+            case.close_time = datetime.utcnow()
         timestamps = [timestamp for (editor, timestamp) in signatures]
-        closed_long_ago = time() - case.close_time > 60 * 60 * 24
-        modified_long_ago = time() - max(timestamps) > 60 * 60 * 24
-        if closed_long_ago and modified_long_ago:
+        close_age = (datetime.utcnow() - case.close_time).total_seconds()
+        modify_age = (datetime.utcnow() - max(timestamps)).total_seconds()
+        if closed_age > 60 * 60 * 24 and modify_age > 60 * 60 * 24:
             case.status = self.STATUS_ARCHIVE
             case.body = "{{" + self.tl_archive_top + "}}\n" + case.body
             case.body += "\n{{" + self.tl_archive_bottom + "}}"
@@ -330,7 +333,8 @@ class DRNClerkBot(Task):
             case.body = re.sub(reg, "", case.body)
 
     def check_for_review(self, case):
-        if time() - case.file_time > 60 * 60 * 24 * 4:
+        age = (datetime.utcnow() - case.file_time).total_seconds()
+        if age > 60 * 60 * 24 * 4:
             if case.last_action != self.STATUS_REVIEW:
                 case.status = self.STATUS_REVIEW
 
