@@ -45,7 +45,6 @@ class DRNClerkBot(Task):
     STATUS_REVIEW = 5
     STATUS_RESOLVED = 6
     STATUS_CLOSED = 7
-    STATUS_ARCHIVE = 8
 
     ALIASES = {
         STATUS_NEW: ("",),
@@ -55,7 +54,6 @@ class DRNClerkBot(Task):
         STATUS_REVIEW: ("review",),
         STATUS_RESOLVED: ("resolved", "resolve"),
         STATUS_CLOSED: ("closed", "close"),
-        STATUS_ARCHIVE: ("archive",)
     }
 
     def setup(self):
@@ -268,6 +266,8 @@ class DRNClerkBot(Task):
             notices = self.clerk_review_case(case)
         elif case.status in [self.STATUS_RESOLVED, self.STATUS_CLOSED]:
             self.clerk_closed_case(conn, signatures)
+        elif case.status == self.STATUS_UNKNOWN:
+            pass
         else:
             log = u"Unsure of how to deal with case {0} (title: {1})"
             self.logger.error(log.format(case.id, case.title))
@@ -326,11 +326,11 @@ class DRNClerkBot(Task):
         close_age = (datetime.utcnow() - case.close_time).total_seconds()
         modify_age = (datetime.utcnow() - max(timestamps)).total_seconds()
         if closed_age > 60 * 60 * 24 and modify_age > 60 * 60 * 24:
-            case.status = self.STATUS_ARCHIVE
             reg = "<!-- \[\[User:DoNotArchiveUntil\]\] .*? -->(<!-- .*? -->)?"
             repl = "{{" + self.tl_archive_top + "}}"
             case.body = re.sub(reg, repl, case.body)
             case.body += "\n{{" + self.tl_archive_bottom + "}}"
+            case.status = self.STATUS_UNKNOWN
 
     def check_for_review(self, case):
         age = (datetime.utcnow() - case.file_time).total_seconds()
@@ -523,8 +523,7 @@ class DRNClerkBot(Task):
         with conn.cursor(oursql.DictCursor) as cursor:
             cursor.execute(query)
             for case in query:
-                if case["case_status"] not in [self.STATUS_UNKNOWN,
-                                               self.STATUS_ARCHIVE]:
+                if case["case_status"] != self.STATUS_UNKNOWN:
                     chart += self.compile_row(case)
         chart += "{{" + self.tl_chart_footer + "}}"
         return chart
@@ -549,7 +548,6 @@ class DRNClerkBot(Task):
 
     def translate_status(self, num):
         translations = {
-            STATUS_UNKNOWN: "u",
             STATUS_NEW: "n",
             STATUS_OPEN: "o",
             STATUS_STALE: "s",
@@ -557,7 +555,6 @@ class DRNClerkBot(Task):
             STATUS_REVIEW: "r",
             STATUS_RESOLVED: "d",
             STATUS_CLOSED: "c",
-            STATUS_ARCHIVE: "a"
         }
         return translations[num]
 
