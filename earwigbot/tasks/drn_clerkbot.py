@@ -327,10 +327,10 @@ class DRNClerkBot(Task):
         modify_age = (datetime.utcnow() - max(timestamps)).total_seconds()
         if closed_age > 60 * 60 * 24 and modify_age > 60 * 60 * 24:
             case.status = self.STATUS_ARCHIVE
-            case.body = "{{" + self.tl_archive_top + "}}\n" + case.body
-            case.body += "\n{{" + self.tl_archive_bottom + "}}"
             reg = "<!-- \[\[User:DoNotArchiveUntil\]\] .*? -->(<!-- .*? -->)?"
-            case.body = re.sub(reg, "", case.body)
+            repl = "{{" + self.tl_archive_top + "}}"
+            case.body = re.sub(reg, repl, case.body)
+            case.body += "\n{{" + self.tl_archive_bottom + "}}"
 
     def check_for_review(self, case):
         age = (datetime.utcnow() - case.file_time).total_seconds()
@@ -523,7 +523,9 @@ class DRNClerkBot(Task):
         with conn.cursor(oursql.DictCursor) as cursor:
             cursor.execute(query)
             for case in query:
-                chart += self.compile_row(case)
+                if case["case_status"] not in [self.STATUS_UNKNOWN,
+                                               self.STATUS_ARCHIVE]:
+                    chart += self.compile_row(case)
         chart += "{{" + self.tl_chart_footer + "}}"
         return chart
 
