@@ -326,10 +326,14 @@ class DRNClerkBot(Task):
         close_age = (datetime.utcnow() - case.close_time).total_seconds()
         modify_age = (datetime.utcnow() - max(timestamps)).total_seconds()
         if closed_age > 60 * 60 * 24 and modify_age > 60 * 60 * 24:
+            arch_top = self.tl_archive_top
+            arch_bottom = self.tl_archive_bottom
             reg = "<!-- \[\[User:DoNotArchiveUntil\]\] .*? -->(<!-- .*? -->)?"
-            repl = "{{" + self.tl_archive_top + "}}"
-            case.body = re.sub(reg, repl, case.body)
-            case.body += "\n{{" + self.tl_archive_bottom + "}}"
+            if re.search(reg, case.body):
+                case.body = re.sub("\{\{" + arch_top + "\}\}", "", case.body)
+                case.body = re.sub(reg, "{{" + arch_top + "}}", case.body)
+            if not re.search(arch_bottom + "\s*\}\}\s*\Z", case.body):
+                case.body += "\n{{" + arch_bottom + "}}"
             case.status = self.STATUS_UNKNOWN
 
     def check_for_review(self, case):
