@@ -135,6 +135,7 @@ class DRNClerkBot(Task):
         if marker not in text:
             log = u"The marker ({0}) wasn't found in the volunteer list at [[{1}]]!"
             self.logger.error(log.format(marker, page.title))
+            return
         text = text.split(marker)[1]
         additions = set()
         for line in text.splitlines():
@@ -197,7 +198,7 @@ class DRNClerkBot(Task):
                 if match:
                     f_user = match.group(1).split("/", 1)[0].replace("_", " ")
                     strp = "%H:%M, %d %B %Y (UTC)"
-                    f_time = datetime.strptime(strp, match.group(2))
+                    f_time = datetime.strptime(match.group(2), strp)
                 else:
                     f_user, f_time = None, datetime.utcnow()
                 zero = datetime.min
@@ -325,7 +326,7 @@ class DRNClerkBot(Task):
         return []
 
     def clerk_closed_case(self, case, signatures):
-        if not case.close_time:
+        if case.close_time == datetime.min:
             case.close_time = datetime.utcnow()
         timestamps = [timestamp for (editor, timestamp) in signatures]
         closed_age = (datetime.utcnow() - case.close_time).total_seconds()
@@ -353,7 +354,7 @@ class DRNClerkBot(Task):
         signatures = []
         for userlink, stamp in matches:
             username = userlink.split("/", 1)[0].replace("_", " ")
-            timestamp = datetime.strptime("%H:%M, %d %B %Y (UTC)", stamp)
+            timestamp = datetime.strptime(stamp, "%H:%M, %d %B %Y (UTC)")
             signatures.append((username, timestamp))
         return signatures
 
@@ -373,9 +374,9 @@ class DRNClerkBot(Task):
         too_late = "<!--Template:DRN-notice-->"
 
         re_parties = "<span.*?>'''Users involved'''</span>(.*?)<span.*?>"
-        text = re.search(re_parties, case, re.S|re.U)
+        text = re.search(re_parties, case.body, re.S|re.U)
         for line in text.group(1).splitlines():
-            user = re.search("\# \{\{User\|(.*?)\}\}", line)
+            user = re.search("[:*#]{,5} \{\{User\|(.*?)\}\}", line)
             if user:
                 party = user.group(1).strip()
                 notice = _Notice("User talk:" + party, template, too_late)
