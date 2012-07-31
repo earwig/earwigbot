@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 from datetime import datetime
-from os import expanduser
+from os.path import expanduser
 import re
 from threading import RLock
 from time import mktime, sleep, time
@@ -67,8 +67,13 @@ class DRNClerkBot(Task):
         self.volunteer_title = cfg.get("volunteers",
                                        "Wikipedia:Dispute resolution noticeboard/Volunteering")
         self.very_old_title = cfg.get("veryOldTitle", "User talk:Szhang (WMF)")
-        default_summary = "Updating $3 cases for the [[WP:DRN|dispute resolution noticeboard]]."
-        self.summary = self.make_summary(cfg.get("summary", default_summary))
+
+        clerk_summary = "Updating $3 cases for the [[WP:DRN|dispute resolution noticeboard]]."
+        notify_summary = "Notifying user regarding [[WP:DRN|dispute resolution notieboard]] case."
+        chart_summary = "Updating statistics for the [[WP:DRN|dispute resolution notieboard]]."
+        self.clerk_summary = self.make_summary(cfg.get("clerkSummary", clerk_summary))
+        self.notify_summary = self.make_summary(cfg.get("notifySummary", notify_summary))
+        self.chart_summary = self.make_summary(cfg.get("chartSummary", chart_summary))
 
         # Templates used:
         templates = cfg.get("templates", {})
@@ -109,11 +114,11 @@ class DRNClerkBot(Task):
                 page = site.get_page(self.title)
                 text = page.get()
                 self.read_page(conn, cases, text)
-                noticies = self.clerk(conn, cases)
-                self.save(page, cases, kwargs)
+                notices = self.clerk(conn, cases)
+                self.save(page, cases, kwargs, start)
                 self.send_notices(site, notices)
             if action in ["all", "update_chart"]:
-                self.update_chart(conn)
+                self.update_chart(conn, site)
         finally:
             self.db_access_lock.release()
 
@@ -283,7 +288,7 @@ class DRNClerkBot(Task):
         return notices
 
     def clerk_open_case(self, case, signatures):
-        self.check_for_review(case):
+        self.check_for_review(case)
         if len(case.body) - case.last_volunteer_size > 15000:
             if case.last_action != self.STATUS_NEEDASSIST:
                 case.status = self.STATUS_NEEDASSIST
@@ -295,14 +300,14 @@ class DRNClerkBot(Task):
         return []
 
     def clerk_needassist_case(self, case, volunteers, newsigs):
-        self.check_for_review(case):
+        self.check_for_review(case)
         if any([editor in volunteers for (editor, timestamp) in newsigs]):
             if case.last_action != self.STATUS_OPEN:
                 case.status = self.STATUS_OPEN
         return []
 
     def clerk_stale_case(self, case, newsigs):
-        self.check_for_review(case):
+        self.check_for_review(case)
         if newsigs:
             if case.last_action != self.STATUS_OPEN:
                 case.status = self.STATUS_OPEN
@@ -323,7 +328,7 @@ class DRNClerkBot(Task):
         if not case.close_time:
             case.close_time = datetime.utcnow()
         timestamps = [timestamp for (editor, timestamp) in signatures]
-        close_age = (datetime.utcnow() - case.close_time).total_seconds()
+        closed_age = (datetime.utcnow() - case.close_time).total_seconds()
         modify_age = (datetime.utcnow() - max(timestamps)).total_seconds()
         if closed_age > 60 * 60 * 24 and modify_age > 60 * 60 * 24:
             arch_top = self.tl_archive_top
@@ -374,6 +379,7 @@ class DRNClerkBot(Task):
             if user:
                 party = user.group(1).strip()
                 notice = _Notice("User talk:" + party, template, too_late)
+                notices.append(notice)
 
         case.parties_notified = True
         return notices
@@ -389,13 +395,13 @@ class DRNClerkBot(Task):
 
         newest_ts = max([stamp for (user, stamp) in sigs])
         newest_user = [usr for (usr, stamp) in sigs if stamp == newest_ts][0]
-        case.modify_user = newest_ts
-        case.modify_time = newest_user
+        case.modify_time = newest_ts
+        case.modify_user = newest_user
 
         newest_vts = max([stamp for (usr, stamp) in sigs if usr in volunteers])
         newest_vuser = [usr for (usr, stamp) in sigs if stamp == newest_vts][0]
-        case.volunteer_user = newest_vol
-        case.volunteer_time = volsigs[1]
+        case.volunteer_time = newest_vts
+        case.volunteer_user = newest_vuser
 
         if case.new:
             self.save_new_case(conn, case)
@@ -452,7 +458,7 @@ class DRNClerkBot(Task):
                 query = "UPDATE case SET {0} WHERE case_id = ?".format(changes)
                 cursor.execute(query, args)
 
-    def save(self, page, cases, kwargs):
+    def save(self, page, cases, kwargs, start):
         """Save any changes to the noticeboard."""
         newtext = text = page.get()
         counter = 0
@@ -472,7 +478,7 @@ class DRNClerkBot(Task):
             log = "Someone has edited the page while we were working; restarting"
             self.logger.warn(log)
             return self.run(**kwargs)
-        summary = self.summary.replace("$3", str(counter))
+        summary = self.clerk_summary.replace("$3", str(counter))
         page.edit(text, summary, minor=True, bot=True)
         self.logger.info(u"Saved page [[{0}]]".format(page.title))
 
@@ -495,7 +501,7 @@ class DRNClerkBot(Task):
                 self.logger.info(log)
             text += ("\n" if text else "") + template
             try:
-                page.edit(text, summary, minor=False, bot=True)
+                page.edit(text, self.notify_summary, minor=False, bot=True)
             except exceptions.EditError as error:
                 name, msg = type(error).name, error.message
                 log = u"Couldn't leave notice on {0} because of {1}: {2}"
@@ -518,7 +524,7 @@ class DRNClerkBot(Task):
         newtext = re.sub("<!-- sig begin -->(.*?)<!-- sig end -->",
                          "<!-- sig begin -->~~~ at ~~~~~<!-- sig end -->",
                          newtext)
-        page.edit(newtext, summary, minor=True, bot=True)
+        page.edit(newtext, self.chart_summary, minor=True, bot=True)
         self.logger.info(u"Chart saved to [[{0}]]".format(page.title))
 
     def compile_chart(self, conn):
@@ -552,13 +558,13 @@ class DRNClerkBot(Task):
 
     def translate_status(self, num):
         translations = {
-            STATUS_NEW: "n",
-            STATUS_OPEN: "o",
-            STATUS_STALE: "s",
-            STATUS_NEEDASSIST: "e",
-            STATUS_REVIEW: "r",
-            STATUS_RESOLVED: "d",
-            STATUS_CLOSED: "c",
+            self.STATUS_NEW: "n",
+            self.STATUS_OPEN: "o",
+            self.STATUS_STALE: "s",
+            self.STATUS_NEEDASSIST: "e",
+            self.STATUS_REVIEW: "r",
+            self.STATUS_RESOLVED: "d",
+            self.STATUS_CLOSED: "c",
         }
         return translations[num]
 
