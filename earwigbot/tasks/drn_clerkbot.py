@@ -140,7 +140,7 @@ class DRNClerkBot(Task):
         removals = set()
         query1 = "SELECT volunteer_username FROM volunteer"
         query2 = "DELETE FROM volunteer WHERE volunteer_username = ?"
-        query3 = "INSERT INTO volunteer VALUES (?)"
+        query3 = "INSERT INTO volunteer (volunteer_username) VALUES (?)"
         with conn.cursor() as cursor:
             cursor.execute(query1)
             for row in cursor:

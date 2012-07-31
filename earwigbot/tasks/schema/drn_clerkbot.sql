@@ -50,8 +50,9 @@ CREATE TABLE `signature` (
 
 DROP TABLE IF EXISTS `volunteer`;
 CREATE TABLE `volunteer` (
+  `volunteer_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `volunteer_username` varchar(512) COLLATE utf8_unicode_ci DEFAULT NULL,
-  PRIMARY KEY (`volunteer_username`)
+  PRIMARY KEY (`volunteer_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
--- Dump completed on 2012-07-27 00:00:00
+-- Dump completed on 2012-07-31  1:34:28
