@@ -37,7 +37,7 @@ CREATE TABLE `cases` (
 
 DROP TABLE IF EXISTS `signatures`;
 CREATE TABLE `signatures` (
-  `signature_id` int(10) unsigned NOT NULL,
+  `signature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `signature_case` int(10) unsigned NOT NULL,
   `signature_username` varchar(512) COLLATE utf8_unicode_ci DEFAULT NULL,
   `signature_timestamp` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',

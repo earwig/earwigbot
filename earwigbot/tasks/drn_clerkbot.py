@@ -174,7 +174,7 @@ class DRNClerkBot(Task):
 
     def read_page(self, conn, cases, text):
         """Read the noticeboard content and update the list of _Cases."""
-        nextid = self.select_next_id(conn, "case_id", "cases")
+        nextid = self.select_next_id(conn)
         tl_status_esc = re.escape(self.tl_status)
         split = re.split("(^==\s*[^=]+?\s*==$)", text, flags=re.M|re.U)
         for i in xrange(len(split)):
@@ -217,14 +217,14 @@ class DRNClerkBot(Task):
                     case.title = title
             case.body, case.old = body, old
 
-    def select_next_id(self, conn, column, table):
+    def select_next_id(self, conn):
         """Return the next incremental ID for a case."""
-        query = "SELECT MAX(?) FROM {0}".format(table)
+        query = "SELECT MAX(case_id) FROM cases"
         with conn.cursor() as cursor:
-            cursor.execute(query, (column,))
+            cursor.execute(query)
             current = cursor.fetchone()[0]
             if current:
-                return current + 1
+                return int(current) + 1
             return 1
 
     def read_status(self, body):
@@ -418,18 +418,16 @@ class DRNClerkBot(Task):
 
         with conn.cursor() as cursor:
             query1 = "DELETE FROM signatures WHERE signature_case = ? AND signature_username = ? AND signature_timestamp = ?"
-            query2 = "INSERT INTO signatures VALUES (?, ?, ?, ?)"
+            query2 = "INSERT INTO signatures (signature_case, signature_username, signature_timestamp) VALUES (?, ?, ?)"
             removals = set(storedsigs) - set(sigs)
             additions = set(sigs) - set(storedsigs)
             if removals:
                 args = [(case.id, name, stamp) for (name, stamp) in removals]
                 cursor.executemany(query1, args)
             if additions:
-                nextid = self.select_next_id(conn, "signature_id", "signatures")
                 args = []
                 for name, stamp in additions:
-                    args.append((nextid, case.id, name, stamp))
-                    nextid += 1
+                    args.append((case.id, name, stamp))
                 cursor.executemany(query2, args)
 
     def save_new_case(self, conn, case):
