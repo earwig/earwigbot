@@ -141,7 +141,7 @@ class DRNClerkBot(Task):
         for line in text.splitlines():
             user = re.search("\# \{\{User\|(.*?)\}\}", line)
             if user:
-                additions.add((user.group(1)))
+                additions.add((user.group(1),))
 
         removals = set()
         query1 = "SELECT volunteer_username FROM volunteer"
