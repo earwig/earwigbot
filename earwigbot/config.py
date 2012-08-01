@@ -283,9 +283,9 @@ class BotConfig(object):
             if not self._decryption_cipher:
                 key = getpass("Enter key to decrypt bot passwords: ")
                 self._decryption_cipher = Blowfish.new(sha256(key).digest())
-            signature = self.metadata["signature"]
-            if bcrypt.hashpw(key, signature) != signature:
-                raise RuntimeError("Incorrect password.")
+                signature = self.metadata["signature"]
+                if bcrypt.hashpw(key, signature) != signature:
+                    raise RuntimeError("Incorrect password.")
             for node, nodes in self._decryptable_nodes:
                 self._decrypt(node, nodes)
 
