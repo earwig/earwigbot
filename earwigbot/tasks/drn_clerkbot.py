@@ -485,6 +485,8 @@ class DRNClerkBot(Task):
             user = re.search("[:*#]{,5} \{\{User\|(.*?)\}\}", line)
             if user:
                 party = user.group(1).replace("_", " ").strip()
+                if party == case.file_user:
+                    continue
                 notice = _Notice("User talk:" + party, template, too_late)
                 notices.append(notice)
 
@@ -633,7 +635,7 @@ class DRNClerkBot(Task):
             except exceptions.PageNotFoundError:
                 text = ""
             if notice.too_late and notice.too_late in text:
-                log = u"Skipped [[{0}]]; was already notified with '{1}'"
+                log = u"Skipping [[{0}]]; was already notified with '{1}'"
                 self.logger.info(log.format(page.title, template))
                 continue
             text += ("\n" if text else "") + template
