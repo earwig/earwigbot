@@ -171,6 +171,7 @@ class DRNClerkBot(Task):
 
     def read_page(self, conn, cases, text):
         """Read the noticeboard content and update the list of _Cases."""
+        nextid = self.select_next_id(conn, "case_id", "cases")
         tl_status_esc = re.escape(self.tl_status)
         split = re.split("(^==\s*[^=]+?\s*==$)", text, flags=re.M|re.U)
         for i in xrange(len(split)):
@@ -188,7 +189,8 @@ class DRNClerkBot(Task):
                 id_ = re.search(re_id, body).group(1)
                 case = [case for case in cases if case.id == id_][0]
             except (AttributeError, IndexError):
-                id_ = self.select_next_id(conn, "case_id", "cases")
+                id_ = nextid
+                nextid += 1
                 re_id2 = "(\{\{" + tl_status_esc
                 re_id2 += r"(.*?)\}\})(<!-- Bot Case ID \(please don't modify\): .*? -->)?"
                 repl = ur"\1 <!-- Bot Case ID (please don't modify): {0} -->"
