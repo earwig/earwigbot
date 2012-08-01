@@ -353,7 +353,10 @@ class DRNClerkBot(Task):
                 case.status = self.STATUS_REVIEW
 
     def read_signatures(self, text):
-        regex = r"\[\[(?:User(?:\stalk)?\:|Special\:Contributions\/)(.*?)(?:\||\]\]).{,256}?(\d{2}:\d{2},\s\d{2}\s\w+\s\d{4}\s\(UTC\))"
+        regex = r"\[\[(?:User(?:\stalk)?\:|Special\:Contributions\/)"
+        regex += r"([^\n\[\]|]{,256}?)(?:\||\]\])"
+        regex += r"(?!.*?(?:User(?:\stalk)?\:|Special\:Contributions\/).*?)"
+        regex += r".{,256}?(\d{2}:\d{2},\s\d{2}\s\w+\s\d{4}\s\(UTC\))"
         matches = re.findall(regex, text, re.U)
         signatures = []
         for userlink, stamp in matches:
