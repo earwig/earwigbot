@@ -24,7 +24,7 @@ from earwigbot.commands import Command
 
 class Langcode(Command):
     """Convert a language code into its name and a list of WMF sites in that
-    language."""
+    language, or a name into its code."""
     name = "langcode"
     commands = ["langcode", "lang", "language"]
 
@@ -33,21 +33,26 @@ class Langcode(Command):
             self.reply(data, "Please specify a language code.")
             return
 
-        code = data.args[0]
+        code, lcase = data.args[0], data.args[0].lower()
         site = self.bot.wiki.get_site()
         matrix = site.api_query(action="sitematrix")["sitematrix"]
         del matrix["count"]
         del matrix["specials"]
 
         for site in matrix.itervalues():
-            if site["code"] == code:
-                name = site["name"].encode("utf8")
-                localname = site["localname"].encode("utf8")
+            name = site["name"].encode("utf8")
+            localname = site["localname"].encode("utf8")
+            if site["code"] == lcase:
                 if name != localname:
                     name += " ({0})".format(localname)
                 sites = ", ".join([s["url"] for s in site["site"]])
                 msg = "\x0302{0}\x0F is {1} ({2})".format(code, name, sites)
                 self.reply(data, msg)
+                return
+            elif name.lower() == lcase or localname.lower() == lcase:
+                sites = ", ".join([s["url"] for s in site["site"]])
+                msg = "\x0302{0}\x0F is {1} ({2})"
+                self.reply(data, msg.format(code, site["code"], sites))
                 return
 
         self.reply(data, "Language \x0302{0}\x0F not found.".format(code))
