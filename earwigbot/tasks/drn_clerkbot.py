@@ -165,8 +165,9 @@ class DRNClerkBot(Task):
     def read_database(self, conn):
         """Return a list of _Cases from the database."""
         cases = []
+        query = "SELECT * FROM cases WHERE case_status != ?"
         with conn.cursor() as cursor:
-            cursor.execute("SELECT * FROM cases")
+            cursor.execute(query, (self.STATUS_UNKNOWN,))
             for row in cursor:
                 case = _Case(*row)
                 cases.append(case)
@@ -189,9 +190,9 @@ class DRNClerkBot(Task):
             status = self.read_status(body)
             re_id = "<!-- Bot Case ID \(please don't modify\): (.*?) -->"
             try:
-                id_ = re.search(re_id, body).group(1)
+                id_ = int(re.search(re_id, body).group(1))
                 case = [case for case in cases if case.id == id_][0]
-            except (AttributeError, IndexError):
+            except (AttributeError, IndexError, ValueError):
                 id_ = nextid
                 nextid += 1
                 re_id2 = "(\{\{" + tl_status_esc
@@ -216,6 +217,11 @@ class DRNClerkBot(Task):
                     self.update_case_title(conn, id_, title)
                     case.title = title
             case.body, case.old = body, old
+
+        # Ignore cases loaded from the DB that weren't found in the page:
+        for case in cases:
+            if case.body is None:
+                case.status = self.STATUS_UNKNOWN
 
     def select_next_id(self, conn):
         """Return the next incremental ID for a case."""
@@ -252,7 +258,8 @@ class DRNClerkBot(Task):
             volunteers = [name for (name,) in cursor.fetchall()]
         notices = []
         for case in cases:
-            notices += self.clerk_case(conn, case, volunteers)
+            if case.status != self.STATUS_UNKNOWN:
+                notices += self.clerk_case(conn, case, volunteers)
         return notices
 
     def clerk_case(self, conn, case, volunteers):
@@ -276,8 +283,6 @@ class DRNClerkBot(Task):
             notices = self.clerk_review_case(case)
         elif case.status in [self.STATUS_RESOLVED, self.STATUS_CLOSED]:
             self.clerk_closed_case(case, signatures)
-        elif case.status == self.STATUS_UNKNOWN:
-            pass
         else:
             log = u"Unsure of how to deal with case {0} (title: {1})"
             self.logger.error(log.format(case.id, case.title))
