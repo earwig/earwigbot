@@ -177,6 +177,8 @@ class DRNClerkBot(Task):
             for row in cursor:
                 case = _Case(*row)
                 cases.append(case)
+        log = "Read {0} cases from the database"
+        self.logger.debug(log.format(len(cases)))
         return cases
 
     def read_page(self, conn, cases, text):
@@ -218,17 +220,24 @@ class DRNClerkBot(Task):
                              f_time, "", self.min_ts, "", self.min_ts,
                              self.min_ts, False, False, 0, new=True)
                 cases.append(case)
+                log = u"Added new case {0} ('{1}', status={2}, by {3})"
+                self.logger.debug(log.format(id_, title, status, f_user))
             else:
                 case.status = status
+                log = u"Read active case {0} ('{1}')".format(id_, title)
+                self.logger.debug(log)
                 if case.title != title:
                     self.update_case_title(conn, id_, title)
                     case.title = title
             case.body, case.old = body, old
 
-        # Ignore cases loaded from the DB that weren't found in the page:
         for case in cases:
             if case.body is None:
                 case.status = self.STATUS_UNKNOWN
+                log = u"Dropped case {0} because it is no longer on the page ('{1}')"
+                self.logger.debug(log.format(case.id, case.title))
+
+        self.logger.debug("Done reading cases from the noticeboard page")
 
     def select_next_id(self, conn):
         """Return the next incremental ID for a case."""
@@ -256,6 +265,8 @@ class DRNClerkBot(Task):
         query = "UPDATE cases SET case_title = ? WHERE case_id = ?"
         with conn.cursor() as cursor:
             cursor.execute(query, (title, id_))
+        log = u"Updated title of case {0} to '{1}'".format(id_, title)
+        self.logger.debug(log)
 
     def clerk(self, conn, cases):
         """Actually go through cases and modify those to be updated."""
@@ -265,10 +276,13 @@ class DRNClerkBot(Task):
             volunteers = [name for (name,) in cursor.fetchall()]
         notices = []
         for case in cases:
+            log = u"Clerking case {0} ('{1}')".format(case.id, case.title)
+            self.logger.debug(log)
             if case.status == self.STATUS_UNKNOWN:
                 self.clerk_unknown_case(conn, case)
             else:
                 notices += self.clerk_case(conn, case, volunteers)
+        self.logger.debug("Done clerking cases")
         return notices
 
     def clerk_case(self, conn, case, volunteers):
@@ -292,47 +306,38 @@ class DRNClerkBot(Task):
             notices = self.clerk_review_case(case)
         elif case.status in [self.STATUS_RESOLVED, self.STATUS_CLOSED]:
             self.clerk_closed_case(case, signatures)
-        else:
-            log = u"Unsure of how to deal with case {0} (title: {1})"
-            self.logger.error(log.format(case.id, case.title))
-            return notices
         self.save_case_updates(conn, case, volunteers, signatures, storedsigs)
         return notices
 
     def clerk_new_case(self, case, volunteers, signatures):
         notices = self.notify_parties(case)
         if any([editor in volunteers for (editor, timestamp) in signatures]):
-            if case.last_action != self.STATUS_OPEN:
-                case.status = self.STATUS_OPEN
+            self.update_status(case, self.STATUS_OPEN)
         return notices
 
     def clerk_open_case(self, case, signatures):
         if self.check_for_review(case):
             return []
         if len(case.body) - case.last_volunteer_size > 15000:
-            if case.last_action != self.STATUS_NEEDASSIST:
-                case.status = self.STATUS_NEEDASSIST
+            self.update_status(case, self.STATUS_NEEDASSIST)
         timestamps = [timestamp for (editor, timestamp) in signatures]
         age = (datetime.utcnow() - max(timestamps)).total_seconds()
         if age > 60 * 60 * 24 * 2:
-            if case.last_action != self.STATUS_STALE:
-                case.status = self.STATUS_STALE
+            self.update_status(case, self.STATUS_STALE)
         return []
 
     def clerk_needassist_case(self, case, volunteers, newsigs):
         if self.check_for_review(case):
             return []
         if any([editor in volunteers for (editor, timestamp) in newsigs]):
-            if case.last_action != self.STATUS_OPEN:
-                case.status = self.STATUS_OPEN
+            self.update_status(case, self.STATUS_OPEN)
         return []
 
     def clerk_stale_case(self, case, newsigs):
         if self.check_for_review(case):
             return []
         if newsigs:
-            if case.last_action != self.STATUS_OPEN:
-                case.status = self.STATUS_OPEN
+            self.update_status(case, self.STATUS_OPEN)
         return []
 
     def clerk_review_case(self, case):
@@ -343,6 +348,9 @@ class DRNClerkBot(Task):
                 template += case.title.replace("|", "&#124;") + "}}"
                 notice = _Notice(self.very_old_title, template)
                 case.very_old_notified = True
+                msg = u"    {0}: will notify [[{1}]] with '{2}'"
+                log = msg.format(case.id, self.very_old_title, template)
+                self.logger.debug(log)
                 return [notice]
         return []
 
@@ -362,6 +370,7 @@ class DRNClerkBot(Task):
             if not re.search(arch_bottom + "\s*\}\}\s*\Z", case.body):
                 case.body += "\n{{" + arch_bottom + "}}"
             case.status = self.STATUS_UNKNOWN
+            self.logger.debug(u"    {0}: archived case".format(case.id))
 
     def clerk_unknown_case(self, conn, case):
         if case.new:
@@ -372,9 +381,21 @@ class DRNClerkBot(Task):
     def check_for_review(self, case):
         age = (datetime.utcnow() - case.file_time).total_seconds()
         if age > 60 * 60 * 24 * 4:
-            if case.last_action != self.STATUS_REVIEW:
-                case.status = self.STATUS_REVIEW
-                return True
+            return self.update_status(case, self.STATUS_REVIEW)
+        return False
+
+    def update_status(self, case, new):
+        old_n = self.ALIASES[case.status][0].upper()
+        new_n = self.ALIASES[new][0].upper()
+        old_n = "NEW" if not old_n else old_n
+        new_n = "NEW" if not new_n else new_n
+        if case.last_action != new:
+            case.status = new
+            log = u"    {0}: {1} -> {2}"
+            self.logger.debug(log.format(case.id, old_n, new_n))
+            return True
+        log = u"Avoiding {0} {1} -> {2} because we already did this ('{3}')"
+        self.logger.info(log.format(case.id, old_n, new_n, case.title))
         return False
 
     def read_signatures(self, text):
@@ -418,6 +439,8 @@ class DRNClerkBot(Task):
                 notices.append(notice)
 
         case.parties_notified = True
+        log = u"    {0}: will try to notify {1} parties with '{3}'"
+        self.logger.debug(log.format(case.id, len(notices), template))
         return notices
 
     def save_case_updates(self, conn, case, volunteers, sigs, storedsigs):
@@ -457,6 +480,9 @@ class DRNClerkBot(Task):
                 for name, stamp in additions:
                     args.append((case.id, name, stamp))
                 cursor.executemany(query2, args)
+            msg = u"    {0}: added {1} signatures and removed {2}"
+            log = msg.format(case.id, len(additions), len(removals))
+            self.logger.debug(log)
 
     def save_new_case(self, conn, case):
         args = (case.id, case.title, case.status, case.last_action,
@@ -467,6 +493,8 @@ class DRNClerkBot(Task):
         with conn.cursor() as cursor:
             query = "INSERT INTO cases VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             cursor.execute(query, args)
+        log = u"    {0}: inserted new case into database".format(case.id)
+        self.logger.debug(log)
 
     def save_existing_case(self, conn, case):
         with conn.cursor(oursql.DictCursor) as cursor:
@@ -494,11 +522,17 @@ class DRNClerkBot(Task):
                 if data != stored[column]:
                     changes.append(column + " = ?")
                     args.append(data)
+                    msg = u"    {0}: will alter {1} ('{2}' -> '{3}')"
+                    log = msg.format(case.id, column, stored[column], data)
+                    self.logger.debug(log)
             if changes:
                 changes = ", ".join(changes)
                 args.append(case.id)
                 query = "UPDATE cases SET {0} WHERE case_id = ?".format(changes)
                 cursor.execute(query, args)
+            else:
+                log = u"    {0}: no changes to commit".format(case.id)
+                self.logger.debug(log)
 
     def save(self, page, cases, kwargs, start):
         """Save any changes to the noticeboard."""
@@ -514,7 +548,7 @@ class DRNClerkBot(Task):
 
         worktime = time() - start
         if worktime < 60:
-            log = "Waiting {0} seconds to make sure we don't edit conflict"
+            log = "Waiting {0} seconds to avoid edit conflicts"
             self.logger.debug(log.format(int(60 - worktime)))
             sleep(60 - worktime)
         page.reload()
@@ -525,7 +559,8 @@ class DRNClerkBot(Task):
         summary = self.clerk_summary.replace("$3", str(counter))
         summary = summary.replace("$4", "" if counter == 1 else "s")
         page.edit(newtext, summary, minor=True, bot=True)
-        self.logger.info(u"Saved page [[{0}]]".format(page.title))
+        log = u"Saved page [[{0}]] ({1} updates)"
+        self.logger.info(log.format(page.title, counter))
 
     def send_notices(self, site, notices):
         """Send out any templated notices to users or pages."""
@@ -534,25 +569,28 @@ class DRNClerkBot(Task):
             return
         for notice in notices:
             target, template = notice.target, notice.template
-            log = u"Notifying [[{0}]] with {1}".format(target, template)
-            self.logger.info(log)
+            log = u"Trying to notify [[{0}]] with '{1}'"
+            self.logger.debug(log.format(target, template))
             page = site.get_page(target)
             try:
                 text = page.get()
             except exceptions.PageNotFoundError:
                 text = ""
             if notice.too_late and notice.too_late in text:
-                log = u"Skipping [[{0}]]; was already notified".format(target)
-                self.logger.info(log)
+                log = u"Skipping [[{0}]]; was already notified with '{1}'"
+                self.logger.info(log.format(page.title, template))
             text += ("\n" if text else "") + template
             try:
                 page.edit(text, self.notify_summary, minor=False, bot=True)
             except exceptions.EditError as error:
                 name, msg = type(error).name, error.message
-                log = u"Couldn't leave notice on {0} because of {1}: {2}"
+                log = u"Couldn't leave notice on [[{0}]] because of {1}: {2}"
                 self.logger.error(log.format(page.title, name, msg))
+            else:
+                log = u"Notified [[{0}]] with '{1}'"
+                self.logger.info(log.format(page.title, template))
 
-        self.logger.info("Done sending notices")
+        self.logger.debug("Done sending notices")
 
     def update_chart(self, conn, site):
         page = site.get_page(self.chart_title)
@@ -618,6 +656,8 @@ class DRNClerkBot(Task):
         return ", ".join(msg) + " ago" if msg else "0 hours ago"
 
     def purge_old_data(self, conn):
+        log = "Purging closed cases older than a month from the database"
+        self.logger.info(log)
         query = """DELETE cases, signatures
             FROM cases JOIN signatures ON case_id = signature_case
             WHERE case_status = ?
