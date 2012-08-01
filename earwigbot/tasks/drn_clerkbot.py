@@ -68,7 +68,7 @@ class DRNClerkBot(Task):
                                        "Wikipedia:Dispute resolution noticeboard/Volunteering")
         self.very_old_title = cfg.get("veryOldTitle", "User talk:Szhang (WMF)")
 
-        clerk_summary = "Updating $3 cases for the [[WP:DRN|dispute resolution noticeboard]]."
+        clerk_summary = "Updating $3 case$4."
         notify_summary = "Notifying user regarding [[WP:DRN|dispute resolution notieboard]] case."
         chart_summary = "Updating statistics for the [[WP:DRN|dispute resolution notieboard]]."
         self.clerk_summary = self.make_summary(cfg.get("clerkSummary", clerk_summary))
@@ -506,6 +506,7 @@ class DRNClerkBot(Task):
             self.logger.warn(log)
             return self.run(**kwargs)
         summary = self.clerk_summary.replace("$3", str(counter))
+        summary = summary.replace("$4", "" if counter == 1 else "s")
         page.edit(newtext, summary, minor=True, bot=True)
         self.logger.info(u"Saved page [[{0}]]".format(page.title))
 
