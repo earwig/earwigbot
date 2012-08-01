@@ -496,7 +496,7 @@ class DRNClerkBot(Task):
             self.logger.warn(log)
             return self.run(**kwargs)
         summary = self.clerk_summary.replace("$3", str(counter))
-        page.edit(text, summary, minor=True, bot=True)
+        page.edit(newtext, summary, minor=True, bot=True)
         self.logger.info(u"Saved page [[{0}]]".format(page.title))
 
     def send_notices(self, site, notices):
@@ -558,7 +558,7 @@ class DRNClerkBot(Task):
     def compile_row(self, case):
         data = "|t={case_title}|s={status}"
         data += "|cu={case_file_user}|cs={file_sortkey}|ct={file_time}"
-        if case["volunteer_user"]:
+        if case["case_volunteer_user"]:
             data += "|vu={case_volunteer_user}|vs={volunteer_sortkey}|vt={volunteer_time}"
             case["volunteer_time"] = self.format_time(case["case_volunteer_time"])
             case["volunteer_sortkey"] = int(mktime(case["case_volunteer_time"].timetuple()))
