@@ -293,7 +293,8 @@ class DRNClerkBot(Task):
         return notices
 
     def clerk_open_case(self, case, signatures):
-        self.check_for_review(case)
+        if self.check_for_review(case):
+            return []
         if len(case.body) - case.last_volunteer_size > 15000:
             if case.last_action != self.STATUS_NEEDASSIST:
                 case.status = self.STATUS_NEEDASSIST
@@ -305,14 +306,16 @@ class DRNClerkBot(Task):
         return []
 
     def clerk_needassist_case(self, case, volunteers, newsigs):
-        self.check_for_review(case)
+        if self.check_for_review(case):
+            return []
         if any([editor in volunteers for (editor, timestamp) in newsigs]):
             if case.last_action != self.STATUS_OPEN:
                 case.status = self.STATUS_OPEN
         return []
 
     def clerk_stale_case(self, case, newsigs):
-        self.check_for_review(case)
+        if self.check_for_review(case):
+            return []
         if newsigs:
             if case.last_action != self.STATUS_OPEN:
                 case.status = self.STATUS_OPEN
@@ -351,6 +354,8 @@ class DRNClerkBot(Task):
         if age > 60 * 60 * 24 * 4:
             if case.last_action != self.STATUS_REVIEW:
                 case.status = self.STATUS_REVIEW
+                return True
+        return False
 
     def read_signatures(self, text):
         regex = r"\[\[(?:User(?:\stalk)?\:|Special\:Contributions\/)"
