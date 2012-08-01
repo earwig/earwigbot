@@ -499,6 +499,8 @@ class DRNClerkBot(Task):
 
         worktime = time() - start
         if worktime < 60:
+            log = "Waiting {0} seconds to make sure we don't edit conflict"
+            self.logger.debug(log.format(int(60 - worktime)))
             sleep(60 - worktime)
         page.reload()
         if page.get() != text:
@@ -513,7 +515,7 @@ class DRNClerkBot(Task):
     def send_notices(self, site, notices):
         """Send out any templated notices to users or pages."""
         if not notices:
-            self.logger.info("No notices to send; finishing")
+            self.logger.info("No notices to send")
             return
         for notice in notices:
             target, template = notice.target, notice.template
@@ -567,7 +569,7 @@ class DRNClerkBot(Task):
         return chart
 
     def compile_row(self, case):
-        data = "|t={case_title}|s={status}"
+        data = "|t={case_title}|s={case_status}"
         data += "|cu={case_file_user}|cs={file_sortkey}|ct={file_time}"
         if case["case_volunteer_user"]:
             data += "|vu={case_volunteer_user}|vs={volunteer_sortkey}|vt={volunteer_time}"
@@ -576,25 +578,12 @@ class DRNClerkBot(Task):
         data += "|mu={case_modify_user}|ms={modify_sortkey}|mt={modify_time}"
 
         case["case_title"] = case["case_title"].replace("|", "&#124;")
-        case["status"] = self.translate_status(case["case_status"])
         case["file_time"] = self.format_time(case["case_file_time"])
         case["file_sortkey"] = int(mktime(case["case_file_time"].timetuple()))
         case["modify_time"] = self.format_time(case["case_modify_time"])
         case["modify_sortkey"] = int(mktime(case["case_modify_time"].timetuple()))
         row = "{{" + self.tl_chart_row + data.format(**case) + "}}\n"
         return row
-
-    def translate_status(self, num):
-        translations = {
-            self.STATUS_NEW: "n",
-            self.STATUS_OPEN: "o",
-            self.STATUS_STALE: "s",
-            self.STATUS_NEEDASSIST: "e",
-            self.STATUS_REVIEW: "r",
-            self.STATUS_RESOLVED: "d",
-            self.STATUS_CLOSED: "c",
-        }
-        return translations[num]
 
     def format_time(self, dt):
         """Format a datetime into the standard MediaWiki timestamp format."""
