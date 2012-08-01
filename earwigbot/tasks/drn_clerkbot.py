@@ -118,9 +118,13 @@ class DRNClerkBot(Task):
                 text = page.get()
                 self.read_page(conn, cases, text)
                 notices = self.clerk(conn, cases)
+                if self.shutoff_enabled():
+                    return
                 self.save(page, cases, kwargs, start)
                 self.send_notices(site, notices)
             if action in ["all", "update_chart"]:
+                if self.shutoff_enabled():
+                    return
                 self.update_chart(conn, site)
         finally:
             self.db_access_lock.release()
@@ -579,7 +583,7 @@ class DRNClerkBot(Task):
 
         title = case["case_title"].replace("_", " ").replace("|", "&#124;")
         case["title"] = title[:47] + "..." if len(title) > 50 else title
-        case["file_time"] = self.format_time(case["case_file_time"])
+        case["file_time"] = self.format_time_since(case["case_file_time"])
         case["file_sortkey"] = int(mktime(case["case_file_time"].timetuple()))
         case["modify_time"] = self.format_time(case["case_modify_time"])
         case["modify_sortkey"] = int(mktime(case["case_modify_time"].timetuple()))
@@ -589,6 +593,18 @@ class DRNClerkBot(Task):
     def format_time(self, dt):
         """Format a datetime into the standard MediaWiki timestamp format."""
         return dt.strftime("%H:%M, %d %b %Y")
+
+    def format_time_since(self, dt):
+        parts = [("year", 31536000), ("day", 86400), ("hour", 3600)]
+        seconds = (datetime.utcnow() - dt).total_seconds()
+        msg = []
+        for name, size in parts:
+            num = seconds // size
+            seconds -= num * size
+            if num:
+                chunk = "{0} {1}".format(num, name if num == 1 else name + "s")
+                msg.append(chunk)
+        return ", ".join(msg) if msg else "0 hours"
 
 
 class _Case(object):
