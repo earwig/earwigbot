@@ -126,6 +126,8 @@ class DRNClerkBot(Task):
                 if self.shutoff_enabled():
                     return
                 self.update_chart(conn, site)
+            if action in ["all", "purge"]:
+                self.purge_old_data(conn)
         finally:
             self.db_access_lock.release()
 
@@ -203,7 +205,8 @@ class DRNClerkBot(Task):
                 re_id2 += r"(.*?)\}\})(<!-- Bot Case ID \(please don't modify\): .*? -->)?"
                 repl = ur"\1 <!-- Bot Case ID (please don't modify): {0} -->"
                 body = re.sub(re_id2, repl.format(id_), body)
-                re_f = r"\{\{drn filing editor\|(.*?)\|(\d{2}:\d{2},\s\d{1,2}\s\w+\s\d{4}\s\(UTC\))\}\}"
+                re_f = r"\{\{drn filing editor\|(.*?)\|"
+                re_f += r"(\d{2}:\d{2},\s\d{1,2}\s\w+\s\d{4}\s\(UTC\))\}\}"
                 match = re.search(re_f, body, re.U)
                 if match:
                     f_user = match.group(1).split("/", 1)[0].replace("_", " ")
@@ -246,7 +249,7 @@ class DRNClerkBot(Task):
         for option, names in self.ALIASES.iteritems():
             if status.group(1).lower() in names:
                 return option
-        return self.STATUS_UNKNOWN
+        return self.STATUS_NEW
 
     def update_case_title(self, conn, id_, title):
         """Update a case title in the database."""
@@ -262,7 +265,9 @@ class DRNClerkBot(Task):
             volunteers = [name for (name,) in cursor.fetchall()]
         notices = []
         for case in cases:
-            if case.status != self.STATUS_UNKNOWN:
+            if case.status == self.STATUS_UNKNOWN:
+                self.clerk_unknown_case(conn, case)
+            else:
                 notices += self.clerk_case(conn, case, volunteers)
         return notices
 
@@ -357,6 +362,12 @@ class DRNClerkBot(Task):
             if not re.search(arch_bottom + "\s*\}\}\s*\Z", case.body):
                 case.body += "\n{{" + arch_bottom + "}}"
             case.status = self.STATUS_UNKNOWN
+
+    def clerk_unknown_case(self, conn, case):
+        if case.new:
+            self.save_new_case(conn, case)
+        else:
+            self.save_existing_case(conn, case)
 
     def check_for_review(self, case):
         age = (datetime.utcnow() - case.file_time).total_seconds()
@@ -605,6 +616,16 @@ class DRNClerkBot(Task):
                 chunk = "{0} {1}".format(num, name if num == 1 else name + "s")
                 msg.append(chunk)
         return ", ".join(msg) + " ago" if msg else "0 hours ago"
+
+    def purge_old_data(self, conn):
+        query = """DELETE cases, signatures
+            FROM cases JOIN signatures ON case_id = signature_case
+            WHERE case_status = ?
+            AND case_file_time < DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 30 DAY)
+            AND case_modify_time < DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 30 DAY)
+        """
+        with conn.cursor() as cursor:
+            cursor.execute(query, (self.STATUS_UNKNOWN,))
 
 
 class _Case(object):
