@@ -322,7 +322,7 @@ class DRNClerkBot(Task):
         age = (datetime.utcnow() - case.file_time).total_seconds()
         if age > 60 * 60 * 24 * 7:
             if not case.very_old_notified:
-                template = "{{subst:" + self.tl_notify_stale
+                template = "{{subst:" + self.tl_notify_stale + "|"
                 template += case.title.replace("|", "&#124;") + "}}"
                 notice = _Notice(self.very_old_title, template)
                 case.very_old_notified = True
