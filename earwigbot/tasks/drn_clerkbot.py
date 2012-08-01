@@ -633,8 +633,9 @@ class DRNClerkBot(Task):
             except exceptions.PageNotFoundError:
                 text = ""
             if notice.too_late and notice.too_late in text:
-                log = u"Skipping [[{0}]]; was already notified with '{1}'"
+                log = u"Skipped [[{0}]]; was already notified with '{1}'"
                 self.logger.info(log.format(page.title, template))
+                continue
             text += ("\n" if text else "") + template
             try:
                 page.edit(text, self.notify_summary, minor=False, bot=True)
