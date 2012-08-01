@@ -416,14 +416,14 @@ class DRNClerkBot(Task):
             additions = set(sigs) - set(storedsigs)
             if removals:
                 args = [(case.id, name, stamp) for (name, stamp) in removals]
-                cursor.execute(query1, args)
+                cursor.executemany(query1, args)
             if additions:
                 nextid = self.select_next_id(conn, "signature_id", "signatures")
                 args = []
                 for name, stamp in additions:
                     args.append((nextid, case.id, name, stamp))
                     nextid += 1
-                cursor.execute(query2, args)
+                cursor.executemany(query2, args)
 
     def save_new_case(self, conn, case):
         args = (case.id, case.title, case.status, case.last_action,
