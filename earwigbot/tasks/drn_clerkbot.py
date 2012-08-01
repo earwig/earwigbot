@@ -549,7 +549,7 @@ class DRNClerkBot(Task):
         query = "SELECT case_title, case_status, case_file_time FROM cases"
         with conn.cursor(oursql.DictCursor) as cursor:
             cursor.execute(query)
-            for case in query:
+            for case in cursor:
                 if case["case_status"] != self.STATUS_UNKNOWN:
                     chart += self.compile_row(case)
         chart += "{{" + self.tl_chart_footer + "}}"
