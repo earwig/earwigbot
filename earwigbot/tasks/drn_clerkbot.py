@@ -551,7 +551,7 @@ class DRNClerkBot(Task):
 
     def compile_chart(self, conn):
         chart = "{{" + self.tl_chart_header + "}}\n"
-        query = "SELECT case_title, case_status, case_file_time FROM cases"
+        query = "SELECT * FROM cases"
         with conn.cursor(oursql.DictCursor) as cursor:
             cursor.execute(query)
             for case in cursor:
