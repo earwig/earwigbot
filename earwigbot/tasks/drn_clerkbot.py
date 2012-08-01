@@ -203,7 +203,7 @@ class DRNClerkBot(Task):
                 re_id2 += r"(.*?)\}\})(<!-- Bot Case ID \(please don't modify\): .*? -->)?"
                 repl = ur"\1 <!-- Bot Case ID (please don't modify): {0} -->"
                 body = re.sub(re_id2, repl.format(id_), body)
-                re_f = r"\{\{drn filing editor\|(.*?)\|(\d{2}:\d{2},\s\d{2}\s\w+\s\d{4}\s\(UTC\))\}\}"
+                re_f = r"\{\{drn filing editor\|(.*?)\|(\d{2}:\d{2},\s\d{1,2}\s\w+\s\d{4}\s\(UTC\))\}\}"
                 match = re.search(re_f, body, re.U)
                 if match:
                     f_user = match.group(1).split("/", 1)[0].replace("_", " ")
@@ -370,7 +370,7 @@ class DRNClerkBot(Task):
         regex = r"\[\[(?:User(?:\stalk)?\:|Special\:Contributions\/)"
         regex += r"([^\n\[\]|]{,256}?)(?:\||\]\])"
         regex += r"(?!.*?(?:User(?:\stalk)?\:|Special\:Contributions\/).*?)"
-        regex += r".{,256}?(\d{2}:\d{2},\s\d{2}\s\w+\s\d{4}\s\(UTC\))"
+        regex += r".{,256}?(\d{2}:\d{2},\s\d{1,2}\s\w+\s\d{4}\s\(UTC\))"
         matches = re.findall(regex, text, re.U)
         signatures = []
         for userlink, stamp in matches:
@@ -604,7 +604,7 @@ class DRNClerkBot(Task):
             if num:
                 chunk = "{0} {1}".format(num, name if num == 1 else name + "s")
                 msg.append(chunk)
-        return ", ".join(msg) if msg else "0 hours"
+        return ", ".join(msg) + " ago" if msg else "0 hours ago"
 
 
 class _Case(object):
