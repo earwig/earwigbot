@@ -489,7 +489,7 @@ class DRNClerkBot(Task):
                 notices.append(notice)
 
         case.parties_notified = True
-        log = u"    {0}: will try to notify {1} parties with '{3}'"
+        log = u"    {0}: will try to notify {1} parties with '{2}'"
         self.logger.debug(log.format(case.id, len(notices), template))
         return notices
 
