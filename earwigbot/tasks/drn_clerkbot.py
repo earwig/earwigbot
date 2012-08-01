@@ -596,7 +596,7 @@ class DRNClerkBot(Task):
 
     def format_time_since(self, dt):
         parts = [("year", 31536000), ("day", 86400), ("hour", 3600)]
-        seconds = (datetime.utcnow() - dt).total_seconds()
+        seconds = int((datetime.utcnow() - dt).total_seconds())
         msg = []
         for name, size in parts:
             num = seconds // size
