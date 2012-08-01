@@ -215,9 +215,9 @@ class DRNClerkBot(Task):
 
     def select_next_id(self, conn, column, table):
         """Return the next incremental ID for a case."""
-        query = "SELECT MAX(?) FROM ?"
+        query = "SELECT MAX(?) FROM {0}".format(table)
         with conn.cursor() as cursor:
-            cursor.execute(query, (column, table))
+            cursor.execute(query, (column,))
             current = cursor.fetchone()[0]
             if current:
                 return current + 1
