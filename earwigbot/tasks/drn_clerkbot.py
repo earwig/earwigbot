@@ -217,7 +217,7 @@ class DRNClerkBot(Task):
                 else:
                     f_user, f_time = None, datetime.utcnow()
                 case = _Case(id_, title, status, self.STATUS_UNKNOWN, f_user,
-                             f_time, "", self.min_ts, "", self.min_ts,
+                             f_time, f_user, f_time, "", self.min_ts,
                              self.min_ts, False, False, 0, new=True)
                 cases.append(case)
                 log = u"Added new case {0} ('{1}', status={2}, by {3})"
@@ -504,15 +504,17 @@ class DRNClerkBot(Task):
                 repl = "{{" + self.tl_status + "|" + new + "}}"
                 case.body = re.sub(search, repl, case.body)
 
-        newest_ts = max([stamp for (user, stamp) in sigs])
-        newest_user = [usr for (usr, stamp) in sigs if stamp == newest_ts][0]
-        case.modify_time = newest_ts
-        case.modify_user = newest_user
+        if sigs:
+            newest_ts = max([stamp for (user, stamp) in sigs])
+            newest_user = [usr for (usr, stamp) in sigs if stamp == newest_ts][0]
+            case.modify_time = newest_ts
+            case.modify_user = newest_user
 
-        newest_vts = max([stamp for (usr, stamp) in sigs if usr in volunteers])
-        newest_vuser = [usr for (usr, stamp) in sigs if stamp == newest_vts][0]
-        case.volunteer_time = newest_vts
-        case.volunteer_user = newest_vuser
+        if any([usr in volunteers for (usr, stamp) in sigs]):
+            newest_vts = max([stamp for (usr, stamp) in sigs if usr in volunteers])
+            newest_vuser = [usr for (usr, stamp) in sigs if stamp == newest_vts][0]
+            case.volunteer_time = newest_vts
+            case.volunteer_user = newest_vuser
 
         if case.new:
             self.save_new_case(conn, case)
