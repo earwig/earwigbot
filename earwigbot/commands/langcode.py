@@ -52,9 +52,11 @@ class Langcode(Command):
                 self.reply(data, msg)
                 return
             elif name.lower() == lcase or localname.lower() == lcase:
+                if name != localname:
+                    name += " ({0})".format(localname)
                 sites = ", ".join([s["url"] for s in site["site"]])
-                msg = "\x0302{0}\x0F is {1} ({2})"
-                self.reply(data, msg.format(code, site["code"], sites))
+                msg = "{0} is \x0302{1}\x0F ({2})"
+                self.reply(data, msg.format(name, site["code"], sites))
                 return
 
         self.reply(data, "Language \x0302{0}\x0F not found.".format(code))
