@@ -569,7 +569,7 @@ class DRNClerkBot(Task):
         return chart
 
     def compile_row(self, case):
-        data = "|t={case_title}|s={case_status}"
+        data = "|t={title}|s={case_status}"
         data += "|cu={case_file_user}|cs={file_sortkey}|ct={file_time}"
         if case["case_volunteer_user"]:
             data += "|vu={case_volunteer_user}|vs={volunteer_sortkey}|vt={volunteer_time}"
@@ -577,7 +577,8 @@ class DRNClerkBot(Task):
             case["volunteer_sortkey"] = int(mktime(case["case_volunteer_time"].timetuple()))
         data += "|mu={case_modify_user}|ms={modify_sortkey}|mt={modify_time}"
 
-        case["case_title"] = case["case_title"].replace("|", "&#124;")
+        title = case["case_title"].replace("_", " ").replace("|", "&#124;")
+        case["title"] = title[:47] + "..." if len(title) > 50 else title
         case["file_time"] = self.format_time(case["case_file_time"])
         case["file_sortkey"] = int(mktime(case["case_file_time"].timetuple()))
         case["modify_time"] = self.format_time(case["case_modify_time"])
