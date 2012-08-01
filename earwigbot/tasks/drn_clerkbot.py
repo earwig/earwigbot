@@ -144,9 +144,9 @@ class DRNClerkBot(Task):
                 additions.add((user.group(1),))
 
         removals = set()
-        query1 = "SELECT volunteer_username FROM volunteer"
-        query2 = "DELETE FROM volunteer WHERE volunteer_username = ?"
-        query3 = "INSERT INTO volunteer (volunteer_username) VALUES (?)"
+        query1 = "SELECT volunteer_username FROM volunteers"
+        query2 = "DELETE FROM volunteers WHERE volunteer_username = ?"
+        query3 = "INSERT INTO volunteers (volunteer_username) VALUES (?)"
         with conn.cursor() as cursor:
             cursor.execute(query1)
             for row in cursor:
@@ -242,7 +242,7 @@ class DRNClerkBot(Task):
 
     def clerk(self, conn, cases):
         """Actually go through cases and modify those to be updated."""
-        query = "SELECT volunteer_username FROM volunteer"
+        query = "SELECT volunteer_username FROM volunteers"
         with conn.cursor() as cursor:
             cursor.execute(query)
             volunteers = [name for (name,) in cursor.fetchall()]
@@ -271,7 +271,7 @@ class DRNClerkBot(Task):
         elif case.status == self.STATUS_REVIEW:
             notices = self.clerk_review_case(case)
         elif case.status in [self.STATUS_RESOLVED, self.STATUS_CLOSED]:
-            self.clerk_closed_case(conn, signatures)
+            self.clerk_closed_case(case, signatures)
         elif case.status == self.STATUS_UNKNOWN:
             pass
         else:
@@ -359,7 +359,7 @@ class DRNClerkBot(Task):
         return signatures
 
     def get_signatures_from_db(self, conn, case):
-        query = "SELECT signature_username, signature_timestamp FROM signature WHERE signature_case = ?"
+        query = "SELECT signature_username, signature_timestamp FROM signatures WHERE signature_case = ?"
         with conn.cursor() as cursor:
             cursor.execute(query, (case.id,))
             return cursor.fetchall()
@@ -410,15 +410,15 @@ class DRNClerkBot(Task):
             self.save_existing_case(conn, case)
 
         with conn.cursor() as cursor:
-            query1 = "DELETE FROM signature WHERE signature_case = ? AND signature_username = ? AND signature_timestamp = ?"
-            query2 = "INSERT INTO signature VALUES (?, ?, ?, ?)"
+            query1 = "DELETE FROM signatures WHERE signature_case = ? AND signature_username = ? AND signature_timestamp = ?"
+            query2 = "INSERT INTO signatures VALUES (?, ?, ?, ?)"
             removals = set(storedsigs) - set(sigs)
             additions = set(sigs) - set(storedsigs)
             if removals:
                 args = [(case.id, name, stamp) for (name, stamp) in removals]
                 cursor.execute(query1, args)
             if additions:
-                nextid = self.select_next_id(conn, "signature_id", "signature")
+                nextid = self.select_next_id(conn, "signature_id", "signatures")
                 args = []
                 for name, stamp in additions:
                     args.append((nextid, case.id, name, stamp))

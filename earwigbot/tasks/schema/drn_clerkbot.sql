@@ -35,8 +35,8 @@ CREATE TABLE `cases` (
 -- Table structure for table `signature`
 --
 
-DROP TABLE IF EXISTS `signature`;
-CREATE TABLE `signature` (
+DROP TABLE IF EXISTS `signatures`;
+CREATE TABLE `signatures` (
   `signature_id` int(10) unsigned NOT NULL,
   `signature_case` int(10) unsigned NOT NULL,
   `signature_username` varchar(512) COLLATE utf8_unicode_ci DEFAULT NULL,
@@ -48,8 +48,8 @@ CREATE TABLE `signature` (
 -- Table structure for table `volunteer`
 --
 
-DROP TABLE IF EXISTS `volunteer`;
-CREATE TABLE `volunteer` (
+DROP TABLE IF EXISTS `volunteers`;
+CREATE TABLE `volunteers` (
   `volunteer_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `volunteer_username` varchar(512) COLLATE utf8_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`volunteer_id`)
