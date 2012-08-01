@@ -40,6 +40,8 @@ class Langcode(Command):
         del matrix["specials"]
 
         for site in matrix.itervalues():
+            if not site["name"]:
+                continue
             name = site["name"].encode("utf8")
             localname = site["localname"].encode("utf8")
             if site["code"] == lcase:
