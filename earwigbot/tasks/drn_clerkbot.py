@@ -141,7 +141,7 @@ class DRNClerkBot(Task):
         for line in text.splitlines():
             user = re.search("\# \{\{User\|(.*?)\}\}", line)
             if user:
-                additions.add((user.group(1),))
+                additions.add((user.group(1).replace("_", " ").strip(),))
 
         removals = set()
         query1 = "SELECT volunteer_username FROM volunteers"
@@ -355,7 +355,8 @@ class DRNClerkBot(Task):
         matches = re.findall(regex, text, re.U)
         signatures = []
         for userlink, stamp in matches:
-            username = userlink.split("/", 1)[0].replace("_", " ")
+            username = userlink.split("/", 1)[0].replace("_", " ").strip()
+            stamp = stamp.strip()
             timestamp = datetime.strptime(stamp, "%H:%M, %d %B %Y (UTC)")
             signatures.append((username, timestamp))
         return signatures
@@ -380,7 +381,7 @@ class DRNClerkBot(Task):
         for line in text.group(1).splitlines():
             user = re.search("[:*#]{,5} \{\{User\|(.*?)\}\}", line)
             if user:
-                party = user.group(1).strip()
+                party = user.group(1).replace("_", " ").strip()
                 notice = _Notice("User talk:" + party, template, too_late)
                 notices.append(notice)
 
