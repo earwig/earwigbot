@@ -310,12 +310,22 @@ class DRNClerkBot(Task):
         return notices
 
     def clerk_new_case(self, case, volunteers, signatures):
+        """Clerk a case in the "brand new" state.
+
+        The case will be set to "open" if a volunteer edits it.
+        """
         notices = self.notify_parties(case)
         if any([editor in volunteers for (editor, timestamp) in signatures]):
             self.update_status(case, self.STATUS_OPEN)
         return notices
 
     def clerk_open_case(self, case, signatures):
+        """Clerk an open case (has been edited by a reviewer).
+
+        The case will be set to "needassist" if 15,000 bytes have been added
+        since a volunteer last edited, "stale" if no edits have occured in two
+        days, or "review" if it has been open for over four days.
+        """
         if self.check_for_review(case):
             return []
         if len(case.body) - case.last_volunteer_size > 15000:
@@ -327,6 +337,11 @@ class DRNClerkBot(Task):
         return []
 
     def clerk_needassist_case(self, case, volunteers, newsigs):
+        """Clerk a "needassist" case (no volunteer edits in 15,000 bytes).
+
+        The case will be set to "open" if a volunteer edits, or "review" if it
+        has been open for over four days.
+        """
         if self.check_for_review(case):
             return []
         if any([editor in volunteers for (editor, timestamp) in newsigs]):
@@ -334,6 +349,11 @@ class DRNClerkBot(Task):
         return []
 
     def clerk_stale_case(self, case, newsigs):
+        """Clerk a stale case (no edits in two days).
+
+        The case will be set to "open" if anyone edits, or "review" if it has
+        been open for over four days.
+        """
         if self.check_for_review(case):
             return []
         if newsigs:
@@ -341,6 +361,12 @@ class DRNClerkBot(Task):
         return []
 
     def clerk_review_case(self, case):
+        """Clerk a "review" case (open for more than four days).
+
+        A message will be set to the "very old notifiee", which is generally
+        [[User talk:Szhang (WMF)]], if the case has been open for more than
+        seven days.
+        """
         age = (datetime.utcnow() - case.file_time).total_seconds()
         if age > 60 * 60 * 24 * 7:
             if not case.very_old_notified:
@@ -355,6 +381,13 @@ class DRNClerkBot(Task):
         return []
 
     def clerk_closed_case(self, case, signatures):
+        """Clerk a closed or resolved case.
+
+        The case will be archived if it has been closed/resolved for more than
+        one day and no edits have been made in the meantime. "Archiving" is
+        the process of adding {{DRN archive top}}, {{DRN archive bottom}}, and
+        removing the [[User:DoNotArchiveUntil]] comment.
+        """
         if case.close_time == self.min_ts:
             case.close_time = datetime.utcnow()
         timestamps = [timestamp for (editor, timestamp) in signatures]
@@ -373,18 +406,26 @@ class DRNClerkBot(Task):
             self.logger.debug(u"    {0}: archived case".format(case.id))
 
     def clerk_unknown_case(self, conn, case):
+        """Clerk a case with "unknown" status.
+
+        This will generally be either closed, archived, and off the page, or
+        with a status we can't identify. We won't do anything to the case other
+        than update it in the database.
+        """
         if case.new:
             self.save_new_case(conn, case)
         else:
             self.save_existing_case(conn, case)
 
     def check_for_review(self, case):
+        """Check whether a case is old enough to be set to "review"."""
         age = (datetime.utcnow() - case.file_time).total_seconds()
         if age > 60 * 60 * 24 * 4:
             return self.update_status(case, self.STATUS_REVIEW)
         return False
 
     def update_status(self, case, new):
+        """Safely update the status of a case, so we don't edit war."""
         old_n = self.ALIASES[case.status][0].upper()
         new_n = self.ALIASES[new][0].upper()
         old_n = "NEW" if not old_n else old_n
@@ -399,6 +440,10 @@ class DRNClerkBot(Task):
         return False
 
     def read_signatures(self, text):
+        """Return a list of all parseable signatures in the body of a case.
+
+        Signatures are returned as tuples of (editor, timestamp as datetime).
+        """
         regex = r"\[\[(?:User(?:\stalk)?\:|Special\:Contributions\/)"
         regex += r"([^\n\[\]|]{,256}?)(?:\||\]\])"
         regex += r"(?!.*?(?:User(?:\stalk)?\:|Special\:Contributions\/).*?)"
@@ -415,12 +460,17 @@ class DRNClerkBot(Task):
         return signatures
 
     def get_signatures_from_db(self, conn, case):
+        """Return a list of signatures in a case from the database.
+
+        The return type is the same as read_signatures().
+        """
         query = "SELECT signature_username, signature_timestamp FROM signatures WHERE signature_case = ?"
         with conn.cursor() as cursor:
             cursor.execute(query, (case.id,))
             return cursor.fetchall()
 
     def notify_parties(self, case):
+        """Schedule notices to be sent to all parties of a case."""
         if case.parties_notified:
             return []
 
@@ -444,13 +494,15 @@ class DRNClerkBot(Task):
         return notices
 
     def save_case_updates(self, conn, case, volunteers, sigs, storedsigs):
+        """Save any updates made to a case and signatures in the database."""
         if case.status != case.original_status:
-            case.last_action = case.status
-            new = self.ALIASES[case.status][0]
-            tl_status_esc = re.escape(self.tl_status)
-            search = "\{\{" + tl_status_esc + "(\|?.*?)\}\}"
-            repl = "{{" + self.tl_status + "|" + new + "}}"
-            case.body = re.sub(search, repl, case.body)
+            if case.status != self.STATUS_UNKNOWN:
+                case.last_action = case.status
+                new = self.ALIASES[case.status][0]
+                tl_status_esc = re.escape(self.tl_status)
+                search = "\{\{" + tl_status_esc + "(\|?.*?)\}\}"
+                repl = "{{" + self.tl_status + "|" + new + "}}"
+                case.body = re.sub(search, repl, case.body)
 
         newest_ts = max([stamp for (user, stamp) in sigs])
         newest_user = [usr for (usr, stamp) in sigs if stamp == newest_ts][0]
@@ -485,6 +537,7 @@ class DRNClerkBot(Task):
             self.logger.debug(log)
 
     def save_new_case(self, conn, case):
+        """Save a brand new case to the database."""
         args = (case.id, case.title, case.status, case.last_action,
                 case.file_user, case.file_time, case.modify_user,
                 case.modify_time, case.volunteer_user, case.volunteer_time,
@@ -497,6 +550,7 @@ class DRNClerkBot(Task):
         self.logger.debug(log)
 
     def save_existing_case(self, conn, case):
+        """Save an existing case to the database, updating as necessary."""
         with conn.cursor(oursql.DictCursor) as cursor:
             query = "SELECT * FROM cases WHERE case_id = ?"
             cursor.execute(query, (case.id,))
@@ -593,6 +647,7 @@ class DRNClerkBot(Task):
         self.logger.debug("Done sending notices")
 
     def update_chart(self, conn, site):
+        """Update the chart of open or recently closed cases."""
         page = site.get_page(self.chart_title)
         self.logger.info(u"Updating case status at [[{0}]]".format(page.title))
         statuses = self.compile_chart(conn)
@@ -611,6 +666,7 @@ class DRNClerkBot(Task):
         self.logger.info(u"Chart saved to [[{0}]]".format(page.title))
 
     def compile_chart(self, conn):
+        """Actually generate the chart from the database."""
         chart = "{{" + self.tl_chart_header + "}}\n"
         query = "SELECT * FROM cases"
         with conn.cursor(oursql.DictCursor) as cursor:
@@ -622,6 +678,7 @@ class DRNClerkBot(Task):
         return chart
 
     def compile_row(self, case):
+        """Generate a single row of the chart from a dict via the database."""
         data = "|t={title}|s={case_status}"
         data += "|cu={case_file_user}|cs={file_sortkey}|ct={file_time}"
         if case["case_volunteer_user"]:
@@ -644,6 +701,7 @@ class DRNClerkBot(Task):
         return dt.strftime("%H:%M, %d %b %Y")
 
     def format_time_since(self, dt):
+        """Return a string telling the time since datetime occured."""
         parts = [("year", 31536000), ("day", 86400), ("hour", 3600)]
         seconds = int((datetime.utcnow() - dt).total_seconds())
         msg = []
@@ -656,6 +714,7 @@ class DRNClerkBot(Task):
         return ", ".join(msg) + " ago" if msg else "0 hours ago"
 
     def purge_old_data(self, conn):
+        """Delete old cases (> one month) from the database."""
         log = "Purging closed cases older than a month from the database"
         self.logger.info(log)
         query = """DELETE cases, signatures
