@@ -95,6 +95,9 @@ class DRNClerkBot(Task):
         self.conn_data = kwargs
         self.db_access_lock = RLock()
 
+        # Minimum size a MySQL TIMESTAMP field can hold:
+        self.min_ts = datetime(1970, 1, 1, 0, 0, 1)
+
     def run(self, **kwargs):
         """Entry point for a task event."""
         if not self.db_access_lock.acquire(False):  # Non-blocking
@@ -203,10 +206,9 @@ class DRNClerkBot(Task):
                     f_time = datetime.strptime(match.group(2), strp)
                 else:
                     f_user, f_time = None, datetime.utcnow()
-                zero = datetime.min
                 case = _Case(id_, title, status, self.STATUS_UNKNOWN, f_user,
-                             f_time, "", zero, "", zero, zero, False, False, 0,
-                             new=True)
+                             f_time, "", self.min_ts, "", self.min_ts,
+                             self.min_ts, False, False, 0, new=True)
                 cases.append(case)
             else:
                 case.status = status
@@ -328,7 +330,7 @@ class DRNClerkBot(Task):
         return []
 
     def clerk_closed_case(self, case, signatures):
-        if case.close_time == datetime.min:
+        if case.close_time == self.min_ts:
             case.close_time = datetime.utcnow()
         timestamps = [timestamp for (editor, timestamp) in signatures]
         closed_age = (datetime.utcnow() - case.close_time).total_seconds()
@@ -356,6 +358,8 @@ class DRNClerkBot(Task):
         signatures = []
         for userlink, stamp in matches:
             username = userlink.split("/", 1)[0].replace("_", " ").strip()
+            if username == "DoNotArchiveUntil":
+                continue
             stamp = stamp.strip()
             timestamp = datetime.strptime(stamp, "%H:%M, %d %B %Y (UTC)")
             signatures.append((username, timestamp))
