@@ -427,10 +427,12 @@ class DRNClerkBot(Task):
 
     def save_new_case(self, conn, case):
         args = (case.id, case.title, case.status, case.last_action,
-                case.file_time, case.close_time, case.parties_notified,
-                case.very_old_notified)
+                case.file_user, case.file_time, case.modify_user,
+                case.modify_time, case.volunteer_user, case.volunteer_time,
+                case.close_time, case.parties_notified,
+                case.very_old_notified, case.last_volunteer_size)
         with conn.cursor() as cursor:
-            query = "INSERT INTO cases VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            query = "INSERT INTO cases VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             cursor.execute(query, args)
 
     def save_existing_case(self, conn, case):
@@ -444,6 +446,12 @@ class DRNClerkBot(Task):
             fields_to_check = [
                 ("case_status", case.status),
                 ("case_last_action", case.last_action),
+                ("case_file_user", case.file_user),
+                ("case_file_time", case.file_time),
+                ("case_modify_user", case.modify_user),
+                ("case_modify_time", case.modify_time),
+                ("case_volunteer_user", case.volunteer_user),
+                ("case_volunteer_time", case.volunteer_time),
                 ("case_close_time", case.close_time),
                 ("case_parties_notified", case.parties_notified),
                 ("case_very_old_notified", case.very_old_notified),
