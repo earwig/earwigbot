@@ -163,7 +163,7 @@ class DRNClerkBot(Task):
         """Return a list of _Cases from the database."""
         cases = []
         with conn.cursor() as cursor:
-            cursor.execute("SELECT * FROM case")
+            cursor.execute("SELECT * FROM cases")
             for row in cursor:
                 case = _Case(*row)
                 cases.append(case)
@@ -188,7 +188,7 @@ class DRNClerkBot(Task):
                 id_ = re.search(re_id, body).group(1)
                 case = [case for case in cases if case.id == id_][0]
             except (AttributeError, IndexError):
-                id_ = self.select_next_id(conn, "case_id", "case")
+                id_ = self.select_next_id(conn, "case_id", "cases")
                 re_id2 = "(\{\{" + tl_status_esc
                 re_id2 += r"(.*?)\}\})(<!-- Bot Case ID \(please don't modify\): .*? -->)?"
                 repl = ur"\1 <!-- Bot Case ID (please don't modify): {0} -->"
@@ -236,7 +236,7 @@ class DRNClerkBot(Task):
 
     def update_case_title(self, conn, id_, title):
         """Update a case title in the database."""
-        query = "UPDATE case SET case_title = ? WHERE case_id = ?"
+        query = "UPDATE cases SET case_title = ? WHERE case_id = ?"
         with conn.cursor() as cursor:
             cursor.execute(query, (title, id_))
 
@@ -430,12 +430,12 @@ class DRNClerkBot(Task):
                 case.file_time, case.close_time, case.parties_notified,
                 case.very_old_notified)
         with conn.cursor() as cursor:
-            query = "INSERT INTO case VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            query = "INSERT INTO cases VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
             cursor.execute(query, args)
 
     def save_existing_case(self, conn, case):
         with conn.cursor(oursql.DictCursor) as cursor:
-            query = "SELECT * FROM case WHERE case_id = ?"
+            query = "SELECT * FROM cases WHERE case_id = ?"
             cursor.execute(query, (case.id,))
             stored = cursor.fetchone()
 
@@ -456,7 +456,7 @@ class DRNClerkBot(Task):
             if changes:
                 changes = ", ".join(changes)
                 args.append(case.id)
-                query = "UPDATE case SET {0} WHERE case_id = ?".format(changes)
+                query = "UPDATE cases SET {0} WHERE case_id = ?".format(changes)
                 cursor.execute(query, args)
 
     def save(self, page, cases, kwargs, start):
@@ -530,7 +530,7 @@ class DRNClerkBot(Task):
 
     def compile_chart(self, conn):
         chart = "{{" + self.tl_chart_header + "}}\n"
-        query = "SELECT case_title, case_status, case_file_time FROM case"
+        query = "SELECT case_title, case_status, case_file_time FROM cases"
         with conn.cursor(oursql.DictCursor) as cursor:
             cursor.execute(query)
             for case in query:

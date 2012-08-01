@@ -12,8 +12,8 @@ CREATE DATABASE `u_earwig_drn_clerkbot`
 -- Table structure for table `case`
 --
 
-DROP TABLE IF EXISTS `case`;
-CREATE TABLE `case` (
+DROP TABLE IF EXISTS `cases`;
+CREATE TABLE `cases` (
   `case_id` int(10) unsigned NOT NULL,
   `case_title` varchar(512) COLLATE utf8_unicode_ci DEFAULT NULL,
   `case_status` int(2) unsigned DEFAULT NULL,
