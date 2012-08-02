@@ -172,9 +172,9 @@ class DRNClerkBot(Task):
     def read_database(self, conn):
         """Return a list of _Cases from the database."""
         cases = []
-        query = "SELECT * FROM cases WHERE case_status != ?"
+        query = "SELECT * FROM cases"
         with conn.cursor() as cursor:
-            cursor.execute(query, (self.STATUS_UNKNOWN,))
+            cursor.execute(query)
             for row in cursor:
                 case = _Case(*row)
                 cases.append(case)
@@ -234,11 +234,14 @@ class DRNClerkBot(Task):
                     case.title = title
             case.body, case.old = body, old
 
-        for case in cases:
+        for case in cases[:]:
             if case.body is None:
-                case.status = self.STATUS_UNKNOWN
-                log = u"Dropped case {0} because it is no longer on the page ('{1}')"
-                self.logger.debug(log.format(case.id, case.title))
+                if case.original_status == self.STATUS_UNKNOWN:
+                    cases.remove(case)  # Ignore archived case
+                else:
+                    case.status = self.STATUS_UNKNOWN
+                    log = u"Dropped case {0} because it is no longer on the page ('{1}')"
+                    self.logger.debug(log.format(case.id, case.title))
 
         self.logger.debug("Done reading cases from the noticeboard page")
 
