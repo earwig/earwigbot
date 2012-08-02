@@ -218,7 +218,7 @@ class DRNClerkBot(Task):
                     f_user, f_time = None, datetime.utcnow()
                 case = _Case(id_, title, status, self.STATUS_UNKNOWN, f_user,
                              f_time, f_user, f_time, "", self.min_ts,
-                             self.min_ts, False, False, 0, new=True)
+                             self.min_ts, False, False, len(body), new=True)
                 cases.append(case)
                 log = u"Added new case {0} ('{1}', status={2}, by {3})"
                 self.logger.debug(log.format(id_, title, status, f_user))
@@ -313,7 +313,8 @@ class DRNClerkBot(Task):
         """Clerk a case in the "brand new" state.
 
         The case will be set to "open" if a volunteer edits it, or "needassist"
-        if it goes by without any volunteer edits for two days.
+        if it increases by over 15,000 bytes or goes by without any volunteer
+        edits for two days.
         """
         notices = self.notify_parties(case)
         if any([editor in volunteers for (editor, timestamp) in signatures]):
@@ -321,6 +322,8 @@ class DRNClerkBot(Task):
         else:
             age = (datetime.utcnow() - case.file_time).total_seconds()
             if age > 60 * 60 * 24 * 2:
+                self.update_status(case, self.STATUS_NEEDASSIST)
+            elif len(case.body) - case.last_volunteer_size > 15000:
                 self.update_status(case, self.STATUS_NEEDASSIST)
         return notices
 
