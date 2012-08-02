@@ -684,14 +684,14 @@ class DRNClerkBot(Task):
 
     def compile_chart(self, conn):
         """Actually generate the chart from the database."""
-        chart = "{{" + self.tl_chart_header + "}}\n"
+        chart = "{{" + self.tl_chart_header + "|small={{{small|}}}}}\n"
         query = "SELECT * FROM cases"
         with conn.cursor(oursql.DictCursor) as cursor:
             cursor.execute(query)
             for case in cursor:
                 if case["case_status"] != self.STATUS_UNKNOWN:
                     chart += self.compile_row(case)
-        chart += "{{" + self.tl_chart_footer + "}}"
+        chart += "{{" + self.tl_chart_footer + "|small={{{small|}}}}}"
         return chart
 
     def compile_row(self, case):
@@ -710,8 +710,8 @@ class DRNClerkBot(Task):
         case["file_sortkey"] = int(mktime(case["case_file_time"].timetuple()))
         case["modify_time"] = self.format_time(case["case_modify_time"])
         case["modify_sortkey"] = int(mktime(case["case_modify_time"].timetuple()))
-        row = "{{" + self.tl_chart_row + data.format(**case) + "}}\n"
-        return row
+        row = "{{" + self.tl_chart_row + data.format(**case)
+        return row + "|sm={{{small|}}}}}\n"
 
     def format_time_since(self, dt):
         """Return a string telling the time since datetime occured."""
