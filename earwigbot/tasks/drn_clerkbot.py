@@ -148,9 +148,10 @@ class DRNClerkBot(Task):
         text = text.split(marker)[1]
         additions = set()
         for line in text.splitlines():
-            user = re.search("\# \{\{User\|(.*?)\}\}", line)
+            user = re.search("\# \{\{User\|(.+?)\}\}", line)
             if user:
-                additions.add((user.group(1).replace("_", " ").strip(),))
+                uname = user.group(1).replace("_", " ").strip()
+                additions.add((uname[0].upper() + uname[1:],))
 
         removals = set()
         query1 = "SELECT volunteer_username FROM volunteers"
@@ -212,6 +213,7 @@ class DRNClerkBot(Task):
                 match = re.search(re_f, body, re.U)
                 if match:
                     f_user = match.group(1).split("/", 1)[0].replace("_", " ")
+                    f_user = f_user[0].upper() + f_user[1:]
                     strp = "%H:%M, %d %B %Y (UTC)"
                     f_time = datetime.strptime(match.group(2), strp)
                 else:
@@ -460,6 +462,7 @@ class DRNClerkBot(Task):
         signatures = []
         for userlink, stamp in matches:
             username = userlink.split("/", 1)[0].replace("_", " ").strip()
+            username = username[0].upper() + username[1:]
             if username == "DoNotArchiveUntil":
                 continue
             stamp = stamp.strip()
@@ -493,6 +496,7 @@ class DRNClerkBot(Task):
             user = re.search("[:*#]{,5} \{\{User\|(.*?)\}\}", line)
             if user:
                 party = user.group(1).replace("_", " ").strip()
+                party = party[0].upper() + party[1:]
                 if party == case.file_user:
                     continue
                 notice = _Notice("User talk:" + party, template, too_late)
