@@ -312,11 +312,16 @@ class DRNClerkBot(Task):
     def clerk_new_case(self, case, volunteers, signatures):
         """Clerk a case in the "brand new" state.
 
-        The case will be set to "open" if a volunteer edits it.
+        The case will be set to "open" if a volunteer edits it, or "needassist"
+        if it goes by without any volunteer edits for two days.
         """
         notices = self.notify_parties(case)
         if any([editor in volunteers for (editor, timestamp) in signatures]):
             self.update_status(case, self.STATUS_OPEN)
+        else:
+            age = (datetime.utcnow() - case.file_time).total_seconds()
+            if age > 60 * 60 * 24 * 2:
+                self.update_status(case, self.STATUS_NEEDASSIST)
         return notices
 
     def clerk_open_case(self, case, signatures):
