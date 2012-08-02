@@ -706,16 +706,12 @@ class DRNClerkBot(Task):
 
         title = case["case_title"].replace("_", " ").replace("|", "&#124;")
         case["title"] = title[:47] + "..." if len(title) > 50 else title
-        case["file_time"] = self.format_time_since(case["case_file_time"])
+        case["file_time"] = self.format_time(case["case_file_time"])
         case["file_sortkey"] = int(mktime(case["case_file_time"].timetuple()))
         case["modify_time"] = self.format_time(case["case_modify_time"])
         case["modify_sortkey"] = int(mktime(case["case_modify_time"].timetuple()))
         row = "{{" + self.tl_chart_row + data.format(**case) + "}}\n"
         return row
-
-    def format_time(self, dt):
-        """Format a datetime into the standard MediaWiki timestamp format."""
-        return dt.strftime("%H:%M, %d %b %Y")
 
     def format_time_since(self, dt):
         """Return a string telling the time since datetime occured."""
