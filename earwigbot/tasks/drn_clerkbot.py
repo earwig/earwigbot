@@ -577,7 +577,7 @@ class DRNClerkBot(Task):
                 ("case_close_time", case.close_time),
                 ("case_parties_notified", case.parties_notified),
                 ("case_very_old_notified", case.very_old_notified),
-                ("case_archived", case.archived)
+                ("case_archived", case.archived),
                 ("case_last_volunteer_size", case.last_volunteer_size)
             ]
             for column, data in fields_to_check:
