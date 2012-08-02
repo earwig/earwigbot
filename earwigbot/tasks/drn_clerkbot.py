@@ -365,10 +365,10 @@ class DRNClerkBot(Task):
 
         A message will be set to the "very old notifiee", which is generally
         [[User talk:Szhang (WMF)]], if the case has been open for more than
-        seven days.
+        five days.
         """
         age = (datetime.utcnow() - case.file_time).total_seconds()
-        if age > 60 * 60 * 24 * 7:
+        if age > 60 * 60 * 24 * 5:
             if not case.very_old_notified:
                 template = "{{subst:" + self.tl_notify_stale + "|"
                 template += case.title.replace("|", "&#124;") + "}}"
