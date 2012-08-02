@@ -27,6 +27,7 @@ CREATE TABLE `cases` (
   `case_close_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `case_parties_notified` tinyint(1) unsigned DEFAULT NULL,
   `case_very_old_notified` tinyint(1) unsigned DEFAULT NULL,
+  `case_archived` tinyint(1) unsigned DEFAULT NULL,
   `case_last_volunteer_size` int(9) unsigned DEFAULT NULL,
   PRIMARY KEY (`case_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
