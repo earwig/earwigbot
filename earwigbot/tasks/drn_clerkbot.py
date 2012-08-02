@@ -120,7 +120,8 @@ class DRNClerkBot(Task):
                 notices = self.clerk(conn, cases)
                 if self.shutoff_enabled():
                     return
-                self.save(page, cases, kwargs, start)
+                if not self.save(page, cases, kwargs, start):
+                    return
                 self.send_notices(site, notices)
             if action in ["all", "update_chart"]:
                 if self.shutoff_enabled():
@@ -425,7 +426,8 @@ class DRNClerkBot(Task):
         """Check whether a case is old enough to be set to "review"."""
         age = (datetime.utcnow() - case.file_time).total_seconds()
         if age > 60 * 60 * 24 * 4:
-            return self.update_status(case, self.STATUS_REVIEW)
+            self.update_status(case, self.STATUS_REVIEW)
+            return True
         return False
 
     def update_status(self, case, new):
@@ -438,10 +440,9 @@ class DRNClerkBot(Task):
             case.status = new
             log = u"    {0}: {1} -> {2}"
             self.logger.debug(log.format(case.id, old_n, new_n))
-            return True
+            return
         log = u"Avoiding {0} {1} -> {2} because we already did this ('{3}')"
         self.logger.info(log.format(case.id, old_n, new_n, case.title))
-        return False
 
     def read_signatures(self, text):
         """Return a list of all parseable signatures in the body of a case.
@@ -609,7 +610,7 @@ class DRNClerkBot(Task):
                 counter += 1
         if newtext == text:
             self.logger.info(u"Nothing to edit on [[{0}]]".format(page.title))
-            return
+            return True
 
         worktime = time() - start
         if worktime < 60:
@@ -620,12 +621,14 @@ class DRNClerkBot(Task):
         if page.get() != text:
             log = "Someone has edited the page while we were working; restarting"
             self.logger.warn(log)
-            return self.run(**kwargs)
+            self.run(**kwargs)
+            return False
         summary = self.clerk_summary.replace("$3", str(counter))
         summary = summary.replace("$4", "" if counter == 1 else "s")
         page.edit(newtext, summary, minor=True, bot=True)
         log = u"Saved page [[{0}]] ({1} updates)"
         self.logger.info(log.format(page.title, counter))
+        return True
 
     def send_notices(self, site, notices):
         """Send out any templated notices to users or pages."""
