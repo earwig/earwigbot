@@ -713,7 +713,7 @@ class DRNClerkBot(Task):
         row = "{{" + self.tl_chart_row + data.format(**case)
         return row + "|sm={{{small|}}}}}\n"
 
-    def format_time_since(self, dt):
+    def format_time(self, dt):
         """Return a string telling the time since datetime occured."""
         parts = [("year", 31536000), ("day", 86400), ("hour", 3600)]
         seconds = int((datetime.utcnow() - dt).total_seconds())
