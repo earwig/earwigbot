@@ -28,24 +28,35 @@ class Link(Command):
     """Convert a Wikipedia page name into a URL."""
     name = "link"
 
+    def setup(self):
+        self.last = {}
+
+    def check(self, data):
+        if re.search("(\[\[(.*?)\]\])|(\{\{(.*?)\}\})", data.msg):
+            self.last[data.chan] = data.msg  # Store most recent link
+        return data.is_command and data.command == self.name
+
     def process(self, data):
         self.site = self.bot.wiki.get_site()
-        msg = data.msg
 
-        if re.search("(\[\[(.*?)\]\])|(\{\{(.*?)\}\})", msg):
-            links = self.parse_line(msg)
-            links = u" , ".join(links)
+        if re.search("(\[\[(.*?)\]\])|(\{\{(.*?)\}\})", data.msg):
+            links = u" , ".join(self.parse_line(data.msg))
             self.reply(data, links.encode("utf8"))
 
         elif data.command == "link":
             if not data.args:
-                self.reply(data, "What do you want me to link to?")
+                if self.last[data.chan]:
+                    links = u" , ".join(self.parse_line(self.last[data.chan]))
+                    self.reply(data, links.encode("utf8"))
+                else:
+                    self.reply(data, "What do you want me to link to?")
                 return
             pagename = " ".join(data.args)
             link = self.site.get_page(pagename).url.encode("utf8")
             self.reply(data, link)
 
     def parse_line(self, line):
+        """Return a list of links within a line of text."""
         results = []
 
         # Destroy {{{template parameters}}}:
@@ -61,10 +72,8 @@ class Link(Command):
         # Find all {{templates}}
         templates = re.findall("(\{\{(.*?)(\||\}\}))", line)
         if templates:
-            templates = [i[1] for i in templates]
-            results.extend(map(self.parse_template, templates))
+            p_tmpl = lambda name: self.site.get_page("Template:" + name).url
+            templates = [p_tmpl(i[1]) for i in templates]
+            results += templates
 
         return results
-
-    def parse_template(self, pagename):
-        return self.site.get_page("Template:" + pagename).url
