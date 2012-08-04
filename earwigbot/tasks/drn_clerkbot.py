@@ -69,8 +69,8 @@ class DRNClerkBot(Task):
         self.very_old_title = cfg.get("veryOldTitle", "User talk:Szhang (WMF)")
 
         clerk_summary = "Updating $3 case$4."
-        notify_summary = "Notifying user regarding [[WP:DRN|dispute resolution notieboard]] case."
-        chart_summary = "Updating statistics for the [[WP:DRN|dispute resolution notieboard]]."
+        notify_summary = "Notifying user regarding [[WP:DRN|dispute resolution noticeboard]] case."
+        chart_summary = "Updating statistics for the [[WP:DRN|dispute resolution noticeboard]]."
         self.clerk_summary = self.make_summary(cfg.get("clerkSummary", clerk_summary))
         self.notify_summary = self.make_summary(cfg.get("notifySummary", notify_summary))
         self.chart_summary = self.make_summary(cfg.get("chartSummary", chart_summary))
