@@ -230,8 +230,8 @@ class TaskManager(_ResourceManager):
         """Start a given task in a new daemon thread, and return the thread.
 
         kwargs are passed to :py:meth:`task.run() <earwigbot.tasks.Task.run>`.
-        If the task is not found, ``None`` will be returned an an error is
-        logged.
+        If the task is not found, ``None`` will be returned and an error will
+        be logged.
         """
         msg = "Starting task '{0}' in a new thread"
         self.logger.info(msg.format(task_name))
