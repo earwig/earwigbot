@@ -28,8 +28,9 @@ from time import mktime, sleep, time
 
 import oursql
 
-from earwigbot import constants, exceptions
+from earwigbot import exceptions
 from earwigbot.tasks import Task
+from earwigbot.wiki import constants
 
 class DRNClerkBot(Task):
     """A task to clerk for [[WP:DRN]]."""
