@@ -28,7 +28,7 @@ from time import mktime, sleep, time
 
 import oursql
 
-from earwigbot import exceptions
+from earwigbot import constants, exceptions
 from earwigbot.tasks import Task
 
 class DRNClerkBot(Task):
@@ -642,6 +642,12 @@ class DRNClerkBot(Task):
             log = u"Trying to notify [[{0}]] with '{1}'"
             self.logger.debug(log.format(target, template))
             page = site.get_page(target)
+            if page.namespace == constants.NS_USER_TALK:
+                user = site.get_user(target.split(":", 1)[1:])
+                if not user.exists and not user.is_ip:
+                    log = u"Skipping [[{0}]]; user does not exist and is not an IP"
+                    self.logger.info(log.format(target))
+                    continue
             try:
                 text = page.get()
             except exceptions.PageNotFoundError:
@@ -695,7 +701,7 @@ class DRNClerkBot(Task):
 
     def compile_row(self, case):
         """Generate a single row of the chart from a dict via the database."""
-        data = "|t={case_title}|d={title}|s={case_status}"
+        data = u"|t={case_title}|d={title}|s={case_status}"
         data += "|cu={case_file_user}|cs={file_sortkey}|ct={file_time}"
         if case["case_volunteer_user"]:
             data += "|vu={case_volunteer_user}|vs={volunteer_sortkey}|vt={volunteer_time}"

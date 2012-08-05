@@ -220,6 +220,8 @@ provide the following attributes:
   user, ``False`` if you cannot
 - :py:attr:`~earwigbot.wiki.user.User.gender`: the user's gender (``"male"``,
   ``"female"``, or ``"unknown"``)
+- :py:attr:`~earwigbot.wiki.user.User.is_ip`: ``True`` if the user is an IP
+  address, IPv4 or IPv6, otherwise ``False``
 
 and the following methods:
 

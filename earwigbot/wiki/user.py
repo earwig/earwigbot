@@ -22,6 +22,7 @@
 
 from logging import getLogger, NullHandler
 from time import gmtime, strptime
+from socket import AF_INET, AF_INET6, error as socket_error, inet_pton
 
 from earwigbot.exceptions import UserNotFoundError
 from earwigbot.wiki import constants
@@ -51,6 +52,7 @@ class User(object):
     - :py:attr:`registration`: the time the user registered
     - :py:attr:`emailable`:    ``True`` if you can email the user, or ``False``
     - :py:attr:`gender`:       the user's gender ("male"/"female"/"unknown")
+    - :py:attr:`is_ip`:        ``True`` if this is an IP address, or ``False``
 
     *Public methods:*
 
@@ -268,6 +270,22 @@ class User(object):
         does not exist. Makes an API query only if we haven't made one already.
         """
         return self._get_attribute("_gender")
+
+    @property
+    def is_ip(self):
+        """``True`` if the user is an IP address, or ``False`` otherwise.
+
+        This tests for IPv4 and IPv6 using :py:func:`socket.inet_pton` on the
+        username. No API queries are made.
+        """
+        try:
+            inet_pton(AF_INET, self.name)
+        except socket_error:
+            try:
+                inet_pton(AF_INET6, self.name)
+            except socket_error:
+                return False
+        return True
 
     def reload(self):
         """Forcibly reload the user's attributes.
