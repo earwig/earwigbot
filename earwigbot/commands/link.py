@@ -45,7 +45,7 @@ class Link(Command):
 
         elif data.command == "link":
             if not data.args:
-                if self.last[data.chan]:
+                if data.chan in self.last:
                     links = u" , ".join(self.parse_line(self.last[data.chan]))
                     self.reply(data, links.encode("utf8"))
                 else:
