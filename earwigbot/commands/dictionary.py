@@ -51,7 +51,7 @@ class Dictionary(Command):
         except exceptions.SiteNotFoundError:
             site = self.bot.wiki.add_site(project="wiktionary", lang=lang)
 
-        page = site.get_page(term)
+        page = site.get_page(term, follow_redirects=True)
         try:
             entry = page.get()
         except (exceptions.PageNotFoundError, exceptions.InvalidPageError):
