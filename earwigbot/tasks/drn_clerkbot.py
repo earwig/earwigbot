@@ -347,9 +347,10 @@ class DRNClerkBot(Task):
         if len(case.body) - case.last_volunteer_size > 15000:
             self.update_status(case, self.STATUS_NEEDASSIST)
         timestamps = [timestamp for (editor, timestamp) in signatures]
-        age = (datetime.utcnow() - max(timestamps)).total_seconds()
-        if age > 60 * 60 * 24 * 2:
-            self.update_status(case, self.STATUS_STALE)
+        if timestamps:
+            age = (datetime.utcnow() - max(timestamps)).total_seconds()
+            if age > 60 * 60 * 24 * 2:
+                self.update_status(case, self.STATUS_STALE)
         return []
 
     def clerk_needassist_case(self, case, volunteers, newsigs):
@@ -412,7 +413,10 @@ class DRNClerkBot(Task):
             return
         timestamps = [timestamp for (editor, timestamp) in signatures]
         closed_age = (datetime.utcnow() - case.close_time).total_seconds()
-        modify_age = (datetime.utcnow() - max(timestamps)).total_seconds()
+        if timestamps:
+            modify_age = (datetime.utcnow() - max(timestamps)).total_seconds()
+        else:
+            modify_age = 0
         if closed_age > 60 * 60 * 24 and modify_age > 60 * 60 * 24:
             arch_top = self.tl_archive_top
             arch_bottom = self.tl_archive_bottom
