@@ -498,11 +498,12 @@ class DRNClerkBot(Task):
             user = re.search("[:*#]{,5} \{\{User\|(.*?)\}\}", line)
             if user:
                 party = user.group(1).replace("_", " ").strip()
-                party = party[0].upper() + party[1:]
-                if party == case.file_user:
-                    continue
-                notice = _Notice("User talk:" + party, template, too_late)
-                notices.append(notice)
+                if party:
+                    party = party[0].upper() + party[1:]
+                    if party == case.file_user:
+                        continue
+                    notice = _Notice("User talk:" + party, template, too_late)
+                    notices.append(notice)
 
         case.parties_notified = True
         log = u"    {0}: will try to notify {1} parties with '{2}'"
