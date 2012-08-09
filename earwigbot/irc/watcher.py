@@ -120,4 +120,4 @@ class Watcher(IRCConnection):
             if chans and frontend and not frontend.is_stopped():
                 pretty = rc.prettify()
                 for chan in chans:
-                    frontend.say(chan, pretty)
+                    frontend.say(chan, pretty[:500 - len(chan)])

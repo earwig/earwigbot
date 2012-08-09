@@ -95,6 +95,22 @@ class IRCConnection(object):
                 if not hidelog:
                     self.logger.debug(msg)
 
+    def _split(msgs, maxlen, maxsplits=3):
+        """Split a large message into multiple messages smaller than maxlen."""
+        words = msgs.split(" ")
+        splits = 0
+        while words and splits < maxsplits:
+            splits += 1
+            if len(words[0]) > maxlen:
+                word = words.pop(0)
+                yield word[:maxlen]
+                words.insert(0, word[maxlen:])
+            else:
+                msg = []
+                while words and len(" ".join(msg + [words[0]])) <= maxlen:
+                    msg.append(words.pop(0))
+                yield " ".join(msg)
+
     def _quit(self, msg=None):
         """Issue a quit message to the server. Doesn't close the connection."""
         if msg:
@@ -142,8 +158,9 @@ class IRCConnection(object):
 
     def say(self, target, msg, hidelog=False):
         """Send a private message to a target on the server."""
-        msg = "PRIVMSG {0} :{1}".format(target, msg)
-        self._send(msg, hidelog)
+        for msg in self._split(msg, 500 - len(target)):
+            msg = "PRIVMSG {0} :{1}".format(target, msg)
+            self._send(msg, hidelog)
 
     def reply(self, data, msg, hidelog=False):
         """Send a private message as a reply to a user on the server."""
@@ -160,8 +177,9 @@ class IRCConnection(object):
 
     def notice(self, target, msg, hidelog=False):
         """Send a notice to a target on the server."""
-        msg = "NOTICE {0} :{1}".format(target, msg)
-        self._send(msg, hidelog)
+        for msg in self._split(msg, 500 - len(target)):
+            msg = "NOTICE {0} :{1}".format(target, msg)
+            self._send(msg, hidelog)
 
     def join(self, chan, hidelog=False):
         """Join a channel on the server."""
