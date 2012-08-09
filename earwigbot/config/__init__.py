@@ -43,6 +43,7 @@ except ImportError:
 
 from earwigbot.config.formatter import BotFormatter
 from earwigbot.config.node import ConfigNode
+from earwigbot.config.permissions import PermissionsDB
 from earwigbot.exceptions import NoConfigError
 
 __all__ = ["BotConfig"]
@@ -77,8 +78,10 @@ class BotConfig(object):
     def __init__(self, root_dir, level):
         self._root_dir = root_dir
         self._logging_level = level
-        self._config_path = path.join(self._root_dir, "config.yml")
-        self._log_dir = path.join(self._root_dir, "logs")
+        self._config_path = path.join(self.root_dir, "config.yml")
+        self._log_dir = path.join(self.root_dir, "logs")
+        perms_file = path.join(self.root_dir, "permissions.db")
+        self._permissions = PermissionsDB(perms_file)
         self._decryption_cipher = None
         self._data = None
 
@@ -290,6 +293,10 @@ class BotConfig(object):
                     raise RuntimeError("Incorrect password.")
             for node, nodes in self._decryptable_nodes:
                 self._decrypt(node, nodes)
+
+        if self.irc:
+            self.irc["permissions"] = self._permissions
+            self._permissions.load()
 
     def decrypt(self, node, *nodes):
         """Decrypt an object in our config tree.

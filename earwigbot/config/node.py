@@ -26,9 +26,14 @@ class ConfigNode(object):
     def __init__(self):
         self._data = {}
 
-    def __iter__(self):
-        for key in self._data:
-            yield key
+    def __repr__(self):
+        return self._data
+
+    def __nonzero__(self):
+        return bool(self._data)
+
+    def __len__(self):
+        retrun len(self._data)
 
     def __getitem__(self, key):
         return self._data[key]
@@ -41,6 +46,13 @@ class ConfigNode(object):
 
     def __setattr__(self, key, item):
         self._data[key] = item
+
+    def __iter__(self):
+        for key in self._data:
+            yield key
+
+    def __contains__(self, item):
+        return item in self._data
 
     def _dump(self):
         data = self._data.copy()
