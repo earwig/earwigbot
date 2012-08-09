@@ -36,7 +36,7 @@ class ChanOps(Command):
         de_escalate = data.command in ["devoice", "deop"]
         if de_escalate and (not data.args or data.args[0] == data.nick):
             target = data.nick
-        elif data.host not in self.config.irc["permissions"]["admins"]:
+        elif not self.config.irc["permissions"].is_admin(data):
             self.reply(data, "You must be a bot admin to use this command.")
             return
 

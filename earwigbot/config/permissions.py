@@ -83,13 +83,15 @@ class PermissionsDB(object):
             except sqlite.OperationalError:
                 self._create(conn)
 
-    def is_admin(self, nick="*", ident="*", host="*"):
+    def is_admin(self, data):
         """Return ``True`` if the given user is a bot admin, else ``False``."""
-        return self._is_rank(_User(nick, ident, host), rank=self.ADMIN)
+        user = _User(data.nick, data.ident, data.host)
+        return self._is_rank(user, rank=self.ADMIN)
 
-    def is_owner(self, nick="*", ident="*", host="*"):
+    def is_owner(self, data):
         """Return ``True`` if the given user is a bot owner, else ``False``."""
-        return self._is_rank(_User(nick, ident, host), rank=self.OWNER)
+        user = _User(data.nick, data.ident, data.host)
+        return self._is_rank(user, rank=self.OWNER)
 
     def add_admin(self, nick="*", ident="*", host="*"):
         """Add an nick/ident/host combo to the bot admins list."""

@@ -39,7 +39,7 @@ class Git(Command):
 
     def process(self, data):
         self.data = data
-        if data.host not in self.config.irc["permissions"]["owners"]:
+        if not self.config.irc["permissions"].is_owner(data):
             msg = "You must be a bot owner to use this command."
             self.reply(data, msg)
             return

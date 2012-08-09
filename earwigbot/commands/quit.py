@@ -29,7 +29,7 @@ class Quit(Command):
     commands = ["quit", "restart", "reload"]
 
     def process(self, data):
-        if data.host not in self.config.irc["permissions"]["owners"]:
+        if not self.config.irc["permissions"].is_owner(data):
             self.reply(data, "You must be a bot owner to use this command.")
             return
         if data.command == "quit":
