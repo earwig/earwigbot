@@ -61,7 +61,7 @@ class PermissionsDB(object):
         try:
             for rule in self._data[rank]:
                 if user in rule:
-                    return True
+                    return rule
         except KeyError:
             return False
 
