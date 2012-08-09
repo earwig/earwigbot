@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 import imp
+import os
 
 from earwigbot.irc import IRCConnection, RC
 
@@ -32,9 +33,9 @@ class Watcher(IRCConnection):
 
     The IRC watcher runs on a wiki recent-changes server and listens for
     edits. Users cannot interact with this part of the bot. When an event
-    occurs, we run it through some rules stored in our config, which can result
-    in wiki bot tasks being started or messages being sent to channels on the
-    IRC frontend.
+    occurs, we run it through some rules stored in our working directory under
+    :file:`rules.py`, which can result in wiki bot tasks being started or
+    messages being sent to channels on the IRC frontend.
     """
 
     def __init__(self, bot):
@@ -78,31 +79,29 @@ class Watcher(IRCConnection):
                 self.join(chan)
 
     def _prepare_process_hook(self):
-        """Create our RC event process hook from information in config.
+        """Create our RC event process hook from information in rules.py.
 
         This will get put in the function self._process_hook, which takes the
         Bot object and an RC object and returns a list of frontend channels to
         report this event to.
         """
         # Set a default RC process hook that does nothing:
-        self._process_hook = lambda rc: ()
+        self._process_hook = lambda bot, rc: ()
+
+        path = os.path.join(self.bot.config.root_dir, "rules.py")
+        f, path, desc = imp.find_module("rules", [path])
         try:
-            rules = self.bot.config.data["rules"]
-        except KeyError:
-            return
-        module = imp.new_module("_rc_event_processing_rules")
-        path = self.bot.config.path
-        try:
-            exec compile(rules, path, "exec") in module.__dict__
+            module = imp.load_module(name, f, path, desc)
         except Exception:
-            e = "Could not compile config file's RC event rules:"
-            self.logger.exception(e)
             return
+        finally:
+            f.close()
+
         self._process_hook_module = module
         try:
             self._process_hook = module.process
         except AttributeError:
-            e = "RC event rules compiled correctly, but no process(bot, rc) function was found"
+            e = "RC event rules imported correctly, but no process(bot, rc) function was found"
             self.logger.error(e)
             return
 
