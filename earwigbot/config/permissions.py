@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from fnmatch import fnmatch
 import sqlite3 as sqlite
 from threading import Lock
 
@@ -53,7 +54,7 @@ class PermissionsDB(object):
         """Return True if the given user has the given rank, else False."""
         try:
             for rule in self._data[rank]:
-                if user == rule:
+                if user in rule:
                     return True
         except KeyError:
             return False
@@ -114,29 +115,9 @@ class _User(object):
         """Return a nice string representation of the User."""
         return "{0}!{1}@{2}".format(self.nick, self.ident, self.host)
 
-    def __eq__(self, user):
-        if self._compare(self.nick, user.nick):
-            if self._compare(self.ident, user.ident):
-                if self._compare(self.host, user.host):
+    def __contains__(self, user):
+        if fnmatch(user.nick, self.nick):
+            if fnmatch(user.ident, self.ident):
+                if fnmatch(user.host, self.host):
                     return True
         return False
-
-    def __ne__(self, user):
-        return not self == user
-
-    def _compare(self, field1, field2):
-        if field1 == "*" or field2 == "*":
-            return True
-        if "*" in field1:
-            regex = re.escape(field1).replace(r"\*", r".*?") + "$"
-            if re.match(regex, field2, re.I):
-                if "*" in field2:
-                    regex = re.escape(field2).replace(r"\*", r".*?") + "$"
-                    return re.match(regex, field1, re.I)
-                return True
-            else:
-                return False
-        elif "*" in field2:
-            regex = re.escape(field2).replace(r"\*", r".*?") + "$"
-            return re.match(regex, field1, re.I)
-        return field1 == field2
