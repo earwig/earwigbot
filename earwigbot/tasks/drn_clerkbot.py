@@ -456,11 +456,11 @@ class DRNClerkBot(Task):
 
         Signatures are returned as tuples of (editor, timestamp as datetime).
         """
-        regex = r"\[\[(?:[uU]ser(?:\stalk)?\:|[sS]pecial\:[cC]ontributions\/)"
+        regex = r"\[\[(?:User(?:\stalk)?\:|Special\:Contributions\/)"
         regex += r"([^\n\[\]|]{,256}?)(?:\||\]\])"
-        regex += r"(?!.*?(?:[uU]ser(?:\stalk)?\:|[sS]pecial\:[cC]ontributions\/).*?)"
+        regex += r"(?!.*?(?:User(?:\stalk)?\:|Special\:Contributions\/).*?)"
         regex += r".{,256}?(\d{2}:\d{2},\s\d{1,2}\s\w+\s\d{4}\s\(UTC\))"
-        matches = re.findall(regex, text, re.U)
+        matches = re.findall(regex, text, re.U|re.I)
         signatures = []
         for userlink, stamp in matches:
             username = userlink.split("/", 1)[0].replace("_", " ").strip()
