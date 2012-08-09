@@ -84,7 +84,7 @@ class Data(object):
             self._is_command = True
             self._trigger = self.command[0]
             self._command = self.command[1:]  # Strip the "!" or "."
-        elif self.command.startswith(self.my_nick):
+        elif re.match(r"{0}\W*?$".format(self.my_nick), self.command, re.U):
             # e.g. "EarwigBot, command arg1 arg2"
             self._is_command = True
             self._trigger = self.my_nick
