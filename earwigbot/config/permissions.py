@@ -58,6 +58,16 @@ class PermissionsDB(object):
         except KeyError:
             return False
 
+    def _set_rank(self, user, rank):
+        """Add a User to the database under a given rank."""
+        try:
+            self._data[rank].append(user)
+        except KeyError:
+            self._data[rank] = [user]
+        query = "INSERT INTO users VALUES (?, ?, ?, ?)"
+        with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
+            conn.execute(query, (user.nick, user.ident, user.host, rank))
+
     def load(self):
         """Load permissions from an existing database, or create a new one."""
         query = "SELECT user_nick, user_ident, user_host, user_rank FROM users"
@@ -80,6 +90,14 @@ class PermissionsDB(object):
         """Return ``True`` if the given user is a bot owner, else ``False``."""
         return self._is_rank(_User(nick, ident, host), rank=self.OWNER)
 
+    def add_admin(self, nick="*", ident="*", host="*"):
+        """Add an nick/ident/host combo to the bot admins list."""
+        return self._set_rank(_User(nick, ident, host), rank=self.ADMIN)
+
+    def add_owner(self, nick="*", ident="*", host="*"):
+        """Add a nick/ident/host combo to the bot owners list."""
+        return self._set_rank(_User(nick, ident, host), rank=self.OWNER)
+
 class _User(object):
     """A class that represents an IRC user for the purpose of testing rules."""
     def __init__(self, nick, ident, host):
@@ -97,13 +115,28 @@ class _User(object):
         return "{0}!{1}@{2}".format(self.nick, self.ident, self.host)
 
     def __eq__(self, user):
-        if self.nick == user.nick or (self.nick == "*" or user.nick == "*"):
-            if self.ident == user.ident or (self.ident == "*" or
-                                            user.ident == "*"):
-                if self.host == user.host or (self.host == "*" or
-                                              user.host == "*"):
+        if self._compare(self.nick, user.nick):
+            if self._compare(self.ident, user.ident):
+                if self._compare(self.host, user.host):
                     return True
         return False
 
     def __ne__(self, user):
         return not self == user
+
+    def _compare(self, field1, field2):
+        if field1 == "*" or field2 == "*":
+            return True
+        if "*" in field1:
+            regex = re.escape(field1).replace(r"\*", r".*?") + "$"
+            if re.match(regex, field2, re.I):
+                if "*" in field2:
+                    regex = re.escape(field2).replace(r"\*", r".*?") + "$"
+                    return re.match(regex, field1, re.I)
+                return True
+            else:
+                return False
+        elif "*" in field2:
+            regex = re.escape(field2).replace(r"\*", r".*?") + "$"
+            return re.match(regex, field1, re.I)
+        return field1 == field2
