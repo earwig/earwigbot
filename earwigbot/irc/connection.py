@@ -95,7 +95,7 @@ class IRCConnection(object):
                 if not hidelog:
                     self.logger.debug(msg)
 
-    def _split(msgs, maxlen, maxsplits=3):
+    def _split(self, msgs, maxlen, maxsplits=3):
         """Split a large message into multiple messages smaller than maxlen."""
         words = msgs.split(" ")
         splits = 0
