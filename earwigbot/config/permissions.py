@@ -63,7 +63,8 @@ class PermissionsDB(object):
                 if user in rule:
                     return rule
         except KeyError:
-            return False
+            pass
+        return False
 
     def _set_rank(self, user, rank):
         """Add a User to the database under a given rank."""
@@ -89,7 +90,13 @@ class PermissionsDB(object):
                             conn.execute(query, args)
                     return rule
         except KeyError:
-            return None
+            pass
+        return None
+
+    @property
+    def data(self):
+        """A dict of all entries in the permissions database."""
+        return self._data
 
     def load(self):
         """Load permissions from an existing database, or create a new one."""
@@ -104,6 +111,17 @@ class PermissionsDB(object):
                         self._data[rank] = [_User(nick, ident, host)]
             except sqlite.OperationalError:
                 self._create(conn)
+
+    def has_exact(self, nick="*", ident="*", host="*", rule):
+        """Return ``True`` if there is an exact match for this rule."""
+        try:
+            for usr in self._data[rank]:
+                if nick != usr.nick or ident != usr.ident or host != usr.host:
+                    continue
+                return usr
+        except KeyError:
+            pass
+        return False
 
     def is_admin(self, data):
         """Return ``True`` if the given user is a bot admin, else ``False``."""
@@ -130,6 +148,7 @@ class PermissionsDB(object):
     def remove_owner(self, nick="*", ident="*", host="*"):
         """Remove a nick/ident/host combo to the bot owners list."""
         return self._del_rank(_User(nick, ident, host), rank=self.OWNER)
+
 
 class _User(object):
     """A class that represents an IRC user for the purpose of testing rules."""

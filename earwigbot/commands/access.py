@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import random
+import re
 
 from earwigbot.commands import Command
 
@@ -35,18 +35,18 @@ class Access(Command):
             return
         db = self.config.irc["permissions"]
         if data.args[0] == "self":
-            self.do_self(data)
+            self.do_self(data, db)
         elif data.args[0] == "list":
-            self.do_list(data)
+            self.do_list(data, db)
         elif data.args[0] == "add":
-            self.do_add(data)
+            self.do_add(data, db)
         elif data.args[0] == "remove":
-            self.do_remove(data)
+            self.do_remove(data, db)
         else:
             msg = "Unknown subcommand \x0303{0}\x0F.".format(data.args[0])
             self.reply(data, msg)
 
-    def do_self(self, data):
+    def do_self(self, data, db):
         if db.is_owner(data):
             msg = "You are a bot owner (matching rule \x0302{0}\x0F)."
             self.reply(data, msg.format(db.is_owner(data)))
@@ -56,11 +56,76 @@ class Access(Command):
         else:
             self.reply(data, "You do not match any bot access rules.")
 
-    def do_list(self, data):
-        pass
+    def do_list(self, data, db):
+        if len(data.args) > 1:
+            if data.args[1] in ["owner", "owners"]:
+                name, rules = "owners", db.data.get(db.OWNERS)
+            elif data.args[1] in ["admin", "admins"]:
+                name, rules = "admins", db.data.get(db.ADMINS)
+            else:
+                msg = "Unknown access level \x0302{0}\x0F."
+                self.reply(data, msg.format(data.args[1]))
+                return
+            if rules:
+                msg = "Bot {0}: {1}.".format(name, ", ".join(map(str, rules)))
+            else:
+                msg = "No bot {0}.".format(name)
+            self.reply(data, msg)
 
-    def do_add(self, data):
-        pass
+        else:
+            owners = len(db.data.get(db.OWNERS, []))
+            admins = len(db.data.get(db.ADMINS, []))
+            msg = "There are {0} bot owners and {1} bot admins. Use '!{2} list owners' or '!{2} list admins' for details."
+            self.reply(data, msg.format(owners, admins, data.command))
 
-    def do_remove(self, data):
-        pass
+    def do_add(self, data, db):
+        if not db.is_owner(data):
+            msg = "You must be a bot owner to add users to the access list."
+            self.reply(data, msg)
+            return
+
+        levels = ["owner", "owners", "admin", "admins"]
+        if len(data.args) == 1 or data.args[1] not in levels:
+            msg = "Please specify an access level ('owners' or 'admins')."
+            self.reply(data, msg)
+            return
+        if len(data.args) == 2:
+            self.no_arg_error(data)
+            return
+
+        if "nick" in data.kwargs or "ident" in kwargs or "host" in kwargs:
+            nick = data.kwargs.get("nick", "*")
+            ident = data.kwargs.get("ident", "*")
+            host = data.kwargs.get("host", "*")
+        else:
+            user = re.match(r"(.*?)!(.*?)@(.*?)$", data.args[2])
+            if not user:
+                self.no_arg_error(data)
+                return
+            nick, ident, host = user.group(1), user.group(2), user.group(3)
+
+        if data.args[1] in ["owner", "owners"]:
+            if db.has_exact(nick, ident, host, db.OWNER):
+                msg = "\x0302{0}\x0F is already a bot owner.".format(rule)
+                self.reply(data, msg)
+            else:
+                rule = db.add_owner(nick, ident, host)
+                self.reply(data, "Added bot owner \x0302{0}\x0F.".format(rule))
+        else:
+            if db.has_exact(nick, ident, host, db.OWNER):
+                msg = "\x0302{0}\x0F is already a bot admin.".format(rule)
+                self.reply(data, msg)
+            else:
+                rule = db.add_admin(nick, ident, host)
+                self.reply(data, "Added bot admin \x0302{0}\x0F.".format(rule))
+
+    def do_remove(self, data, db):
+        if not db.is_owner(data):
+            msg = "You must be a bot owner to remove users from the access list."
+            self.reply(data, msg)
+            return
+
+    def no_arg_error(self, data):
+        msg = 'Please specify a user, either as "\x0302nick\x0F!\x0302ident\x0F@\x0302host\x0F"'
+        msg += ' or "nick=\x0302nick\x0F, ident=\x0302ident\x0F, host=\x0302host\x0F".'
+        self.reply(data, msg)
