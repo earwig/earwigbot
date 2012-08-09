@@ -41,6 +41,8 @@ try:
 except ImportError:
     yaml = None
 
+from earwigbot.config.formatter import BotFormatter
+from earwigbot.config.node import ConfigNode
 from earwigbot.exceptions import NoConfigError
 
 __all__ = ["BotConfig"]
@@ -80,12 +82,12 @@ class BotConfig(object):
         self._decryption_cipher = None
         self._data = None
 
-        self._components = _ConfigNode()
-        self._wiki = _ConfigNode()
-        self._irc = _ConfigNode()
-        self._commands = _ConfigNode()
-        self._tasks = _ConfigNode()
-        self._metadata = _ConfigNode()
+        self._components = ConfigNode()
+        self._wiki = ConfigNode()
+        self._irc = ConfigNode()
+        self._commands = ConfigNode()
+        self._tasks = ConfigNode()
+        self._metadata = ConfigNode()
 
         self._nodes = [self._components, self._wiki, self._irc, self._commands,
                        self._tasks, self._metadata]
@@ -123,8 +125,8 @@ class BotConfig(object):
         logger = logging.getLogger("earwigbot")
         logger.handlers = []  # Remove any handlers already attached to us
         logger.setLevel(logging.DEBUG)
-        color_formatter = _BotFormatter(color=True)
-        formatter = _BotFormatter()
+        color_formatter = BotFormatter(color=True)
+        formatter = BotFormatter()
 
         if self.metadata.get("enableLogging"):
             hand = logging.handlers.TimedRotatingFileHandler
@@ -253,7 +255,7 @@ class BotConfig(object):
         exit.
 
         Data from the config file is stored in six
-        :py:class:`~earwigbot.config._ConfigNode`\ s (:py:attr:`components`,
+        :py:class:`~earwigbot.config.ConfigNode`\ s (:py:attr:`components`,
         :py:attr:`wiki`, :py:attr:`irc`, :py:attr:`commands`, :py:attr:`tasks`,
         :py:attr:`metadata`) for easy access (as well as the lower-level
         :py:attr:`data` attribute). If passwords are encrypted, we'll use
@@ -342,81 +344,3 @@ class BotConfig(object):
                     pass
 
         return tasks
-
-
-class _ConfigNode(object):
-    def __iter__(self):
-        for key in self.__dict__:
-            yield key
-
-    def __getitem__(self, item):
-        return self.__dict__.__getitem__(item)
-
-    def _dump(self):
-        data = self.__dict__.copy()
-        for key, val in data.iteritems():
-            if isinstance(val, _ConfigNode):
-                data[key] = val._dump()
-        return data
-
-    def _load(self, data):
-        self.__dict__ = data.copy()
-
-    def _decrypt(self, cipher, intermediates, item):
-        base = self.__dict__
-        for inter in intermediates:
-            try:
-                base = base[inter]
-            except KeyError:
-                return
-        if item in base:
-            ciphertext = base[item].decode("hex")
-            base[item] = cipher.decrypt(ciphertext).rstrip("\x00")
-
-    def get(self, *args, **kwargs):
-        return self.__dict__.get(*args, **kwargs)
-
-    def keys(self):
-        return self.__dict__.keys()
-
-    def values(self):
-        return self.__dict__.values()
-
-    def items(self):
-        return self.__dict__.items()
-
-    def iterkeys(self):
-        return self.__dict__.iterkeys()
-
-    def itervalues(self):
-        return self.__dict__.itervalues()
-
-    def iteritems(self):
-        return self.__dict__.iteritems()
-
-
-class _BotFormatter(logging.Formatter):
-    def __init__(self, color=False):
-        self._format = super(_BotFormatter, self).format
-        if color:
-            fmt = "[%(asctime)s %(lvl)s] %(name)s: %(message)s"
-            self.format = lambda record: self._format(self.format_color(record))
-        else:
-            fmt = "[%(asctime)s %(levelname)-8s] %(name)s: %(message)s"
-            self.format = self._format
-        datefmt = "%Y-%m-%d %H:%M:%S"
-        super(_BotFormatter, self).__init__(fmt=fmt, datefmt=datefmt)
-
-    def format_color(self, record):
-        l = record.levelname.ljust(8)
-        if record.levelno == logging.DEBUG:
-            record.lvl = l.join(("\x1b[34m", "\x1b[0m"))  # Blue
-        if record.levelno == logging.INFO:
-            record.lvl = l.join(("\x1b[32m", "\x1b[0m"))  # Green
-        if record.levelno == logging.WARNING:
-            record.lvl = l.join(("\x1b[33m", "\x1b[0m"))  # Yellow
-        if record.levelno == logging.ERROR:
-            record.lvl = l.join(("\x1b[31m", "\x1b[0m"))  # Red
-        if record.levelno == logging.CRITICAL:
-            record.lvl = l.join(("\x1b[1m\x1b[31m", "\x1b[0m"))  # Bold red
-        return record
