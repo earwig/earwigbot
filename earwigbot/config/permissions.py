@@ -27,6 +27,12 @@ from threading import Lock
 __all__ = ["PermissionsDB"]
 
 class PermissionsDB(object):
+    """
+    **EarwigBot: Permissions Database Manager**
+
+    Controls the :file:`permissions.db` file, which stores the bot's owners and
+    admins for the purposes of using certain dangerous IRC commands.
+    """
     ADMIN = 1
     OWNER = 2
 
@@ -68,6 +74,22 @@ class PermissionsDB(object):
         query = "INSERT INTO users VALUES (?, ?, ?, ?)"
         with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
             conn.execute(query, (user.nick, user.ident, user.host, rank))
+        return user
+
+    def _del_rank(self, user, rank):
+        """Remove a User from the database."""
+        query = """DELETE FROM users WHERE user_nick = ? AND user_ident = ? AND
+                                           user_host = ? AND user_rank = ?"""
+        try:
+            for rule in self._data[rank]:
+                if user in rule:
+                    with self._db_access_lock:
+                        with sqlite.connect(self._dbfile) as conn:
+                            args = (user.nick, user.ident, user.host, rank)
+                            conn.execute(query, args)
+                    return rule
+        except KeyError:
+            return None
 
     def load(self):
         """Load permissions from an existing database, or create a new one."""
@@ -94,12 +116,20 @@ class PermissionsDB(object):
         return self._is_rank(user, rank=self.OWNER)
 
     def add_admin(self, nick="*", ident="*", host="*"):
-        """Add an nick/ident/host combo to the bot admins list."""
+        """Add a nick/ident/host combo to the bot admins list."""
         return self._set_rank(_User(nick, ident, host), rank=self.ADMIN)
 
     def add_owner(self, nick="*", ident="*", host="*"):
         """Add a nick/ident/host combo to the bot owners list."""
         return self._set_rank(_User(nick, ident, host), rank=self.OWNER)
+
+    def remove_admin(self, nick="*", ident="*", host="*"):
+        """Remove a nick/ident/host combo to the bot admins list."""
+        return self._del_rank(_User(nick, ident, host), rank=self.ADMIN)
+
+    def remove_owner(self, nick="*", ident="*", host="*"):
+        """Remove a nick/ident/host combo to the bot owners list."""
+        return self._del_rank(_User(nick, ident, host), rank=self.OWNER)
 
 class _User(object):
     """A class that represents an IRC user for the purpose of testing rules."""

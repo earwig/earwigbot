@@ -44,7 +44,7 @@ class ExclusionsDB(object):
     """
     **EarwigBot: Wiki Toolset: Exclusions Database Manager**
 
-    Controls the :file:`.exclusions.db` file, which stores URLs excluded from
+    Controls the :file:`exclusions.db` file, which stores URLs excluded from
     copyright violation checks on account of being known mirrors, for example.
     """
 
