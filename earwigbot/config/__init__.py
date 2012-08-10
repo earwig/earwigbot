@@ -25,6 +25,7 @@ from hashlib import sha256
 import logging
 import logging.handlers
 from os import mkdir, path
+import stat
 
 try:
     from Crypto.Cipher import Blowfish
@@ -139,7 +140,7 @@ class BotConfig(object):
 
             if not path.isdir(log_dir):
                 if not path.exists(log_dir):
-                    mkdir(log_dir, 0700)
+                    mkdir(log_dir, stat.S_IWUSR|stat.S_IRUSR|stat.S_IXUSR)
                 else:
                     msg = "log_dir ({0}) exists but is not a directory!"
                     print msg.format(log_dir)

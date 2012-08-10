@@ -22,7 +22,7 @@
 
 from collections import OrderedDict
 from getpass import getpass
-from os import chmod
+from os import chmod, path
 import re
 import stat
 from textwrap import fill, wrap
@@ -40,6 +40,15 @@ except ImportError:
 from earwigbot import exceptions
 
 __all__ = ["ConfigScript"]
+
+RULES_TEMPLATE = """"# -*- coding: utf-8  -*-
+
+def process(bot, rc):
+    \"\"\"Given a Bot() object and an RC() object, return a list of channels
+    to report this event to. Also, start any wiki bot tasks within this
+    function if necessary.\"\"\"
+    pass
+"""
 
 class ConfigScript(object):
     """A script to guide a user through the creation of a new config file."""
@@ -118,8 +127,8 @@ class ConfigScript(object):
                        subdirectory. Error logs are kept for a month whereas
                        normal logs are kept for a week. If you disable this,
                        the bot will still print logs to stdout.""")
-        question = "Enable logging?"
-        self.data["metadata"]["enableLogging"] = self._ask_bool(question)
+        logging = self._ask_bool("Enable logging?")
+        self.data["metadata"]["enableLogging"] = logging
 
     def _set_components(self):
         print
@@ -284,7 +293,15 @@ class ConfigScript(object):
             else:
                 chan_question = "Watcher channels to join"
                 watcher["channels"] = self._ask_list(chan_question)
-            # create rules.py
+            self._print("""I am now creating a blank 'rules.py' file, which
+                           will determine how the bot handles messages received
+                           from the IRC watcher. It contains a process()
+                           function that takes a Bot object allowing you to
+                           start tasks and an RC object that holds the message
+                           from the watcher. See the documentation for
+                           details.""")
+            with open(path.join(self.config.root_dir, "rules.py"), "w") as fp:
+                fp.write(RULES_TEMPLATE)
 
         self.data["irc"]["version"] = "EarwigBot - $1 - Python/$2 https://github.com/earwig/earwigbot"
 
@@ -302,13 +319,17 @@ class ConfigScript(object):
         pass
 
     def _save(self):
-        open(self.config.path, "w").close()
-        chmod(self.config.path, stat.S_IRUSR|stat.S_IWUSR)
         with open(self.config.path, "w") as stream:
             yaml.dump(self.data, stream=stream, default_flow_style=False)
 
     def make_new(self):
         """Make a new config file based on the user's input."""
+        try:
+            open(self.config.path, "w").close()
+            chmod(self.config.path, stat.S_IRUSR|stat.S_IWUSR)
+        except IOError:
+            print "I can't seem to write to the config file:"
+            raise
         self._set_metadata()
         self._set_components()
         self._set_wiki()
