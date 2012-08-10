@@ -649,7 +649,7 @@ class DRNClerkBot(Task):
             self.logger.debug(log.format(target, template))
             page = site.get_page(target)
             if page.namespace == constants.NS_USER_TALK:
-                user = site.get_user(target.split(":", 1)[1:])
+                user = site.get_user(target.split(":", 1)[1])
                 if not user.exists and not user.is_ip:
                     log = u"Skipping [[{0}]]; user does not exist and is not an IP"
                     self.logger.info(log.format(target))
