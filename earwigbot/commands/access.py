@@ -59,9 +59,9 @@ class Access(Command):
     def do_list(self, data, permdb):
         if len(data.args) > 1:
             if data.args[1] in ["owner", "owners"]:
-                name, rules = "owners", permdb.data.get(permdb.OWNERS)
+                name, rules = "owners", permdb.data.get(permdb.OWNER)
             elif data.args[1] in ["admin", "admins"]:
-                name, rules = "admins", permdb.data.get(permdb.ADMINS)
+                name, rules = "admins", permdb.data.get(permdb.ADMIN)
             else:
                 msg = "Unknown access level \x0302{0}\x0F."
                 self.reply(data, msg.format(data.args[1]))
@@ -72,8 +72,8 @@ class Access(Command):
                 msg = "No bot {0}.".format(name)
             self.reply(data, msg)
         else:
-            owners = len(permdb.data.get(permdb.OWNERS, []))
-            admins = len(permdb.data.get(permdb.ADMINS, []))
+            owners = len(permdb.data.get(permdb.OWNER, []))
+            admins = len(permdb.data.get(permdb.ADMIN, []))
             msg = "There are {0} bot owners and {1} bot admins. Use '!{2} list owners' or '!{2} list admins' for details."
             self.reply(data, msg.format(owners, admins, data.command))
 

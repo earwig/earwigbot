@@ -50,7 +50,7 @@ class Data(object):
 
     def _parse(self, msgtype):
         """Parse a line from IRC into its components as instance attributes."""
-        sender = re.findall(":(.*?)!(.*?)@(.*?)\Z", self.line[0])[0]
+        sender = re.findall(r":(.*?)!(.*?)@(.*?)\Z", self.line[0])[0]
         self._nick, self._ident, self._host = sender
         self._chan = self.line[2]
 
@@ -84,7 +84,8 @@ class Data(object):
             self._is_command = True
             self._trigger = self.command[0]
             self._command = self.command[1:]  # Strip the "!" or "."
-        elif re.match(r"{0}\W*?$".format(self.my_nick), self.command, re.U):
+        elif re.match(r"{0}\W*?$".format(re.escape(self.my_nick)),
+                      self.command, re.U):
             # e.g. "EarwigBot, command arg1 arg2"
             self._is_command = True
             self._trigger = self.my_nick
@@ -110,7 +111,7 @@ class Data(object):
         """
         for arg in self.args:
             try:
-                key, value = re.findall("^(.*?)\=(.*?)$", arg)[0]
+                key, value = re.findall(r"^(.*?)\=(.*?)$", arg)[0]
             except IndexError:
                 continue
             if key and value:
