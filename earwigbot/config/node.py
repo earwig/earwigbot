@@ -33,7 +33,7 @@ class ConfigNode(object):
         return bool(self._data)
 
     def __len__(self):
-        retrun len(self._data)
+        return len(self._data)
 
     def __getitem__(self, key):
         return self._data[key]
