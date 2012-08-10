@@ -41,7 +41,15 @@ class ConfigScript(object):
 
     def __init__(self, config):
         self.config = config
-        self.data = {}
+        self.data = {
+            "metadata": None,
+            "components": None,
+            "wiki": None,
+            "irc": None,
+            "commands": None,
+            "tasks": None,
+            "schedule": None,
+        }
 
     def _prnt(self, msg):
         pass
@@ -49,9 +57,7 @@ class ConfigScript(object):
     def _ask_bool(self, text, default=True):
         pass
 
-    def make_new(self):
-        """Make a new config file based on the user's input."""
-        print
+    def _set_metadata(self):
         self.data["metadata"] = {"version": 1}
         self._print("""I can encrypt passwords stored in your config file in
                        addition to preventing other users on your system from
@@ -75,3 +81,40 @@ class ConfigScript(object):
                        the bot will still print logs to stdout.""")
         question = "Enable logging?"
         self.data["metadata"]["enableLogging"] = self._ask_bool(question)
+
+    def _set_components(self):
+        pass
+
+    def _set_wiki(self):
+        pass
+
+    def _set_irc(self):
+        pass
+
+    def _set_commands(self):
+        pass
+
+    def _set_tasks(self):
+        pass
+
+    def _set_schedule(self):
+        pass
+
+    def _save(self):
+        with open(self.config.path, "w") as fp:
+            yaml.dump(self.data, stream=fp, default_flow_style=False)
+
+    def make_new(self):
+        """Make a new config file based on the user's input."""
+        print
+        self._set_metadata()
+        self._set_components()
+        self._set_wiki()
+        components = self.data["components"]
+        if components["irc_frontend"] or components["irc_watcher"]:
+            self._set_irc()
+            self._set_commands()
+        self._set_tasks()
+        if components["wiki_scheduler"]:
+            self._set_schedule()
+        self._save()
