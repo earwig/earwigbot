@@ -76,7 +76,8 @@ class BotConfig(object):
     - :py:meth:`decrypt`: decrypts an object in the config tree
     """
 
-    def __init__(self, root_dir, level):
+    def __init__(self, bot, root_dir, level):
+        self._bot = bot
         self._root_dir = root_dir
         self._logging_level = level
         self._config_path = path.join(self.root_dir, "config.yml")
@@ -168,6 +169,11 @@ class BotConfig(object):
         except ValueError:
             print "Error decrypting passwords:"
             raise
+
+    @property
+    def bot(self):
+        """The config's Bot object."""
+        return self._bot
 
     @property
     def root_dir(self):

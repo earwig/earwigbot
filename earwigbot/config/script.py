@@ -35,6 +35,8 @@ try:
 except ImportError:
     yaml = None
 
+from earwigbot import exceptions
+
 __all__ = ["ConfigScript"]
 
 class ConfigScript(object):
@@ -56,6 +58,15 @@ class ConfigScript(object):
 
     def _print(self, msg):
         print fill(re.sub("\s\s+", " ", msg), self.WIDTH)
+
+    def _ask(self, text, default=None):
+        text = "> " + text
+        if default:
+            text += " [{0}]".format(default)
+        lines = wrap(re.sub("\s\s+", " ", msg), self.WIDTH)
+        if len(lines) > 1:
+            print "\n".join(lines[:-1])
+        return raw_input(lines[-1] + " ") or default
 
     def _ask_bool(self, text, default=True):
         text = "> " + text
@@ -125,30 +136,83 @@ class ConfigScript(object):
         self.data["components"]["irc_watcher"] = watcher
         self.data["components"]["wiki_scheduler"] = scheduler
 
+    def _login(self, kwargs):
+        self.config.wiki._load(self.data["wiki"])
+        print "Trying to login to the site...",
+        try:
+            site = self.config.bot.wiki.add_site(**kargs)
+        except exceptions.APIError:
+            print " API error!"
+            question = "Would you like to re-enter the site information?"
+            if self._ask_bool(question):
+                return self._set_wiki()
+            question = "This will cancel the setup process. Are you sure?"
+            if self._ask_bool(question, default=False):
+                raise exceptions.NoConfigError()
+            return self._set_wiki()
+        except exceptions.LoginError:
+            print " login error!"
+            question = "Would you like to re-enter your login information?"
+            if self._ask_bool(question):
+                self.data["wiki"]["username"] = self._ask("Bot username:")
+                self.data["wiki"]["password"] = getpass("> Bot password: ")
+                return self._login(kwargs)
+            question = "Would you like to re-enter the site information?"
+            if self._ask_bool(question):
+                return self._set_wiki()
+            self._print("""Moving on. You can modify the login information
+                           stored in the bot's config in the future.""")
+        else:
+            print " success."
+        return site
+
     def _set_wiki(self):
         print
         wmf = self._ask_bool("""Will this bot run on Wikimedia Foundation
                                 wikis, like Wikipedia?""")
         if wmf:
-            sitename = ?  # setup sites.db
+            msg = "Site project (e.g. 'wikipedia', 'wiktionary', 'wikimedia'):"
+            project = self._ask(msg, default="wikipedia").lower()
+            msg = "Site language code (e.g. 'en', 'fr', 'commons'):"
+            lang = self._ask(msg, default="en").lower()
+            kwargs = {"project": project, "lang": lang}
         else:
-            sitename = ?  # setup sites.db
-        self.data["wiki"]["username"] = raw_input("> Bot username: ")
+            msg = "Site base URL, without the script path and trailing slash;"
+            msg += " can be protocol-insensitive (e.g. '//en.wikipedia.org'):"
+            url = self._ask(msg)
+            script = self._ask("Site script path:", default="/w")
+            kwargs = {"base_url": url, "script_path": script, "sql": sql}
+
+        self.data["wiki"]["username"] = self._ask("Bot username:")
         self.data["wiki"]["password"] = getpass("> Bot password: ")
         self.data["wiki"]["userAgent"] = "EarwigBot/$1 (Python/$2; https://github.com/earwig/earwigbot)"
         self.data["wiki"]["summary"] = "([[WP:BOT|Bot]]): $2"
-        shutoff
         self.data["wiki"]["useHTTPS"] = True
         self.data["wiki"]["assert"] = "user"
         self.data["wiki"]["maxlag"] = 10
-        self.data["wiki"]["waitTime"] = 2
-        self.data["wiki"]["defaultSite"] = sitename
-        ts = self._ask_bool("Will this bot run from the Wikimedia Toolserver?")
-        if ts:
-            args = (("host", "$1-p.rrdb.toolserver.org"), ("db": "$1_p"))
-            self.data["wiki"]["sql"] = OrderedDict(args)
-        else:
-            self.data["wiki"]["sql"] = {}
+        self.data["wiki"]["waitTime"] = 3
+        self.data["wiki"]["defaultSite"] = self._login(kwargs).name
+        self.data["wiki"]["sql"] = {}
+
+        if wmf:
+            msg = "Will this bot run from the Wikimedia Toolserver?"
+            toolserver = self._ask_bool(msg, default=False)
+            if toolserver:
+                args = (("host", "$1-p.rrdb.toolserver.org"), ("db": "$1_p"))
+                self.data["wiki"]["sql"] = OrderedDict(args)
+
+        self.data["wiki"]["shutoff"] = {}
+        msg = "Would you like to enable an automatic shutoff page for the bot?"
+        if self._ask_bool(msg):
+            self._print("""The page title can contain two wildcards: $1 will be
+                           substituted with the bot's username, and $2 with the
+                           current task number. This can be used to implement a
+                           separate shutoff page for each task.""")
+            page = self._ask("Page title:", default="User:$1/Shutoff")
+            disabled = self._ask("Page content when *not* shut off:", "run")
+            args = (("page", page), ("disabled", disabled))
+            self.data["wiki"]["shutoff"] = OrderedDict(args)
+
         self.data["wiki"]["search"] = {}
 
     def _set_irc(self):
