@@ -33,35 +33,35 @@ class Access(Command):
         if not data.args:
             self.reply(data, "Subcommands are self, list, add, remove.")
             return
-        db = self.config.irc["permissions"]
+        permdb = self.config.irc["permissions"]
         if data.args[0] == "self":
-            self.do_self(data, db)
+            self.do_self(data, permdb)
         elif data.args[0] == "list":
-            self.do_list(data, db)
+            self.do_list(data, permdb)
         elif data.args[0] == "add":
-            self.do_add(data, db)
+            self.do_add(data, permdb)
         elif data.args[0] == "remove":
-            self.do_remove(data, db)
+            self.do_remove(data, permdb)
         else:
             msg = "Unknown subcommand \x0303{0}\x0F.".format(data.args[0])
             self.reply(data, msg)
 
-    def do_self(self, data, db):
-        if db.is_owner(data):
+    def do_self(self, data, permdb):
+        if permdb.is_owner(data):
             msg = "You are a bot owner (matching rule \x0302{0}\x0F)."
-            self.reply(data, msg.format(db.is_owner(data)))
-        elif db.is_admin(data):
+            self.reply(data, msg.format(permdb.is_owner(data)))
+        elif permdb.is_admin(data):
             msg = "You are a bot admin (matching rule \x0302{0}\x0F)."
-            self.reply(data, msg.format(db.is_admin(data)))
+            self.reply(data, msg.format(permdb.is_admin(data)))
         else:
             self.reply(data, "You do not match any bot access rules.")
 
-    def do_list(self, data, db):
+    def do_list(self, data, permdb):
         if len(data.args) > 1:
             if data.args[1] in ["owner", "owners"]:
-                name, rules = "owners", db.data.get(db.OWNERS)
+                name, rules = "owners", permdb.data.get(permdb.OWNERS)
             elif data.args[1] in ["admin", "admins"]:
-                name, rules = "admins", db.data.get(db.ADMINS)
+                name, rules = "admins", permdb.data.get(permdb.ADMINS)
             else:
                 msg = "Unknown access level \x0302{0}\x0F."
                 self.reply(data, msg.format(data.args[1]))
@@ -72,20 +72,20 @@ class Access(Command):
                 msg = "No bot {0}.".format(name)
             self.reply(data, msg)
         else:
-            owners = len(db.data.get(db.OWNERS, []))
-            admins = len(db.data.get(db.ADMINS, []))
+            owners = len(permdb.data.get(permdb.OWNERS, []))
+            admins = len(permdb.data.get(permdb.ADMINS, []))
             msg = "There are {0} bot owners and {1} bot admins. Use '!{2} list owners' or '!{2} list admins' for details."
             self.reply(data, msg.format(owners, admins, data.command))
 
-    def do_add(self, data, db):
-        user = self.get_user_from_args(data)
+    def do_add(self, data, permdb):
+        user = self.get_user_from_args(data, permdb)
         if user:
             nick, ident, host = user
             if data.args[1] in ["owner", "owners"]:
-                name, level, adder = "owner", db.OWNER, db.add_owner
+                name, level, adder = "owner", permdb.OWNER, permdb.add_owner
             else:
-                name, level, adder = "admin", db.ADMIN, db.add_admin
-            if db.has_exact(nick, ident, host, level):
+                name, level, adder = "admin", permdb.ADMIN, permdb.add_admin
+            if permdb.has_exact(level, nick, ident, host):
                 rule = "{0}!{1}@{2}".format(nick, ident, host)
                 msg = "\x0302{0}\x0F is already a bot {1}.".format(rule, name)
                 self.reply(data, msg)
@@ -94,14 +94,14 @@ class Access(Command):
                 msg = "Added bot {0} \x0302{1}\x0F.".format(name, rule)
                 self.reply(data, msg)
 
-    def do_remove(self, data, db):
-        user = self.get_user_from_args(data)
+    def do_remove(self, data, permdb):
+        user = self.get_user_from_args(data, permdb)
         if user:
             nick, ident, host = user
             if data.args[1] in ["owner", "owners"]:
-                name, level, rmver = "owner", db.OWNER, db.remove_owner
+                name, rmver = "owner", permdb.remove_owner
             else:
-                name, level, rmver = "admin", db.ADMIN, db.remove_admin
+                name, rmver = "admin", permdb.remove_admin
             rule = rmver(nick, ident, host)
             if rule:
                 msg = "Removed bot {0} \x0302{1}\x0F.".format(name, rule)
@@ -111,8 +111,8 @@ class Access(Command):
                 msg = "No bot {0} matching \x0302{1}\x0F.".format(name, rule)
                 self.reply(data, msg)
 
-    def get_user_from_args(self, data):
-        if not db.is_owner(data):
+    def get_user_from_args(self, data, permdb):
+        if not permdb.is_owner(data):
             msg = "You must be a bot owner to add users to the access list."
             self.reply(data, msg)
             return
@@ -124,10 +124,11 @@ class Access(Command):
         if len(data.args) == 2:
             self.no_arg_error(data)
             return
-        if "nick" in data.kwargs or "ident" in kwargs or "host" in kwargs:
-            nick = data.kwargs.get("nick", "*")
-            ident = data.kwargs.get("ident", "*")
-            host = data.kwargs.get("host", "*")
+        kwargs = data.kwargs
+        if "nick" in kwargs or "ident" in kwargs or "host" in kwargs:
+            nick = kwargs.get("nick", "*")
+            ident = kwargs.get("ident", "*")
+            host = kwargs.get("host", "*")
             return nick, ident, host
         user = re.match(r"(.*?)!(.*?)@(.*?)$", data.args[2])
         if not user:

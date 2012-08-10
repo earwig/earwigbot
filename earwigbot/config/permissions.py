@@ -112,7 +112,7 @@ class PermissionsDB(object):
             except sqlite.OperationalError:
                 self._create(conn)
 
-    def has_exact(self, nick="*", ident="*", host="*", rule):
+    def has_exact(self, rank, nick="*", ident="*", host="*"):
         """Return ``True`` if there is an exact match for this rule."""
         try:
             for usr in self._data[rank]:
