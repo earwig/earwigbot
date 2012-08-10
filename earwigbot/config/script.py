@@ -22,7 +22,9 @@
 
 from collections import OrderedDict
 from getpass import getpass
+from os import chmod
 import re
+import stat
 from textwrap import fill, wrap
 
 try:
@@ -56,14 +58,18 @@ class ConfigScript(object):
             ("schedule", [])
         )
 
-    def _print(self, msg):
-        print fill(re.sub("\s\s+", " ", msg), self.WIDTH)
+        self.wmf = False
+        self.proj = None
+        self.lang = None
+
+    def _print(self, text):
+        print fill(re.sub("\s\s+", " ", text), self.WIDTH)
 
     def _ask(self, text, default=None):
         text = "> " + text
         if default:
             text += " [{0}]".format(default)
-        lines = wrap(re.sub("\s\s+", " ", msg), self.WIDTH)
+        lines = wrap(re.sub("\s\s+", " ", text), self.WIDTH)
         if len(lines) > 1:
             print "\n".join(lines[:-1])
         return raw_input(lines[-1] + " ") or default
@@ -74,7 +80,7 @@ class ConfigScript(object):
             text += " [Y/n]"
         else:
             text += " [y/N]"
-        lines = wrap(re.sub("\s\s+", " ", msg), self.WIDTH)
+        lines = wrap(re.sub("\s\s+", " ", text), self.WIDTH)
         if len(lines) > 1:
             print "\n".join(lines[:-1])
         while True:
@@ -85,6 +91,9 @@ class ConfigScript(object):
                 return True
             if answer.startswith("n"):
                 return False
+
+    def _ask_list(self, text):
+        pass
 
     def _set_metadata(self):
         print
@@ -140,7 +149,7 @@ class ConfigScript(object):
         self.config.wiki._load(self.data["wiki"])
         print "Trying to login to the site...",
         try:
-            site = self.config.bot.wiki.add_site(**kargs)
+            site = self.config.bot.wiki.add_site(**kwargs)
         except exceptions.APIError:
             print " API error!"
             question = "Would you like to re-enter the site information?"
@@ -168,20 +177,20 @@ class ConfigScript(object):
 
     def _set_wiki(self):
         print
-        wmf = self._ask_bool("""Will this bot run on Wikimedia Foundation
-                                wikis, like Wikipedia?""")
-        if wmf:
+        self.wmf = self._ask_bool("""Will this bot run on Wikimedia Foundation
+                                     wikis, like Wikipedia?""")
+        if self.wmf:
             msg = "Site project (e.g. 'wikipedia', 'wiktionary', 'wikimedia'):"
-            project = self._ask(msg, default="wikipedia").lower()
+            self.proj = project = self._ask(msg, default="wikipedia").lower()
             msg = "Site language code (e.g. 'en', 'fr', 'commons'):"
-            lang = self._ask(msg, default="en").lower()
+            self.lang = lang = self._ask(msg, default="en").lower()
             kwargs = {"project": project, "lang": lang}
         else:
             msg = "Site base URL, without the script path and trailing slash;"
             msg += " can be protocol-insensitive (e.g. '//en.wikipedia.org'):"
             url = self._ask(msg)
             script = self._ask("Site script path:", default="/w")
-            kwargs = {"base_url": url, "script_path": script, "sql": sql}
+            kwargs = {"base_url": url, "script_path": script}
 
         self.data["wiki"]["username"] = self._ask("Bot username:")
         self.data["wiki"]["password"] = getpass("> Bot password: ")
@@ -194,11 +203,11 @@ class ConfigScript(object):
         self.data["wiki"]["defaultSite"] = self._login(kwargs).name
         self.data["wiki"]["sql"] = {}
 
-        if wmf:
+        if self.wmf:
             msg = "Will this bot run from the Wikimedia Toolserver?"
             toolserver = self._ask_bool(msg, default=False)
             if toolserver:
-                args = (("host", "$1-p.rrdb.toolserver.org"), ("db": "$1_p"))
+                args = (("host", "$1-p.rrdb.toolserver.org"), ("db", "$1_p"))
                 self.data["wiki"]["sql"] = OrderedDict(args)
 
         self.data["wiki"]["shutoff"] = {}
@@ -216,9 +225,68 @@ class ConfigScript(object):
         self.data["wiki"]["search"] = {}
 
     def _set_irc(self):
-        # create permissions.db with us if frontend
-        # create rules.py if watcher
-        pass
+        if self.data["components"]["irc_frontend"]:
+            print
+            frontend = self.data["irc"]["frontend"] = OrderedDict()
+            msg = "Hostname of the frontend's IRC server, without 'irc://'"
+            frontend["host"] = self._ask(msg, "irc.freenode.net")
+            frontend["port"] = self._ask("Frontend port", 6667)
+            frontend["nick"] = self._ask("Frontend bot's nickname")
+            frontend["ident"] = self._ask("Frontend bot's ident",
+                                          frontend["nick"].lower())
+            question = "Frontend bot's real name (gecos)"
+            frontend["realname"] = self._ask(question)
+            if self._ask_bool("Should the bot identify to NickServ?"):
+                frontend["nickservUsername"] = self._ask("NickServ username",
+                                                         frontend["nick"])
+                frontend["nickservPassword"] = getpass("> Nickserv password: ")
+            chan_question = "Frontend channels to join by default"
+            frontend["channels"] = self._ask_list(chan_question)
+            self._print("""The bot keeps a database of its admins (users who
+                           can use certain sensitive commands) and owners
+                           (users who can quit the bot and modify its access
+                           list), identified by nick, ident, and/or hostname.
+                           Hostname is most secure since it cannot be easily
+                           spoofed. If you have a cloak, it will probably look
+                           like 'wikipedia/Username' or
+                           'unaffiliated/nickname'.""")
+            host = self._ask("Your hostname on the IRC frontend")
+            if host:
+                self.config._permissions.load()
+                self.config._permissions.add_owner(host=host)
+                self.config._permissions.add_admin(host=host)
+        else:
+            frontend = {}
+
+        if self.data["components"]["irc_watcher"]:
+            print
+            watcher = self.data["irc"]["watcher"] = OrderedDict()
+            if self.wmf:
+                watcher["host"] = "irc.wikimedia.org"
+                watcher["port"] = 6667
+            else:
+                msg = "Hostname of the watcher's IRC server, without 'irc://'"
+                watcher["host"] = self._ask(msg)
+                watcher["port"] = self._ask("Watcher port", 6667)
+            watcher["nick"] = self._ask("Watcher bot's nickname",
+                                        frontend.get("nick"))
+            watcher["ident"] = self._ask("Watcher bot's ident",
+                                         watcher["nick"].lower())
+            question = "Watcher bot's real name (gecos)"
+            watcher["realname"] = self._ask(question, frontend.get("realname"))
+            watcher_ns = "Should the bot identify to NickServ?"
+            if not self.wmf and self._ask_bool(watcher_ns):
+                watcher["nickservUsername"] = self._ask("NickServ username",
+                                                        watcher["nick"])
+                watcher["nickservPassword"] = getpass("> Nickserv password: ")
+            if self.wmf:
+                watcher["channels"] = ["#{0}.{1}".format(self.lang, self.proj)]
+            else:
+                chan_question = "Watcher channels to join"
+                watcher["channels"] = self._ask_list(chan_question)
+            # create rules.py
+
+        self.data["irc"]["version"] = "EarwigBot - $1 - Python/$2 https://github.com/earwig/earwigbot"
 
     def _set_commands(self):
         # disable: True if no IRC frontend or prompted
@@ -234,8 +302,10 @@ class ConfigScript(object):
         pass
 
     def _save(self):
-        with open(self.config.path, "w") as fp:
-            yaml.dump(self.data, stream=fp, default_flow_style=False)
+        open(self.config.path, "w").close()
+        chmod(self.config.path, stat.S_IRUSR|stat.S_IWUSR)
+        with open(self.config.path, "w") as stream:
+            yaml.dump(self.data, stream=stream, default_flow_style=False)
 
     def make_new(self):
         """Make a new config file based on the user's input."""
