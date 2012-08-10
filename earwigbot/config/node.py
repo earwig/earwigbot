@@ -42,10 +42,15 @@ class ConfigNode(object):
         self._data[key] = item
 
     def __getattr__(self, key):
+        if key == "_data":
+            return super(ConfigNode, self)__getattr__(key)
         return self._data[key]
 
     def __setattr__(self, key, item):
-        self._data[key] = item
+        if key == "_data":
+            super(ConfigNode, self)__setattr__(key, item)
+        else:
+            self._data[key] = item
 
     def __iter__(self):
         for key in self._data:
