@@ -68,29 +68,31 @@ class PermissionsDB(object):
 
     def _set_rank(self, user, rank):
         """Add a User to the database under a given rank."""
-        try:
-            self._data[rank].append(user)
-        except KeyError:
-            self._data[rank] = [user]
         query = "INSERT INTO users VALUES (?, ?, ?, ?)"
-        with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
-            conn.execute(query, (user.nick, user.ident, user.host, rank))
+        with self._db_access_lock:
+            with sqlite.connect(self._dbfile) as conn:
+                conn.execute(query, (user.nick, user.ident, user.host, rank))
+            try:
+                self._data[rank].append(user)
+            except KeyError:
+                self._data[rank] = [user]
         return user
 
     def _del_rank(self, user, rank):
         """Remove a User from the database."""
         query = """DELETE FROM users WHERE user_nick = ? AND user_ident = ? AND
                                            user_host = ? AND user_rank = ?"""
-        try:
-            for rule in self._data[rank]:
-                if user in rule:
-                    with self._db_access_lock:
+        with self._db_access_lock:
+            try:
+                for rule in self._data[rank]:
+                    if user in rule:
                         with sqlite.connect(self._dbfile) as conn:
                             args = (user.nick, user.ident, user.host, rank)
                             conn.execute(query, args)
-                    return rule
-        except KeyError:
-            pass
+                        self._data[rank].remove(user)
+                        return rule
+            except KeyError:
+                pass
         return None
 
     @property
