@@ -89,7 +89,7 @@ class PermissionsDB(object):
                         with sqlite.connect(self._dbfile) as conn:
                             args = (user.nick, user.ident, user.host, rank)
                             conn.execute(query, args)
-                        self._data[rank].remove(user)
+                        self._data[rank].remove(rule)
                         return rule
             except KeyError:
                 pass
