@@ -71,7 +71,6 @@ class Access(Command):
             else:
                 msg = "No bot {0}.".format(name)
             self.reply(data, msg)
-
         else:
             owners = len(db.data.get(db.OWNERS, []))
             admins = len(db.data.get(db.ADMINS, []))
@@ -79,11 +78,44 @@ class Access(Command):
             self.reply(data, msg.format(owners, admins, data.command))
 
     def do_add(self, data, db):
+        user = self.get_user_from_args(data)
+        if user:
+            nick, ident, host = user
+            if data.args[1] in ["owner", "owners"]:
+                name, level, adder = "owner", db.OWNER, db.add_owner
+            else:
+                name, level, adder = "admin", db.ADMIN, db.add_admin
+            if db.has_exact(nick, ident, host, level):
+                rule = "{0}!{1}@{2}".format(nick, ident, host)
+                msg = "\x0302{0}\x0F is already a bot {1}.".format(rule, name)
+                self.reply(data, msg)
+            else:
+                rule = adder(nick, ident, host)
+                msg = "Added bot {0} \x0302{1}\x0F.".format(name, rule)
+                self.reply(data, msg)
+
+    def do_remove(self, data, db):
+        user = self.get_user_from_args(data)
+        if user:
+            nick, ident, host = user
+            if data.args[1] in ["owner", "owners"]:
+                name, level, rmver = "owner", db.OWNER, db.remove_owner
+            else:
+                name, level, rmver = "admin", db.ADMIN, db.remove_admin
+            rule = rmver(nick, ident, host)
+            if rule:
+                msg = "Removed bot {0} \x0302{1}\x0F.".format(name, rule)
+                self.reply(data, msg)
+            else:
+                rule = "{0}!{1}@{2}".format(nick, ident, host)
+                msg = "No bot {0} matching \x0302{1}\x0F.".format(name, rule)
+                self.reply(data, msg)
+
+    def get_user_from_args(self, data):
         if not db.is_owner(data):
             msg = "You must be a bot owner to add users to the access list."
             self.reply(data, msg)
             return
-
         levels = ["owner", "owners", "admin", "admins"]
         if len(data.args) == 1 or data.args[1] not in levels:
             msg = "Please specify an access level ('owners' or 'admins')."
@@ -92,38 +124,16 @@ class Access(Command):
         if len(data.args) == 2:
             self.no_arg_error(data)
             return
-
         if "nick" in data.kwargs or "ident" in kwargs or "host" in kwargs:
             nick = data.kwargs.get("nick", "*")
             ident = data.kwargs.get("ident", "*")
             host = data.kwargs.get("host", "*")
-        else:
-            user = re.match(r"(.*?)!(.*?)@(.*?)$", data.args[2])
-            if not user:
-                self.no_arg_error(data)
-                return
-            nick, ident, host = user.group(1), user.group(2), user.group(3)
-
-        if data.args[1] in ["owner", "owners"]:
-            if db.has_exact(nick, ident, host, db.OWNER):
-                msg = "\x0302{0}\x0F is already a bot owner.".format(rule)
-                self.reply(data, msg)
-            else:
-                rule = db.add_owner(nick, ident, host)
-                self.reply(data, "Added bot owner \x0302{0}\x0F.".format(rule))
-        else:
-            if db.has_exact(nick, ident, host, db.OWNER):
-                msg = "\x0302{0}\x0F is already a bot admin.".format(rule)
-                self.reply(data, msg)
-            else:
-                rule = db.add_admin(nick, ident, host)
-                self.reply(data, "Added bot admin \x0302{0}\x0F.".format(rule))
-
-    def do_remove(self, data, db):
-        if not db.is_owner(data):
-            msg = "You must be a bot owner to remove users from the access list."
-            self.reply(data, msg)
+            return nick, ident, host
+        user = re.match(r"(.*?)!(.*?)@(.*?)$", data.args[2])
+        if not user:
+            self.no_arg_error(data)
             return
+        return user.group(1), user.group(2), user.group(3)
 
     def no_arg_error(self, data):
         msg = 'Please specify a user, either as "\x0302nick\x0F!\x0302ident\x0F@\x0302host\x0F"'
