@@ -90,7 +90,7 @@ class IRCConnection(object):
         with self._send_lock:
             time_since_last = time() - self._last_send
             if time_since_last < 0.75:
-                time.sleep(0.75 - time_since_last)
+                sleep(0.75 - time_since_last)
             try:
                 self._sock.sendall(msg + "\r\n")
             except socket.error:
