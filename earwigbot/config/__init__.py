@@ -44,6 +44,7 @@ except ImportError:
 from earwigbot.config.formatter import BotFormatter
 from earwigbot.config.node import ConfigNode
 from earwigbot.config.permissions import PermissionsDB
+from earwigbot.config.script import ConfigScript
 from earwigbot.exceptions import NoConfigError
 
 __all__ = ["BotConfig"]
@@ -168,20 +169,6 @@ class BotConfig(object):
             print "Error decrypting passwords:"
             raise
 
-    def _make_new(self):
-        """Make a new config file based on the user's input."""
-        #m = "Would you like to encrypt passwords stored in config.yml? [y/n] "
-        #encrypt = raw_input(m)
-        #if encrypt.lower().startswith("y"):
-        #    is_encrypted = True
-        #else:
-        #    is_encrypted = False
-        raise NotImplementedError()
-        # yaml.dumps() config.yml file (self._config_path)
-        # Create root_dir/, root_dir/commands/, root_dir/tasks/
-        # Give a reasonable message after config has been created regarding
-        # what to do next...
-
     @property
     def root_dir(self):
         """The bot's root directory containing its config file and more."""
@@ -268,11 +255,11 @@ class BotConfig(object):
         """
         if not path.exists(self._config_path):
             print "Config file not found:", self._config_path
-            choice = raw_input("Would you like to create a config file now? [y/n] ")
-            if choice.lower().startswith("y"):
-                self._make_new()
-            else:
+            choice = raw_input("Would you like to create a config file now? [Y/n] ")
+            if choice.lower().startswith("n"):
                 raise NoConfigError()
+            else:
+                ConfigScript(self).make_new()
 
         self._load()
         data = self._data
