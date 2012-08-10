@@ -22,6 +22,7 @@
 
 from getpass import getpass
 import re
+from textwrap import fill, wrap
 
 try:
     import bcrypt
@@ -37,6 +38,7 @@ __all__ = ["ConfigScript"]
 
 class ConfigScript(object):
     """A script to guide a user through the creation of a new config file."""
+    WIDTH = 79
     BCRYPT_ROUNDS = 12
 
     def __init__(self, config):
@@ -51,11 +53,26 @@ class ConfigScript(object):
             "schedule": None,
         }
 
-    def _prnt(self, msg):
-        pass
+    def _print(self, msg):
+        print fill(re.sub("\s\s+", " ", msg), self.WIDTH)
 
     def _ask_bool(self, text, default=True):
-        pass
+        text = "> " + text
+        if default:
+            text += " [Y/n] "
+        else:
+            text += " [y/N] "
+        lines = wrap(re.sub("\s\s+", " ", msg), self.WIDTH)
+        if len(lines) > 1:
+            print "\n".join(lines[:-1])
+        while True:
+            answer = raw_input(lines[-1]).lower()
+            if not answer:
+                return default
+            if answer.startswith("y"):
+                return True
+            if answer.startswith("n"):
+                return False
 
     def _set_metadata(self):
         self.data["metadata"] = {"version": 1}
