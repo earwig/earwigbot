@@ -88,8 +88,11 @@ class Watcher(IRCConnection):
         # Set a default RC process hook that does nothing:
         self._process_hook = lambda bot, rc: ()
 
-        path = os.path.join(self.bot.config.root_dir, "rules.py")
-        f, path, desc = imp.find_module("rules", [path])
+        path = self.bot.config.root_dir
+        try:
+            f, path, desc = imp.find_module("rules", [path])
+        except ImportError:
+            return
         try:
             module = imp.load_module(name, f, path, desc)
         except Exception:
