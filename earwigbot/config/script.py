@@ -113,7 +113,7 @@ class ConfigScript(object):
                        cannot interact with this component. It can detect
                        specific events and report them to "feed" channels on
                        the front-end, or start bot tasks.""")
-        self._pritn("""- The wiki task scheduler runs wiki-editing bot tasks in
+        self._print("""- The wiki task scheduler runs wiki-editing bot tasks in
                        separate threads at user-defined times through a
                        cron-like interface. Tasks which are not scheduled can
                        be started by the IRC watcher manually through the IRC
@@ -126,15 +126,44 @@ class ConfigScript(object):
         self.data["components"]["wiki_scheduler"] = scheduler
 
     def _set_wiki(self):
-        pass
+        print
+        wmf = self._ask_bool("""Will this bot run on Wikimedia Foundation
+                                wikis, like Wikipedia?""")
+        if wmf:
+            sitename = ?  # setup sites.db
+        else:
+            sitename = ?  # setup sites.db
+        self.data["wiki"]["username"] = raw_input("> Bot username: ")
+        self.data["wiki"]["password"] = getpass("> Bot password: ")
+        self.data["wiki"]["userAgent"] = "EarwigBot/$1 (Python/$2; https://github.com/earwig/earwigbot)"
+        self.data["wiki"]["summary"] = "([[WP:BOT|Bot]]): $2"
+        shutoff
+        self.data["wiki"]["useHTTPS"] = True
+        self.data["wiki"]["assert"] = "user"
+        self.data["wiki"]["maxlag"] = 10
+        self.data["wiki"]["waitTime"] = 2
+        self.data["wiki"]["defaultSite"] = sitename
+        ts = self._ask_bool("Will this bot run from the Wikimedia Toolserver?")
+        if ts:
+            args = (("host", "$1-p.rrdb.toolserver.org"), ("db": "$1_p"))
+            self.data["wiki"]["sql"] = OrderedDict(args)
+        else:
+            self.data["wiki"]["sql"] = {}
+        self.data["wiki"]["search"] = {}
 
     def _set_irc(self):
+        # create permissions.db with us if frontend
+        # create rules.py if watcher
         pass
 
     def _set_commands(self):
+        # disable: True if no IRC frontend or prompted
+        # create commands/
         pass
 
     def _set_tasks(self):
+        # disable: True if prompted
+        # create tasks/
         pass
 
     def _set_schedule(self):
@@ -156,4 +185,12 @@ class ConfigScript(object):
         self._set_tasks()
         if components["wiki_scheduler"]:
             self._set_schedule()
+        self._print("""I am now saving config.yml with your settings. YAML is a
+                       relatively straightforward format and you should be able
+                       to update these settings in the future when necessary.
+                       I will start the bot at your signal. Feel free to
+                       contact me at wikipedia.earwig at gmail.com if you have
+                       any questions.""")
         self._save()
+        if not self._ask_bool("Start the bot now?"):
+            exit()
