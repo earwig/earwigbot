@@ -39,7 +39,7 @@ class Git(Command):
 
     def process(self, data):
         self.data = data
-        if data.host not in self.config.irc["permissions"]["owners"]:
+        if not self.config.irc["permissions"].is_owner(data):
             msg = "You must be a bot owner to use this command."
             self.reply(data, msg)
             return
@@ -78,7 +78,7 @@ class Git(Command):
         elif command == "status":
             self.do_status()
         else:  # They asked us to do something we don't know
-            msg = "Ynknown argument: \x0303{0}\x0F.".format(data.args[0])
+            msg = "Unknown argument: \x0303{0}\x0F.".format(data.args[0])
             self.reply(data, msg)
 
     def get_repos(self):

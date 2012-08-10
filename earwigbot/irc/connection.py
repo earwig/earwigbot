@@ -43,6 +43,7 @@ class IRCConnection(object):
         self._send_lock = Lock()
 
         self._last_recv = time()
+        self._last_send = 0
         self._last_ping = 0
 
     def __repr__(self):
@@ -87,6 +88,9 @@ class IRCConnection(object):
     def _send(self, msg, hidelog=False):
         """Send data to the server."""
         with self._send_lock:
+            time_since_last = time() - self._last_send
+            if time_since_last < 0.75:
+                time.sleep(0.75 - time_since_last)
             try:
                 self._sock.sendall(msg + "\r\n")
             except socket.error:
@@ -94,6 +98,7 @@ class IRCConnection(object):
             else:
                 if not hidelog:
                     self.logger.debug(msg)
+                self._last_send = time()
 
     def _split(self, msgs, maxlen, maxsplits=3):
         """Split a large message into multiple messages smaller than maxlen."""
@@ -158,7 +163,7 @@ class IRCConnection(object):
 
     def say(self, target, msg, hidelog=False):
         """Send a private message to a target on the server."""
-        for msg in self._split(msg, 500 - len(target)):
+        for msg in self._split(msg, 400):
             msg = "PRIVMSG {0} :{1}".format(target, msg)
             self._send(msg, hidelog)
 
@@ -177,7 +182,7 @@ class IRCConnection(object):
 
     def notice(self, target, msg, hidelog=False):
         """Send a notice to a target on the server."""
-        for msg in self._split(msg, 500 - len(target)):
+        for msg in self._split(msg, 400):
             msg = "NOTICE {0} :{1}".format(target, msg)
             self._send(msg, hidelog)
 
