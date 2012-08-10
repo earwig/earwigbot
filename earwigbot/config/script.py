@@ -22,7 +22,7 @@
 
 from collections import OrderedDict
 from getpass import getpass
-from os import chmod, path
+from os import chmod, mkdir, path
 import re
 import stat
 from textwrap import fill, wrap
@@ -74,6 +74,9 @@ class ConfigScript(object):
     def _print(self, text):
         print fill(re.sub("\s\s+", " ", text), self.WIDTH)
 
+    def _pause(self):
+        raw_input("> Press enter to continue: ")
+
     def _ask(self, text, default=None):
         text = "> " + text
         if default:
@@ -102,7 +105,15 @@ class ConfigScript(object):
                 return False
 
     def _ask_list(self, text):
-        pass
+        print fill(re.sub("\s\s+", " ", "> " + text), self.WIDTH)
+        print "[one item per line; blank line to end]:"
+        result = []
+        while True:
+            line = raw_input("> ")
+            if line:
+                result.append(line)
+            else:
+                return result
 
     def _set_metadata(self):
         print
@@ -237,19 +248,19 @@ class ConfigScript(object):
         if self.data["components"]["irc_frontend"]:
             print
             frontend = self.data["irc"]["frontend"] = OrderedDict()
-            msg = "Hostname of the frontend's IRC server, without 'irc://'"
+            msg = "Hostname of the frontend's IRC server, without 'irc://':"
             frontend["host"] = self._ask(msg, "irc.freenode.net")
-            frontend["port"] = self._ask("Frontend port", 6667)
-            frontend["nick"] = self._ask("Frontend bot's nickname")
-            frontend["ident"] = self._ask("Frontend bot's ident",
+            frontend["port"] = self._ask("Frontend port:", 6667)
+            frontend["nick"] = self._ask("Frontend bot's nickname:")
+            frontend["ident"] = self._ask("Frontend bot's ident:",
                                           frontend["nick"].lower())
-            question = "Frontend bot's real name (gecos)"
+            question = "Frontend bot's real name (gecos):"
             frontend["realname"] = self._ask(question)
             if self._ask_bool("Should the bot identify to NickServ?"):
-                frontend["nickservUsername"] = self._ask("NickServ username",
+                frontend["nickservUsername"] = self._ask("NickServ username:",
                                                          frontend["nick"])
                 frontend["nickservPassword"] = getpass("> Nickserv password: ")
-            chan_question = "Frontend channels to join by default"
+            chan_question = "Frontend channels to join by default:"
             frontend["channels"] = self._ask_list(chan_question)
             self._print("""The bot keeps a database of its admins (users who
                            can use certain sensitive commands) and owners
@@ -259,7 +270,7 @@ class ConfigScript(object):
                            spoofed. If you have a cloak, it will probably look
                            like 'wikipedia/Username' or
                            'unaffiliated/nickname'.""")
-            host = self._ask("Your hostname on the IRC frontend")
+            host = self._ask("Your hostname on the IRC frontend:")
             if host:
                 self.config._permissions.load()
                 self.config._permissions.add_owner(host=host)
@@ -274,24 +285,24 @@ class ConfigScript(object):
                 watcher["host"] = "irc.wikimedia.org"
                 watcher["port"] = 6667
             else:
-                msg = "Hostname of the watcher's IRC server, without 'irc://'"
+                msg = "Hostname of the watcher's IRC server, without 'irc://':"
                 watcher["host"] = self._ask(msg)
-                watcher["port"] = self._ask("Watcher port", 6667)
-            watcher["nick"] = self._ask("Watcher bot's nickname",
+                watcher["port"] = self._ask("Watcher port:", 6667)
+            watcher["nick"] = self._ask("Watcher bot's nickname:",
                                         frontend.get("nick"))
-            watcher["ident"] = self._ask("Watcher bot's ident",
+            watcher["ident"] = self._ask("Watcher bot's ident:",
                                          watcher["nick"].lower())
-            question = "Watcher bot's real name (gecos)"
+            question = "Watcher bot's real name (gecos):"
             watcher["realname"] = self._ask(question, frontend.get("realname"))
             watcher_ns = "Should the bot identify to NickServ?"
             if not self.wmf and self._ask_bool(watcher_ns):
-                watcher["nickservUsername"] = self._ask("NickServ username",
+                watcher["nickservUsername"] = self._ask("NickServ username:",
                                                         watcher["nick"])
                 watcher["nickservPassword"] = getpass("> Nickserv password: ")
             if self.wmf:
                 watcher["channels"] = ["#{0}.{1}".format(self.lang, self.proj)]
             else:
-                chan_question = "Watcher channels to join"
+                chan_question = "Watcher channels to join by default:"
                 watcher["channels"] = self._ask_list(chan_question)
             self._print("""I am now creating a blank 'rules.py' file, which
                            will determine how the bot handles messages received
@@ -302,21 +313,51 @@ class ConfigScript(object):
                            details.""")
             with open(path.join(self.config.root_dir, "rules.py"), "w") as fp:
                 fp.write(RULES_TEMPLATE)
+            self._pause()
 
         self.data["irc"]["version"] = "EarwigBot - $1 - Python/$2 https://github.com/earwig/earwigbot"
 
     def _set_commands(self):
-        # disable: True if no IRC frontend or prompted
-        # create commands/
-        pass
+        print
+        msg = """Would you like to disable the default IRC commands? You can
+                 fine-tune which commands are disabled later on."""
+        if (not self.data["components"]["irc_frontend"] or
+                self._ask_bool(msg, default=False)):
+            self.data["commands"]["disable"] = True
+        self._print("""I am now creating the 'commands/' directory, where you
+                       can place custom IRC commands and plugins. Creating your
+                       own commands is described in the documentation.""")
+        mkdir(path.join(self.config.root_dir, "commands"))
+        self._pause()
 
     def _set_tasks(self):
-        # disable: True if prompted
-        # create tasks/
-        pass
+        print
+        self._print("""I am now creating the 'tasks/' directory, where you can
+                       place custom bot tasks and plugins. Creating your own
+                       tasks is described in the documentation.""")
+        mkdir(path.join(self.config.root_dir, "tasks"))
+        self._pause()
 
     def _set_schedule(self):
-        pass
+        self._print("""The final section of your config file, 'schedule', is a
+                       list of bot tasks to be started by the wiki scheduler.
+                       Each entry contains cron-like time quantifiers and a
+                       list of tasks. For example, the following starts the
+                       'foobot' task every hour on the half-hour:""")
+        print "schedule:"
+        print "    - minute: 30"
+        print "      tasks:"
+        print "          - foobot"
+        self._print("""The following starts the 'barbot' task with the keyword
+                       arguments 'action="baz"' every Monday at 05:00 UTC:""")
+        print "    - week_day: 1"
+        print "      hour:     5"
+        print "      tasks:"
+        print '          - ["barbot", {"action": "baz"}]'
+        self._print("""The full list of quantifiers is minute, hour, month_day,
+                       month, and week_day. See the documentation for more
+                       details.""")
+        self._pause()
 
     def _save(self):
         with open(self.config.path, "w") as stream:
@@ -344,8 +385,8 @@ class ConfigScript(object):
                        relatively straightforward format and you should be able
                        to update these settings in the future when necessary.
                        I will start the bot at your signal. Feel free to
-                       contact me at wikipedia.earwig at gmail.com if you have
-                       any questions.""")
+                       contact me at wikipedia.earwig@gmail.com if you have any
+                       questions.""")
         self._save()
         if not self._ask_bool("Start the bot now?"):
             exit()
