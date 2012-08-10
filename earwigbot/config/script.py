@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from collections import OrderedDict
 from getpass import getpass
 import re
 from textwrap import fill, wrap
@@ -43,15 +44,15 @@ class ConfigScript(object):
 
     def __init__(self, config):
         self.config = config
-        self.data = {
-            "metadata": None,
-            "components": None,
-            "wiki": None,
-            "irc": None,
-            "commands": None,
-            "tasks": None,
-            "schedule": None,
-        }
+        self.data = OrderedDict(
+            ("metadata", OrderedDict()),
+            ("components", OrderedDict()),
+            ("wiki", OrderedDict()),
+            ("irc", OrderedDict()),
+            ("commands", OrderedDict()),
+            ("tasks", OrderedDict()),
+            ("schedule", [])
+        )
 
     def _print(self, msg):
         print fill(re.sub("\s\s+", " ", msg), self.WIDTH)
@@ -59,14 +60,14 @@ class ConfigScript(object):
     def _ask_bool(self, text, default=True):
         text = "> " + text
         if default:
-            text += " [Y/n] "
+            text += " [Y/n]"
         else:
-            text += " [y/N] "
+            text += " [y/N]"
         lines = wrap(re.sub("\s\s+", " ", msg), self.WIDTH)
         if len(lines) > 1:
             print "\n".join(lines[:-1])
         while True:
-            answer = raw_input(lines[-1]).lower()
+            answer = raw_input(lines[-1] + " ").lower()
             if not answer:
                 return default
             if answer.startswith("y"):
@@ -75,7 +76,8 @@ class ConfigScript(object):
                 return False
 
     def _set_metadata(self):
-        self.data["metadata"] = {"version": 1}
+        print
+        self.data["metadata"] = OrderedDict(("version", 1))
         self._print("""I can encrypt passwords stored in your config file in
                        addition to preventing other users on your system from
                        reading the file. Encryption is recommended is the bot
@@ -100,7 +102,28 @@ class ConfigScript(object):
         self.data["metadata"]["enableLogging"] = self._ask_bool(question)
 
     def _set_components(self):
-        pass
+        print
+        self._print("""The bot contains three separate components that can run
+                       independently of each other.""")
+        self._print("""- The IRC front-end runs on a normal IRC server, like
+                       freenode, and expects users to interact with it through
+                       commands.""")
+        self._print("""- The IRC watcher runs on a wiki recent-changes server,
+                       like irc.wikimedia.org, and listens for edits. Users
+                       cannot interact with this component. It can detect
+                       specific events and report them to "feed" channels on
+                       the front-end, or start bot tasks.""")
+        self._pritn("""- The wiki task scheduler runs wiki-editing bot tasks in
+                       separate threads at user-defined times through a
+                       cron-like interface. Tasks which are not scheduled can
+                       be started by the IRC watcher manually through the IRC
+                       front-end.""")
+        frontend = self._ask_bool("Enable the IRC front-end?")
+        watcher = self._ask_bool("Enable the IRC watcher?")
+        scheduler  = self._ask_bool("Enable the wiki task scheduler?")
+        self.data["components"]["irc_frontend"] = frontend
+        self.data["components"]["irc_watcher"] = watcher
+        self.data["components"]["wiki_scheduler"] = scheduler
 
     def _set_wiki(self):
         pass
@@ -123,7 +146,6 @@ class ConfigScript(object):
 
     def make_new(self):
         """Make a new config file based on the user's input."""
-        print
         self._set_metadata()
         self._set_components()
         self._set_wiki()
