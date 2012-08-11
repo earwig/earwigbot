@@ -124,7 +124,10 @@ class BotConfig(object):
         if choice.lower().startswith("n"):
             raise NoConfigError()
         else:
-            ConfigScript(self).make_new()
+            try:
+                ConfigScript(self).make_new()
+            except KeyboardInterrupt:
+                raise NoConfigError()
 
     def _load(self):
         """Load data from our JSON config file (config.yml) into self._data."""

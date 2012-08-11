@@ -91,14 +91,17 @@ class ConfigScript(object):
     def _pause(self):
         raw_input(self.PROMPT + "Press enter to continue: ")
 
-    def _ask(self, text, default=None):
+    def _ask(self, text, default=None, require=True):
         text = self.PROMPT + text
         if default:
             text += " \x1b[33m[{0}]\x1b[0m".format(default)
         lines = wrap(re.sub("\s\s+", " ", text), self.WIDTH)
         if len(lines) > 1:
             print "\n".join(lines[:-1])
-        return raw_input(lines[-1] + " ") or default
+        while True:
+            answer = raw_input(lines[-1] + " ") or default
+            if answer or not require:
+                return answer
 
     def _ask_bool(self, text, default=True):
         text = self.PROMPT + text
@@ -149,7 +152,7 @@ class ConfigScript(object):
         self.data["metadata"] = OrderedDict([("version", 1)])
         self._print("""I can encrypt passwords stored in your config file in
                        addition to preventing other users on your system from
-                       reading the file. Encryption is recommended is the bot
+                       reading the file. Encryption is recommended if the bot
                        is to run on a public computer like the Toolserver, but
                        otherwise the need to enter a key everytime you start
                        the bot may be annoying.""")
@@ -184,7 +187,7 @@ class ConfigScript(object):
                        like irc.wikimedia.org, and listens for edits. Users
                        cannot interact with this component. It can detect
                        specific events and report them to "feed" channels on
-                       the front-end, or start bot tasks.""")
+                       the front-end or start bot tasks.""")
         self._print("""- The wiki task scheduler runs wiki-editing bot tasks in
                        separate threads at user-defined times through a
                        cron-like interface. Tasks which are not scheduled can
@@ -249,15 +252,15 @@ class ConfigScript(object):
                                       wikis, like Wikipedia?""")
         if self._wmf:
             msg = "Site project (e.g. 'wikipedia', 'wiktionary', 'wikimedia'):"
-            self._proj = project = self._ask(msg, default="wikipedia").lower()
+            self._proj = project = self._ask(msg, "wikipedia").lower()
             msg = "Site language code (e.g. 'en', 'fr', 'commons'):"
-            self._lang = lang = self._ask(msg, default="en").lower()
+            self._lang = lang = self._ask(msg, "en").lower()
             kwargs = {"project": project, "lang": lang}
         else:
             msg = "Site base URL, without the script path and trailing slash;"
             msg += " can be protocol-insensitive (e.g. '//en.wikipedia.org'):"
             url = self._ask(msg)
-            script = self._ask("Site script path:", default="/w")
+            script = self._ask("Site script path:", "/w")
             kwargs = {"base_url": url, "script_path": script}
 
         self.data["wiki"]["username"] = self._ask("Bot username:")
@@ -287,7 +290,7 @@ class ConfigScript(object):
                            substituted with the bot's username, and $2 with the
                            current task number. This can be used to implement a
                            separate shutoff page for each task.""")
-            page = self._ask("Page title:", default="User:$1/Shutoff")
+            page = self._ask("Page title:", "User:$1/Shutoff")
             msg = "Page content to indicate the bot is *not* shut off:"
             disabled = self._ask(msg, "run")
             args = [("page", page), ("disabled", disabled)]
@@ -306,7 +309,7 @@ class ConfigScript(object):
             frontend["ident"] = self._ask("Frontend bot's ident:",
                                           frontend["nick"].lower())
             question = "Frontend bot's real name (gecos):"
-            frontend["realname"] = self._ask(question)
+            frontend["realname"] = self._ask(question, "EarwigBot")
             if self._ask_bool("Should the bot identify to NickServ?"):
                 ns_user = self._ask("NickServ username:", frontend["nick"])
                 ns_pass = self._ask_pass("Nickserv password:")
@@ -323,7 +326,7 @@ class ConfigScript(object):
                            be easily spoofed. If you have a cloak, this will
                            probably look like 'wikipedia/Username' or
                            'unaffiliated/nickname'.""")
-            host = self._ask("Your hostname on the IRC frontend:")
+            host = self._ask("Your hostname on the frontend:", require=False)
             if host:
                 permdb = self.config._permissions
                 permdb.load()
@@ -347,7 +350,8 @@ class ConfigScript(object):
             watcher["nick"] = nick
             watcher["ident"] = ident
             question = "Watcher bot's real name (gecos):"
-            watcher["realname"] = self._ask(question, frontend.get("realname"))
+            default = frontend.get("realname", "EarwigBot")
+            watcher["realname"] = self._ask(question, default)
             watcher_ns = "Should the bot identify to NickServ?"
             if not self._wmf and self._ask_bool(watcher_ns):
                 ns_user = self._ask("NickServ username:", watcher["nick"])
