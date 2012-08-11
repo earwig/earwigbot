@@ -118,8 +118,13 @@ class ConfigScript(object):
             if answer.startswith("n"):
                 return False
 
-    def _ask_pass(self, text):
+    def _ask_pass(self, text, encrypt=True):
         password = getpass(self.PROMPT + text + " ")
+        if encrypt:
+            return self._encrypt(password)
+        return password
+
+    def _encrypt(self, password):
         if self._cipher:
             mod = len(password) % 8
             if mod:
@@ -213,14 +218,17 @@ class ConfigScript(object):
             question = "Would you like to re-enter your login information?"
             if self._ask_bool(question):
                 self.data["wiki"]["username"] = self._ask("Bot username:")
-                self.data["wiki"]["password"] = self._ask_pass("Bot password:")
+                password = self._ask_pass("Bot password:", encrypt=False)
+                self.data["wiki"]["password"] = password
                 return self._login(kwargs)
+            else:
+                password = self.data["wiki"]["password"]
             question = "Would you like to re-enter the site information?"
             if self._ask_bool(question):
                 return self._set_wiki()
+            print
             self._print("""Moving on. You can modify the login information
                            stored in the bot's config in the future.""")
-            password = self.data["wiki"]["password"]
             self.data["wiki"]["password"] = None  # Clear so we don't login
             self.config.wiki._load(self.data["wiki"])
             self._print_no_nl("Trying to connect to the site...")
@@ -229,6 +237,10 @@ class ConfigScript(object):
             self.data["wiki"]["password"] = password  # Reset original value
         else:
             print " success."
+
+        # Remember to store the encrypted password:
+        password = self._encrypt(self.data["wiki"]["password"])
+        self.data["wiki"]["password"] = password
         return site
 
     def _set_wiki(self):
@@ -249,7 +261,8 @@ class ConfigScript(object):
             kwargs = {"base_url": url, "script_path": script}
 
         self.data["wiki"]["username"] = self._ask("Bot username:")
-        self.data["wiki"]["password"] = self._ask_pass("Bot password:")
+        password = self._ask_pass("Bot password:", encrypt=False)
+        self.data["wiki"]["password"] = password
         self.data["wiki"]["userAgent"] = "EarwigBot/$1 (Python/$2; https://github.com/earwig/earwigbot)"
         self.data["wiki"]["summary"] = "([[WP:BOT|Bot]]): $2"
         self.data["wiki"]["useHTTPS"] = True
@@ -275,7 +288,8 @@ class ConfigScript(object):
                            current task number. This can be used to implement a
                            separate shutoff page for each task.""")
             page = self._ask("Page title:", default="User:$1/Shutoff")
-            disabled = self._ask("Page content when *not* shut off:", "run")
+            msg = "Page content to indicate the bot is *not* shut off:"
+            disabled = self._ask(msg, "run")
             args = [("page", page), ("disabled", disabled)]
             self.data["wiki"]["shutoff"] = OrderedDict(args)
 
@@ -305,9 +319,9 @@ class ConfigScript(object):
                            can use certain sensitive commands) and owners
                            (users who can quit the bot and modify its access
                            list), identified by nick, ident, and/or hostname.
-                           Hostname is most secure since it cannot be easily
-                           spoofed. If you have a cloak, it will probably look
-                           like 'wikipedia/Username' or
+                           Hostname is the most secure option since it cannot
+                           be easily spoofed. If you have a cloak, this will
+                           probably look like 'wikipedia/Username' or
                            'unaffiliated/nickname'.""")
             host = self._ask("Your hostname on the IRC frontend:")
             if host:
@@ -329,7 +343,7 @@ class ConfigScript(object):
                 watcher["host"] = self._ask(msg)
                 watcher["port"] = self._ask("Watcher port:", 6667)
             nick = self._ask("Watcher bot's nickname:", frontend.get("nick"))
-            ident = self._ask("Watcher bot's ident:", watcher["nick"].lower())
+            ident = self._ask("Watcher bot's ident:", nick.lower())
             watcher["nick"] = nick
             watcher["ident"] = ident
             question = "Watcher bot's real name (gecos):"
@@ -350,9 +364,9 @@ class ConfigScript(object):
             self._print("""I am now creating a blank 'rules.py' file, which
                            will determine how the bot handles messages received
                            from the IRC watcher. It contains a process()
-                           function that takes a Bot object allowing you to
-                           start tasks and an RC object that holds the message
-                           from the watcher. See the documentation for
+                           function that takes a Bot object (allowing you to
+                           start tasks) and an RC object (storing the message
+                           from the watcher). See the documentation for
                            details.""")
             with open(path.join(self.config.root_dir, "rules.py"), "w") as fp:
                 fp.write(RULES_TEMPLATE)
@@ -367,6 +381,7 @@ class ConfigScript(object):
         if (not self.data["components"]["irc_frontend"] or
                 self._ask_bool(msg, default=False)):
             self.data["commands"]["disable"] = True
+        print
         self._print("""I am now creating the 'commands/' directory, where you
                        can place custom IRC commands and plugins. Creating your
                        own commands is described in the documentation.""")
@@ -382,29 +397,31 @@ class ConfigScript(object):
         self._pause()
 
     def _set_schedule(self):
+        print
         self._print("""The final section of your config file, 'schedule', is a
                        list of bot tasks to be started by the wiki scheduler.
                        Each entry contains cron-like time quantifiers and a
                        list of tasks. For example, the following starts the
                        'foobot' task every hour on the half-hour:""")
-        print "schedule:"
+        print "\x1b[33mschedule:"
         print "    - minute: 30"
         print "      tasks:"
-        print "          - foobot"
+        print "          - foobot\x1b[0m"
         self._print("""The following starts the 'barbot' task with the keyword
                        arguments 'action="baz"' every Monday at 05:00 UTC:""")
-        print "    - week_day: 1"
+        print "\x1b[33m    - week_day: 1"
         print "      hour:     5"
         print "      tasks:"
-        print '          - ["barbot", {"action": "baz"}]'
+        print '          - ["barbot", {"action": "baz"}]\x1b[0m'
         self._print("""The full list of quantifiers is minute, hour, month_day,
                        month, and week_day. See the documentation for more
-                       details.""")
+                       information.""")
         self._pause()
 
     def _save(self):
-        with open(self.config.path, "w") as strm:
-            yaml.dump(self.data, strm, OrderedDumper, default_flow_style=False)
+        with open(self.config.path, "w") as stream:
+            yaml.dump(self.data, stream, OrderedDumper, indent=4,
+                      allow_unicode=True, default_flow_style=False)
 
     def make_new(self):
         """Make a new config file based on the user's input."""

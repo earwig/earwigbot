@@ -52,7 +52,7 @@ class CopyvioMixIn(object):
 
     def __init__(self, site):
         self._search_config = site._search_config
-        self._exclusions_db = self._search_config["exclusions_db"]
+        self._exclusions_db = self._search_config.get("exclusions_db")
         self._opener = build_opener()
         self._opener.addheaders = site._opener.addheaders
 
@@ -137,7 +137,8 @@ class CopyvioMixIn(object):
         :py:exc:`~earwigbot.exceptions.SearchQueryError`, ...) on errors.
         """
         searcher = self._select_search_engine()
-        self._exclusions_db.sync(self.site.name)
+        if self._exclusions_db:
+            self._exclusions_db.sync(self.site.name)
         handled_urls = []
         best_confidence = 0
         best_match = None
@@ -163,8 +164,9 @@ class CopyvioMixIn(object):
             urls = [url for url in urls if url not in handled_urls]
             for url in urls:
                 handled_urls.append(url)
-                if self._exclusions_db.check(self.site.name, url):
-                    continue
+                if self._exclusions_db:
+                    if self._exclusions_db.check(self.site.name, url):
+                        continue
                 conf, chains = self._copyvio_compare_content(article_chain, url)
                 if conf > best_confidence:
                     best_confidence = conf
