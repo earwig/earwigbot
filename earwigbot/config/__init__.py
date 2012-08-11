@@ -117,6 +117,15 @@ class BotConfig(object):
         """Return a nice string representation of the BotConfig."""
         return "<BotConfig at {0}>".format(self.root_dir)
 
+    def _handle_missing_config(self):
+        print "Config file missing or empty:", self._config_path
+        msg = "Would you like to create a config file now? [Y/n] "
+        choice = raw_input(msg)
+        if choice.lower().startswith("n"):
+            raise NoConfigError()
+        else:
+            ConfigScript(self).make_new()
+
     def _load(self):
         """Load data from our JSON config file (config.yml) into self._data."""
         filename = self._config_path
@@ -263,15 +272,11 @@ class BotConfig(object):
         decrypted if they were decrypted earlier.
         """
         if not path.exists(self._config_path):
-            print "Config file not found:", self._config_path
-            choice = raw_input("Would you like to create a config file now? [Y/n] ")
-            if choice.lower().startswith("n"):
-                raise NoConfigError()
-            else:
-                ConfigScript(self).make_new()
-
+            self._handle_missing_config()
         self._load()
         data = self._data
+        if not data:
+            self._handle_missing_config()
         self.components._load(data.get("components", OrderedDict()))
         self.wiki._load(data.get("wiki", OrderedDict()))
         self.irc._load(data.get("irc", OrderedDict()))

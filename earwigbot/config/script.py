@@ -26,6 +26,7 @@ from hashlib import sha256
 from os import chmod, mkdir, path
 import re
 import stat
+import sys
 from textwrap import fill, wrap
 
 try:
@@ -60,6 +61,7 @@ def process(bot, rc):
 class ConfigScript(object):
     """A script to guide a user through the creation of a new config file."""
     WIDTH = 79
+    PROMPT = "\x1b[32m> \x1b[0m"
     BCRYPT_ROUNDS = 12
 
     def __init__(self, config):
@@ -82,24 +84,28 @@ class ConfigScript(object):
     def _print(self, text):
         print fill(re.sub("\s\s+", " ", text), self.WIDTH)
 
+    def _print_no_nl(self, text):
+        sys.stdout.write(fill(re.sub("\s\s+", " ", text), self.WIDTH))
+        sys.stdout.flush()
+
     def _pause(self):
-        raw_input("> Press enter to continue: ")
+        raw_input(self.PROMPT + "Press enter to continue: ")
 
     def _ask(self, text, default=None):
-        text = "> " + text
+        text = self.PROMPT + text
         if default:
-            text += " [{0}]".format(default)
+            text += " \x1b[33m[{0}]\x1b[0m".format(default)
         lines = wrap(re.sub("\s\s+", " ", text), self.WIDTH)
         if len(lines) > 1:
             print "\n".join(lines[:-1])
         return raw_input(lines[-1] + " ") or default
 
     def _ask_bool(self, text, default=True):
-        text = "> " + text
+        text = self.PROMPT + text
         if default:
-            text += " [Y/n]"
+            text += " \x1b[33m[Y/n]\x1b[0m"
         else:
-            text += " [y/N]"
+            text += " \x1b[33m[y/N]\x1b[0m"
         lines = wrap(re.sub("\s\s+", " ", text), self.WIDTH)
         if len(lines) > 1:
             print "\n".join(lines[:-1])
@@ -113,7 +119,7 @@ class ConfigScript(object):
                 return False
 
     def _ask_pass(self, text):
-        password = getpass("> " + text + " ")
+        password = getpass(self.PROMPT + text + " ")
         if self._cipher:
             mod = len(password) % 8
             if mod:
@@ -123,11 +129,11 @@ class ConfigScript(object):
             return password
 
     def _ask_list(self, text):
-        print fill(re.sub("\s\s+", " ", "> " + text), self.WIDTH)
+        print fill(re.sub("\s\s+", " ", self.PROMPT + text), self.WIDTH)
         print "[one item per line; blank line to end]:"
         result = []
         while True:
-            line = raw_input("> ")
+            line = raw_input(self.PROMPT)
             if line:
                 result.append(line)
             else:
@@ -144,8 +150,9 @@ class ConfigScript(object):
                        the bot may be annoying.""")
         if self._ask_bool("Encrypt stored passwords?"):
             self.data["metadata"]["encryptPasswords"] = True
-            key = getpass("> Enter an encryption key: ")
-            print "Running {0} rounds of bcrypt...".format(self.BCRYPT_ROUNDS),             # STDOUT
+            key = getpass(self.PROMPT + "Enter an encryption key: ")
+            msg = "Running {0} rounds of bcrypt...".format(self.BCRYPT_ROUNDS)
+            self._print_no_nl(msg)
             signature = bcrypt.hashpw(key, bcrypt.gensalt(self.BCRYPT_ROUNDS))
             self.data["metadata"]["signature"] = signature
             self._cipher = Blowfish.new(sha256(key).digest())
@@ -153,6 +160,7 @@ class ConfigScript(object):
         else:
             self.data["metadata"]["encryptPasswords"] = False
 
+        print
         self._print("""The bot can temporarily store its logs in the logs/
                        subdirectory. Error logs are kept for a month whereas
                        normal logs are kept for a week. If you disable this,
@@ -186,11 +194,12 @@ class ConfigScript(object):
 
     def _login(self, kwargs):
         self.config.wiki._load(self.data["wiki"])
-        print "Trying to login to the site...",
+        self._print_no_nl("Trying to connect to the site...")
         try:
             site = self.config.bot.wiki.add_site(**kwargs)
-        except exceptions.APIError:
+        except exceptions.APIError as exc:
             print " API error!"
+            print "\x1b[31m" + exc.message + "\x1b[0m"
             question = "Would you like to re-enter the site information?"
             if self._ask_bool(question):
                 return self._set_wiki()
@@ -198,8 +207,9 @@ class ConfigScript(object):
             if self._ask_bool(question, default=False):
                 raise exceptions.NoConfigError()
             return self._set_wiki()
-        except exceptions.LoginError:
+        except exceptions.LoginError as exc:
             print " login error!"
+            print "\x1b[31m" + exc.message + "\x1b[0m"
             question = "Would you like to re-enter your login information?"
             if self._ask_bool(question):
                 self.data["wiki"]["username"] = self._ask("Bot username:")
@@ -210,6 +220,13 @@ class ConfigScript(object):
                 return self._set_wiki()
             self._print("""Moving on. You can modify the login information
                            stored in the bot's config in the future.""")
+            password = self.data["wiki"]["password"]
+            self.data["wiki"]["password"] = None  # Clear so we don't login
+            self.config.wiki._load(self.data["wiki"])
+            self._print_no_nl("Trying to connect to the site...")
+            site = self.config.bot.wiki.add_site(**kwargs)
+            print " success."
+            self.data["wiki"]["password"] = password  # Reset original value
         else:
             print " success."
         return site
@@ -252,6 +269,7 @@ class ConfigScript(object):
         self.data["wiki"]["shutoff"] = {}
         msg = "Would you like to enable an automatic shutoff page for the bot?"
         if self._ask_bool(msg):
+            print
             self._print("""The page title can contain two wildcards: $1 will be
                            substituted with the bot's username, and $2 with the
                            current task number. This can be used to implement a
@@ -282,6 +300,7 @@ class ConfigScript(object):
                 frontend["nickservPassword"] = ns_pass
             chan_question = "Frontend channels to join by default:"
             frontend["channels"] = self._ask_list(chan_question)
+            print
             self._print("""The bot keeps a database of its admins (users who
                            can use certain sensitive commands) and owners
                            (users who can quit the bot and modify its access
@@ -327,6 +346,7 @@ class ConfigScript(object):
             else:
                 chan_question = "Watcher channels to join by default:"
                 watcher["channels"] = self._ask_list(chan_question)
+            print
             self._print("""I am now creating a blank 'rules.py' file, which
                            will determine how the bot handles messages received
                            from the IRC watcher. It contains a process()
