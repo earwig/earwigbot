@@ -277,15 +277,16 @@ class BotConfig(object):
         if not path.exists(self._config_path):
             self._handle_missing_config()
         self._load()
-        data = self._data
-        if not data:
+        if not self._data:
             self._handle_missing_config()
-        self.components._load(data.get("components", OrderedDict()))
-        self.wiki._load(data.get("wiki", OrderedDict()))
-        self.irc._load(data.get("irc", OrderedDict()))
-        self.commands._load(data.get("commands", OrderedDict()))
-        self.tasks._load(data.get("tasks", OrderedDict()))
-        self.metadata._load(data.get("metadata", OrderedDict()))
+            self._load()
+
+        self.components._load(self._data.get("components", OrderedDict()))
+        self.wiki._load(self._data.get("wiki", OrderedDict()))
+        self.irc._load(self._data.get("irc", OrderedDict()))
+        self.commands._load(self._data.get("commands", OrderedDict()))
+        self.tasks._load(self._data.get("tasks", OrderedDict()))
+        self.metadata._load(self._data.get("metadata", OrderedDict()))
 
         self._setup_logging()
         if self.is_encrypted():
