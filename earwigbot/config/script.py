@@ -22,10 +22,16 @@
 
 from collections import OrderedDict
 from getpass import getpass
+from hashlib import sha256
 from os import chmod, mkdir, path
 import re
 import stat
 from textwrap import fill, wrap
+
+try:
+    from Crypto.Cipher import Blowfish
+except ImportError:
+    Blowfish = None
 
 try:
     import bcrypt
@@ -42,7 +48,7 @@ from earwigbot.config.ordered_yaml import OrderedDumper
 
 __all__ = ["ConfigScript"]
 
-RULES_TEMPLATE = """"# -*- coding: utf-8  -*-
+RULES_TEMPLATE = """# -*- coding: utf-8  -*-
 
 def process(bot, rc):
     \"\"\"Given a Bot() object and an RC() object, return a list of channels
@@ -58,7 +64,7 @@ class ConfigScript(object):
 
     def __init__(self, config):
         self.config = config
-        self.data = OrderedDict(
+        self.data = OrderedDict([
             ("metadata", OrderedDict()),
             ("components", OrderedDict()),
             ("wiki", OrderedDict()),
@@ -66,11 +72,12 @@ class ConfigScript(object):
             ("commands", OrderedDict()),
             ("tasks", OrderedDict()),
             ("schedule", [])
-        )
+        ])
 
-        self.wmf = False
-        self.proj = None
-        self.lang = None
+        self._cipher = None
+        self._wmf = False
+        self._proj = None
+        self._lang = None
 
     def _print(self, text):
         print fill(re.sub("\s\s+", " ", text), self.WIDTH)
@@ -105,6 +112,16 @@ class ConfigScript(object):
             if answer.startswith("n"):
                 return False
 
+    def _ask_pass(self, text):
+        password = getpass("> " + text + " ")
+        if self._cipher:
+            mod = len(password) % 8
+            if mod:
+                password = password.ljust(len(password) + (8 - mod), "\x00")
+            return self._cipher.encrypt(password).encode("hex")
+        else:
+            return password
+
     def _ask_list(self, text):
         print fill(re.sub("\s\s+", " ", "> " + text), self.WIDTH)
         print "[one item per line; blank line to end]:"
@@ -118,7 +135,7 @@ class ConfigScript(object):
 
     def _set_metadata(self):
         print
-        self.data["metadata"] = OrderedDict(("version", 1))
+        self.data["metadata"] = OrderedDict([("version", 1)])
         self._print("""I can encrypt passwords stored in your config file in
                        addition to preventing other users on your system from
                        reading the file. Encryption is recommended is the bot
@@ -128,9 +145,10 @@ class ConfigScript(object):
         if self._ask_bool("Encrypt stored passwords?"):
             self.data["metadata"]["encryptPasswords"] = True
             key = getpass("> Enter an encryption key: ")
-            print "Running {0} rounds of bcrypt...".format(self.BCRYPT_ROUNDS),
+            print "Running {0} rounds of bcrypt...".format(self.BCRYPT_ROUNDS),             # STDOUT
             signature = bcrypt.hashpw(key, bcrypt.gensalt(self.BCRYPT_ROUNDS))
             self.data["metadata"]["signature"] = signature
+            self._cipher = Blowfish.new(sha256(key).digest())
             print " done."
         else:
             self.data["metadata"]["encryptPasswords"] = False
@@ -185,7 +203,7 @@ class ConfigScript(object):
             question = "Would you like to re-enter your login information?"
             if self._ask_bool(question):
                 self.data["wiki"]["username"] = self._ask("Bot username:")
-                self.data["wiki"]["password"] = getpass("> Bot password: ")
+                self.data["wiki"]["password"] = self._ask_pass("Bot password:")
                 return self._login(kwargs)
             question = "Would you like to re-enter the site information?"
             if self._ask_bool(question):
@@ -198,13 +216,13 @@ class ConfigScript(object):
 
     def _set_wiki(self):
         print
-        self.wmf = self._ask_bool("""Will this bot run on Wikimedia Foundation
-                                     wikis, like Wikipedia?""")
-        if self.wmf:
+        self._wmf = self._ask_bool("""Will this bot run on Wikimedia Foundation
+                                      wikis, like Wikipedia?""")
+        if self._wmf:
             msg = "Site project (e.g. 'wikipedia', 'wiktionary', 'wikimedia'):"
-            self.proj = project = self._ask(msg, default="wikipedia").lower()
+            self._proj = project = self._ask(msg, default="wikipedia").lower()
             msg = "Site language code (e.g. 'en', 'fr', 'commons'):"
-            self.lang = lang = self._ask(msg, default="en").lower()
+            self._lang = lang = self._ask(msg, default="en").lower()
             kwargs = {"project": project, "lang": lang}
         else:
             msg = "Site base URL, without the script path and trailing slash;"
@@ -214,7 +232,7 @@ class ConfigScript(object):
             kwargs = {"base_url": url, "script_path": script}
 
         self.data["wiki"]["username"] = self._ask("Bot username:")
-        self.data["wiki"]["password"] = getpass("> Bot password: ")
+        self.data["wiki"]["password"] = self._ask_pass("Bot password:")
         self.data["wiki"]["userAgent"] = "EarwigBot/$1 (Python/$2; https://github.com/earwig/earwigbot)"
         self.data["wiki"]["summary"] = "([[WP:BOT|Bot]]): $2"
         self.data["wiki"]["useHTTPS"] = True
@@ -224,11 +242,11 @@ class ConfigScript(object):
         self.data["wiki"]["defaultSite"] = self._login(kwargs).name
         self.data["wiki"]["sql"] = {}
 
-        if self.wmf:
+        if self._wmf:
             msg = "Will this bot run from the Wikimedia Toolserver?"
             toolserver = self._ask_bool(msg, default=False)
             if toolserver:
-                args = (("host", "$1-p.rrdb.toolserver.org"), ("db", "$1_p"))
+                args = [("host", "$1-p.rrdb.toolserver.org"), ("db", "$1_p")]
                 self.data["wiki"]["sql"] = OrderedDict(args)
 
         self.data["wiki"]["shutoff"] = {}
@@ -240,7 +258,7 @@ class ConfigScript(object):
                            separate shutoff page for each task.""")
             page = self._ask("Page title:", default="User:$1/Shutoff")
             disabled = self._ask("Page content when *not* shut off:", "run")
-            args = (("page", page), ("disabled", disabled))
+            args = [("page", page), ("disabled", disabled)]
             self.data["wiki"]["shutoff"] = OrderedDict(args)
 
         self.data["wiki"]["search"] = {}
@@ -258,9 +276,10 @@ class ConfigScript(object):
             question = "Frontend bot's real name (gecos):"
             frontend["realname"] = self._ask(question)
             if self._ask_bool("Should the bot identify to NickServ?"):
-                frontend["nickservUsername"] = self._ask("NickServ username:",
-                                                         frontend["nick"])
-                frontend["nickservPassword"] = getpass("> Nickserv password: ")
+                ns_user = self._ask("NickServ username:", frontend["nick"])
+                ns_pass = self._ask_pass("Nickserv password:")
+                frontend["nickservUsername"] = ns_user
+                frontend["nickservPassword"] = ns_pass
             chan_question = "Frontend channels to join by default:"
             frontend["channels"] = self._ask_list(chan_question)
             self._print("""The bot keeps a database of its admins (users who
@@ -283,26 +302,28 @@ class ConfigScript(object):
         if self.data["components"]["irc_watcher"]:
             print
             watcher = self.data["irc"]["watcher"] = OrderedDict()
-            if self.wmf:
+            if self._wmf:
                 watcher["host"] = "irc.wikimedia.org"
                 watcher["port"] = 6667
             else:
                 msg = "Hostname of the watcher's IRC server, without 'irc://':"
                 watcher["host"] = self._ask(msg)
                 watcher["port"] = self._ask("Watcher port:", 6667)
-            watcher["nick"] = self._ask("Watcher bot's nickname:",
-                                        frontend.get("nick"))
-            watcher["ident"] = self._ask("Watcher bot's ident:",
-                                         watcher["nick"].lower())
+            nick = self._ask("Watcher bot's nickname:", frontend.get("nick"))
+            ident = self._ask("Watcher bot's ident:", watcher["nick"].lower())
+            watcher["nick"] = nick
+            watcher["ident"] = ident
             question = "Watcher bot's real name (gecos):"
             watcher["realname"] = self._ask(question, frontend.get("realname"))
             watcher_ns = "Should the bot identify to NickServ?"
-            if not self.wmf and self._ask_bool(watcher_ns):
-                watcher["nickservUsername"] = self._ask("NickServ username:",
-                                                        watcher["nick"])
-                watcher["nickservPassword"] = getpass("> Nickserv password: ")
-            if self.wmf:
-                watcher["channels"] = ["#{0}.{1}".format(self.lang, self.proj)]
+            if not self._wmf and self._ask_bool(watcher_ns):
+                ns_user = self._ask("NickServ username:", watcher["nick"])
+                ns_pass = self._ask_pass("Nickserv password:")
+                watcher["nickservUsername"] = ns_user
+                watcher["nickservPassword"] = ns_pass
+            if self._wmf:
+                chan = "#{0}.{1}".format(self._lang, self._proj)
+                watcher["channels"] = [chan]
             else:
                 chan_question = "Watcher channels to join by default:"
                 watcher["channels"] = self._ask_list(chan_question)
@@ -383,6 +404,7 @@ class ConfigScript(object):
         self._set_tasks()
         if components["wiki_scheduler"]:
             self._set_schedule()
+        print
         self._print("""I am now saving config.yml with your settings. YAML is a
                        relatively straightforward format and you should be able
                        to update these settings in the future when necessary.

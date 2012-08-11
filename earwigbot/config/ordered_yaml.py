@@ -75,7 +75,7 @@ class OrderedLoader(yaml.Loader):
 
 
 class OrderedDumper(yaml.Dumper):
-    """A YAML dumper that dumps mappings into ordered dictionaries."""
+    """A YAML dumper that dumps ordered dictionaries into mappings."""
 
     def __init__(self, *args, **kwargs):
         super(OrderedDumper, self).__init__(*args, **kwargs)
