@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from collections import OrderedDict
 from getpass import getpass
 from hashlib import sha256
 import logging
@@ -44,6 +45,7 @@ except ImportError:
 
 from earwigbot.config.formatter import BotFormatter
 from earwigbot.config.node import ConfigNode
+from earwigbot.config.ordered_yaml import OrderedLoader
 from earwigbot.config.permissions import PermissionsDB
 from earwigbot.config.script import ConfigScript
 from earwigbot.exceptions import NoConfigError
@@ -120,7 +122,7 @@ class BotConfig(object):
         filename = self._config_path
         with open(filename, 'r') as fp:
             try:
-                self._data = yaml.load(fp)
+                self._data = yaml.load(fp, OrderedLoader)
             except yaml.YAMLError:
                 print "Error parsing config file {0}:".format(filename)
                 raise
@@ -270,12 +272,12 @@ class BotConfig(object):
 
         self._load()
         data = self._data
-        self.components._load(data.get("components", {}))
-        self.wiki._load(data.get("wiki", {}))
-        self.irc._load(data.get("irc", {}))
-        self.commands._load(data.get("commands", {}))
-        self.tasks._load(data.get("tasks", {}))
-        self.metadata._load(data.get("metadata", {}))
+        self.components._load(data.get("components", OrderedDict()))
+        self.wiki._load(data.get("wiki", OrderedDict()))
+        self.irc._load(data.get("irc", OrderedDict()))
+        self.commands._load(data.get("commands", OrderedDict()))
+        self.tasks._load(data.get("tasks", OrderedDict()))
+        self.metadata._load(data.get("metadata", OrderedDict()))
 
         self._setup_logging()
         if self.is_encrypted():

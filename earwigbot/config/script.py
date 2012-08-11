@@ -38,6 +38,7 @@ except ImportError:
     yaml = None
 
 from earwigbot import exceptions
+from earwigbot.config.ordered_yaml import OrderedDumper
 
 __all__ = ["ConfigScript"]
 
@@ -272,9 +273,10 @@ class ConfigScript(object):
                            'unaffiliated/nickname'.""")
             host = self._ask("Your hostname on the IRC frontend:")
             if host:
-                self.config._permissions.load()
-                self.config._permissions.add_owner(host=host)
-                self.config._permissions.add_admin(host=host)
+                permdb = self.config._permissions
+                permdb.load()
+                permdb.add_owner(host=host)
+                permdb.add_admin(host=host)
         else:
             frontend = {}
 
@@ -360,8 +362,8 @@ class ConfigScript(object):
         self._pause()
 
     def _save(self):
-        with open(self.config.path, "w") as stream:
-            yaml.dump(self.data, stream=stream, default_flow_style=False)
+        with open(self.config.path, "w") as strm:
+            yaml.dump(self.data, strm, OrderedDumper, default_flow_style=False)
 
     def make_new(self):
         """Make a new config file based on the user's input."""
