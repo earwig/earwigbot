@@ -94,7 +94,7 @@ class Watcher(IRCConnection):
         except ImportError:
             return
         try:
-            module = imp.load_module(name, f, path, desc)
+            module = imp.load_module("rules", f, path, desc)
         except Exception:
             return
         finally:
