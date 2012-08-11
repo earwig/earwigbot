@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from collections import OrderedDict
 from cookielib import LWPCookieJar, LoadError
 import errno
 from os import chmod, path
@@ -192,7 +193,7 @@ class SitesDB(object):
         maxlag = config.wiki.get("maxlag")
         wait_between_queries = config.wiki.get("waitTime", 3)
         logger = self._logger.getChild(name)
-        search_config = config.wiki.get("search", {}).copy()
+        search_config = config.wiki.get("search", OrderedDict()).copy()
 
         if user_agent:
             user_agent = user_agent.replace("$1", __version__)
@@ -204,7 +205,7 @@ class SitesDB(object):
             search_config["exclusions_db"] = self._exclusions_db
 
         if not sql:
-            sql = config.wiki.get("sql", {}).copy()
+            sql = config.wiki.get("sql", OrderedDict()).copy()
             for key, value in sql.iteritems():
                 if isinstance(value, basestring) and "$1" in value:
                     sql[key] = value.replace("$1", name)
@@ -386,7 +387,7 @@ class SitesDB(object):
         config = self.config
         login = (config.wiki.get("username"), config.wiki.get("password"))
         user_agent = config.wiki.get("userAgent")
-        use_https = config.wiki.get("useHTTPS", False)
+        use_https = config.wiki.get("useHTTPS", True)
         assert_edit = config.wiki.get("assert")
         maxlag = config.wiki.get("maxlag")
         wait_between_queries = config.wiki.get("waitTime", 3)

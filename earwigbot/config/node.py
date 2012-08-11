@@ -20,11 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from collections import OrderedDict
+
 __all__ = ["ConfigNode"]
 
 class ConfigNode(object):
     def __init__(self):
-        self._data = {}
+        self._data = OrderedDict()
 
     def __repr__(self):
         return self._data
@@ -99,4 +101,4 @@ class ConfigNode(object):
         return self._data.itervalues()
 
     def iteritems(self):
-        return self.__dict__.iteritems()
+        return self._data.iteritems()

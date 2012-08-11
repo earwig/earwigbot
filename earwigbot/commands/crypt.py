@@ -69,6 +69,9 @@ class Crypt(Command):
             cipher = Blowfish.new(hashlib.sha256(key).digest())
             try:
                 if data.command == "encrypt":
+                    if len(text) % 8:
+                        pad = 8 - len(text) % 8
+                        text = text.ljust(len(text) + pad, "\x00")
                     self.reply(data, cipher.encrypt(text).encode("hex"))
                 else:
                     self.reply(data, cipher.decrypt(text.decode("hex")))

@@ -20,11 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from collections import OrderedDict
 from getpass import getpass
 from hashlib import sha256
 import logging
 import logging.handlers
 from os import mkdir, path
+import stat
 
 try:
     from Crypto.Cipher import Blowfish
@@ -43,7 +45,9 @@ except ImportError:
 
 from earwigbot.config.formatter import BotFormatter
 from earwigbot.config.node import ConfigNode
+from earwigbot.config.ordered_yaml import OrderedLoader
 from earwigbot.config.permissions import PermissionsDB
+from earwigbot.config.script import ConfigScript
 from earwigbot.exceptions import NoConfigError
 
 __all__ = ["BotConfig"]
@@ -75,7 +79,8 @@ class BotConfig(object):
     - :py:meth:`decrypt`: decrypts an object in the config tree
     """
 
-    def __init__(self, root_dir, level):
+    def __init__(self, bot, root_dir, level):
+        self._bot = bot
         self._root_dir = root_dir
         self._logging_level = level
         self._config_path = path.join(self.root_dir, "config.yml")
@@ -112,12 +117,21 @@ class BotConfig(object):
         """Return a nice string representation of the BotConfig."""
         return "<BotConfig at {0}>".format(self.root_dir)
 
+    def _handle_missing_config(self):
+        print "Config file missing or empty:", self._config_path
+        msg = "Would you like to create a config file now? [Y/n] "
+        choice = raw_input(msg)
+        if choice.lower().startswith("n"):
+            raise NoConfigError()
+        else:
+            ConfigScript(self).make_new()
+
     def _load(self):
         """Load data from our JSON config file (config.yml) into self._data."""
         filename = self._config_path
         with open(filename, 'r') as fp:
             try:
-                self._data = yaml.load(fp)
+                self._data = yaml.load(fp, OrderedLoader)
             except yaml.YAMLError:
                 print "Error parsing config file {0}:".format(filename)
                 raise
@@ -137,7 +151,7 @@ class BotConfig(object):
 
             if not path.isdir(log_dir):
                 if not path.exists(log_dir):
-                    mkdir(log_dir, 0700)
+                    mkdir(log_dir, stat.S_IWUSR|stat.S_IRUSR|stat.S_IXUSR)
                 else:
                     msg = "log_dir ({0}) exists but is not a directory!"
                     print msg.format(log_dir)
@@ -168,19 +182,10 @@ class BotConfig(object):
             print "Error decrypting passwords:"
             raise
 
-    def _make_new(self):
-        """Make a new config file based on the user's input."""
-        #m = "Would you like to encrypt passwords stored in config.yml? [y/n] "
-        #encrypt = raw_input(m)
-        #if encrypt.lower().startswith("y"):
-        #    is_encrypted = True
-        #else:
-        #    is_encrypted = False
-        raise NotImplementedError()
-        # yaml.dumps() config.yml file (self._config_path)
-        # Create root_dir/, root_dir/commands/, root_dir/tasks/
-        # Give a reasonable message after config has been created regarding
-        # what to do next...
+    @property
+    def bot(self):
+        """The config's Bot object."""
+        return self._bot
 
     @property
     def root_dir(self):
@@ -267,21 +272,17 @@ class BotConfig(object):
         decrypted if they were decrypted earlier.
         """
         if not path.exists(self._config_path):
-            print "Config file not found:", self._config_path
-            choice = raw_input("Would you like to create a config file now? [y/n] ")
-            if choice.lower().startswith("y"):
-                self._make_new()
-            else:
-                raise NoConfigError()
-
+            self._handle_missing_config()
         self._load()
         data = self._data
-        self.components._load(data.get("components", {}))
-        self.wiki._load(data.get("wiki", {}))
-        self.irc._load(data.get("irc", {}))
-        self.commands._load(data.get("commands", {}))
-        self.tasks._load(data.get("tasks", {}))
-        self.metadata._load(data.get("metadata", {}))
+        if not data:
+            self._handle_missing_config()
+        self.components._load(data.get("components", OrderedDict()))
+        self.wiki._load(data.get("wiki", OrderedDict()))
+        self.irc._load(data.get("irc", OrderedDict()))
+        self.commands._load(data.get("commands", OrderedDict()))
+        self.tasks._load(data.get("tasks", OrderedDict()))
+        self.metadata._load(data.get("metadata", OrderedDict()))
 
         self._setup_logging()
         if self.is_encrypted():

@@ -149,11 +149,15 @@ class _ResourceManager(object):
             builtin_dir = path.join(path.dirname(__file__), name)
             plugins_dir = path.join(self.bot.config.root_dir, name)
             if getattr(self.bot.config, name).get("disable") is True:
-                log = "Skipping disabled builtins directory {0}"
+                log = "Skipping disabled builtins directory: {0}"
                 self.logger.debug(log.format(builtin_dir))
             else:
                 self._load_directory(builtin_dir)  # Built-in resources
-            self._load_directory(plugins_dir)  # Custom resources, aka plugins
+            if path.exists(plugins_dir) and path.isdir(plugins_dir):
+                self._load_directory(plugins_dir)  # Custom resources, plugins
+            else:
+                log = "Skipping nonexistent plugins directory: {0}"
+                self.logger.debug(log.format(plugins_dir))
 
         if self._resources:
             msg = "Loaded {0} {1}: {2}"
