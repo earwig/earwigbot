@@ -15,13 +15,6 @@ earwigbot Package
     :members:
     :undoc-members:
 
-:mod:`config` Module
---------------------
-
-.. automodule:: earwigbot.config
-    :members:
-    :undoc-members:
-
 :mod:`exceptions` Module
 ------------------------
 
@@ -29,6 +22,13 @@ earwigbot Package
     :members:
     :undoc-members:
     :show-inheritance:
+
+:mod:`lazy` Module
+------------------
+
+.. automodule:: earwigbot.lazy
+    :members:
+    :undoc-members:
 
 :mod:`managers` Module
 ----------------------
@@ -51,6 +51,7 @@ Subpackages
 .. toctree::
 
     earwigbot.commands
+    earwigbot.config
     earwigbot.irc
     earwigbot.tasks
     earwigbot.wiki

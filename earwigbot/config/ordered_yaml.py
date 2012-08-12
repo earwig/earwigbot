@@ -22,8 +22,10 @@
 
 """
 Based on:
+
  * https://gist.github.com/844388
  * http://pyyaml.org/attachment/ticket/161/use_ordered_dict.py
+
 with modifications.
 """
 
