@@ -707,13 +707,10 @@ class Page(CopyvioMixIn):
         """Parse the page content for templates, links, etc.
 
         Actual parsing is handled by :py:mod:`mwparserfromhell`. Raises
-        :py:exc:`ImportError` if :py:mod:`mwparserfromhell` isn't installed,
-        and :py:exc:`~earwigbot.exceptions.InvalidPageError` or
+        :py:exc:`~earwigbot.exceptions.InvalidPageError` or
         :py:exc:`~earwigbot.exceptions.PageNotFoundError` if the page name is
         invalid or the page does not exist, respectively.
         """
-        if not mwparserfromhell:
-            raise ImportError("mwparserfromhell")
         return mwparserfromhell.parse(self.get())
 
     def edit(self, text, summary, minor=False, bot=True, force=False):
@@ -765,7 +762,7 @@ class Page(CopyvioMixIn):
         ``{{bots|optout=orfud,norationale,replaceable}}``.
         """
         def parse_param(template, param):
-            value = template.get_param(param).value
+            value = template.get(param).value
             return [item.strip().lower() for item in value.split(",")]
 
         if not username:
@@ -776,7 +773,7 @@ class Page(CopyvioMixIn):
         optouts = [optout.lower() for optout in optouts] if optouts else []
 
         r_bots = "\{\{\s*(no)?bots\s*(\||\}\})"
-        filter = self.parse().ifilter_templates(matches=r_bots, recursive=True)
+        filter = self.parse().ifilter_templates(recursive=True, matches=r_bots)
         for template in filter:
             if template.has_param("deny"):
                 denies = parse_param(template, "deny")
