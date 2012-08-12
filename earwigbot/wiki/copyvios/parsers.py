@@ -22,20 +22,9 @@
 
 from os import path
 
-try:
-    import bs4
-except ImportError:
-    bs4 = None
-
-try:
-    import mwparserfromhell
-except ImportError:
-    mwparserfromhell = None
-
-try:
-    import nltk
-except ImportError:
-    nltk = None
+import bs4
+import mwparserfromhell
+import nltk
 
 __all__ = ["BaseTextParser", "ArticleTextParser", "HTMLTextParser"]
 

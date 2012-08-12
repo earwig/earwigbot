@@ -51,12 +51,18 @@ if not __release__:
     finally:
         del _get_git_commit_id
 
-from earwigbot import bot
-from earwigbot import commands
-from earwigbot import config
-from earwigbot import exceptions
-from earwigbot import irc
-from earwigbot import managers
-from earwigbot import tasks
-from earwigbot import util
-from earwigbot import wiki
+from earwigbot import lazy
+
+importer = lazy.LazyImporter()
+
+bot = importer.new("earwigbot.bot")
+commands = importer.new("earwigbot.commands")
+config = importer.new("earwigbot.config")
+exceptions = importer.new("earwigbot.exceptions")
+irc = importer.new("earwigbot.irc")
+managers = importer.new("earwigbot.managers")
+tasks = importer.new("earwigbot.tasks")
+util = importer.new("earwigbot.util")
+wiki = importer.new("earwigbot.wiki")
+
+del importer

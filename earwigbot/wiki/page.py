@@ -26,10 +26,7 @@ import re
 from time import gmtime, strftime
 from urllib import quote
 
-try:
-    import mwparserfromhell
-except ImportError:
-    mwparserfromhell = None
+import mwparserfromhell
 
 from earwigbot import exceptions
 from earwigbot.wiki.copyvios import CopyvioMixIn

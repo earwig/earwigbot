@@ -23,10 +23,7 @@
 from json import loads
 from urllib import quote_plus, urlencode
 
-try:
-    import oauth2 as oauth
-except ImportError:
-    oauth = None
+import oauth2 as oauth
 
 from earwigbot.exceptions import SearchQueryError
 

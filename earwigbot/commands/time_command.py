@@ -24,10 +24,7 @@ from datetime import datetime
 from math import floor
 from time import time
 
-try:
-    import pytz
-except ImportError:
-    pytz = None
+import pytz
 
 from earwigbot.commands import Command
 

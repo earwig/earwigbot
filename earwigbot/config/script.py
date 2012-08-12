@@ -29,20 +29,9 @@ import stat
 import sys
 from textwrap import fill, wrap
 
-try:
-    from Crypto.Cipher import Blowfish
-except ImportError:
-    Blowfish = None
-
-try:
-    import bcrypt
-except ImportError:
-    bcrypt = None
-
-try:
-    import yaml
-except ImportError:
-    yaml = None
+from Crypto.Cipher import Blowfish
+import bcrypt
+import yaml
 
 from earwigbot import exceptions
 from earwigbot.config.ordered_yaml import OrderedDumper
@@ -271,7 +260,7 @@ class ConfigScript(object):
         self.data["wiki"]["useHTTPS"] = True
         self.data["wiki"]["assert"] = "user"
         self.data["wiki"]["maxlag"] = 10
-        self.data["wiki"]["waitTime"] = 3
+        self.data["wiki"]["waitTime"] = 2
         self.data["wiki"]["defaultSite"] = self._login(kwargs).name
         self.data["wiki"]["sql"] = {}
 

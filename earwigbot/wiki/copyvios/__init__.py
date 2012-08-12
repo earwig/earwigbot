@@ -26,10 +26,7 @@ from StringIO import StringIO
 from time import sleep, time
 from urllib2 import build_opener, URLError
 
-try:
-    import oauth2 as oauth
-except ImportError:
-    oauth = None
+import oauth2 as oauth
 
 from earwigbot import exceptions
 from earwigbot.wiki.copyvios.markov import MarkovChain, MarkovChainIntersection

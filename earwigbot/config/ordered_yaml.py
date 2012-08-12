@@ -29,15 +29,11 @@ with modifications.
 
 from collections import OrderedDict
 
-try:
-    import yaml
-    from yaml import Loader, SafeDumper
-except ImportError:
-    yaml = Loader = SafeDumper = None
+import yaml
 
 __all__ = ["OrderedLoader", "OrderedDumper"]
 
-class OrderedLoader(Loader):
+class OrderedLoader(yaml.Loader):
     """A YAML loader that loads mappings into ordered dictionaries."""
 
     def __init__(self, *args, **kwargs):
@@ -75,7 +71,7 @@ class OrderedLoader(Loader):
         return mapping
 
 
-class OrderedDumper(SafeDumper):
+class OrderedDumper(yaml.SafeDumper):
     """A YAML dumper that dumps ordered dictionaries into mappings."""
 
     def __init__(self, *args, **kwargs):

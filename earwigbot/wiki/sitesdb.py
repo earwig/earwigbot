@@ -191,7 +191,7 @@ class SitesDB(object):
         use_https = config.wiki.get("useHTTPS", False)
         assert_edit = config.wiki.get("assert")
         maxlag = config.wiki.get("maxlag")
-        wait_between_queries = config.wiki.get("waitTime", 3)
+        wait_between_queries = config.wiki.get("waitTime", 2)
         logger = self._logger.getChild(name)
         search_config = config.wiki.get("search", OrderedDict()).copy()
 
@@ -390,7 +390,7 @@ class SitesDB(object):
         use_https = config.wiki.get("useHTTPS", True)
         assert_edit = config.wiki.get("assert")
         maxlag = config.wiki.get("maxlag")
-        wait_between_queries = config.wiki.get("waitTime", 3)
+        wait_between_queries = config.wiki.get("waitTime", 2)
 
         if user_agent:
             user_agent = user_agent.replace("$1", __version__)

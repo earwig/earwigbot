@@ -34,14 +34,14 @@ dependencies = [
     "GitPython >= 0.3.2.RC1",  # Interfacing with git for !git and __version__
     "PyYAML >= 3.10",  # Parsing config files
     "beautifulsoup4 >= 4.1.1",  # Parsing/scraping HTML for copyvios
-    "lxml >= 2.3.4",  # Faster parser for BeautifulSoup
+    "lxml >= 2.3.5",  # Faster parser for BeautifulSoup
     "mwparserfromhell >= 0.1",  # Parsing wikicode for manipulation
     "nltk >= 2.0.2",  # Parsing sentences to split article content for copyvios
-    "oursql >= 0.9.3",  # Interfacing with MediaWiki databases
     "oauth2 >= 1.5.211",  # Interfacing with Yahoo! BOSS Search for copyvios
+    "oursql >= 0.9.3.1",  # Interfacing with MediaWiki databases
     "py-bcrypt >= 0.2",  # Hashing the bot key in the config file
-    "pycrypto >= 2.5",  # Storing bot passwords and keys in the config file
-    "pytz >= 2012c",  # Handling timezones for the !time IRC command
+    "pycrypto >= 2.6",  # Storing bot passwords and keys in the config file
+    "pytz >= 2012d",  # Handling timezones for the !time IRC command
 ]
 
 with open("README.rst") as fp:

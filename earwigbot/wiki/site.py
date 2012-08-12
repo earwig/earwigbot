@@ -32,10 +32,7 @@ from urllib import quote_plus, unquote_plus
 from urllib2 import build_opener, HTTPCookieProcessor, URLError
 from urlparse import urlparse
 
-try:
-    import oursql
-except ImportError:
-    oursql = None
+import oursql
 
 from earwigbot import exceptions
 from earwigbot.wiki import constants
@@ -90,7 +87,7 @@ class Site(object):
                  article_path=None, script_path=None, sql=None,
                  namespaces=None, login=(None, None), cookiejar=None,
                  user_agent=None, use_https=False, assert_edit=None,
-                 maxlag=None, wait_between_queries=3, logger=None,
+                 maxlag=None, wait_between_queries=2, logger=None,
                  search_config=None):
         """Constructor for new Site instances.
 

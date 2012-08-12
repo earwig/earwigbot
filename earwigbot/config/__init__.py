@@ -28,20 +28,9 @@ import logging.handlers
 from os import mkdir, path
 import stat
 
-try:
-    from Crypto.Cipher import Blowfish
-except ImportError:
-    Blowfish = None
-
-try:
-    import bcrypt
-except ImportError:
-    bcrypt = None
-
-try:
-    import yaml
-except ImportError:
-    yaml = None
+from Crypto.Cipher import Blowfish
+import bcrypt
+import yaml
 
 from earwigbot.config.formatter import BotFormatter
 from earwigbot.config.node import ConfigNode
