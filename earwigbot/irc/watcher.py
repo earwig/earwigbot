@@ -121,5 +121,9 @@ class Watcher(IRCConnection):
             frontend = self.bot.frontend
             if chans and frontend and not frontend.is_stopped():
                 pretty = rc.prettify()
+                if len(pretty) > 400:
+                    msg = pretty[:397] + "..."
+                else:
+                    msg = pretty[:400]
                 for chan in chans:
-                    frontend.say(chan, pretty[:400])
+                    frontend.say(chan, msg)

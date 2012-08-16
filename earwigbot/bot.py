@@ -150,9 +150,10 @@ class Bot(object):
         advance warning of their forced shutdown.
         """
         tasks = []
-        non_tasks = self.config.components.keys() + ["MainThread", "reminder"]
+        component_names = self.config.components.keys()
+        skips = component_names + ["MainThread", "reminder", "irc:quit"]
         for thread in enumerate_threads():
-            if thread.name not in non_tasks and thread.is_alive():
+            if thread.name not in skips and thread.is_alive():
                 tasks.append(thread.name)
         if tasks:
             log = "The following commands or tasks will be killed: {0}"
