@@ -214,15 +214,8 @@ class Page(CopyvioMixIn):
 
         res = result["query"]["pages"].values()[0]
 
-        # Normalize our pagename/title thing:
-        self._title = res["title"]
-
-        try:
-            res["redirect"]
-        except KeyError:
-            self._is_redirect = False
-        else:
-            self._is_redirect = True
+        self._title = res["title"]  # Normalize our pagename/title
+        self._is_redirect = "redirect" in res
 
         self._pageid = int(result["query"]["pages"].keys()[0])
         if self._pageid < 0:
