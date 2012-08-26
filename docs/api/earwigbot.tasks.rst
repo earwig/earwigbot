@@ -13,5 +13,4 @@ tasks Package
 
 .. automodule:: earwigbot.tasks.wikiproject_tagger
     :members:
-    :undoc-members:
     :show-inheritance:

@@ -27,33 +27,71 @@ from earwigbot.tasks import Task
 class WikiProjectTagger(Task):
     """A task to tag talk pages with WikiProject banners.
 
-    Usage:
-        earwigbot -t wikiproject_tagger PATH [--category CAT]
+    Usage: :command:`earwigbot -t wikiproject_tagger PATH
+    --banner BANNER (--category CAT | --file FILE) [--summary SUM]
+    [--append TEXT] [--autoassess] [--nocreate] [--recursive NUM]`
+
+    .. glossary::
+
+    ``--banner BANNER``
+        the page name of the banner to add, without a namespace (unless the
+        namespace is something other than ``Template``) so
+        ``--banner WikiProject Biography`` for ``{{WikiProject Biography}}``
+    ``--category CAT`` or ``--file FILE``
+        determines which pages to tag; either all pages in a category (to
+        include subcategories as well, see ``--recursive``) or all
+        pages/categories in a file (utf-8 encoded and path relative to the
+        current directory)
+    ``--summary SUM``
+        an optional edit summary to use; defaults to
+        ``"Adding {{BANNER}} to article talk page."``
+    ``--append TEXT``
+        optional text to append to the banner (after an autoassessment, if
+        any), like ``|importance=low``
+    ``--autoassess``
+        try to assess each article's class automatically based on the class of
+        other banners on the same page
+    ``--nocreate``
+        don't create new talk pages with just a banner if the page doesn't
+        already exist
+    ``--recursive NUM``
+        recursively go through subcategories up to a maximum depth of ``NUM``,
+        or if ``NUM`` isn't provided, go infinitely (this can be dangerous)
+
     """
     name = "wikiproject_tagger"
 
-    # Regexes for template names that should always go above the banner:
+    # Regexes for template names that should always go above the banner, based
+    # on [[Wikipedia:Talk page layout]]:
     TOP_TEMPS = [
         "skip[ _]?to ?(toc|talk|toctalk)",
+
+        "ga ?nominee",
+
+        "(user ?)?talk ?(header|page|page ?header)",
+
         "community ?article ?probation",
         "censor(-nudity)?",
-        "controvers(ial2?|y)"
         "blp(o| ?others?)?",
-        "(user ?)?talk ?(header|page|page ?header)",
+        "controvers(ial2?|y)"
+
         "(not ?(a ?)?)?forum",
         "tv(episode|series)talk",
         "recurring ?themes",
         "faq",
         "(round ?in ?)?circ(les|ular)",
+
         "ar(ti|it)cle ?(history|milestones)",
         "failed ?ga",
         "old ?prod( ?full)?",
         "(old|previous) ?afd",
+
         "((wikiproject|wp) ?)?bio(graph(y|ies))?"
     ]
 
-    def setup(self):
-        pass
-
     def run(self, **kwargs):
-        print kwargs
+        """Main entry point for the bot task."""
+        if "category" in kwargs:
+            pass
+        elif "file" in kwargs:
+            pass
