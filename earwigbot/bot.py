@@ -159,6 +159,15 @@ class Bot(object):
             log = "The following commands or tasks will be killed: {0}"
             self.logger.warn(log.format(" ".join(tasks)))
 
+    @property
+    def is_running(self):
+        """Whether or not the bot is currently running.
+
+        This may return ``False`` even if the bot is still technically active,
+        but in the process of shutting down.
+        """
+        return self._keep_looping
+
     def run(self):
         """Main entry point into running the bot.
 

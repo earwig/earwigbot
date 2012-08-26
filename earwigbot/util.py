@@ -22,7 +22,7 @@
 # SOFTWARE.
 
 """
-usage: :command:`earwigbot [-h] [-v] [-d] [-q] [-t NAME] [PATH]`
+usage: :command:`earwigbot [-h] [-v] [-d | -q] [-t NAME] [PATH] ...`
 
 This is EarwigBot's command-line utility, enabling you to easily start the bot
 or run specific tasks.
@@ -43,9 +43,13 @@ or run specific tasks.
 ``-t NAME``, ``--task NAME``
     given the name of a task, the bot will run it instead of the main bot and
     then exit
+``TASK_ARGS``
+    with --task, will pass any remaining arguments to the task's
+    :py:meth:`.Task.run` method
+
 """
 
-from argparse import ArgumentParser
+from argparse import Action, ArgumentParser, REMAINDER
 import logging
 from os import path
 from time import sleep
@@ -54,6 +58,41 @@ from earwigbot import __version__
 from earwigbot.bot import Bot
 
 __all__ = ["main"]
+
+class _StoreTaskArg(Action):
+    """A custom argparse action to read remaining command-line arguments."""
+    def __call__(self, parser, namespace, values, option_string=None):
+        kwargs = {}
+        name = None
+        for value in values:
+            if value.startswith("-") and "=" in value:
+                key, value = value.split("=", 1)
+                self.insert(kwargs, key.lstrip("-"), value)
+            elif name:
+                if value.startswith("-"):
+                    if name not in kwargs:
+                        kwargs[name] = True
+                    name = value.lstrip("-")
+                else:
+                    self.insert(kwargs, name, value)
+                    name = None
+            else:
+                if value.startswith("-"):
+                    name = value.lstrip("-")
+        if name and name not in kwargs:
+            kwargs[name] = True
+        namespace.task_args = kwargs
+
+    def insert(self, kwargs, key, value):
+        """Add a key/value pair to kwargs; support multiple values per key."""
+        if key in kwargs:
+            try:
+                kwargs[key].append(value)
+            except AttributeError:
+                kwargs[key] = [kwargs[key], value]
+        else:
+            kwargs[key] = value
+
 
 def main():
     """Main entry point for the command-line utility."""
@@ -66,20 +105,25 @@ def main():
                                 be created if it doesn't exist; current
                                 directory assumed if not specified""")
     parser.add_argument("-v", "--version", action="version", version=version)
-    parser.add_argument("-d", "--debug", action="store_true",
+    logger = parser.add_mutually_exclusive_group()
+    logger.add_argument("-d", "--debug", action="store_true",
                         help="print all logs, including DEBUG-level messages")
-    parser.add_argument("-q", "--quiet", action="store_true",
+    logger.add_argument("-q", "--quiet", action="store_true",
                         help="don't print any logs except warnings and errors")
     parser.add_argument("-t", "--task", metavar="NAME",
                         help="""given the name of a task, the bot will run it
                                 instead of the main bot and then exit""")
+    parser.add_argument("task_args", nargs=REMAINDER, action=_StoreTaskArg,
+                        metavar="TASK_ARGS",
+                        help="""with --task, will pass these arguments to the
+                                task's run() method""")
     args = parser.parse_args()
 
+    if not args.task and args.task_args:
+        unrecognized = " ".join(args.task_args)
+        parser.error("unrecognized arguments: {0}".format(unrecognized))
+
     level = logging.INFO
-    if args.debug and args.quiet:
-        parser.print_usage()
-        print "earwigbot: error: cannot show debug messages and be quiet at the same time"
-        return
     if args.debug:
         level = logging.DEBUG
     elif args.quiet:
@@ -89,7 +133,7 @@ def main():
 
     bot = Bot(path.abspath(args.path), level=level)
     if args.task:
-        thread = bot.tasks.start(args.task)
+        thread = bot.tasks.start(args.task, **args.task_args)
         if not thread:
             return
         try:
@@ -106,7 +150,7 @@ def main():
         except KeyboardInterrupt:
             pass
         finally:
-            if bot._keep_looping:  # Indicates bot hasn't already been stopped
+            if bot.is_running:
                 bot.stop()
 
 if __name__ == "__main__":

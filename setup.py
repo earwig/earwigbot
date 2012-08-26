@@ -26,12 +26,11 @@ from setuptools import setup, find_packages
 from earwigbot import __version__
 
 # Not all of these dependencies are required, particularly the copyvio-specific
-# ones (bs4, lxml, nltk, and oauth2) or the command-specific ones (GitPython,
-# pytz). The bot should run fine without them, but will raise an exception if
-# you try to detect copyvios or run a command that requries one.
+# ones (bs4, lxml, nltk, and oauth2) and the command-specific one (pytz). The
+# bot should run fine without them, but will raise an exception if you try to
+# detect copyvios or run a command that requries one.
 
 dependencies = [
-    "GitPython >= 0.3.2.RC1",  # Interfacing with git for !git and __version__
     "PyYAML >= 3.10",  # Parsing config files
     "beautifulsoup4 >= 4.1.1",  # Parsing/scraping HTML for copyvios
     "lxml >= 2.3.5",  # Faster parser for BeautifulSoup
