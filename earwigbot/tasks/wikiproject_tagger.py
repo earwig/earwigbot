@@ -20,14 +20,40 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import re
+
 from earwigbot.tasks import Task
 
 class WikiProjectTagger(Task):
-    """A task to tag talk pages with WikiProject Banners."""
+    """A task to tag talk pages with WikiProject banners.
+
+    Usage:
+        earwigbot -t wikiproject_tagger PATH [--category CAT]
+    """
     name = "wikiproject_tagger"
+
+    # Regexes for template names that should always go above the banner:
+    TOP_TEMPS = [
+        "skip[ _]?to ?(toc|talk|toctalk)",
+        "community ?article ?probation",
+        "censor(-nudity)?",
+        "controvers(ial2?|y)"
+        "blp(o| ?others?)?",
+        "(user ?)?talk ?(header|page|page ?header)",
+        "(not ?(a ?)?)?forum",
+        "tv(episode|series)talk",
+        "recurring ?themes",
+        "faq",
+        "(round ?in ?)?circ(les|ular)",
+        "ar(ti|it)cle ?(history|milestones)",
+        "failed ?ga",
+        "old ?prod( ?full)?",
+        "(old|previous) ?afd",
+        "((wikiproject|wp) ?)?bio(graph(y|ies))?"
+    ]
 
     def setup(self):
         pass
 
     def run(self, **kwargs):
-        pass
+        print kwargs
