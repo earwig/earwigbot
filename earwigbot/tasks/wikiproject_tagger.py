@@ -22,14 +22,17 @@
 
 import re
 
+from earwigbot import exceptions
 from earwigbot.tasks import Task
+from earwigbot.wiki import constants
 
 class WikiProjectTagger(Task):
     """A task to tag talk pages with WikiProject banners.
 
     Usage: :command:`earwigbot -t wikiproject_tagger PATH
     --banner BANNER (--category CAT | --file FILE) [--summary SUM]
-    [--append TEXT] [--autoassess] [--nocreate] [--recursive NUM]`
+    [--append TEXT] [--autoassess] [--nocreate] [--recursive NUM]
+    [--site SITE]`
 
     .. glossary::
 
@@ -57,6 +60,8 @@ class WikiProjectTagger(Task):
     ``--recursive NUM``
         recursively go through subcategories up to a maximum depth of ``NUM``,
         or if ``NUM`` isn't provided, go infinitely (this can be dangerous)
+    ``--site SITE``
+        the ID of the site to tag pages on, defaulting to the... default site
 
     """
     name = "wikiproject_tagger"
@@ -91,7 +96,58 @@ class WikiProjectTagger(Task):
 
     def run(self, **kwargs):
         """Main entry point for the bot task."""
+        if "file" not in kwargs and "category" not in kwargs:
+            log = "No pages to tag; I need either a 'category' or a 'file' passed as kwargs"
+            self.logger.error(log)
+            return
+        if "banner" not in kwargs:
+            log = "Needs a banner to add passed as the 'banner' kwarg"
+            self.logger.error(log)
+            return
+
+        banner = kwargs["banner"]
+        summary = kwargs.get("summary", "Adding $3 to article talk page.")
+        append = kwargs.get("append")
+        autoassess = kwargs.get("autoassess", False)
+        nocreate = kwargs.get("nocreate", False)
+        recursive = kwargs.get("recursive", 0)
+        site = self.bot.wiki.get_site(name=kwargs.get("site"))
+
         if "category" in kwargs:
-            pass
-        elif "file" in kwargs:
-            pass
+            title = kwargs["category"]
+            prefix = name.split(":", 1)[0]
+            ns_cat = site.namespace_id_to_name(constants.NS_CATEGORY)
+            if prefix == title:
+                title = u":".join((ns_cat, title))
+            else:
+                try:
+                    site.namespace_name_to_id(prefix)
+                except exceptions.NamespaceNotFoundError:
+                    title = u":".join((ns_cat, title))
+            self.process_category(title, recursive)
+
+        if "file" in kwargs:
+            with open(kwargs["file"], "r") as fileobj:
+                for line in fileobj:
+                    if line.strip():
+                        line = line.decode("utf8")
+                        if line.startswith("[[") and line.endswith("]]"):
+                            line = line[2:-2]
+                        page = site.get_page(line)
+                        if page.namespace == constants.NS_CATEGORY:
+                            self.process_category(page, recursive)
+                        else:
+                            self.process_page(page)
+
+    def process_category(self, page, recursive):
+        for member in page.get_members():
+            if member.namespace == constants.NS_CATEGORY:
+                if recursive is True:
+                    self.process_category(member, True)
+                elif recursive:
+                    self.process_category(member, recursive - 1)
+            else:
+                self.process_page(member)
+
+    def process_page(self, page):
+        raise NotImplementedError(page)
