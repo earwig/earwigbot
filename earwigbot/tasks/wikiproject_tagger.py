@@ -105,6 +105,7 @@ class WikiProjectTagger(Task):
             self.logger.error(log)
             return
 
+        site = self.bot.wiki.get_site(name=kwargs.get("site"))
         banner = kwargs["banner"]
         summary = kwargs.get("summary", "Adding WikiProject banner $3.")
         append = kwargs.get("append")
@@ -115,11 +116,16 @@ class WikiProjectTagger(Task):
         if not names:
             return
         job = _Job(banner, names, summary, append, autoassess, nocreate)
-        site = self.bot.wiki.get_site(name=kwargs.get("site"))
 
+        try:
+            self.run_job(kwargs, site, job, recursive)
+        except _ShutoffEnabled:
+            return
+
+    def run_job(self, kwargs, site, job, recursive):
         if "category" in kwargs:
             title = kwargs["category"]
-            title = self.guess_namespace(title, constants.NS_CATEGORY)
+            title = self.guess_namespace(site, title, constants.NS_CATEGORY)
             self.process_category(site.get_page(title), job, recursive)
 
         if "file" in kwargs:
@@ -135,7 +141,7 @@ class WikiProjectTagger(Task):
                         else:
                             self.process_page(page, job)
 
-    def guess_namespace(self, title, assumed):
+    def guess_namespace(self, site, title, assumed):
         prefix = title.split(":", 1)[0]
         if prefix == title:
             return u":".join((site.namespace_id_to_name(assumed), title))
@@ -146,12 +152,12 @@ class WikiProjectTagger(Task):
         return title
 
     def get_names(self, site, banner):
-        title = self.guess_namespace(banner, constants.NS_TEMPLATE)
+        title = self.guess_namespace(site, banner, constants.NS_TEMPLATE)
         if title == banner:
             banner = banner.split(":", 1)[1]
         page = site.get_page(title)
         if page.exists != page.PAGE_EXISTS:
-            self.logger.error("Banner [[{0}]] does not exist".format(title))
+            self.logger.error(u"Banner [[{0}]] does not exist".format(title))
             return banner, None
 
         names = [banner] if banner == title else [banner, title]
@@ -162,12 +168,12 @@ class WikiProjectTagger(Task):
             if backlink["ns"] == constants.NS_TEMPLATE:
                 names.append(backlink["title"].split(":", 1)[1])
 
-        log = "Found {0} aliases for banner [[{1}]]".format(len(names), title)
+        log = u"Found {0} aliases for banner [[{1}]]".format(len(names), title)
         self.logger.debug(log)
         return banner, names
 
     def process_category(self, page, job, recursive):
-        self.logger.info("Processing category: [[{0]]".format(page.title))
+        self.logger.info(u"Processing category: [[{0]]".format(page.title))
         for member in page.get_members():
             if member.namespace == constants.NS_CATEGORY:
                 if recursive is True:
@@ -178,16 +184,21 @@ class WikiProjectTagger(Task):
                 self.process_page(member, job)
 
     def process_page(self, page, job):
+        if job.counter % 10 == 0:  # Do a shutoff check every ten pages
+            if self.shutoff_enabled(page.site):
+                raise _ShutoffEnabled()
+        job.counter += 1
+
         if not page.is_talkpage:
             page = page.toggle_talk()
         try:
             code = page.parse()
         except exceptions.PageNotFoundError:
             if job.nocreate:
-                log = "Skipping nonexistent page: [[{0}]]".format(page.title)
+                log = u"Skipping nonexistent page: [[{0}]]".format(page.title)
                 self.logger.info(log)
             else:
-                log = "Tagging new page: [[{0}]]".format(page.title)
+                log = u"Tagging new page: [[{0}]]".format(page.title)
                 self.logger.info(log)
                 banner = "{{" + job.banner + job.append + "}}"
                 summary = job.summary.replace("$3", banner)
@@ -202,11 +213,18 @@ class WikiProjectTagger(Task):
 
         text = unicode(code)
         if page.get() != text:
+            self.logger.info(u"Tagging page: [[{0}]]".format(page.title))
             summary = job.summary.replace("$3", banner)
             page.edit(text, self.make_summary(summary))
 
 
 class _Job(object):
+    """Represents a single wikiproject-tagging task.
+
+    Stores information on the banner to add, the edit summary to use, whether
+    or not to autoassess and create new pages from scratch, and a counter of
+    the number of pages edited.
+    """
     def __init__(self, banner, names, summary, append, autoassess, nocreate):
         self.banner = banner
         self.names = names
@@ -214,3 +232,10 @@ class _Job(object):
         self.append = append
         self.autoassess = autoassess
         self.nocreate = nocreate
+        self.counter = 0
+
+
+class _ShutoffEnabled(Exception):
+    """Raised by process_page() if shutoff is enabled. Caught by run(), which
+    will then stop the task."""
+    pass
