@@ -69,30 +69,37 @@ class WikiProjectTagger(Task):
     # Regexes for template names that should always go above the banner, based
     # on [[Wikipedia:Talk page layout]]:
     TOP_TEMPS = [
-        "skip[ _]?to ?(toc|talk|toctalk)",
+        r"skip ?to ?(toc|talk|toctalk)",
 
-        "ga ?nominee",
+        r"ga ?nominee",
 
-        "(user ?)?talk ?(header|page|page ?header)",
+        r"(user ?)?talk ?(header|page|page ?header)",
 
-        "community ?article ?probation",
-        "censor(-nudity)?",
-        "blp(o| ?others?)?",
-        "controvers(ial2?|y)"
+        r"community ?article ?probation",
+        r"censor(-nudity)?",
+        r"blp(o| ?others?)?",
+        r"controvers(ial2?|y)"
 
-        "(not ?(a ?)?)?forum",
-        "tv(episode|series)talk",
-        "recurring ?themes",
-        "faq",
-        "(round ?in ?)?circ(les|ular)",
+        r"(not ?(a ?)?)?forum",
+        r"tv(episode|series)talk",
+        r"recurring ?themes",
+        r"faq",
+        r"(round ?in ?)?circ(les|ular)",
 
-        "ar(ti|it)cle ?(history|milestones)",
-        "failed ?ga",
-        "old ?prod( ?full)?",
-        "(old|previous) ?afd",
+        r"ar(ti|it)cle ?(history|milestones)",
+        r"failed ?ga",
+        r"old ?prod( ?full)?",
+        r"(old|previous) ?afd",
 
-        "((wikiproject|wp) ?)?bio(graph(y|ies))?"
+        r"((wikiproject|wp) ?)?bio(graph(y|ies))?"
     ]
+
+    def _upperfirst(self, text):
+        """Try to uppercase the first letter of a string."""
+        try:
+            return text[0].upper() + text[1:]
+        except IndexError:
+            return text
 
     def run(self, **kwargs):
         """Main entry point for the bot task."""
@@ -123,6 +130,7 @@ class WikiProjectTagger(Task):
             return
 
     def run_job(self, kwargs, site, job, recursive):
+        """Run a tagging *job* on a given *site*."""
         if "category" in kwargs:
             title = kwargs["category"]
             title = self.guess_namespace(site, title, constants.NS_CATEGORY)
@@ -142,6 +150,12 @@ class WikiProjectTagger(Task):
                             self.process_page(page, job)
 
     def guess_namespace(self, site, title, assumed):
+        """If the given *title* does not have an explicit namespace, guess it.
+
+        For example, when transcluding templates, the namespace is guessed to
+        be ``NS_TEMPLATE`` unless one is explicitly declared (so ``{{foo}}`` ->
+        ``[[Template:Foo]]``, but ``{{:foo}}`` -> ``[[Foo]]``).
+        """
         prefix = title.split(":", 1)[0]
         if prefix == title:
             return u":".join((site.namespace_id_to_name(assumed), title))
@@ -152,6 +166,7 @@ class WikiProjectTagger(Task):
         return title
 
     def get_names(self, site, banner):
+        """Return all possible aliases for a given *banner* template."""
         title = self.guess_namespace(site, banner, constants.NS_TEMPLATE)
         if title == banner:
             banner = banner.split(":", 1)[1]
@@ -160,7 +175,10 @@ class WikiProjectTagger(Task):
             self.logger.error(u"Banner [[{0}]] does not exist".format(title))
             return banner, None
 
-        names = [banner] if banner == title else [banner, title]
+        if banner == text:
+            names = [self._upperfirst(banner)]
+        else:
+            names = [self._upperfirst(banner), self._upperfirst(title)]
         result = site.api_query(action="query", list="backlinks", bllimit=500,
                                 blfilterredir="redirects", bltitle=title)
         for backlink in result["query"]["backlinks"]:
@@ -173,6 +191,7 @@ class WikiProjectTagger(Task):
         return banner, names
 
     def process_category(self, page, job, recursive):
+        """Try to tag all pages in the given category."""
         self.logger.info(u"Processing category: [[{0]]".format(page.title))
         for member in page.get_members():
             if member.namespace == constants.NS_CATEGORY:
@@ -184,6 +203,7 @@ class WikiProjectTagger(Task):
                 self.process_page(member, job)
 
     def process_page(self, page, job):
+        """Try to tag a specific *page* using the *job* description."""
         if job.counter % 10 == 0:  # Do a shutoff check every ten pages
             if self.shutoff_enabled(page.site):
                 raise _ShutoffEnabled()
@@ -209,13 +229,58 @@ class WikiProjectTagger(Task):
             self.logger.error(log)
             return
 
-        raise NotImplementedError()
+        for template in code.ifilter_templates(recursive=True):
+            name = self.upperfirst(template.name.strip())
+            if name in job.names:
+                log = u"Skipping page: [[{0}]]; already tagged with '{1}'"
+                self.logger.info(log.format(page.title, name))
+                return
 
-        text = unicode(code)
-        if page.get() != text:
-            self.logger.info(u"Tagging page: [[{0}]]".format(page.title))
-            summary = job.summary.replace("$3", banner)
-            page.edit(text, self.make_summary(summary))
+        banner = self.make_banner(job, code)
+        shell = self.get_banner_shell(code)
+        if shell:
+            if shell.has_param(1):
+                shell.get(1).value.insert(0, banner + "\n")
+            else:
+                shell.add(1, banner)
+        else:
+            self.add_banner(code, banner)
+        self.apply_genfixes(code)
+
+        self.logger.info(u"Tagging page: [[{0}]]".format(page.title))
+        summary = job.summary.replace("$3", banner)
+        page.edit(unicode(code), self.make_summary(summary))
+
+    def make_banner(self, job, code):
+        """Return banner text to add based on a *job* and a page's *code*."""
+        banner = "{{" + job.banner
+        if job.autoassess:
+            assessment = self.assess(code)                                                      # TODO
+            if assessment:
+                banner += "|class=" + assessment
+        return banner + job.append + "}}"
+
+    def get_banner_shell(self, code):
+        """Return the banner shell template within *code*, else ``None``."""
+        regex = r"^\{\{\s*((WikiProject|WP)[ _]?Banner[ _]?S(hell)?|W(BPS|PBS|PB)|Shell)"
+        shells = code.filter_templates(matches=regex)
+        if not shells:
+            shells = code.filter_templates(matches=regex, recursive=True)
+        if shells:
+            return shells[0]
+
+    def add_banner(self, code, banner):
+        """Add *banner* to *code*, following template order conventions."""
+        if has_top_temps:                                                                       # TODO
+            xxx
+        else:
+            yyy
+
+    def apply_genfixes(self, code):
+        """Apply general fixes to *code*, such as template substitution."""
+        regex = r"^\{\{\s*((un|no)?s(i((gn|ng)(ed3?)?|g))?|usu|tilde|forgot to sign|without signature)"
+        for template in code.ifilter_templates(matches=regex):
+            template.name = "subst:unsigned"
 
 
 class _Job(object):
