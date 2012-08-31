@@ -47,7 +47,7 @@ class Notes(Command):
         }
 
         if not data.args:
-            msg = "The Earwig Mini-Wiki: running v{0}. Subcommands are: {1}. You can get help on any with '!{2} help subcommand'."
+            msg = "\x0302The Earwig Mini-Wiki\x0F: running v{0}. Subcommands are: {1}. You can get help on any with '!{2} help subcommand'."
             cmnds = ", ".join((commands))
             self.reply(data, msg.format(self.version, cmnds, data.command))
             return
@@ -60,27 +60,58 @@ class Notes(Command):
     def create_db(self, conn):
         """Initialize the notes database with its necessary tables."""
         script = """
-            CREATE TABLE pages (page_id, page_title);
+            CREATE TABLE entries (entry_id, entry_slug, entry_title, entry_revision);
             CREATE TABLE users (user_id, user_name);
-            CREATE TABLE revisions (rev_id, rev_page, rev_user, rev_content);
+            CREATE TABLE revisions (rev_id, rev_entry, rev_user, rev_content);
         """
         conn.executescript(script)
 
-    def do_list(self):
+    def do_list(self, data):
+        """Show a list of entries in the notes database."""
+        query = "SELECT entry_title FROM entries"
+        with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
+            try:
+                entries = conn.execute(query).fetchall()
+            except sqlite.OperationalError:
+                entires = []
+
+        if entries:
+            self.reply(data, "Entries: {0}".format(", ".join(entries)))
+        else:
+            self.reply(data, "No entries in the database.")
+
+    def do_read(self, data):
+        """Read an entry from the notes database."""
+        query = "SELECT entry_title, rev_content FROM entries INNER JOIN revisions ON entry_revision = rev_id WHERE entry_slug = ?"
+        try:
+            slug = data.args[1].lower().replace("_", "").replace("-", "")
+        except IndexError:
+            self.reply(data, "Please name an entry to read from.")
+            return
+
+        with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
+            try:
+                title, content = conn.execute(query, (slug,)).fetchone()
+            except sqlite.OperationalError:
+                title, content = slug, None
+
+        if content:
+            self.reply(data, "\x0302{0}\x0F: {1}".format(title, content))
+        else:
+            self.reply(data, "Entry \x0302{0}\x0F not found.".format(title))
+
+    def do_edit(self, data):
+        """Edit an entry in the notes database."""
         pass
 
-    def do_read(self):
+    def do_rename(self, data):
+        """Rename an entry in the notes database."""
         pass
 
-    def edit(self):
+    def do_delete(self, data):
+        """Delete an entry from the notes database."""
         pass
 
-    def rename(self):
+    def do_info(self, data):
+        """Get info on an entry in the notes database."""
         pass
-
-    def delete(self):
-        pass
-
-    def info(self):
-        pass
-
