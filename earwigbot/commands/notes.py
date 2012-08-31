@@ -20,148 +20,300 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from datetime import datetime
+from os import path
+import re
+import sqlite3 as sqlite
+from threading import Lock
+
 from earwigbot.commands import Command
 
 class Notes(Command):
     """A mini IRC-based wiki for storing notes, tips, and reminders."""
     name = "notes"
+    commands = ["notes", "note", "about"]
+    version = 2
+
+    def setup(self):
+        self._dbfile = path.join(self.config.root_dir, "notes.db")
+        self._db_access_lock = Lock()
 
     def process(self, data):
-        pass
+        commands = {
+            "help": self.do_help,
+            "list": self.do_list,
+            "read": self.do_read,
+            "edit": self.do_edit,
+            "info": self.do_info,
+            "rename": self.do_rename,
+            "delete": self.do_delete,
+        }
 
+        if not data.args:
+            msg = "\x0302The Earwig Mini-Wiki\x0F: running v{0}. Subcommands are: {1}. You can get help on any with '!{2} help subcommand'."
+            cmnds = ", ".join((commands))
+            self.reply(data, msg.format(self.version, cmnds, data.command))
+            return
+        command = data.args[0].lower()
+        if command in commands:
+            commands[command](data)
+        else:
+            msg = "Unknown subcommand: \x0303{0}\x0F.".format(command)
+            self.reply(data, msg)
 
-class OldCommand(object):
-    def parse(self):
-        if command == "notes" or command == "note" or command == "about" or command == "data" or command == "database":
+    def do_help(self, data):
+        """Get help on a subcommand."""
+        info = {
+            "help": "Get help on other subcommands.",
+            "list": "List existing entries.",
+            "read": "Read an existing entry ('!notes read [name]').",
+            "edit": """Modify or create a new entry ('!notes edit name
+                       [entry content]...'). If modifying, you must be the
+                       entry author or a bot admin.""",
+            "info": """Get information on an existing entry ('!notes info
+                       [name]').""",
+            "rename": """Rename an existing entry ('!notes rename [old_name]
+                         [new_name]'). You must be the entry author or a bot
+                         admin.""",
+            "delete": """Delete an existing entry ('!notes delete [name]'). You
+                         must be the entry author or a bot admin.""",
+        }
+
+        try:
+            command = data.args[1]
+        except IndexError:
+            self.reply(data, "Please specify a subcommand to get help on.")
+            return
+        try:
+            help_ = re.sub(r"\s\s+", " ", info[command].replace("\n", ""))
+            self.reply(data, "\x0303{0}\x0F: ".format(command) + help_)
+        except KeyError:
+            msg = "Unknown subcommand: \x0303{0}\x0F.".format(command)
+            self.reply(data, msg)
+
+    def do_list(self, data):
+        """Show a list of entries in the notes database."""
+        query = "SELECT entry_title FROM entries"
+        with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
             try:
-                action = line2[4]
-            except BaseException:
-                reply("What do you want me to do? Type \"!notes help\" for more information.", chan, nick)
+                entries = conn.execute(query).fetchall()
+            except sqlite.OperationalError:
+                entries = []
+
+        if entries:
+            entries = [entry[0] for entry in entries]
+            self.reply(data, "Entries: {0}".format(", ".join(entries)))
+        else:
+            self.reply(data, "No entries in the database.")
+
+    def do_read(self, data):
+        """Read an entry from the notes database."""
+        query = """SELECT entry_title, rev_content FROM entries
+                   INNER JOIN revisions ON entry_revision = rev_id
+                   WHERE entry_slug = ?"""
+        try:
+            slug = self.slugify(data.args[1])
+        except IndexError:
+            self.reply(data, "Please specify an entry to read from.")
+            return
+
+        with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
+            try:
+                title, content = conn.execute(query, (slug,)).fetchone()
+            except (sqlite.OperationalError, TypeError):
+                title, content = slug, None
+
+        if content:
+            self.reply(data, "\x0302{0}\x0F: {1}".format(title, content))
+        else:
+            self.reply(data, "Entry \x0302{0}\x0F not found.".format(title))
+
+    def do_edit(self, data):
+        """Edit an entry in the notes database."""
+        query1 = """SELECT entry_id, entry_title, user_host FROM entries
+                    INNER JOIN revisions ON entry_revision = rev_id
+                    INNER JOIN users ON rev_user = user_id
+                    WHERE entry_slug = ?"""
+        query2 = "INSERT INTO revisions VALUES (?, ?, ?, ?, ?)"
+        query3 = "INSERT INTO entries VALUES (?, ?, ?, ?)"
+        query4 = "UPDATE entries SET entry_revision = ? WHERE entry_id = ?"
+        try:
+            slug = self.slugify(data.args[1])
+        except IndexError:
+            self.reply(data, "Please specify an entry to edit.")
+            return
+        content = " ".join(data.args[2:]).strip()
+        if not content:
+            self.reply(data, "Please give some content to put in the entry.")
+            return
+
+        with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
+            create = True
+            try:
+                id_, title, author = conn.execute(query1, (slug,)).fetchone()
+                create = False
+            except sqlite.OperationalError:
+                id_, title, author = 1, data.args[1], data.host
+                self.create_db(conn)
+            except TypeError:
+                id_ = self.get_next_entry(conn)
+                title, author = data.args[1], data.host
+            permdb = self.config.irc["permissions"]
+            if author != data.host and not permdb.is_admin(data):
+                msg = "You must be an author or a bot admin to edit this entry."
+                self.reply(data, msg)
                 return
-            import MySQLdb
-            db = MySQLdb.connect(db="u_earwig_ircbot", host="sql", read_default_file="/home/earwig/.my.cnf")
-            specify = ' '.join(line2[5:])
-            if action == "help" or action == "manual":
-                shortCommandList = "read, write, change, undo, delete, move, author, category, list, report, developer"
-                if specify == "read":
-                    say("To read an entry, type \"!notes read <entry>\".", chan)
-                elif specify == "write":
-                    say("To write a new entry, type \"!notes write <entry> <content>\". This will create a new entry only if one does not exist, see the below command...", chan)
-                elif specify == "change":
-                    say("To change an entry, type \"!notes change <entry> <new content>\". The old entry will be stored in the database, so it can be undone later.", chan)
-                elif specify == "undo":
-                    say("To undo a change, type \"!notes undo <entry>\".", chan)
-                elif specify == "delete":
-                    say("To delete an entry, type \"!notes delete <entry>\". For security reasons, only bot admins can do this.", chan)
-                elif specify == "move":
-                    say("To move an entry, type \"!notes move <old_title> <new_title>\".", chan)
-                elif specify == "author":
-                    say("To return the author of an entry, type \"!notes author <entry>\".", chan)
-                elif specify == "category" or specify == "cat":
-                    say("To change an entry's category, type \"!notes category <entry> <category>\".", chan)
-                elif specify == "list":
-                    say("To list all categories in the database, type \"!notes list\". Type \"!notes list <category>\" to get all entries in a certain category.", chan)
-                elif specify == "report":
-                    say("To give some statistics about the mini-wiki, including some debugging information, type \"!notes report\" in a PM.", chan)
-                elif specify == "developer":
-                    say("To do developer work, such as writing to the database directly, type \"!notes developer <command>\". This can only be done by the bot owner.", chan)
-                else:
-                    db.query("SELECT * FROM version;")
-                    r = db.use_result()
-                    data = r.fetch_row(0)
-                    version = data[0]
-                    reply("The Earwig Mini-Wiki: running v%s." % version, chan, nick)
-                    reply("The full list of commands, for reference, are: %s." % shortCommandList, chan, nick)
-                    reply("For an explaination of a certain command, type \"!notes help <command>\".", chan, nick)
-                    reply("You can also access the database from the Toolserver: http://toolserver.org/~earwig/cgi-bin/irc_database.py", chan, nick)
-                    time.sleep(0.4)
+            revid = self.get_next_revision(conn)
+            userid = self.get_user(conn, data.host)
+            now = datetime.utcnow().strftime("%b %d, %Y %H:%M:%S")
+            conn.execute(query2, (revid, id_, userid, now, content))
+            if create:
+                conn.execute(query3, (id_, slug, title, revid))
+            else:
+                conn.execute(query4, (revid, id_))
+
+        self.reply(data, "Entry \x0302{0}\x0F updated.".format(title))
+
+    def do_info(self, data):
+        """Get info on an entry in the notes database."""
+        query = """SELECT entry_title, rev_timestamp, user_host FROM entries
+                   INNER JOIN revisions ON entry_id = rev_entry
+                   INNER JOIN users ON rev_user = user_id
+                   WHERE entry_slug = ?"""
+        try:
+            slug = self.slugify(data.args[1])
+        except IndexError:
+            self.reply(data, "Please specify an entry to get info on.")
+            return
+
+        with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
+            try:
+                info = conn.execute(query, (slug,)).fetchall()
+            except sqlite.OperationalError:
+                info = []
+
+        if info:
+            title = info[0][0]
+            times = [datum[1] for datum in info]
+            earliest = min(times)
+            msg = "\x0302{0}\x0F: {1} edits since {2}"
+            msg = msg.format(title, len(info), earliest)
+            if len(times) > 1:
+                latest = max(times)
+                msg += "; last edit on {0}".format(latest)
+            names = [datum[2] for datum in info]
+            msg += "; authors: {0}.".format(", ".join(list(set(names))))
+            self.reply(data, msg)
+        else:
+            title = data.args[1]
+            self.reply(data, "Entry \x0302{0}\x0F not found.".format(title))
+
+    def do_rename(self, data):
+        """Rename an entry in the notes database."""
+        query1 = """SELECT entry_id, user_host FROM entries
+                    INNER JOIN revisions ON entry_revision = rev_id
+                    INNER JOIN users ON rev_user = user_id
+                    WHERE entry_slug = ?"""
+        query2 = """UPDATE entries SET entry_slug = ?, entry_title = ?
+                    WHERE entry_id = ?"""
+        try:
+            slug = self.slugify(data.args[1])
+        except IndexError:
+            self.reply(data, "Please specify an entry to rename.")
+            return
+        try:
+            newtitle = data.args[2]
+        except IndexError:
+            self.reply(data, "Please specify a new name for the entry.")
+            return
+        if newtitle == data.args[1]:
+            self.reply(data, "The old and new names are identical.")
+            return
+
+        with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
+            try:
+                id_, author = conn.execute(query1, (slug,)).fetchone()
+            except (sqlite.OperationalError, TypeError):
+                msg = "Entry \x0302{0}\x0F not found.".format(data.args[1])
+                self.reply(data, msg)
                 return
-            elif action == "read":
-                specify = string.lower(specify)
-                if " " in specify: specify = string.split(specify, " ")[0]
-                if not specify or "\"" in specify:
-                    reply("Please include the name of the entry you would like to read after the command, e.g. !notes read earwig", chan, nick)
-                    return
-                try:
-                    db.query("SELECT entry_content FROM entries WHERE entry_title = \"%s\";" % specify)
-                    r = db.use_result()
-                    data = r.fetch_row(0)
-                    entry = data[0][0]
-                    say("Entry \"\x02%s\x0F\": %s" % (specify, entry), chan)
-                except Exception:
-                    reply("There is no entry titled \"\x02%s\x0F\"." % specify, chan, nick)
+            permdb = self.config.irc["permissions"]
+            if author != data.host and not permdb.is_admin(data):
+                msg = "You must be an author or a bot admin to rename this entry."
+                self.reply(data, msg)
                 return
-            elif action == "delete" or action == "remove":
-                specify = string.lower(specify)
-                if " " in specify: specify = string.split(specify, " ")[0]
-                if not specify or "\"" in specify:
-                    reply("Please include the name of the entry you would like to delete after the command, e.g. !notes delete earwig", chan, nick)
-                    return
-                if authy == "owner" or authy == "admin":
-                    try:
-                        db.query("DELETE from entries where entry_title = \"%s\";" % specify)
-                        r = db.use_result()
-                        db.commit()
-                        reply("The entry on \"\x02%s\x0F\" has been removed." % specify, chan, nick)
-                    except Exception:
-                        phenny.reply("Unable to remove the entry on \"\x02%s\x0F\", because it doesn't exist." % specify, chan, nick)
-                else:
-                    reply("Only bot admins can remove entries.", chan, nick)
+            conn.execute(query2, (self.slugify(newtitle), newtitle, id_))
+
+        msg = "Entry \x0302{0}\x0F renamed to \x0302{1}\x0F."
+        self.reply(data, msg.format(data.args[1], newtitle))
+
+    def do_delete(self, data):
+        """Delete an entry from the notes database."""
+        query1 = """SELECT entry_id, user_host FROM entries
+                    INNER JOIN revisions ON entry_revision = rev_id
+                    INNER JOIN users ON rev_user = user_id
+                    WHERE entry_slug = ?"""
+        query2 = "DELETE FROM entries WHERE entry_id = ?"
+        query3 = "DELETE FROM revisions WHERE rev_entry = ?"
+        try:
+            slug = self.slugify(data.args[1])
+        except IndexError:
+            self.reply(data, "Please specify an entry to delete.")
+            return
+
+        with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
+            try:
+                id_, author = conn.execute(query1, (slug,)).fetchone()
+            except (sqlite.OperationalError, TypeError):
+                msg = "Entry \x0302{0}\x0F not found.".format(data.args[1])
+                self.reply(data, msg)
                 return
-            elif action == "developer":
-                if authy == "owner":
-                    db.query(specify)
-                    r = db.use_result()
-                    try:
-                        print r.fetch_row(0)
-                    except Exception:
-                        pass
-                    db.commit()
-                    reply("Done.", chan, nick)
-                else:
-                    reply("Only the bot owner can modify the raw database.", chan, nick)
+            permdb = self.config.irc["permissions"]
+            if author != data.host and not permdb.is_admin(data):
+                msg = "You must be an author or a bot admin to delete this entry."
+                self.reply(data, msg)
                 return
-            elif action == "write":
-                try:
-                    write = line2[5]
-                    content = ' '.join(line2[6:])
-                except Exception:
-                    reply("Please include some content in your entry.", chan, nick)
-                    return
-                db.query("SELECT * from entries WHERE entry_title = \"%s\";" % write)
-                r = db.use_result()
-                data = r.fetch_row(0)
-                if data:
-                    reply("An entry on %s already exists; please use \"!notes change %s %s\"." % (write, write, content), chan, nick)
-                    return
-                content2 = content.replace('"', '\\' + '"')
-                db.query("INSERT INTO entries (entry_title, entry_author, entry_category, entry_content, entry_content_old) VALUES (\"%s\", \"%s\", \"uncategorized\", \"%s\", NULL);" % (write, nick, content2))
-                db.commit()
-                reply("You have written an entry titled \"\x02%s\x0F\", with the following content: \"%s\"" % (write, content), chan, nick)
-                return
-            elif action == "change":
-                reply("NotImplementedError", chan, nick)
-            elif action == "undo":
-                reply("NotImplementedError", chan, nick)
-            elif action == "move":
-                reply("NotImplementedError", chan, nick)
-            elif action == "author":
-                try:
-                    entry = line2[5]
-                except Exception:
-                    reply("Please include the name of the entry you would like to get information for after the command, e.g. !notes author earwig", chan, nick)
-                    return
-                db.query("SELECT entry_author from entries WHERE entry_title = \"%s\";" % entry)
-                r = db.use_result()
-                data = r.fetch_row(0)
-                if data:
-                    say("The author of \"\x02%s\x0F\" is \x02%s\x0F." % (entry, data[0][0]), chan)
-                    return
-                reply("There is no entry titled \"\x02%s\x0F\"." % entry, chan, nick)
-                return
-            elif action == "cat" or action == "category":
-                reply("NotImplementedError", chan, nick)
-            elif action == "list":
-                reply("NotImplementedError", chan, nick)
-            elif action == "report":
-                reply("NotImplementedError", chan, nick)
+            conn.execute(query2, (id_,))
+            conn.execute(query3, (id_,))
+
+        self.reply(data, "Entry \x0302{0}\x0F deleted.".format(data.args[1]))
+
+    def slugify(self, name):
+        """Convert *name* into an identifier for storing in the database."""
+        return name.lower().replace("_", "").replace("-", "")
+
+    def create_db(self, conn):
+        """Initialize the notes database with its necessary tables."""
+        script = """
+            CREATE TABLE entries (entry_id, entry_slug, entry_title,
+                                  entry_revision);
+            CREATE TABLE users (user_id, user_host);
+            CREATE TABLE revisions (rev_id, rev_entry, rev_user, rev_timestamp,
+                                    rev_content);
+        """
+        conn.executescript(script)
+
+    def get_next_entry(self, conn):
+        """Get the next entry ID."""
+        query = "SELECT MAX(entry_id) FROM entries"
+        later = conn.execute(query).fetchone()[0]
+        return later + 1 if later else 1
+
+    def get_next_revision(self, conn):
+        """Get the next revision ID."""
+        query = "SELECT MAX(rev_id) FROM revisions"
+        later = conn.execute(query).fetchone()[0]
+        return later + 1 if later else 1
+
+    def get_user(self, conn, host):
+        """Get the user ID corresponding to a hostname, or make one."""
+        query1 = "SELECT user_id FROM users WHERE user_host = ?"
+        query2 = "SELECT MAX(user_id) FROM users"
+        query3 = "INSERT INTO users VALUES (?, ?)"
+        user = conn.execute(query1, (host,)).fetchone()
+        if user:
+            return user[0]
+        last = conn.execute(query2).fetchone()[0]
+        later = last + 1 if last else 1
+        conn.execute(query3, (later, host))
+        return later
