@@ -41,9 +41,10 @@ class Notes(Command):
             "list": self.do_list,
             "read": self.do_read,
             "edit": self.do_edit,
+            "info": self.do_info,
+            "history": self.do_history,
             "rename": self.do_rename,
             "delete": self.do_delete,
-            "info": self.do_info,
         }
 
         if not data.args:
@@ -61,8 +62,8 @@ class Notes(Command):
         """Initialize the notes database with its necessary tables."""
         script = """
             CREATE TABLE entries (entry_id, entry_slug, entry_title, entry_revision);
-            CREATE TABLE users (user_id, user_name);
-            CREATE TABLE revisions (rev_id, rev_entry, rev_user, rev_content);
+            CREATE TABLE users (user_id, user_host);
+            CREATE TABLE revisions (rev_id, rev_entry, rev_user, rev_timestamp, rev_content);
         """
         conn.executescript(script)
 
@@ -82,7 +83,9 @@ class Notes(Command):
 
     def do_read(self, data):
         """Read an entry from the notes database."""
-        query = "SELECT entry_title, rev_content FROM entries INNER JOIN revisions ON entry_revision = rev_id WHERE entry_slug = ?"
+        query = """SELECT entry_title, rev_content FROM entries
+                   INNER JOIN revisions ON entry_revision = rev_id
+                   WHERE entry_slug = ?"""
         try:
             slug = data.args[1].lower().replace("_", "").replace("-", "")
         except IndexError:
@@ -104,14 +107,47 @@ class Notes(Command):
         """Edit an entry in the notes database."""
         pass
 
+    def do_info(self, data):
+        """Get info on an entry in the notes database."""
+        pass
+
+    def do_history(self, data):
+        """Get the history of an entry in the notes database."""
+        query = """SELECT entry_title, rev_timestamp, user_host FROM entries
+                   INNER JOIN revisions ON entry_revision = rev_id
+                   INNER JOIN users ON rev_user = user_id
+                   WHERE entry_slug = ?"""
+        try:
+            slug = data.args[1].lower().replace("_", "").replace("-", "")
+        except IndexError:
+            self.reply(data, "Please name an entry to get the history of.")
+            return
+
+        with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
+            try:
+                data = conn.execute(query, (slug,)).fetchall()
+            except sqlite.OperationalError:
+                data = []
+
+        if data:
+            title = data[0][0]
+            times = [datum[1] for datum in data]
+            earliest = min(times).strftime("%b %d, %Y %H:%M:%S")
+            msg = "\x0302{0}\x0F: {1} edits since {2}"
+            msg = msg.format(title, len(data), earliest)
+            if len(times) > 1:
+                latest = max(times).strftime("%b %d, %Y %H:%M:%S")
+                msg += "; last edit on {0}".format(lastest)
+            names = [datum[2] for datum in data]
+            msg += "; authors: {0}.".format(", ".join(list(set(names))))
+            self.reply(data, msg)
+        else:
+            self.reply(data, "Entry \x0302{0}\x0F not found.".format(title))
+
     def do_rename(self, data):
         """Rename an entry in the notes database."""
         pass
 
     def do_delete(self, data):
         """Delete an entry from the notes database."""
-        pass
-
-    def do_info(self, data):
-        """Get info on an entry in the notes database."""
         pass
