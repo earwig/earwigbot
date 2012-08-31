@@ -30,13 +30,32 @@ class Notes(Command):
     """A mini IRC-based wiki for storing notes, tips, and reminders."""
     name = "notes"
     commands = ["notes", "note", "about"]
+    version = 2
 
     def setup(self):
         self._dbfile = path.join(self.config.root_dir, "notes.db")
         self._db_access_lock = Lock()
 
     def process(self, data):
-        pass
+        commands = {
+            "list": self.do_list,
+            "read": self.do_read,
+            "edit": self.do_edit,
+            "rename": self.do_rename,
+            "delete": self.do_delete,
+            "info": self.do_info,
+        }
+
+        if not data.args:
+            msg = "The Earwig Mini-Wiki: running v{0}. Subcommands are: {1}. You can get help on any with '!{2} help subcommand'."
+            cmnds = ", ".join((commands))
+            self.reply(data, msg.format(self.version, cmnds, data.command))
+            return
+        command = data.args[0].lower()
+        if command in commands:
+            commands[command](data)
+        else:
+            self.reply("Unknown subcommand: \x0303{0}\x0F.".format(command))
 
     def create_db(self, conn):
         """Initialize the notes database with its necessary tables."""
@@ -47,144 +66,21 @@ class Notes(Command):
         """
         conn.executescript(script)
 
+    def do_list(self):
+        pass
 
+    def do_read(self):
+        pass
 
+    def edit(self):
+        pass
 
+    def rename(self):
+        pass
 
+    def delete(self):
+        pass
 
+    def info(self):
+        pass
 
-
-class OldCommand(object):
-    def parse(self):
-        try:
-            action = line2[4]
-        except BaseException:
-            reply("What do you want me to do? Type \"!notes help\" for more information.", chan, nick)
-            return
-        import MySQLdb
-        db = MySQLdb.connect(db="u_earwig_ircbot", host="sql", read_default_file="/home/earwig/.my.cnf")
-        specify = ' '.join(line2[5:])
-        if action == "help" or action == "manual":
-            shortCommandList = "read, write, change, undo, delete, move, author, category, list, report, developer"
-            if specify == "read":
-                say("To read an entry, type \"!notes read <entry>\".", chan)
-            elif specify == "write":
-                say("To write a new entry, type \"!notes write <entry> <content>\". This will create a new entry only if one does not exist, see the below command...", chan)
-            elif specify == "change":
-                say("To change an entry, type \"!notes change <entry> <new content>\". The old entry will be stored in the database, so it can be undone later.", chan)
-            elif specify == "undo":
-                say("To undo a change, type \"!notes undo <entry>\".", chan)
-            elif specify == "delete":
-                say("To delete an entry, type \"!notes delete <entry>\". For security reasons, only bot admins can do this.", chan)
-            elif specify == "move":
-                say("To move an entry, type \"!notes move <old_title> <new_title>\".", chan)
-            elif specify == "author":
-                say("To return the author of an entry, type \"!notes author <entry>\".", chan)
-            elif specify == "category" or specify == "cat":
-                say("To change an entry's category, type \"!notes category <entry> <category>\".", chan)
-            elif specify == "list":
-                say("To list all categories in the database, type \"!notes list\". Type \"!notes list <category>\" to get all entries in a certain category.", chan)
-            elif specify == "report":
-                say("To give some statistics about the mini-wiki, including some debugging information, type \"!notes report\" in a PM.", chan)
-            elif specify == "developer":
-                say("To do developer work, such as writing to the database directly, type \"!notes developer <command>\". This can only be done by the bot owner.", chan)
-            else:
-                db.query("SELECT * FROM version;")
-                r = db.use_result()
-                data = r.fetch_row(0)
-                version = data[0]
-                reply("The Earwig Mini-Wiki: running v%s." % version, chan, nick)
-                reply("The full list of commands, for reference, are: %s." % shortCommandList, chan, nick)
-                reply("For an explaination of a certain command, type \"!notes help <command>\".", chan, nick)
-                reply("You can also access the database from the Toolserver: http://toolserver.org/~earwig/cgi-bin/irc_database.py", chan, nick)
-                time.sleep(0.4)
-            return
-        elif action == "read":
-            specify = string.lower(specify)
-            if " " in specify: specify = string.split(specify, " ")[0]
-            if not specify or "\"" in specify:
-                reply("Please include the name of the entry you would like to read after the command, e.g. !notes read earwig", chan, nick)
-                return
-            try:
-                db.query("SELECT entry_content FROM entries WHERE entry_title = \"%s\";" % specify)
-                r = db.use_result()
-                data = r.fetch_row(0)
-                entry = data[0][0]
-                say("Entry \"\x02%s\x0F\": %s" % (specify, entry), chan)
-            except Exception:
-                reply("There is no entry titled \"\x02%s\x0F\"." % specify, chan, nick)
-            return
-        elif action == "delete" or action == "remove":
-            specify = string.lower(specify)
-            if " " in specify: specify = string.split(specify, " ")[0]
-            if not specify or "\"" in specify:
-                reply("Please include the name of the entry you would like to delete after the command, e.g. !notes delete earwig", chan, nick)
-                return
-            if authy == "owner" or authy == "admin":
-                try:
-                    db.query("DELETE from entries where entry_title = \"%s\";" % specify)
-                    r = db.use_result()
-                    db.commit()
-                    reply("The entry on \"\x02%s\x0F\" has been removed." % specify, chan, nick)
-                except Exception:
-                    phenny.reply("Unable to remove the entry on \"\x02%s\x0F\", because it doesn't exist." % specify, chan, nick)
-            else:
-                reply("Only bot admins can remove entries.", chan, nick)
-            return
-        elif action == "developer":
-            if authy == "owner":
-                db.query(specify)
-                r = db.use_result()
-                try:
-                    print r.fetch_row(0)
-                except Exception:
-                    pass
-                db.commit()
-                reply("Done.", chan, nick)
-            else:
-                reply("Only the bot owner can modify the raw database.", chan, nick)
-            return
-        elif action == "write":
-            try:
-                write = line2[5]
-                content = ' '.join(line2[6:])
-            except Exception:
-                reply("Please include some content in your entry.", chan, nick)
-                return
-            db.query("SELECT * from entries WHERE entry_title = \"%s\";" % write)
-            r = db.use_result()
-            data = r.fetch_row(0)
-            if data:
-                reply("An entry on %s already exists; please use \"!notes change %s %s\"." % (write, write, content), chan, nick)
-                return
-            content2 = content.replace('"', '\\' + '"')
-            db.query("INSERT INTO entries (entry_title, entry_author, entry_category, entry_content, entry_content_old) VALUES (\"%s\", \"%s\", \"uncategorized\", \"%s\", NULL);" % (write, nick, content2))
-            db.commit()
-            reply("You have written an entry titled \"\x02%s\x0F\", with the following content: \"%s\"" % (write, content), chan, nick)
-            return
-        elif action == "change":
-            reply("NotImplementedError", chan, nick)
-        elif action == "undo":
-            reply("NotImplementedError", chan, nick)
-        elif action == "move":
-            reply("NotImplementedError", chan, nick)
-        elif action == "author":
-            try:
-                entry = line2[5]
-            except Exception:
-                reply("Please include the name of the entry you would like to get information for after the command, e.g. !notes author earwig", chan, nick)
-                return
-            db.query("SELECT entry_author from entries WHERE entry_title = \"%s\";" % entry)
-            r = db.use_result()
-            data = r.fetch_row(0)
-            if data:
-                say("The author of \"\x02%s\x0F\" is \x02%s\x0F." % (entry, data[0][0]), chan)
-                return
-            reply("There is no entry titled \"\x02%s\x0F\"." % entry, chan, nick)
-            return
-        elif action == "cat" or action == "category":
-            reply("NotImplementedError", chan, nick)
-        elif action == "list":
-            reply("NotImplementedError", chan, nick)
-        elif action == "report":
-            reply("NotImplementedError", chan, nick)
