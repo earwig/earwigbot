@@ -39,6 +39,7 @@ class Notes(Command):
 
     def process(self, data):
         commands = {
+            "help": self.do_help,
             "list": self.do_list,
             "read": self.do_read,
             "edit": self.do_edit,
@@ -56,6 +57,30 @@ class Notes(Command):
         if command in commands:
             commands[command](data)
         else:
+            msg = "Unknown subcommand: \x0303{0}\x0F.".format(command)
+            self.reply(data, msg)
+
+    def do_help(self, data):
+        """Get help on a subcommand."""
+        help = {
+            "help": "Get help on other subcommands.",
+            "list": "List existing entries."
+            "read": "Read an existing entry ('!notes read [name]')."
+            "edit": "Modify or create a new entry ('!notes edit name [entry content]...')."
+            "info": "Get information on an existing entry ('!notes info [name]')."
+            "rename": "Rename an existing entry ('!notes rename [old_name] [new_name]')."
+            "delete": "Delete an existing entry ('!notes delete [name]')."
+        }
+
+        try:
+            command = data.args[1]
+        except IndexError:
+            self.reply(data, "Please specify a subcommand to get help on.")
+            return
+        try:
+            prefix = "\x0303{0}\x0F: ".format(command)
+            self.reply(data, prefix + help[command])
+        except KeyError:
             msg = "Unknown subcommand: \x0303{0}\x0F.".format(command)
             self.reply(data, msg)
 
