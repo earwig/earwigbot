@@ -189,10 +189,10 @@ class Notes(Command):
         try:
             newtitle = data.args[2]
         except IndexError:
-            self.reply(data, "Please specify an entry to rename.")
+            self.reply(data, "Please specify a new name for the entry.")
             return
         if newtitle == data.args[1]:
-            self.reply(data, "The old and new titles are identical.")
+            self.reply(data, "The old and new names are identical.")
             return
 
         with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
@@ -207,16 +207,39 @@ class Notes(Command):
                 self.reply(data, msg)
                 return
             conn.execute(query2, (newtitle, id_))
+
         msg = "Entry \x0302{0}\x0F renamed to \x0302{1}\x0F."
         self.reply(data, msg.format(data.args[1], newtitle))
 
     def do_delete(self, data):
         """Delete an entry from the notes database."""
+        query1 = """SELECT entry_id, user_host FROM entries
+                    INNER JOIN revisions ON entry_revision = rev_id
+                    INNER JOIN users ON rev_user = user_id
+                    WHERE entry_slug = ?"""
+        query2 = "DELETE FROM entries WHERE entry_id = ?"
+        query3 = "DELETE FROM revisions WHERE rev_entry = ?"
         try:
             slug = data.args[1].lower().replace("_", "").replace("-", "")
         except IndexError:
             self.reply(data, "Please specify an entry to delete.")
             return
+
+        with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
+            try:
+                id_, author = conn.execute(query1, (slug,)).fetchone()
+            except (sqlite.OperationalError, TypeError):
+                msg = "Entry \x0302{0}\x0F not found.".format(data.args[1])
+                self.reply(data, msg)
+                return
+            if author != data.host and not permdb.is_admin(data):
+                msg = "You must be an author or a bot admin to delete this entry."
+                self.reply(data, msg)
+                return
+            conn.execute(query2, (id_))
+            conn.execute(query3, (id_))
+
+        self.reply(data, "Entry \x0302{0}\x0F deleted.".format(data.args[1]))
 
     def create_db(self, conn):
         """Initialize the notes database with its necessary tables."""
