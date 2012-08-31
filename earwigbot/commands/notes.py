@@ -56,7 +56,8 @@ class Notes(Command):
         if command in commands:
             commands[command](data)
         else:
-            self.reply("Unknown subcommand: \x0303{0}\x0F.".format(command))
+            msg = "Unknown subcommand: \x0303{0}\x0F.".format(command)
+            self.reply(data, msg)
 
     def do_list(self, data):
         """Show a list of entries in the notes database."""
@@ -65,7 +66,7 @@ class Notes(Command):
             try:
                 entries = conn.execute(query).fetchall()
             except sqlite.OperationalError:
-                entires = []
+                entries = []
 
         if entries:
             self.reply(data, "Entries: {0}".format(", ".join(entries)))
@@ -154,20 +155,20 @@ class Notes(Command):
 
         with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
             try:
-                data = conn.execute(query, (slug,)).fetchall()
+                info = conn.execute(query, (slug,)).fetchall()
             except sqlite.OperationalError:
-                data = []
+                info = []
 
-        if data:
-            title = data[0][0]
-            times = [datum[1] for datum in data]
+        if info:
+            title = info[0][0]
+            times = [datum[1] for datum in info]
             earliest = min(times).strftime("%b %d, %Y %H:%M:%S")
             msg = "\x0302{0}\x0F: {1} edits since {2}"
-            msg = msg.format(title, len(data), earliest)
+            msg = msg.format(title, len(info), earliest)
             if len(times) > 1:
                 latest = max(times).strftime("%b %d, %Y %H:%M:%S")
-                msg += "; last edit on {0}".format(lastest)
-            names = [datum[2] for datum in data]
+                msg += "; last edit on {0}".format(latest)
+            names = [datum[2] for datum in info]
             msg += "; authors: {0}.".format(", ".join(list(set(names))))
             self.reply(data, msg)
         else:
@@ -202,6 +203,7 @@ class Notes(Command):
                 msg = "Entry \x0302{0}\x0F not found.".format(data.args[1])
                 self.reply(data, msg)
                 return
+            permdb = self.config.irc["permissions"]
             if author != data.host and not permdb.is_admin(data):
                 msg = "You must be an author or a bot admin to rename this entry."
                 self.reply(data, msg)
@@ -232,6 +234,7 @@ class Notes(Command):
                 msg = "Entry \x0302{0}\x0F not found.".format(data.args[1])
                 self.reply(data, msg)
                 return
+            permdb = self.config.irc["permissions"]
             if author != data.host and not permdb.is_admin(data):
                 msg = "You must be an author or a bot admin to delete this entry."
                 self.reply(data, msg)
@@ -255,14 +258,14 @@ class Notes(Command):
     def get_next_entry(self, conn):
         """Get the next entry ID."""
         query = "SELECT MAX(entry_id) FROM entries"
-        next = conn.execute(query).fetchone()[0]
-        return next + 1 if next else 1
+        later = conn.execute(query).fetchone()[0]
+        return later + 1 if later else 1
 
     def get_next_revision(self, conn):
         """Get the next revision ID."""
         query = "SELECT MAX(rev_id) FROM revisions"
-        next = conn.execute(query).fetchone()[0]
-        return next + 1 if next else 1
+        later = conn.execute(query).fetchone()[0]
+        return later + 1 if later else 1
 
     def get_user(self, conn, host):
         """Get the user ID corresponding to a hostname, or make one."""
@@ -273,6 +276,6 @@ class Notes(Command):
         if user:
             return user
         last = conn.execute(query2).fetchone()[0]
-        next = last + 1 if last else 1
-        conn.execute(query3, (next, host))
-        return next
+        later = last + 1 if last else 1
+        conn.execute(query3, (later, host))
+        return later
