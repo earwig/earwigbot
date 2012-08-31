@@ -1,10 +1,6 @@
-# Ignore python bytecode:
 *.pyc
-
-# Ignore secure config files:
-config/secure.py
-
-# Ignore pydev's nonsense:
-.project
-.pydevproject
-.settings/
+*.egg
+*.egg-info
+.DS_Store
+build
+docs/_build
