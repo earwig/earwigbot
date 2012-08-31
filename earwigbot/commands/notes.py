@@ -101,6 +101,7 @@ class Notes(Command):
                 entries = []
 
         if entries:
+            entries = [entry[0] for entry in entries]
             self.reply(data, "Entries: {0}".format(", ".join(entries)))
         else:
             self.reply(data, "No entries in the database.")
@@ -111,7 +112,7 @@ class Notes(Command):
                    INNER JOIN revisions ON entry_revision = rev_id
                    WHERE entry_slug = ?"""
         try:
-            slug = data.args[1].lower().replace("_", "").replace("-", "")
+            slug = self.slugify(data.args[1])
         except IndexError:
             self.reply(data, "Please specify an entry to read from.")
             return
@@ -137,7 +138,7 @@ class Notes(Command):
         query3 = "INSERT INTO entries VALUES (?, ?, ?, ?)"
         query4 = "UPDATE entries SET entry_revision = ? WHERE entry_id = ?"
         try:
-            slug = data.args[1].lower().replace("_", "").replace("-", "")
+            slug = self.slugify(data.args[1])
         except IndexError:
             self.reply(data, "Please specify an entry to edit.")
             return
@@ -164,7 +165,7 @@ class Notes(Command):
                 return
             revid = self.get_next_revision(conn)
             userid = self.get_user(conn, data.host)
-            now = datetime.utcnow()
+            now = datetime.utcnow().strftime("%b %d, %Y %H:%M:%S")
             conn.execute(query2, (revid, id_, userid, now, content))
             if create:
                 conn.execute(query3, (id_, slug, title, revid))
@@ -180,7 +181,7 @@ class Notes(Command):
                    INNER JOIN users ON rev_user = user_id
                    WHERE entry_slug = ?"""
         try:
-            slug = data.args[1].lower().replace("_", "").replace("-", "")
+            slug = self.slugify(data.args[1])
         except IndexError:
             self.reply(data, "Please specify an entry to get info on.")
             return
@@ -194,11 +195,11 @@ class Notes(Command):
         if info:
             title = info[0][0]
             times = [datum[1] for datum in info]
-            earliest = min(times).strftime("%b %d, %Y %H:%M:%S")
+            earliest = min(times)
             msg = "\x0302{0}\x0F: {1} edits since {2}"
             msg = msg.format(title, len(info), earliest)
             if len(times) > 1:
-                latest = max(times).strftime("%b %d, %Y %H:%M:%S")
+                latest = max(times)
                 msg += "; last edit on {0}".format(latest)
             names = [datum[2] for datum in info]
             msg += "; authors: {0}.".format(", ".join(list(set(names))))
@@ -213,9 +214,10 @@ class Notes(Command):
                     INNER JOIN revisions ON entry_revision = rev_id
                     INNER JOIN users ON rev_user = user_id
                     WHERE entry_slug = ?"""
-        query2 = "UPDATE entries SET entry_title = ? WHERE entry_id = ?"
+        query2 = """UPDATE entries SET entry_slug = ?, entry_title = ?
+                    WHERE entry_id = ?"""
         try:
-            slug = data.args[1].lower().replace("_", "").replace("-", "")
+            slug = self.slugify(data.args[1])
         except IndexError:
             self.reply(data, "Please specify an entry to rename.")
             return
@@ -240,7 +242,7 @@ class Notes(Command):
                 msg = "You must be an author or a bot admin to rename this entry."
                 self.reply(data, msg)
                 return
-            conn.execute(query2, (newtitle, id_))
+            conn.execute(query2, (self.slugify(newtitle), newtitle, id_))
 
         msg = "Entry \x0302{0}\x0F renamed to \x0302{1}\x0F."
         self.reply(data, msg.format(data.args[1], newtitle))
@@ -254,7 +256,7 @@ class Notes(Command):
         query2 = "DELETE FROM entries WHERE entry_id = ?"
         query3 = "DELETE FROM revisions WHERE rev_entry = ?"
         try:
-            slug = data.args[1].lower().replace("_", "").replace("-", "")
+            slug = self.slugify(data.args[1])
         except IndexError:
             self.reply(data, "Please specify an entry to delete.")
             return
@@ -271,10 +273,14 @@ class Notes(Command):
                 msg = "You must be an author or a bot admin to delete this entry."
                 self.reply(data, msg)
                 return
-            conn.execute(query2, (id_))
-            conn.execute(query3, (id_))
+            conn.execute(query2, (id_,))
+            conn.execute(query3, (id_,))
 
         self.reply(data, "Entry \x0302{0}\x0F deleted.".format(data.args[1]))
+
+    def slugify(self, name):
+        """Convert *name* into an identifier for storing in the database."""
+        return name.lower().replace("_", "").replace("-", "")
 
     def create_db(self, conn):
         """Initialize the notes database with its necessary tables."""
@@ -301,12 +307,12 @@ class Notes(Command):
 
     def get_user(self, conn, host):
         """Get the user ID corresponding to a hostname, or make one."""
-        query1 = "SELECT user_host FROM users WHERE user_id = ?"
+        query1 = "SELECT user_id FROM users WHERE user_host = ?"
         query2 = "SELECT MAX(user_id) FROM users"
         query3 = "INSERT INTO users VALUES (?, ?)"
-        user = conn.execute(query1).fetchone()[0]
+        user = conn.execute(query1, (host,)).fetchone()
         if user:
-            return user
+            return user[0]
         last = conn.execute(query2).fetchone()[0]
         later = last + 1 if last else 1
         conn.execute(query3, (later, host))
