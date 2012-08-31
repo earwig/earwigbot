@@ -175,7 +175,7 @@ class WikiProjectTagger(Task):
             self.logger.error(u"Banner [[{0}]] does not exist".format(title))
             return banner, None
 
-        if banner == text:
+        if banner == title:
             names = [self._upperfirst(banner)]
         else:
             names = [self._upperfirst(banner), self._upperfirst(title)]
@@ -230,7 +230,7 @@ class WikiProjectTagger(Task):
             return
 
         for template in code.ifilter_templates(recursive=True):
-            name = self.upperfirst(template.name.strip())
+            name = self._upperfirst(template.name.strip())
             if name in job.names:
                 log = u"Skipping page: [[{0}]]; already tagged with '{1}'"
                 self.logger.info(log.format(page.title, name))
