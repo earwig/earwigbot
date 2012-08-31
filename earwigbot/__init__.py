@@ -32,9 +32,9 @@ details. This documentation is also available `online
 __author__ = "Ben Kurtovic"
 __copyright__ = "Copyright (C) 2009, 2010, 2011, 2012 Ben Kurtovic"
 __license__ = "MIT License"
-__version__ = "0.1.dev"
+__version__ = "0.1"
 __email__ = "ben.kurtovic@verizon.net"
-__release__ = False
+__release__ = True
 
 if not __release__:
     def _get_git_commit_id():
