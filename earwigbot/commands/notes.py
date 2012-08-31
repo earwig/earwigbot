@@ -80,7 +80,7 @@ class Notes(Command):
         try:
             slug = data.args[1].lower().replace("_", "").replace("-", "")
         except IndexError:
-            self.reply(data, "Please name an entry to read from.")
+            self.reply(data, "Please specify an entry to read from.")
             return
 
         with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
@@ -106,7 +106,7 @@ class Notes(Command):
         try:
             slug = data.args[1].lower().replace("_", "").replace("-", "")
         except IndexError:
-            self.reply(data, "Please name an entry to edit.")
+            self.reply(data, "Please specify an entry to edit.")
             return
         content = " ".join(data.args[2:]).strip()
         if not content:
@@ -149,7 +149,7 @@ class Notes(Command):
         try:
             slug = data.args[1].lower().replace("_", "").replace("-", "")
         except IndexError:
-            self.reply(data, "Please name an entry to get info on.")
+            self.reply(data, "Please specify an entry to get info on.")
             return
 
         with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
@@ -171,15 +171,52 @@ class Notes(Command):
             msg += "; authors: {0}.".format(", ".join(list(set(names))))
             self.reply(data, msg)
         else:
+            title = data.args[1]
             self.reply(data, "Entry \x0302{0}\x0F not found.".format(title))
 
     def do_rename(self, data):
         """Rename an entry in the notes database."""
-        pass
+        query1 = """SELECT entry_id, user_host FROM entries
+                    INNER JOIN revisions ON entry_revision = rev_id
+                    INNER JOIN users ON rev_user = user_id
+                    WHERE entry_slug = ?"""
+        query2 = "UPDATE entries SET entry_title = ? WHERE entry_id = ?"
+        try:
+            slug = data.args[1].lower().replace("_", "").replace("-", "")
+        except IndexError:
+            self.reply(data, "Please specify an entry to rename.")
+            return
+        try:
+            newtitle = data.args[2]
+        except IndexError:
+            self.reply(data, "Please specify an entry to rename.")
+            return
+        if newtitle == data.args[1]:
+            self.reply(data, "The old and new titles are identical.")
+            return
+
+        with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
+            try:
+                id_, author = conn.execute(query1, (slug,)).fetchone()
+            except (sqlite.OperationalError, TypeError):
+                msg = "Entry \x0302{0}\x0F not found.".format(data.args[1])
+                self.reply(data, msg)
+                return
+            if author != data.host and not permdb.is_admin(data):
+                msg = "You must be an author or a bot admin to rename this entry."
+                self.reply(data, msg)
+                return
+            conn.execute(query2, (newtitle, id_))
+        msg = "Entry \x0302{0}\x0F renamed to \x0302{1}\x0F."
+        self.reply(data, msg.format(data.args[1], newtitle))
 
     def do_delete(self, data):
         """Delete an entry from the notes database."""
-        pass
+        try:
+            slug = data.args[1].lower().replace("_", "").replace("-", "")
+        except IndexError:
+            self.reply(data, "Please specify an entry to delete.")
+            return
 
     def create_db(self, conn):
         """Initialize the notes database with its necessary tables."""
