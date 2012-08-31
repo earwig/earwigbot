@@ -22,6 +22,7 @@
 
 from datetime import datetime
 from os import path
+import re
 import sqlite3 as sqlite
 from threading import Lock
 
@@ -62,14 +63,20 @@ class Notes(Command):
 
     def do_help(self, data):
         """Get help on a subcommand."""
-        help = {
+        info = {
             "help": "Get help on other subcommands.",
-            "list": "List existing entries."
-            "read": "Read an existing entry ('!notes read [name]')."
-            "edit": "Modify or create a new entry ('!notes edit name [entry content]...')."
-            "info": "Get information on an existing entry ('!notes info [name]')."
-            "rename": "Rename an existing entry ('!notes rename [old_name] [new_name]')."
-            "delete": "Delete an existing entry ('!notes delete [name]')."
+            "list": "List existing entries.",
+            "read": "Read an existing entry ('!notes read [name]').",
+            "edit": """Modify or create a new entry ('!notes edit name
+                       [entry content]...'). If modifying, you must be the
+                       entry author or a bot admin.""",
+            "info": """Get information on an existing entry ('!notes info
+                       [name]').""",
+            "rename": """Rename an existing entry ('!notes rename [old_name]
+                         [new_name]'). You must be the entry author or a bot
+                         admin.""",
+            "delete": """Delete an existing entry ('!notes delete [name]'). You
+                         must be the entry author or a bot admin.""",
         }
 
         try:
@@ -78,8 +85,8 @@ class Notes(Command):
             self.reply(data, "Please specify a subcommand to get help on.")
             return
         try:
-            prefix = "\x0303{0}\x0F: ".format(command)
-            self.reply(data, prefix + help[command])
+            help_ = re.sub(r"\s\s+", " ", info[command].replace("\n", ""))
+            self.reply(data, "\x0303{0}\x0F: ".format(command) + help_)
         except KeyError:
             msg = "Unknown subcommand: \x0303{0}\x0F.".format(command)
             self.reply(data, msg)
