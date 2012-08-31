@@ -69,29 +69,29 @@ class WikiProjectTagger(Task):
     # Regexes for template names that should always go above the banner, based
     # on [[Wikipedia:Talk page layout]]:
     TOP_TEMPS = [
-        r"skip ?to ?(toc|talk|toctalk)",
+        r"skip ?to ?(toc|talk|toctalk)$",
 
-        r"ga ?nominee",
+        r"ga ?nominee$",
 
-        r"(user ?)?talk ?(header|page|page ?header)",
+        r"(user ?)?talk ?(header|page|page ?header)$",
 
-        r"community ?article ?probation",
-        r"censor(-nudity)?",
-        r"blp(o| ?others?)?",
-        r"controvers(ial2?|y)"
+        r"community ?article ?probation$",
+        r"censor(-nudity)?$",
+        r"blp(o| ?others?)?$",
+        r"controvers(ial2?|y)$",
 
-        r"(not ?(a ?)?)?forum",
-        r"tv(episode|series)talk",
-        r"recurring ?themes",
-        r"faq",
-        r"(round ?in ?)?circ(les|ular)",
+        r"(not ?(a ?)?)?forum$",
+        r"tv(episode|series)talk$",
+        r"recurring ?themes$",
+        r"faq$",
+        r"(round ?in ?)?circ(les|ular)$",
 
-        r"ar(ti|it)cle ?(history|milestones)",
-        r"failed ?ga",
-        r"old ?prod( ?full)?",
-        r"(old|previous) ?afd",
+        r"ar(ti|it)cle ?(history|milestones)$",
+        r"failed ?ga$",
+        r"old ?prod( ?full)?$",
+        r"(old|previous) ?afd$",
 
-        r"((wikiproject|wp) ?)?bio(graph(y|ies))?"
+        r"((wikiproject|wp) ?)?bio(graph(y|ies))?$",
     ]
 
     def _upperfirst(self, text):
@@ -260,7 +260,7 @@ class WikiProjectTagger(Task):
                        "book": 0, "template": 0, "category": 0}
             for template in code.ifilter_templates(recursive=True):
                 if template.has_param("class"):
-                    value = str(template.get("class").value).lower()
+                    value = unicode(template.get("class").value).lower()
                     if value in classes:
                         classes[value] += 1
             values = tuple(classes.values())
@@ -281,20 +281,28 @@ class WikiProjectTagger(Task):
         if not shells:
             shells = code.filter_templates(matches=regex, recursive=True)
         if shells:
+            log = u"Inserting banner into shell: {0}"
+            self.logger.debug(log.format(shells[0].name))
             return shells[0]
 
     def add_banner(self, code, banner):
         """Add *banner* to *code*, following template order conventions."""
-        ins_index = 0
-        if has_top_temps:                                                                       # TODO
-            xxx
-        else:
-            yyy
+        index = 0
+        for i, template in enumerate(code.ifilter_templates()):
+            name = template.name.lower().replace("_", " ")
+            for regex in self.TOP_TEMPS:
+                if re.match(regex, name):
+                    self.logger.info("Skipping top template: {0}".format(name))
+                    index = i + 1
+
+        self.logger.debug(u"Inserting banner at index {0}".format(index))
+        code.insert(index, banner)
 
     def apply_genfixes(self, code):
         """Apply general fixes to *code*, such as template substitution."""
         regex = r"^\{\{\s*((un|no)?s(i((gn|ng)(ed3?)?|g))?|usu|tilde|forgot to sign|without signature)"
         for template in code.ifilter_templates(matches=regex):
+            self.logger.debug("Applying genfix: substitute {{unsigned}}")
             template.name = "subst:unsigned"
 
 
