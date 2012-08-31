@@ -255,9 +255,23 @@ class WikiProjectTagger(Task):
         """Return banner text to add based on a *job* and a page's *code*."""
         banner = "{{" + job.banner
         if job.autoassess:
-            assessment = self.assess(code)                                                      # TODO
-            if assessment:
-                banner += "|class=" + assessment
+            classes = {"fa": 0, "fl": 0, "ga": 0, "a": 0, "b": 0, "start": 0,
+                       "stub": 0, "list": 0, "dab": 0, "c": 0, "redirect": 0,
+                       "book": 0, "template": 0, "category": 0}
+            for template in code.ifilter_templates(recursive=True):
+                if template.has_param("class"):
+                    value = str(template.get("class").value).lower()
+                    if value in classes:
+                        classes[value] += 1
+            values = tuple(classes.values())
+            best = max(values)
+            confidence = float(best) / sum(values)
+            if confidence > 0.75:
+                rank = tuple(classes.keys())[values.index(best)]
+                if rank in ("fa", "fl", "ga"):
+                    banner += "|class=" + rank.upper()
+                else:
+                    banner += "|class=" + self._upperfirst(rank)
         return banner + job.append + "}}"
 
     def get_banner_shell(self, code):
@@ -271,6 +285,7 @@ class WikiProjectTagger(Task):
 
     def add_banner(self, code, banner):
         """Add *banner* to *code*, following template order conventions."""
+        ins_index = 0
         if has_top_temps:                                                                       # TODO
             xxx
         else:
