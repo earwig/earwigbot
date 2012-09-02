@@ -28,16 +28,18 @@ import logging.handlers
 from os import mkdir, path
 import stat
 
-from Crypto.Cipher import Blowfish
-import bcrypt
 import yaml
 
+from earwigbot import importer
 from earwigbot.config.formatter import BotFormatter
 from earwigbot.config.node import ConfigNode
 from earwigbot.config.ordered_yaml import OrderedLoader
 from earwigbot.config.permissions import PermissionsDB
 from earwigbot.config.script import ConfigScript
 from earwigbot.exceptions import NoConfigError
+
+Blowfish = importer.new("Crypto.Cipher.Blowfish")
+bcrypt = importer.new("bcrypt")
 
 __all__ = ["BotConfig"]
 

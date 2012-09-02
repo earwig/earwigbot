@@ -24,7 +24,10 @@ import hashlib
 
 from Crypto.Cipher import Blowfish
 
+from earwigbot import importer
 from earwigbot.commands import Command
+
+Blowfish = importer.new("Crypto.Cipher.Blowfish")
 
 class Crypt(Command):
     """Provides hash functions with !hash (!hash list for supported algorithms)
@@ -66,7 +69,13 @@ class Crypt(Command):
                 self.reply(data, msg.format(data.command))
                 return
 
-            cipher = Blowfish.new(hashlib.sha256(key).digest())
+            try:
+                cipher = Blowfish.new(hashlib.sha256(key).digest())
+            except ImportError:
+                msg = "This command requires the 'pycrypto' package: https://www.dlitz.net/software/pycrypto/"
+                self.reply(data, msg)
+                return
+
             try:
                 if data.command == "encrypt":
                     if len(text) % 8:

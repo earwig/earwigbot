@@ -530,7 +530,7 @@ class Site(object):
         try:
             self._sql_conn = oursql.connect(**args)
         except ImportError:
-            e = "Module 'oursql' is required for SQL queries."
+            e = "SQL querying requires the 'oursql' package: http://packages.python.org/oursql/"
             raise exceptions.SQLError(e)
 
     def _get_service_order(self):

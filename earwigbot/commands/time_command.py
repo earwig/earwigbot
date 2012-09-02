@@ -56,7 +56,7 @@ class Time(Command):
         try:
             tzinfo = pytz.timezone(timezone)
         except ImportError:
-            msg = "This command requires the 'pytz' module: http://pytz.sourceforge.net/"
+            msg = "This command requires the 'pytz' package: http://pytz.sourceforge.net/"
             self.reply(data, msg)
             return
         except pytz.exceptions.UnknownTimeZoneError:

@@ -29,12 +29,13 @@ import stat
 import sys
 from textwrap import fill, wrap
 
-from Crypto.Cipher import Blowfish
-import bcrypt
 import yaml
 
-from earwigbot import exceptions
+from earwigbot import exceptions, importer
 from earwigbot.config.ordered_yaml import OrderedDumper
+
+Blowfish = importer.new("Crypto.Cipher.Blowfish")
+bcrypt = importer.new("bcrypt")
 
 __all__ = ["ConfigScript"]
 
@@ -145,17 +146,30 @@ class ConfigScript(object):
                        is to run on a public computer like the Toolserver, but
                        otherwise the need to enter a key everytime you start
                        the bot may be annoying.""")
+        self.data["metadata"]["encryptPasswords"] = False
         if self._ask_bool("Encrypt stored passwords?"):
-            self.data["metadata"]["encryptPasswords"] = True
             key = getpass(self.PROMPT + "Enter an encryption key: ")
             msg = "Running {0} rounds of bcrypt...".format(self.BCRYPT_ROUNDS)
             self._print_no_nl(msg)
-            signature = bcrypt.hashpw(key, bcrypt.gensalt(self.BCRYPT_ROUNDS))
-            self.data["metadata"]["signature"] = signature
-            self._cipher = Blowfish.new(sha256(key).digest())
-            print " done."
-        else:
-            self.data["metadata"]["encryptPasswords"] = False
+            try:
+                salt = bcrypt.gensalt(self.BCRYPT_ROUNDS)
+                signature = bcrypt.hashpw(key, salt)
+                self._cipher = Blowfish.new(sha256(key).digest())
+            except ImportError:
+                print " error!"
+                self._print("""Encryption requires the 'py-bcrypt' and
+                               'pycrypto' packages:""")
+                strt, end = " * \x1b[36m", "\x1b[0m"
+                print strt + "http://www.mindrot.org/projects/py-bcrypt/" + end
+                print strt + "https://www.dlitz.net/software/pycrypto/" + end
+                self._print("""I will disable encryption for now; restart
+                               configuration after installing these packages if
+                               you want it.""")
+                self._pause()
+            else:
+                self.data["metadata"]["encryptPasswords"] = True
+                self.data["metadata"]["signature"] = signature
+                print " done."
 
         print
         self._print("""The bot can temporarily store its logs in the logs/

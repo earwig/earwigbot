@@ -95,8 +95,8 @@ class CopyvioMixIn(object):
         if engine == "Yahoo! BOSS":
             try:
                 oauth.__version__  # Force-load the lazy module
-            except (ImportError, AttributeError):
-                e = "The package 'oauth2' could not be imported"
+            except ImportError:
+                e = "Yahoo! BOSS requires the 'oauth2' package: https://github.com/simplegeo/python-oauth2"
                 raise exceptions.UnsupportedSearchEngineError(e)
             return YahooBOSSSearchEngine(credentials)
 
