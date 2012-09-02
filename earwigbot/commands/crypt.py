@@ -22,8 +22,6 @@
 
 import hashlib
 
-from Crypto.Cipher import Blowfish
-
 from earwigbot import importer
 from earwigbot.commands import Command
 
