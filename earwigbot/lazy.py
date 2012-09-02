@@ -21,8 +21,10 @@
 # SOFTWARE.
 
 """
-Implements a hierarchy of importing classes as defined in PEP 302 to load
-modules in a safe yet lazy manner.
+Implements a hierarchy of importing classes as defined in `PEP 302
+<http://www.python.org/dev/peps/pep-0302/>`_ to load modules in a safe yet lazy
+manner, so that they can be referred to by name but are not actually loaded
+until they are used (i.e. their attributes are read or modified).
 """
 
 from imp import acquire_lock, release_lock
@@ -64,6 +66,11 @@ class _LazyModule(type):
 
 
 class LazyImporter(object):
+    """An importer for modules that are loaded lazily.
+
+    This inserts itself into :py:data:`sys.meta_path`, storing a dictionary of
+    :py:class:`_LazyModule`\ s (which is added to with :py:meth:`new`).
+    """
     def __init__(self):
         self._modules = {}
         sys.meta_path.append(self)

@@ -64,5 +64,3 @@ managers = importer.new("earwigbot.managers")
 tasks = importer.new("earwigbot.tasks")
 util = importer.new("earwigbot.util")
 wiki = importer.new("earwigbot.wiki")
-
-del importer

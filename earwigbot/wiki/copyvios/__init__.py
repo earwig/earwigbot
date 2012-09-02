@@ -26,13 +26,13 @@ from StringIO import StringIO
 from time import sleep, time
 from urllib2 import build_opener, URLError
 
-import oauth2 as oauth
-
-from earwigbot import exceptions
+from earwigbot import exceptions, importer
 from earwigbot.wiki.copyvios.markov import MarkovChain, MarkovChainIntersection
 from earwigbot.wiki.copyvios.parsers import ArticleTextParser, HTMLTextParser
 from earwigbot.wiki.copyvios.result import CopyvioCheckResult
 from earwigbot.wiki.copyvios.search import YahooBOSSSearchEngine
+
+oauth = importer.new("oauth2")
 
 __all__ = ["CopyvioMixIn"]
 
@@ -93,7 +93,9 @@ class CopyvioMixIn(object):
         credentials = self._search_config["credentials"]
 
         if engine == "Yahoo! BOSS":
-            if not oauth:
+            try:
+                oauth.__version__  # Force-load the lazy module
+            except (ImportError, AttributeError):
                 e = "The package 'oauth2' could not be imported"
                 raise exceptions.UnsupportedSearchEngineError(e)
             return YahooBOSSSearchEngine(credentials)

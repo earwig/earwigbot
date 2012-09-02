@@ -23,9 +23,10 @@
 from json import loads
 from urllib import quote_plus, urlencode
 
-import oauth2 as oauth
-
+from earwigbot import importer
 from earwigbot.exceptions import SearchQueryError
+
+oauth = importer.new("oauth2")
 
 __all__ = ["BaseSearchEngine", "YahooBOSSSearchEngine"]
 

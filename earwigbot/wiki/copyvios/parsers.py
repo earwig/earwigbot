@@ -22,9 +22,12 @@
 
 from os import path
 
-import bs4
 import mwparserfromhell
-import nltk
+
+from earwigbot import importer
+
+bs4 = importer.new("bs4")
+nltk = importer.new("nltk")
 
 __all__ = ["BaseTextParser", "ArticleTextParser", "HTMLTextParser"]
 
