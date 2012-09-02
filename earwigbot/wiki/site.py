@@ -32,13 +32,13 @@ from urllib import quote_plus, unquote_plus
 from urllib2 import build_opener, HTTPCookieProcessor, URLError
 from urlparse import urlparse
 
-import oursql
-
-from earwigbot import exceptions
+from earwigbot import exceptions, importer
 from earwigbot.wiki import constants
 from earwigbot.wiki.category import Category
 from earwigbot.wiki.page import Page
 from earwigbot.wiki.user import User
+
+oursql = importer.new("oursql")
 
 __all__ = ["Site"]
 
@@ -514,10 +514,6 @@ class Site(object):
         may raise its own exceptions (e.g. oursql.InterfaceError) if it cannot
         establish a connection.
         """
-        if not oursql:
-            e = "Module 'oursql' is required for SQL queries."
-            raise exceptions.SQLError(e)
-
         args = self._sql_data
         for key, value in kwargs.iteritems():
             args[key] = value
@@ -531,7 +527,11 @@ class Site(object):
         if "autoreconnect" not in args:
             args["autoreconnect"] = True
 
-        self._sql_conn = oursql.connect(**args)
+        try:
+            self._sql_conn = oursql.connect(**args)
+        except ImportError:
+            e = "Module 'oursql' is required for SQL queries."
+            raise exceptions.SQLError(e)
 
     def _get_service_order(self):
         """Return a preferred order for using services (e.g. the API and SQL).

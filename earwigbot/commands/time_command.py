@@ -24,9 +24,10 @@ from datetime import datetime
 from math import floor
 from time import time
 
-import pytz
-
+from earwigbot import importer
 from earwigbot.commands import Command
+
+pytz = importer.new("pytz")
 
 class Time(Command):
     """Report the current time in any timezone (UTC default), or in beats."""
@@ -52,12 +53,12 @@ class Time(Command):
         self.reply(data, "@{0:0>3}".format(beats))
 
     def do_time(self, data, timezone):
-        if not pytz:
+        try:
+            tzinfo = pytz.timezone(timezone)
+        except ImportError:
             msg = "This command requires the 'pytz' module: http://pytz.sourceforge.net/"
             self.reply(data, msg)
             return
-        try:
-            tzinfo = pytz.timezone(timezone)
         except pytz.exceptions.UnknownTimeZoneError:
             self.reply(data, "Unknown timezone: {0}.".format(timezone))
             return
