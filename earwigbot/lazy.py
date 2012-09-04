@@ -60,6 +60,8 @@ class _LazyModule(type):
                 parents = (ModuleType,)
                 klass = type.__new__(cls, "module", parents, attributes)
                 sys.modules[name] = klass(name)
+                if "." in name:  # Also ensure the parent exists
+                    _LazyModule(name.rsplit(".", 1)[0])
             return sys.modules[name]
         finally:
             release_lock()
