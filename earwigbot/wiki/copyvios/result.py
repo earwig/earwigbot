@@ -34,16 +34,19 @@ class CopyvioCheckResult(object):
     - :py:attr:`confidence`:    a float between 0 and 1 indicating accuracy
     - :py:attr:`url`:           the URL of the violated page
     - :py:attr:`queries`:       the number of queries used to reach a result
+    - :py:attr:`time`:          the amount of time the check took to complete
     - :py:attr:`article_chain`: the MarkovChain of the article text
     - :py:attr:`source_chain`:  the MarkovChain of the violated page text
     - :py:attr:`delta_chain`:   the MarkovChainIntersection comparing the two
     """
 
-    def __init__(self, violation, confidence, url, queries, article, chains):
+    def __init__(self, violation, confidence, url, queries, time, article,
+                 chains):
         self.violation = violation
         self.confidence = confidence
         self.url = url
         self.queries = queries
+        self.time = time
         self.article_chain = article
         self.source_chain = chains[0]
         self.delta_chain = chains[1]

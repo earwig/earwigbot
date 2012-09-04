@@ -116,7 +116,7 @@ class CopyvioMixIn(object):
         delta = MarkovChainIntersection(article, source)
         return float(delta.size()) / article.size(), (source, delta)
 
-    def copyvio_check(self, min_confidence=0.5, max_queries=-1,
+    def copyvio_check(self, min_confidence=0.5, max_queries=-1, max_time=-1,
                       interquery_sleep=1):
         """Check the page for copyright violations.
 
@@ -128,6 +128,11 @@ class CopyvioMixIn(object):
         number of queries in a given check. If it's lower than 0, we will not
         limit the number of queries.
 
+        *max_time* can be set to prevent copyvio checks from taking longer than
+        a set amount of time (generally around a minute), which can be useful
+        if checks are called through a web server with timeouts. We will stop
+        checking new URLs as soon as this limit is reached.
+
         *interquery_sleep* is the minimum amount of time we will sleep between
         search engine queries, in seconds.
 
@@ -135,6 +140,7 @@ class CopyvioMixIn(object):
         (:py:exc:`~earwigbot.exceptions.UnknownSearchEngineError`,
         :py:exc:`~earwigbot.exceptions.SearchQueryError`, ...) on errors.
         """
+        start_time = time()
         searcher = self._select_search_engine()
         if self._exclusions_db:
             self._exclusions_db.sync(self.site.name)
@@ -171,25 +177,31 @@ class CopyvioMixIn(object):
                     best_confidence = conf
                     best_match = url
                     best_chains = chns
+                if time() - start_time > max_time:
+                    break
             num_queries += 1
+            if time() - start_time > max_time:
+                break
             diff = time() - last_query
             if diff < interquery_sleep:
                 sleep(interquery_sleep - diff)
             last_query = time()
 
+        ctime = time() - start_time
         if best_confidence >= min_confidence:
             is_violation = True
-            log = u"Violation detected for [[{0}]] (confidence: {1}; URL: {2}; using {3} queries)"
+            log = u"Violation detected for [[{0}]] (confidence: {1}; URL: {2}; using {3} queries in {4} seconds)"
             self._logger.debug(log.format(self.title, best_confidence,
-                                          best_match, num_queries))
+                                          best_match, num_queries, ctime))
         else:
             is_violation = False
-            log = u"No violation for [[{0}]] (confidence: {1}; using {2} queries)"
+            log = u"No violation for [[{0}]] (confidence: {1}; using {2} queries in {3} seconds)"
             self._logger.debug(log.format(self.title, best_confidence,
-                                          num_queries))
+                                          num_queries, ctime))
 
         return CopyvioCheckResult(is_violation, best_confidence, best_match,
-                                  num_queries, article_chain, best_chains)
+                                  num_queries, ctime, article_chain,
+                                  best_chains)
 
     def copyvio_compare(self, url, min_confidence=0.5):
         """Check the page like :py:meth:`copyvio_check` against a specific URL.
@@ -213,19 +225,21 @@ class CopyvioMixIn(object):
         :py:exc:`~earwigbot.exceptions.UnknownSearchEngineError` nor
         :py:exc:`~earwigbot.exceptions.SearchQueryError` will be raised.
         """
+        start_time = time()
         content = self.get()
         clean = ArticleTextParser(content).strip()
         article_chain = MarkovChain(clean)
         confidence, chains = self._copyvio_compare_content(article_chain, url)
 
+        ctime = time() - start_time
         if confidence >= min_confidence:
             is_violation = True
-            log = u"Violation detected for [[{0}]] (confidence: {1}; URL: {2})"
-            self._logger.debug(log.format(self.title, confidence, url))
+            log = u"Violation detected for [[{0}]] (confidence: {1}; URL: {2}; {3} seconds)"
+            self._logger.debug(log.format(self.title, confidence, url, ctime))
         else:
             is_violation = False
-            log = u"No violation for [[{0}]] (confidence: {1}; URL: {2})"
-            self._logger.debug(log.format(self.title, confidence, url))
+            log = u"No violation for [[{0}]] (confidence: {1}; URL: {2}; {3} seconds)"
+            self._logger.debug(log.format(self.title, confidence, url, ctime))
 
-        return CopyvioCheckResult(is_violation, confidence, url, 0,
+        return CopyvioCheckResult(is_violation, confidence, url, 0, ctime,
                                   article_chain, chains)
