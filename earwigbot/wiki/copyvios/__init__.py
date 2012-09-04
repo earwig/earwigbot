@@ -110,7 +110,7 @@ class CopyvioMixIn(object):
         """
         html = self._open_url_ignoring_errors(url)
         if not html:
-            return 0
+            return 0, ()
 
         source = MarkovChain(HTMLTextParser(html).strip())
         delta = MarkovChainIntersection(article, source)
@@ -166,11 +166,11 @@ class CopyvioMixIn(object):
                 if self._exclusions_db:
                     if self._exclusions_db.check(self.site.name, url):
                         continue
-                conf, chains = self._copyvio_compare_content(article_chain, url)
+                conf, chns = self._copyvio_compare_content(article_chain, url)
                 if conf > best_confidence:
                     best_confidence = conf
                     best_match = url
-                    best_chains = chains
+                    best_chains = chns
             num_queries += 1
             diff = time() - last_query
             if diff < interquery_sleep:
