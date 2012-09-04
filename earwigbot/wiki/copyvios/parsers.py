@@ -137,8 +137,10 @@ class HTMLTextParser(BaseTextParser):
             soup = bs4.BeautifulSoup(self.text).body
 
         is_comment = lambda text: isinstance(text, bs4.element.Comment)
-        [comment.extract() for comment in soup.find_all(text=is_comment)]
+        for comment in soup.find_all(text=is_comment):
+            comment.extract()
         for tag in self.hidden_tags:
-            [element.extract() for element in soup.find_all(tag)]
+            for element in soup.find_all(tag):
+                element.extract()
 
         return "\n".join(soup.stripped_strings)
