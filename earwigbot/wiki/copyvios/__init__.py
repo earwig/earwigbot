@@ -98,7 +98,7 @@ class CopyvioMixIn(object):
             except ImportError:
                 e = "Yahoo! BOSS requires the 'oauth2' package: https://github.com/simplegeo/python-oauth2"
                 raise exceptions.UnsupportedSearchEngineError(e)
-            return YahooBOSSSearchEngine(credentials)
+            return YahooBOSSSearchEngine(credentials, self._opener)
 
         raise exceptions.UnknownSearchEngineError(engine)
 

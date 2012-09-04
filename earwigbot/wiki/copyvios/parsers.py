@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import errno
 from os import path
 
 import mwparserfromhell
@@ -83,7 +84,9 @@ class ArticleTextParser(BaseTextParser):
         datafile = path.join(nltk_dir, "tokenizers", "punkt", "english.pickle")
         try:
             tokenizer = nltk.data.load("file:" + datafile)
-        except LookupError:
+        except IOError as exc:
+            if exc.errno != errno.ENOENT:
+                raise
             nltk.download("punkt", nltk_dir)
             tokenizer = nltk.data.load("file:" + datafile)
 

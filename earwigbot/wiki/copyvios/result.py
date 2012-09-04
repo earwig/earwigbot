@@ -50,7 +50,7 @@ class CopyvioCheckResult(object):
 
     def __repr__(self):
         """Return the canonical string representation of the result."""
-        res = "CopyvioCheckResult(violation={0!r}, confidence={1!r}, url={2!r}, queries={3|r})"
+        res = "CopyvioCheckResult(violation={0!r}, confidence={1!r}, url={2!r}, queries={3!r})"
         return res.format(self.violation, self.confidence, self.url,
                           self.queries)
 

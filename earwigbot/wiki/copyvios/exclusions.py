@@ -88,11 +88,12 @@ class ExclusionsDB(object):
             return urls
 
         regexes = [
-            "url\s*=\s*<nowiki>(?:https?:)?(?://)?(.*)</nowiki>",
-            "\*\s*Site:\s*\[?(?:https?:)?(?://)?(.*)\]?"
+            r"url\s*=\s*<nowiki>(?:https?:)?(?://)?(.*)</nowiki>",
+            r"\*\s*Site:\s*(?:\[|\<nowiki\>)?(?:https?:)?(?://)?(.*)(?:\]|\</nowiki\>)?"
         ]
         for regex in regexes:
-            [urls.add(url.lower()) for (url,) in re.findall(regex, data, re.I)]
+            find = re.findall(regex, data, re.I)
+            [urls.add(url.lower().strip()) for url in find if url.strip()]
         return urls
 
     def _update(self, sitename):

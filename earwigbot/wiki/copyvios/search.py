@@ -20,8 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from gzip import GzipFile
 from json import loads
-from urllib import quote_plus, urlencode
+from StringIO import StringIO
+from urllib import quote_plus
 
 from earwigbot import importer
 from earwigbot.exceptions import SearchQueryError
@@ -34,9 +36,10 @@ class BaseSearchEngine(object):
     """Base class for a simple search engine interface."""
     name = "Base"
 
-    def __init__(self, cred):
-        """Store credentials *cred* for searching later on."""
+    def __init__(self, cred, opener):
+        """Store credentials (*cred*) and *opener* for searching later on."""
         self.cred = cred
+        self.opener = opener
 
     def __repr__(self):
         """Return the canonical string representation of the search engine."""
@@ -65,22 +68,35 @@ class YahooBOSSSearchEngine(BaseSearchEngine):
         determined by Yahoo). Raises
         :py:exc:`~earwigbot.exceptions.SearchQueryError` on errors.
         """
-        base_url = "http://yboss.yahooapis.com/ysearch/web"
-        query = quote_plus(query.join('"', '"'))
-        params = {"q": query, "type": "html,text", "format": "json"}
-        url = "{0}?{1}".format(base_url, urlencode(params))
+        key, secret = self.cred["key"], self.cred["secret"]
+        consumer = oauth.Consumer(key=key, secret=secret)
 
-        consumer = oauth.Consumer(key=self.cred["key"],
-                                  secret=self.cred["secret"])
-        client = oauth.Client(consumer)
-        headers, body = client.request(url, "GET")
+        url = "http://yboss.yahooapis.com/ysearch/web"
+        params = {
+            "oauth_version": oauth.OAUTH_VERSION,
+            "oauth_nonce": oauth.generate_nonce(),
+            "oauth_timestamp": oauth.Request.make_timestamp(),
+            "oauth_consumer_key": consumer.key,
+            "q": quote_plus('"' + query.encode("utf8") + '"'),
+            "type": "html,text",
+            "format": "json",
+        }
 
-        if headers["status"] != "200":
+        req = oauth.Request(method="GET", url=url, parameters=params)
+        req.sign_request(oauth.SignatureMethod_HMAC_SHA1(), consumer, None)
+        response = self.opener.open(req.to_url())
+        result = response.read()
+
+        if response.headers.get("Content-Encoding") == "gzip":
+            stream = StringIO(result)
+            gzipper = GzipFile(fileobj=stream)
+            result = gzipper.read()
+
+        if response.getcode() != 200:
             e = "Yahoo! BOSS Error: got response code '{0}':\n{1}'"
-            raise SearchQueryError(e.format(headers["status"], body))
-
+            raise SearchQueryError(e.format(response.getcode(), result))
         try:
-            res = loads(body)
+            res = loads(result)
         except ValueError:
             e = "Yahoo! BOSS Error: JSON could not be decoded"
             raise SearchQueryError(e)
