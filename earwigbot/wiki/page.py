@@ -400,6 +400,15 @@ class Page(CopyvioMixIn):
         elif error.code in ["emptypage", "emptynewsection"]:
             raise exceptions.NoContentError(error.info)
 
+        elif error.code == "blocked":
+            if tries > 0 or not all(self.site._login_info):
+                raise exceptions.PermissionsError(error.info)
+            else:
+                # Perhaps we are blocked from being logged-out? Try to log in:
+                self.site._login(self.site._login_info)
+                self._token = None  # Need a new token; old one is invalid now
+                return self._edit(params=params, tries=1)
+
         elif error.code == "contenttoobig":
             raise exceptions.ContentTooBigError(error.info)
 

@@ -169,7 +169,8 @@ class PermissionsError(EditError):
 
     We tried to do something we don't have permission to, like trying to delete
     a page as a non-admin, or trying to edit a page without login information
-    and AssertEdit enabled.
+    and AssertEdit enabled. This will also be raised if we have been blocked
+    from editing.
 
     Raised by :py:meth:`Page.edit <earwigbot.wiki.page.Page.edit>` and
     :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`.
