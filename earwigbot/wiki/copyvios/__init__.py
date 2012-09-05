@@ -158,7 +158,8 @@ class CopyvioMixIn(object):
 
         if article_chain.size() < 20:  # Auto-fail very small articles
             return CopyvioCheckResult(False, best_confidence, best_match,
-                                      num_queries, article_chain, best_chains)
+                                      num_queries, 0, article_chain,
+                                      best_chains)
 
         while (chunks and best_confidence < min_confidence and
                (max_queries < 0 or num_queries < max_queries)):
