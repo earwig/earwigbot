@@ -230,8 +230,13 @@ class CopyvioMixIn(object):
         content = self.get()
         clean = ArticleTextParser(content).strip()
         article_chain = MarkovChain(clean)
-        confidence, chains = self._copyvio_compare_content(article_chain, url)
 
+        if not url:
+            empty = MarkovChain("")
+            chns = (empty, MarkovChainIntersection(empty, empty))
+            return CopyvioCheckResult(False, 0, url, 0, 0, article_chain, chns)
+
+        confidence, chains = self._copyvio_compare_content(article_chain, url)
         ctime = time() - start_time
         if confidence >= min_confidence:
             is_violation = True
