@@ -31,12 +31,14 @@ from earwigbot import exceptions
 __all__ = ["ExclusionsDB"]
 
 default_sources = {
+    "all": [
+        "User:EarwigBot/Copyvios/Exclusions"
+    ],
     "enwiki": [
         "Wikipedia:Mirrors and forks/Abc", "Wikipedia:Mirrors and forks/Def",
         "Wikipedia:Mirrors and forks/Ghi", "Wikipedia:Mirrors and forks/Jkl",
         "Wikipedia:Mirrors and forks/Mno", "Wikipedia:Mirrors and forks/Pqr",
-        "Wikipedia:Mirrors and forks/Stu", "Wikipedia:Mirrors and forks/Vwxyz",
-        "User:EarwigBot/Copyvios/Exclusions"
+        "Wikipedia:Mirrors and forks/Stu", "Wikipedia:Mirrors and forks/Vwxyz"
     ]
 }
 
@@ -73,7 +75,8 @@ class ExclusionsDB(object):
         query = "INSERT INTO sources VALUES (?, ?);"
         sources = []
         for sitename, pages in default_sources.iteritems():
-            [sources.append((sitename, page)) for page in pages]
+            for page in pages:
+                sources.append((sitename, page))
 
         with sqlite.connect(self._dbfile) as conn:
             conn.executescript(script)
@@ -147,6 +150,8 @@ class ExclusionsDB(object):
         else:
             log = u"Database for {0} is still fresh (last updated {1} seconds ago)"
             self._logger.debug(log.format(sitename, time_since_update))
+        if sitename != "all":
+            self.sync("all")
 
     def check(self, sitename, url):
         """Check whether a given URL is in the exclusions database.
@@ -154,9 +159,10 @@ class ExclusionsDB(object):
         Return ``True`` if the URL is in the database, or ``False`` otherwise.
         """
         normalized = re.sub("https?://", "", url.lower())
-        query = "SELECT exclusion_url FROM exclusions WHERE exclusion_sitename = ?"
+        query = """SELECT exclusion_url FROM exclusions
+                   WHERE exclusion_sitename = ? OR exclusion_sitename = ?"""
         with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
-            for (excl,) in conn.execute(query, (sitename,)):
+            for (excl,) in conn.execute(query, (sitename, "all")):
                 if excl.startswith("*."):
                     netloc = urlparse(url.lower()).netloc
                     matches = True if excl[2:] in netloc else False
