@@ -31,7 +31,7 @@ from earwigbot import exceptions
 __all__ = ["ExclusionsDB"]
 
 default_sources = {
-    "all": [
+    "all": [  # Applies to all, but located on enwiki
         "User:EarwigBot/Copyvios/Exclusions"
     ],
     "enwiki": [
@@ -109,7 +109,10 @@ class ExclusionsDB(object):
         query6 = "UPDATE updates SET update_time = ? WHERE update_sitename = ?;"
         query7 = "INSERT INTO updates VALUES (?, ?);"
 
-        site = self._sitesdb.get_site(sitename)
+        if sitename == "all":
+            site = self._sitesdb.get_site("enwiki")
+        else:
+            site = self._sitesdb.get_site(sitename)
         with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
             urls = set()
             for (source,) in conn.execute(query1, (sitename,)):
