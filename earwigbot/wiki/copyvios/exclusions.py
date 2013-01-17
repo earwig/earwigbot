@@ -91,7 +91,7 @@ class ExclusionsDB(object):
             return urls
 
         regexes = [
-            r"url\s*=\s*<nowiki>(?:https?:)?(?://)?(.*)</nowiki>",
+            r"url\s*=\s*(<nowiki>)?(?:https?:)?(?://)?(.*)(</nowiki>)?",
             r"\*\s*Site:\s*(?:\[|\<nowiki\>)?(?:https?:)?(?://)?(.*)(?:\]|\</nowiki\>)?"
         ]
         for regex in regexes:
