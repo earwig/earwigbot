@@ -95,7 +95,7 @@ class ExclusionsDB(object):
             r"\*\s*Site:\s*(?:\[|\<nowiki\>)?(?:https?:)?(?://)?(.*?)(?:\].*?|\</nowiki\>.*?)?\s*$"
         ]
         for regex in regexes:
-            find = re.findall(regex, data, re.I)
+            find = re.findall(regex, data, re.I|re.M)
             [urls.add(url.lower().strip()) for url in find if url.strip()]
         return urls
 
