@@ -91,8 +91,8 @@ class ExclusionsDB(object):
             return urls
 
         regexes = [
-            r"url\s*=\s*(?:<nowiki>)?(?:https?:)?(?://)?(.*)(?:</nowiki>)?",
-            r"\*\s*Site:\s*(?:\[|\<nowiki\>)?(?:https?:)?(?://)?(.*)(?:\]|\</nowiki\>)?"
+            r"url\s*=\s*(?:\<nowiki\>)?(?:https?:)?(?://)?(.*?)(?:\</nowiki\>.*?)?\s*$",
+            r"\*\s*Site:\s*(?:\[|\<nowiki\>)?(?:https?:)?(?://)?(.*?)(?:\].*?|\</nowiki\>.*?)?\s*$"
         ]
         for regex in regexes:
             find = re.findall(regex, data, re.I)
@@ -101,13 +101,13 @@ class ExclusionsDB(object):
 
     def _update(self, sitename):
         """Update the database from listed sources in the index."""
-        query1 = "SELECT source_page FROM sources WHERE source_sitename = ?;"
+        query1 = "SELECT source_page FROM sources WHERE source_sitename = ?"
         query2 = "SELECT exclusion_url FROM exclusions WHERE exclusion_sitename = ?"
         query3 = "DELETE FROM exclusions WHERE exclusion_sitename = ? AND exclusion_url = ?"
-        query4 = "INSERT INTO exclusions VALUES (?, ?);"
-        query5 = "SELECT 1 FROM updates WHERE update_sitename = ?;"
-        query6 = "UPDATE updates SET update_time = ? WHERE update_sitename = ?;"
-        query7 = "INSERT INTO updates VALUES (?, ?);"
+        query4 = "INSERT INTO exclusions VALUES (?, ?)"
+        query5 = "SELECT 1 FROM updates WHERE update_sitename = ?"
+        query6 = "UPDATE updates SET update_time = ? WHERE update_sitename = ?"
+        query7 = "INSERT INTO updates VALUES (?, ?)"
 
         if sitename == "all":
             site = self._sitesdb.get_site("enwiki")
@@ -130,7 +130,7 @@ class ExclusionsDB(object):
 
     def _get_last_update(self, sitename):
         """Return the UNIX timestamp of the last time the db was updated."""
-        query = "SELECT update_time FROM updates WHERE update_sitename = ?;"
+        query = "SELECT update_time FROM updates WHERE update_sitename = ?"
         with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
             try:
                 result = conn.execute(query, (sitename,)).fetchone()
@@ -140,11 +140,11 @@ class ExclusionsDB(object):
             return result[0] if result else 0
 
     def sync(self, sitename):
-        """Update the database if it hasn't been updated in the past week.
+        """Update the database if it hasn't been updated in the past day.
 
         This only updates the exclusions database for the *sitename* site.
         """
-        max_staleness = 60 * 60 * 24 * 7
+        max_staleness = 60 * 60 * 24
         time_since_update = int(time() - self._get_last_update(sitename))
         if time_since_update > max_staleness:
             log = u"Updating stale database: {0} (last updated {1} seconds ago)"
