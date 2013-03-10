@@ -30,11 +30,8 @@ class Access(Command):
     commands = ["access", "permission", "permissions", "perm", "perms"]
 
     def process(self, data):
-        if not data.args:
-            self.reply(data, "Subcommands are self, list, add, remove.")
-            return
         permdb = self.config.irc["permissions"]
-        if data.args[0] == "self":
+        if not data.args or data.args[0] == "self":
             self.do_self(data, permdb)
         elif data.args[0] == "list":
             self.do_list(data, permdb)
@@ -42,9 +39,11 @@ class Access(Command):
             self.do_add(data, permdb)
         elif data.args[0] == "remove":
             self.do_remove(data, permdb)
+        elif data.args[0] == "help":
+            self.reply(data, "Subcommands are self, list, add, and remove.")
         else:
-            msg = "Unknown subcommand \x0303{0}\x0F.".format(data.args[0])
-            self.reply(data, msg)
+            msg = "Unknown subcommand \x0303{0}\x0F. Subcommands are self, list, add, remove."
+            self.reply(data, msg.format(data.args[0]))
 
     def do_self(self, data, permdb):
         if permdb.is_owner(data):
