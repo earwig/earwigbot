@@ -73,7 +73,7 @@ class Access(Command):
         else:
             owners = len(permdb.data.get(permdb.OWNER, []))
             admins = len(permdb.data.get(permdb.ADMIN, []))
-            msg = "There are {0} bot owners and {1} bot admins. Use '!{2} list owners' or '!{2} list admins' for details."
+            msg = "There are \x02{0}\x0F bot owners and \x02{1}\x0F bot admins. Use '!{2} list owners' or '!{2} list admins' for details."
             self.reply(data, msg.format(owners, admins, data.command))
 
     def do_add(self, data, permdb):
