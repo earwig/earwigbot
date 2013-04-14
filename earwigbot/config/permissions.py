@@ -183,10 +183,10 @@ class PermissionsDB(object):
         query3 = """UPDATE attributes SET attr_value = ? WHERE attr_uid = ?
                     AND attr_key = ?"""
         with self._db_access_lock, sqlite.connect(self._dbfile) as conn:
-            if conn.execute(query1, (user, key)):
-                conn.execute(query2, (user, key, value))
-            else:
+            if conn.execute(query1, (user, key)).fetchone():
                 conn.execute(query3, (value, user, key))
+            else:
+                conn.execute(query2, (user, key, value))
         try:
             self._attributes[user][key] = value
         except KeyError:
