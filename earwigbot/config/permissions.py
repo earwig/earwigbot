@@ -39,7 +39,8 @@ class PermissionsDB(object):
     def __init__(self, dbfile):
         self._dbfile = dbfile
         self._db_access_lock = Lock()
-        self._data = {}
+        self._users = {}
+        self._attributes = {}
 
     def __repr__(self):
         """Return the canonical string representation of the PermissionsDB."""
@@ -53,13 +54,14 @@ class PermissionsDB(object):
     def _create(self, conn):
         """Initialize the permissions database with its necessary tables."""
         query = """CREATE TABLE users (user_nick, user_ident, user_host,
-                                       user_rank)"""
+                                       user_rank);
+                   CREATE TABLE attributes (attr_uid, attr_key, attr_value);"""
         conn.execute(query)
 
     def _is_rank(self, user, rank):
         """Return True if the given user has the given rank, else False."""
         try:
-            for rule in self._data[rank]:
+            for rule in self._users[rank]:
                 if user in rule:
                     return rule
         except KeyError:
@@ -73,9 +75,9 @@ class PermissionsDB(object):
             with sqlite.connect(self._dbfile) as conn:
                 conn.execute(query, (user.nick, user.ident, user.host, rank))
             try:
-                self._data[rank].append(user)
+                self._users[rank].append(user)
             except KeyError:
-                self._data[rank] = [user]
+                self._users[rank] = [user]
         return user
 
     def _del_rank(self, user, rank):
@@ -84,40 +86,51 @@ class PermissionsDB(object):
                                            user_host = ? AND user_rank = ?"""
         with self._db_access_lock:
             try:
-                for rule in self._data[rank]:
+                for rule in self._users[rank]:
                     if user in rule:
                         with sqlite.connect(self._dbfile) as conn:
                             args = (user.nick, user.ident, user.host, rank)
                             conn.execute(query, args)
-                        self._data[rank].remove(rule)
+                        self._users[rank].remove(rule)
                         return rule
             except KeyError:
                 pass
         return None
 
     @property
-    def data(self):
-        """A dict of all entries in the permissions database."""
-        return self._data
+    def users(self):
+        """A dict of all users in the permissions database."""
+        return self._users
+
+    @property
+    def attributes(self):
+        """A dict of all attributes in the permissions database."""
+        return self._attributes
 
     def load(self):
         """Load permissions from an existing database, or create a new one."""
-        query = "SELECT user_nick, user_ident, user_host, user_rank FROM users"
-        self._data = {}
+        qry1 = "SELECT user_nick, user_ident, user_host, user_rank FROM users"
+        qry2 = "SELECT attr_uid, attr_key, attr_value FROM attributes"
+        self._users = {}
         with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
             try:
-                for nick, ident, host, rank in conn.execute(query):
+                for nick, ident, host, rank in conn.execute(qry1):
                     try:
-                        self._data[rank].append(_User(nick, ident, host))
+                        self._users[rank].append(_User(nick, ident, host))
                     except KeyError:
-                        self._data[rank] = [_User(nick, ident, host)]
+                        self._users[rank] = [_User(nick, ident, host)]
+                for user, key, value in conn.execute(qry2):
+                    try:
+                        self._attributes[user][key] = value
+                    except KeyError:
+                        self._attributes[user] = {key: value}
             except sqlite.OperationalError:
                 self._create(conn)
 
     def has_exact(self, rank, nick="*", ident="*", host="*"):
         """Return ``True`` if there is an exact match for this rule."""
         try:
-            for usr in self._data[rank]:
+            for usr in self._users[rank]:
                 if nick != usr.nick or ident != usr.ident or host != usr.host:
                     continue
                 return usr
@@ -151,6 +164,39 @@ class PermissionsDB(object):
         """Remove a nick/ident/host combo to the bot owners list."""
         return self._del_rank(_User(nick, ident, host), rank=self.OWNER)
 
+    def has_attr(self, user, key):
+        """Return ``True`` if a given user has a certain attribute, *key*."""
+        return user in self._attributes and key in self._attributes[user]
+
+    def get_attr(self, user, key):
+        """Get the value of the attribute *key* of a given *user*.
+
+        Raises :py:exc:`KeyError` if the *key* or *user* is not found.
+        """
+        return self._attributes[user][key]
+
+    def set_attr(self, user, key, value):
+        """Set the *value* of the attribute *key* of a given *user*."""
+        query1 = """SELECT attr_value FROM attributes WHERE attr_uid = ?
+                    AND attr_key = ?"""
+        query2 = "INSERT INTO attributes VALUES (?, ?, ?)"
+        query3 = """UPDATE attributes SET attr_value = ? WHERE attr_uid = ?
+                    AND attr_key = ?"""
+        with self._db_access_lock, sqlite.connect(self._dbfile) as conn:
+            if conn.execute(query1, (user, key)):
+                conn.execute(query2, (user, key, value))
+            else:
+                conn.execute(query3, (value, user, key))
+        try:
+            self._attributes[user][key] = value
+        except KeyError:
+            self.attributes[user] = {key: value}
+
+    def remove_attr(self, user, key):
+        """Remove the attribute *key* of a given *user*."""
+        query = "DELETE FROM attributes WHERE attr_uid = ? AND attr_key = ?"
+        with self._db_access_lock, sqlite.connect(self._dbfile) as conn:
+            conn.execute(query, (user, key))
 
 class _User(object):
     """A class that represents an IRC user for the purpose of testing rules."""
