@@ -63,9 +63,9 @@ class CopyvioMixIn(object):
         """
         try:
             response = self._opener.open(url.encode("utf8"), timeout=5)
+            result = response.read()
         except (URLError, timeout):
             return None
-        result = response.read()
 
         if response.headers.get("Content-Encoding") == "gzip":
             stream = StringIO(result)
