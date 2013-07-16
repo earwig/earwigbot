@@ -28,7 +28,7 @@ from earwigbot.commands import Command
 class Dictionary(Command):
     """Define words and stuff."""
     name = "dictionary"
-    commands = ["dict", "dictionary", "define"]
+    commands = ["dict", "dictionary", "define", "def"]
 
     def process(self, data):
         if not data.args:
