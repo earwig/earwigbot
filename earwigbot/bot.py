@@ -22,7 +22,7 @@
 
 import logging
 from threading import Lock, Thread, enumerate as enumerate_threads
-from time import sleep, time
+from time import gmtime, sleep
 
 from earwigbot import __version__
 from earwigbot.config import BotConfig
@@ -101,13 +101,10 @@ class Bot(object):
     def _start_wiki_scheduler(self):
         """Start the wiki scheduler in a separate thread if enabled."""
         def wiki_scheduler():
+            run_at = 15
             while self._keep_looping:
-                time_start = time()
                 self.tasks.schedule()
-                time_end = time()
-                time_diff = time_start - time_end
-                if time_diff < 60:  # Sleep until the next minute
-                    sleep(60 - time_diff)
+                sleep(60 + run_at - gmtime().tm_sec)
 
         if self.config.components.get("wiki_scheduler"):
             self.logger.info("Starting wiki scheduler")
