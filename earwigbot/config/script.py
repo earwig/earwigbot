@@ -279,11 +279,20 @@ class ConfigScript(object):
         self.data["wiki"]["sql"] = {}
 
         if self._wmf:
-            msg = "Will this bot run from the Wikimedia Toolserver?"
-            toolserver = self._ask_bool(msg, default=False)
-            if toolserver:
-                args = [("host", "$1-p.rrdb.toolserver.org"), ("db", "$1_p")]
+            msg = "Will this bot run from the Wikimedia Tool Labs?"
+            labs = self._ask_bool(msg, default=False)
+            if labs:
+                args = [("host", "$1.labsdb"), ("db", "$1_p"),
+                        ("read_default_file",
+                         "/data/project/earwigbot/replica.my.cnf")]
                 self.data["wiki"]["sql"] = OrderedDict(args)
+            else:
+                msg = "Will this bot run from the Wikimedia Toolserver?"
+                toolserver = self._ask_bool(msg, default=False)
+                if toolserver:
+                    args = [("host", "$1-p.rrdb.toolserver.org"),
+                            ("db", "$1_p")]
+                    self.data["wiki"]["sql"] = OrderedDict(args)
 
         self.data["wiki"]["shutoff"] = {}
         msg = "Would you like to enable an automatic shutoff page for the bot?"

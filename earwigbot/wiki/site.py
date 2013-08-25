@@ -729,7 +729,7 @@ class Site(object):
         query = """SELECT UNIX_TIMESTAMP() - UNIX_TIMESTAMP(rc_timestamp) FROM
                    recentchanges ORDER BY rc_timestamp DESC LIMIT 1"""
         result = list(self.sql_query(query))
-        return result[0][0]
+        return int(result[0][0])
 
     def namespace_id_to_name(self, ns_id, all=False):
         """Given a namespace ID, returns associated namespace names.
