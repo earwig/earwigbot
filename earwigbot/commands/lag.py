@@ -24,7 +24,7 @@ from earwigbot import exceptions
 from earwigbot.commands import Command
 
 class Lag(Command):
-    """Return the replag for a specific database on the Toolserver."""
+    """Return the replag for a specific database on Labs."""
     name = "lag"
     commands = ["lag", "replag", "maxlag"]
 
@@ -45,7 +45,7 @@ class Lag(Command):
         self.reply(data, msg)
 
     def get_replag(self, site):
-        return "Toolserver replag is {0}".format(self.time(site.get_replag()))
+        return "Labs replag is {0}".format(self.time(site.get_replag()))
 
     def get_maxlag(self, site):
         return "database maxlag is {0}".format(self.time(site.get_maxlag()))
