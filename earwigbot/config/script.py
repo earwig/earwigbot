@@ -283,8 +283,7 @@ class ConfigScript(object):
             labs = self._ask_bool(msg, default=False)
             if labs:
                 args = [("host", "$1.labsdb"), ("db", "$1_p"),
-                        ("read_default_file",
-                         "/data/project/earwigbot/replica.my.cnf")]
+                        ("read_default_file", "~/replica.my.cnf")]
                 self.data["wiki"]["sql"] = OrderedDict(args)
             else:
                 msg = "Will this bot run from the Wikimedia Toolserver?"
