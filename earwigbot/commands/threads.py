@@ -71,10 +71,10 @@ class Threads(Command):
             tname = thread.name
             if tname == "MainThread":
                 t = "\x0302MainThread\x0F (id {0})"
-                normal_threads.append(t.format(thread.ident))
+                normal_threads.append(t.format(thread.ident % 10000))
             elif tname in self.config.components:
                 t = "\x0302{0}\x0F (id {1})"
-                normal_threads.append(t.format(tname, thread.ident))
+                normal_threads.append(t.format(tname, thread.ident % 10000))
             elif tname.startswith("reminder"):
                 tname = tname.replace("reminder ", "")
                 t = "\x0302reminder\x0F (until {0})"
@@ -82,7 +82,7 @@ class Threads(Command):
             else:
                 tname, start_time = re.findall("^(.*?) \((.*?)\)$", tname)[0]
                 t = "\x0302{0}\x0F (id {1}, since {2})"
-                daemon_threads.append(t.format(tname, thread.ident,
+                daemon_threads.append(t.format(tname, thread.ident % 10000,
                                                start_time))
 
         if daemon_threads:
