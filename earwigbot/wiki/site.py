@@ -520,6 +520,8 @@ class Site(object):
 
         if "read_default_file" not in args and "user" not in args and "passwd" not in args:
             args["read_default_file"] = expanduser("~/.my.cnf")
+        elif "read_default_file" in args:
+            args["read_default_file"] = expanduser(args["read_default_file"])
 
         if "autoping" not in args:
             args["autoping"] = True
