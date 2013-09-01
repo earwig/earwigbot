@@ -87,9 +87,9 @@ class Category(Page):
 
         if limit:
             query += " LIMIT ?"
-            result = self.site.sql_query(query, (title, limit))
+            result = self.site.sql_query(query, (title, limit), buffsize=0)
         else:
-            result = self.site.sql_query(query, (title,))
+            result = self.site.sql_query(query, (title,), buffsize=0)
 
         members = list(result)
         for row in members:

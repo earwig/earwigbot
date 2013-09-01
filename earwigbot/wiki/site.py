@@ -517,15 +517,12 @@ class Site(object):
         args = self._sql_data
         for key, value in kwargs.iteritems():
             args[key] = value
-
         if "read_default_file" not in args and "user" not in args and "passwd" not in args:
             args["read_default_file"] = expanduser("~/.my.cnf")
         elif "read_default_file" in args:
             args["read_default_file"] = expanduser(args["read_default_file"])
-
         if "autoping" not in args:
             args["autoping"] = True
-
         if "autoreconnect" not in args:
             args["autoreconnect"] = True
 
@@ -647,7 +644,7 @@ class Site(object):
             return self._api_query(kwargs)
 
     def sql_query(self, query, params=(), plain_query=False, dict_cursor=False,
-                  cursor_class=None, show_table=False):
+                  cursor_class=None, show_table=False, buffsize=1024):
         """Do an SQL query and yield its results.
 
         If *plain_query* is ``True``, we will force an unparameterized query.
@@ -657,6 +654,13 @@ class Site(object):
         *cursor_class* is given, it will override this option. If *show_table*
         is True, the name of the table will be prepended to the name of the
         column. This will mainly affect an :py:class:`~oursql.DictCursor`.
+
+        *buffsize* is the size of each memory-buffered group of results, to
+        reduce the number of conversations with the database; it is passed to
+        :py:meth:`cursor.fetchmany() <oursql.Cursor.fetchmany>`. If set to
+        ``0```, all results will be buffered in memory at once (this uses
+        :py:meth:`fetchall() <oursql.Cursor.fetchall>`). If set to ``1``, it is
+        equivalent to using :py:meth:`fetchone() <oursql.Cursor.fetchone>`.
 
         Example usage::
 
@@ -690,7 +694,14 @@ class Site(object):
                 self._sql_connect()
             with self._sql_conn.cursor(klass, show_table=show_table) as cur:
                 cur.execute(query, params, plain_query)
-                for result in cur:
+                if buffsize:
+                    while True:
+                        group = cur.fetchmany(buffsize)
+                        if not group:
+                            return
+                        for result in group:
+                            yield result
+                for result in cur.fetchall():
                     yield result
 
     def get_maxlag(self, showall=False):
@@ -828,7 +839,7 @@ class Site(object):
         (:py:attr:`self.SERVICE_API <SERVICE_API>` or
         :py:attr:`self.SERVICE_SQL <SERVICE_SQL>`), and the value is the
         function to call for this service. All functions will be passed the
-        same arguments the tuple *args* and the dict **kwargs**, which are both
+        same arguments the tuple *args* and the dict *kwargs*, which are both
         empty by default. The service order is determined by
         :py:meth:`_get_service_order`.
 
