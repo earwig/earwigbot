@@ -32,11 +32,14 @@ pytz = importer.new("pytz")
 class Time(Command):
     """Report the current time in any timezone (UTC default), or in beats."""
     name = "time"
-    commands = ["time", "beats", "swatch"]
+    commands = ["time", "beats", "swatch", "epoch"]
 
     def process(self, data):
         if data.command in ["beats", "swatch"]:
             self.do_beats(data)
+            return
+        if data.command == "epoch":
+            self.reply(data, time())
             return
         if data.args:
             timezone = data.args[0]
