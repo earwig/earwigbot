@@ -30,7 +30,8 @@ from earwigbot.commands import Command
 pytz = importer.new("pytz")
 
 class Time(Command):
-    """Report the current time in any timezone (UTC default), or in beats."""
+    """Report the current time in any timezone (UTC default), UNIX epoch time,
+    or beat time."""
     name = "time"
     commands = ["time", "beats", "swatch", "epoch"]
 
