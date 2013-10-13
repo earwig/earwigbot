@@ -58,6 +58,10 @@ class Category(Page):
         """Return a nice string representation of the Category."""
         return '<Category "{0}" of {1}>'.format(self.title, str(self.site))
 
+    def __iter__(self):
+        """Iterate over all members of the category."""
+        return self.get_members()
+
     def _get_members_via_api(self, limit, follow):
         """Iterate over Pages in the category using the API."""
         params = {"action": "query", "list": "categorymembers",
