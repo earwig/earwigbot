@@ -202,4 +202,4 @@ Footnotes
 .. _wikiproject_tagger:             https://github.com/earwig/earwigbot/blob/develop/earwigbot/tasks/wikiproject_tagger.py
 .. _afc_statistics:                 https://github.com/earwig/earwigbot-plugins/blob/develop/tasks/afc_statistics.py
 .. _its code and docstrings:        https://github.com/earwig/earwigbot/tree/develop/earwigbot/wiki
-.. _Let me know:                    ben.kurtovic@verizon.net
+.. _Let me know:                    ben.kurtovic@gmail.com
