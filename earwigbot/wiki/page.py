@@ -308,6 +308,7 @@ class Page(CopyvioMixIn):
                                              section, captcha_id, captcha_word)
         else: # Make sure we have the right token:
             params["token"] = self._token
+        self._token = None  # Token now invalid
 
         # Try the API query, catching most errors with our handler:
         try:
@@ -324,13 +325,8 @@ class Page(CopyvioMixIn):
             self._exists = self.PAGE_UNKNOWN
             return
 
-        # If we're here, then the edit failed. If it's because of AssertEdit,
-        # handle that. Otherwise, die - something odd is going on:
-        try:
-            assertion = result["edit"]["assert"]
-        except KeyError:
-            raise exceptions.EditError(result["edit"])
-        self._handle_assert_edit(assertion, params, tries)
+        # Otherwise, there was some kind of problem. Throw an exception:
+        raise exceptions.EditError(result["edit"])
 
     def _build_edit_params(self, text, summary, minor, bot, force, section,
                            captcha_id, captcha_word):
@@ -371,94 +367,26 @@ class Page(CopyvioMixIn):
         is protected), or we'll try to fix it (for example, if we can't edit
         due to being logged out, we'll try to log in).
         """
-        if error.code in ["noedit", "cantcreate", "protectedtitle",
-                          "noimageredirect"]:
+        perms = ["noedit", "noedit-anon", "cantcreate", "cantcreate-anon",
+                 "protectedtitle", "noimageredirect", "noimageredirect-anon",
+                 "blocked"]
+        if error.code in perms:
             raise exceptions.PermissionsError(error.info)
-
-        elif error.code in ["noedit-anon", "cantcreate-anon",
-                            "noimageredirect-anon"]:
-            if not all(self.site._login_info):
-                # Insufficient login info:
-                raise exceptions.PermissionsError(error.info)
-            if tries == 0:
-                # We have login info; try to login:
-                self.site._login(self.site._login_info)
-                self._token = None  # Need a new token; old one is invalid now
-                return self._edit(params=params, tries=1)
-            else:
-                # We already tried to log in and failed!
-                e = "Although we should be logged in, we are not. This may be a cookie problem or an odd bug."
-                raise exceptions.LoginError(e)
-
         elif error.code in ["editconflict", "pagedeleted", "articleexists"]:
             # These attributes are now invalidated:
             self._content = None
             self._basetimestamp = None
             self._exists = self.PAGE_UNKNOWN
             raise exceptions.EditConflictError(error.info)
-
         elif error.code in ["emptypage", "emptynewsection"]:
             raise exceptions.NoContentError(error.info)
-
-        elif error.code == "blocked":
-            if tries > 0 or not all(self.site._login_info):
-                raise exceptions.PermissionsError(error.info)
-            else:
-                # Perhaps we are blocked from being logged-out? Try to log in:
-                self.site._login(self.site._login_info)
-                self._token = None  # Need a new token; old one is invalid now
-                return self._edit(params=params, tries=1)
-
         elif error.code == "contenttoobig":
             raise exceptions.ContentTooBigError(error.info)
-
         elif error.code == "spamdetected":
             raise exceptions.SpamDetectedError(error.info)
-
         elif error.code == "filtered":
             raise exceptions.FilteredError(error.info)
-
         raise exceptions.EditError(": ".join((error.code, error.info)))
-
-    def _handle_assert_edit(self, assertion, params, tries):
-        """If we can't edit due to a failed AssertEdit assertion, handle that.
-
-        If the assertion was 'user' and we have valid login information, try to
-        log in. Otherwise, raise PermissionsError with details.
-        """
-        if assertion == "user":
-            if not all(self.site._login_info):
-                # Insufficient login info:
-                e = "AssertEdit: user assertion failed, and no login info was provided."
-                raise exceptions.PermissionsError(e)
-            if tries == 0:
-                # We have login info; try to login:
-                self.site._login(self.site._login_info)
-                self._token = None  # Need a new token; old one is invalid now
-                return self._edit(params=params, tries=1)
-            else:
-                # We already tried to log in and failed!
-                e = "Although we should be logged in, we are not. This may be a cookie problem or an odd bug."
-                raise exceptions.LoginError(e)
-
-        elif assertion == "bot":
-            if not all(self.site._login_info):
-                # Insufficient login info:
-                e = "AssertEdit: bot assertion failed, and no login info was provided."
-                raise exceptions.PermissionsError(e)
-            if tries == 0:
-                # Try to log in if we got logged out:
-                self.site._login(self.site._login_info)
-                self._token = None  # Need a new token; old one is invalid now
-                return self._edit(params=params, tries=1)
-            else:
-                # We already tried to log in, so we don't have a bot flag:
-                e = "AssertEdit: bot assertion failed: we don't have a bot flag!"
-                raise exceptions.PermissionsError(e)
-
-        # Unknown assertion, maybe "true", "false", or "exists":
-        e = "AssertEdit: assertion '{0}' failed.".format(assertion)
-        raise exceptions.PermissionsError(e)
 
     @property
     def site(self):

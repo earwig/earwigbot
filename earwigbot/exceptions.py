@@ -36,13 +36,13 @@ This module contains all exceptions used by EarwigBot::
           |    +-- SQLError
           +-- NoServiceError
           +-- LoginError
+          +-- PermissionsError
           +-- NamespaceNotFoundError
           +-- PageNotFoundError
           +-- InvalidPageError
           +-- RedirectError
           +-- UserNotFoundError
           +-- EditError
-          |    +-- PermissionsError
           |    +-- EditConflictError
           |    +-- NoContentError
           |    +-- ContentTooBigError
@@ -120,6 +120,19 @@ class LoginError(WikiToolsetError):
     Raised by :py:meth:`Site._login <earwigbot.wiki.site.Site._login>`.
     """
 
+class PermissionsError(WikiToolsetError):
+    """A permissions error ocurred.
+
+    We tried to do something we don't have permission to, like trying to delete
+    a page as a non-admin, or trying to edit a page without login information
+    and AssertEdit enabled. This will also be raised if we have been blocked
+    from editing.
+
+    Raised by :py:meth:`Page.edit <earwigbot.wiki.page.Page.edit>`,
+    :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`, and
+    other API methods depending on settings.
+    """
+
 class NamespaceNotFoundError(WikiToolsetError):
     """A requested namespace name or namespace ID does not exist.
 
@@ -159,18 +172,6 @@ class EditError(WikiToolsetError):
 
     This is used as a base class for all editing errors; this one specifically
     is used only when a generic error occurs that we don't know about.
-
-    Raised by :py:meth:`Page.edit <earwigbot.wiki.page.Page.edit>` and
-    :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`.
-    """
-
-class PermissionsError(EditError):
-    """A permissions error ocurred while editing.
-
-    We tried to do something we don't have permission to, like trying to delete
-    a page as a non-admin, or trying to edit a page without login information
-    and AssertEdit enabled. This will also be raised if we have been blocked
-    from editing.
 
     Raised by :py:meth:`Page.edit <earwigbot.wiki.page.Page.edit>` and
     :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`.

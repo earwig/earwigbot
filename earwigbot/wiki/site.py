@@ -209,11 +209,13 @@ class Site(object):
             args.append(key + "=" + val)
         return "&".join(args)
 
-    def _api_query(self, params, tries=0, wait=5, ignore_maxlag=False):
+    def _api_query(self, params, tries=0, wait=5, ignore_maxlag=False,
+                   ae_retry=True):
         """Do an API query with *params* as a dict of parameters.
 
         See the documentation for :py:meth:`api_query` for full implementation
-        details.
+        details. *tries*, *wait*, and *ignore_maxlag* are for maxlag;
+        *ae_retry* is for AssertEdit.
         """
         since_last_query = time() - self._last_query_time  # Throttling support
         if since_last_query < self._wait_between_queries:
@@ -247,7 +249,7 @@ class Site(object):
             gzipper = GzipFile(fileobj=stream)
             result = gzipper.read()
 
-        return self._handle_api_query_result(result, params, tries, wait)
+        return self._handle_api_result(result, params, tries, wait, ae_retry)
 
     def _build_api_query(self, params, ignore_maxlag):
         """Given API query params, return the URL to query and POST data."""
@@ -257,7 +259,8 @@ class Site(object):
 
         url = ''.join((self.url, self._script_path, "/api.php"))
         params["format"] = "json"  # This is the only format we understand
-        if self._assert_edit:  # If requested, ensure that we're logged in
+        if self._assert_edit and params.get("action") != "login":
+            # If requested, ensure that we're logged in
             params["assert"] = self._assert_edit
         if self._maxlag and not ignore_maxlag:
             # If requested, don't overload the servers:
@@ -266,7 +269,7 @@ class Site(object):
         data = self._urlencode_utf8(params)
         return url, data
 
-    def _handle_api_query_result(self, result, params, tries, wait):
+    def _handle_api_result(self, result, params, tries, wait, ae_retry):
         """Given the result of an API query, attempt to return useful data."""
         try:
             res = loads(result)  # Try to parse as a JSON object
@@ -277,8 +280,8 @@ class Site(object):
         try:
             code = res["error"]["code"]
             info = res["error"]["info"]
-        except (TypeError, KeyError):  # Having these keys indicates a problem
-            return res  # All is well; return the decoded JSON
+        except (TypeError, KeyError):  # If there's no error code/info, return
+            return res
 
         if code == "maxlag":  # We've been throttled by the server
             if tries >= self._max_retries:
@@ -288,7 +291,22 @@ class Site(object):
             msg = 'Server says "{0}"; retrying in {1} seconds ({2}/{3})'
             self._logger.info(msg.format(info, wait, tries, self._max_retries))
             sleep(wait)
-            return self._api_query(params, tries=tries, wait=wait*2)
+            return self._api_query(params, tries, wait * 2, ae_retry=ae_retry)
+        elif code in ["assertuserfailed", "assertbotfailed"]:  # AssertEdit
+            if ae_retry and all(self._login_info):
+                # Try to log in if we got logged out:
+                self._login(self._login_info)
+                if "token" in params:  # Fetch a new one; this is invalid now
+                    tparams = {"action": "tokens", "type": params["action"]}
+                    params["token"] = self._api_query(tparams, ae_retry=False)
+                return self._api_query(params, tries, wait, ae_retry=False)
+            if not all(self._login_info):
+                e = "Assertion failed, and no login info was provided."
+            elif code == "assertbotfailed":
+                e = "Bot assertion failed: we don't have a bot flag!"
+            else:
+                e = "User assertion failed due to an unknown issue. Cookie problem?"
+            raise exceptions.PermissionsError("AssertEdit: " + e)
         else:  # Some unknown error occurred
             e = 'API query failed: got error "{0}"; server says: "{1}".'
             error = exceptions.APIError(e.format(code, info))
