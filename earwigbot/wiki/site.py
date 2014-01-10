@@ -73,6 +73,7 @@ class Site(object):
     - :py:meth:`sql_query`:            does an SQL query and yields its results
     - :py:meth:`get_maxlag`:           returns the internal database lag
     - :py:meth:`get_replag`:           estimates the external database lag
+    - :py:meth:`get_token`:            gets a token for a specific API action
     - :py:meth:`namespace_id_to_name`: returns names associated with an NS id
     - :py:meth:`namespace_name_to_id`: returns the ID associated with a NS name
     - :py:meth:`get_page`:             returns a Page for the given title
@@ -297,8 +298,7 @@ class Site(object):
                 # Try to log in if we got logged out:
                 self._login(self._login_info)
                 if "token" in params:  # Fetch a new one; this is invalid now
-                    tparams = {"action": "tokens", "type": params["action"]}
-                    params["token"] = self._api_query(tparams, ae_retry=False)
+                    params["token"] = self.get_token(params["action"], False)
                 return self._api_query(params, tries, wait, ae_retry=False)
             if not all(self._login_info):
                 e = "Assertion failed, and no login info was provided."
@@ -656,7 +656,7 @@ class Site(object):
         query until we exceed :py:attr:`self._max_retries`.
 
         There is helpful MediaWiki API documentation at `MediaWiki.org
-        <http://www.mediawiki.org/wiki/API>`_.
+        <https://www.mediawiki.org/wiki/API>`_.
         """
         with self._api_lock:
             return self._api_query(kwargs)
@@ -761,6 +761,33 @@ class Site(object):
                    recentchanges ORDER BY rc_timestamp DESC LIMIT 1"""
         result = list(self.sql_query(query))
         return int(result[0][0])
+
+    def get_token(self, action, lock=True):
+        """Return a token for a data-modifying API action.
+
+        *action* must be one of the types listed on
+        <https://www.mediawiki.org/wiki/API:Tokens>. If it's given as a union
+        of types separated by |, then the function will return a dictionary
+        of tokens instead of a single one. *lock* is for internal usage;
+        setting it to ``False`` prevents the query from acquiring the internal
+        API access lock.
+
+        Raises :py:exc:`~earwigbot.exceptions.PermissionsError` if we don't
+        have permissions for the requested action(s), or they are invalid.
+        Raises :py:exc:`~earwigbot.exceptions.APIError` if there was some other
+        API issue.
+        """
+        if lock:
+            result = self.api_query(action="tokens", type=action)
+        else:
+            params = {"action": "tokens", "type": action}
+            result = self._api_query(params, ae_retry=False)
+
+        if "warnings" in result and "token" in result["warnings"]:
+            raise exceptions.PermissionsError(result["warnings"]["token"]["*"])
+        if "|" in action:
+            return result["tokens"]
+        return result["tokens"].values()[0]
 
     def namespace_id_to_name(self, ns_id, all=False):
         """Given a namespace ID, returns associated namespace names.
