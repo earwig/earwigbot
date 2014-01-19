@@ -26,7 +26,7 @@ from json import loads
 from logging import getLogger, NullHandler
 from os.path import expanduser
 from StringIO import StringIO
-from threading import Lock
+from threading import RLock
 from time import sleep, time
 from urllib import quote_plus, unquote_plus
 from urllib2 import build_opener, HTTPCookieProcessor, URLError
@@ -124,7 +124,7 @@ class Site(object):
         self._wait_between_queries = wait_between_queries
         self._max_retries = 6
         self._last_query_time = 0
-        self._api_lock = Lock()
+        self._api_lock = RLock()
         self._api_info_cache = {"maxlag": 0, "lastcheck": 0}
 
         # Attributes used for SQL queries:
@@ -133,7 +133,7 @@ class Site(object):
         else:
             self._sql_data = {}
         self._sql_conn = None
-        self._sql_lock = Lock()
+        self._sql_lock = RLock()
         self._sql_info_cache = {"replag": 0, "lastcheck": 0, "usable": None}
 
         # Attribute used in copyright violation checks (see CopyrightMixIn):
@@ -298,7 +298,7 @@ class Site(object):
                 # Try to log in if we got logged out:
                 self._login(self._login_info)
                 if "token" in params:  # Fetch a new one; this is invalid now
-                    params["token"] = self.get_token(params["action"], False)
+                    params["token"] = self.get_token(params["action"])
                 return self._api_query(params, tries, wait, ae_retry=False)
             if not all(self._login_info):
                 e = "Assertion failed, and no login info was provided."
@@ -762,27 +762,20 @@ class Site(object):
         result = list(self.sql_query(query))
         return int(result[0][0])
 
-    def get_token(self, action, lock=True):
+    def get_token(self, action):
         """Return a token for a data-modifying API action.
 
         *action* must be one of the types listed on
         <https://www.mediawiki.org/wiki/API:Tokens>. If it's given as a union
         of types separated by |, then the function will return a dictionary
-        of tokens instead of a single one. *lock* is for internal usage;
-        setting it to ``False`` prevents the query from acquiring the internal
-        API access lock.
+        of tokens instead of a single one.
 
         Raises :py:exc:`~earwigbot.exceptions.PermissionsError` if we don't
         have permissions for the requested action(s), or they are invalid.
         Raises :py:exc:`~earwigbot.exceptions.APIError` if there was some other
         API issue.
         """
-        if lock:
-            res = self.api_query(action="tokens", type=action)
-        else:
-            params = {"action": "tokens", "type": action}
-            res = self._api_query(params, ae_retry=False)
-
+        res = self.api_query(action="tokens", type=action)
         if "warnings" in res and "tokens" in res["warnings"]:
             raise exceptions.PermissionsError(res["warnings"]["tokens"]["*"])
         if "|" in action:

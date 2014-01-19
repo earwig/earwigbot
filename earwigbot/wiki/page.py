@@ -280,8 +280,7 @@ class Page(CopyvioMixIn):
             self._assert_existence()
 
     def _edit(self, params=None, text=None, summary=None, minor=None, bot=None,
-              force=None, section=None, captcha_id=None, captcha_word=None,
-              tries=0):
+              force=None, section=None, captcha_id=None, captcha_word=None):
         """Edit the page!
 
         If *params* is given, we'll use it as our API query parameters.
@@ -316,7 +315,7 @@ class Page(CopyvioMixIn):
         except exceptions.APIError as error:
             if not hasattr(error, "code"):
                 raise  # We can only handle errors with a code attribute
-            result = self._handle_edit_errors(error, params, tries)
+            result = self._handle_edit_errors(error, params)
 
         # If everything was successful, reset invalidated attributes:
         if result["edit"]["result"] == "Success":
@@ -360,12 +359,12 @@ class Page(CopyvioMixIn):
 
         return params
 
-    def _handle_edit_errors(self, error, params, tries):
+    def _handle_edit_errors(self, error, params, retry=True):
         """If our edit fails due to some error, try to handle it.
 
         We'll either raise an appropriate exception (for example, if the page
-        is protected), or we'll try to fix it (for example, if we can't edit
-        due to being logged out, we'll try to log in).
+        is protected), or we'll try to fix it (for example, if the token is
+        invalid, we'll try to get a new one).
         """
         perms = ["noedit", "noedit-anon", "cantcreate", "cantcreate-anon",
                  "protectedtitle", "noimageredirect", "noimageredirect-anon",
@@ -378,6 +377,14 @@ class Page(CopyvioMixIn):
             self._basetimestamp = None
             self._exists = self.PAGE_UNKNOWN
             raise exceptions.EditConflictError(error.info)
+        elif error.code == "badtoken" and retry:
+            params["token"] = self.site.get_token("edit")
+            try:
+                return self.site.api_query(**params)
+            except exceptions.APIError as error:
+                if not hasattr(error, "code"):
+                    raise  # We can only handle errors with a code attribute
+                result = self._handle_edit_errors(error, params, retry=False)
         elif error.code in ["emptypage", "emptynewsection"]:
             raise exceptions.NoContentError(error.info)
         elif error.code == "contenttoobig":
