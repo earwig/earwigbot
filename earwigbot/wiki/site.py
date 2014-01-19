@@ -778,16 +778,16 @@ class Site(object):
         API issue.
         """
         if lock:
-            result = self.api_query(action="tokens", type=action)
+            res = self.api_query(action="tokens", type=action)
         else:
             params = {"action": "tokens", "type": action}
-            result = self._api_query(params, ae_retry=False)
+            res = self._api_query(params, ae_retry=False)
 
-        if "warnings" in result and "token" in result["warnings"]:
-            raise exceptions.PermissionsError(result["warnings"]["token"]["*"])
+        if "warnings" in res and "tokens" in res["warnings"]:
+            raise exceptions.PermissionsError(res["warnings"]["tokens"]["*"])
         if "|" in action:
-            return result["tokens"]
-        return result["tokens"].values()[0]
+            return res["tokens"]
+        return res["tokens"].values()[0]
 
     def namespace_id_to_name(self, ns_id, all=False):
         """Given a namespace ID, returns associated namespace names.
