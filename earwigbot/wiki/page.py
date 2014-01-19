@@ -384,7 +384,7 @@ class Page(CopyvioMixIn):
             except exceptions.APIError as error:
                 if not hasattr(error, "code"):
                     raise  # We can only handle errors with a code attribute
-                result = self._handle_edit_errors(error, params, retry=False)
+                return self._handle_edit_errors(error, params, retry=False)
         elif error.code in ["emptypage", "emptynewsection"]:
             raise exceptions.NoContentError(error.info)
         elif error.code == "contenttoobig":
