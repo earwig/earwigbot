@@ -20,7 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import ast
 from itertools import chain
+import operator
 import random
 from threading import Thread
 import time
@@ -45,6 +47,32 @@ class Remind(Command):
             return "cancel"
         if command in SNOOZE:
             return "snooze"
+
+    @staticmethod
+    def _parse_time(arg):
+        """Parse the wait time for a reminder."""
+        ast_to_op = {
+            ast.Add: operator.add, ast.Sub: operator.sub,
+            ast.Mult: operator.mul, ast.Div: operator.truediv,
+            ast.FloorDiv: operator.floordiv, ast.Mod: operator.mod,
+            ast.Pow: operator.pow
+        }
+        def _evaluate(node):
+            """Convert an AST node into a real number or raise an exception."""
+            if isinstance(node, ast.Num):
+                assert isinstance(node.n, (int, long, float))
+                return node.n
+            elif isinstance(node, ast.BinOp):
+                left, right = _evaluate(node.left), _evaluate(node.right)
+                return ast_to_op[type(node.op)](left, right)
+            else:
+                raise ValueError(node)
+        try:
+            parsed = int(_evaluate(ast.parse(arg, mode="eval").body))
+            assert parsed > 0
+        except (SyntaxError, AssertionError, KeyError):
+            raise ValueError(arg)
+        return parsed
 
     def _really_get_reminder_by_id(self, user, rid):
         """Return the _Reminder object that corresponds to a particular ID.
@@ -75,9 +103,8 @@ class Remind(Command):
     def _create_reminder(self, data, user):
         """Create a new reminder for the given user."""
         try:
-            wait = int(data.args[0])
-            assert wait > 0
-        except (ValueError, AssertionError):
+            wait = self._parse_time(data.args[0])
+        except ValueError:
             msg = "Invalid time \x02{0}\x0F. Time must be a positive integer, in seconds."
             return self.reply(data, msg.format(data.args[0]))
         message = " ".join(data.args[1:])
@@ -115,10 +142,9 @@ class Remind(Command):
         """Snooze a reminder to be re-triggered after a period of time."""
         if arg:
             try:
-                duration = int(data.args[arg])
-                assert duration > 0
+                duration = self._parse_time(data.args[arg])
                 reminder.wait = duration
-            except (IndexError, ValueError, AssertionError):
+            except (IndexError, ValueError):
                 pass
         reminder.start()
         end_time = time.strftime("%b %d %H:%M:%S %Z", reminder.end)
