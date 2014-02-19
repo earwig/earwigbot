@@ -70,7 +70,7 @@ class Remind(Command):
         """Get a free ID for a new reminder."""
         taken = set(robj.id for robj in chain(*self.reminders.values()))
         num = random.choice(list(set(range(4096)) - taken))
-        return "R-{0:03X}".format(num)
+        return "R{0:03X}".format(num)
 
     def _create_reminder(self, data, user):
         """Create a new reminder for the given user."""
