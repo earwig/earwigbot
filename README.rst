@@ -188,7 +188,7 @@ Footnotes
 .. _several ongoing tasks:          http://en.wikipedia.org/wiki/User:EarwigBot#Tasks
 .. _my instance of EarwigBot:       http://en.wikipedia.org/wiki/User:EarwigBot
 .. _earwigbot-plugins:              https://github.com/earwig/earwigbot-plugins
-.. _Python Package Index:           http://pypi.python.org
+.. _Python Package Index:           https://pypi.python.org/pypi/earwigbot
 .. _get pip:                        http://pypi.python.org/pypi/pip
 .. _git flow:                       http://nvie.com/posts/a-successful-git-branching-model/
 .. _explanation of YAML:            http://en.wikipedia.org/wiki/YAML
