@@ -29,9 +29,9 @@ import time
 
 from earwigbot.commands import Command
 
-DISPLAY = ["display", "show", "list", "info"]
-CANCEL = ["cancel", "stop", "delete", "del"]
-SNOOZE = ["snooze", "delay", "reset", "adjust"]
+DISPLAY = ["display", "show", "list", "info", "details"]
+CANCEL = ["cancel", "stop", "delete", "del", "stop"]
+SNOOZE = ["snooze", "delay", "reset", "adjust", "modify", "change"]
 
 class Remind(Command):
     """Set a message to be repeated to you in a certain amount of time."""
@@ -120,11 +120,11 @@ class Remind(Command):
         else:
             self.reminders[user] = [reminder]
         msg = "Set reminder \x0303{0}\x0F ({1})."
-        self.reply(data, msg.format(rid, wait, reminder.end_time))
+        self.reply(data, msg.format(rid, reminder.end_time))
 
     def _display_reminder(self, data, reminder):
         """Display a particular reminder's information."""
-        msg = 'Reminder \x0303{0}\x0F: {1} seconds ({2}): "{3}". !remind [cancel|snooze] {0}.'
+        msg = 'Reminder \x0303{0}\x0F: {1} seconds ({2}): "{3}".'
         msg = msg.format(reminder.id, reminder.wait, reminder.end_time,
                          reminder.message)
         self.reply(data, msg)
@@ -140,6 +140,7 @@ class Remind(Command):
 
     def _snooze_reminder(self, data, reminder, arg=None):
         """Snooze a reminder to be re-triggered after a period of time."""
+        verb = "snoozed" if reminder.end < time.time() else "adjusted"
         if arg:
             try:
                 duration = self._parse_time(data.args[arg])
@@ -147,9 +148,9 @@ class Remind(Command):
             except (IndexError, ValueError):
                 pass
         reminder.start()
-        end_time = time.strftime("%b %d %H:%M:%S %Z", reminder.end)
-        msg = "Reminder \x0303{0}\x0F snoozed until {1}."
-        self.reply(data, msg.format(reminder.id, end_time))
+        end = time.strftime("%b %d %H:%M:%S %Z", time.localtime(reminder.end))
+        msg = "Reminder \x0303{0}\x0F {1} until {2}."
+        self.reply(data, msg.format(reminder.id, verb, end))
 
     def _handle_command(self, command, data, user, reminder, arg=None):
         """Handle a reminder-processing subcommand."""
@@ -172,9 +173,9 @@ class Remind(Command):
 
         if user in self.reminders:
             rlist = ", ".join(fmt(robj) for robj in self.reminders[user])
-            msg = "Your reminders: {1}.".format(rlist)
+            msg = "Your reminders: {0}.".format(rlist)
         else:
-            msg = "You have no reminders. Set one with !remind <time> <msg>."
+            msg = "You have no reminders. Set one with \x0306!remind [time] [message]\x0F. See also: \x0306!remind help\x0F."
         self.reply(data, msg)
 
     def _process_snooze_command(self, data, user):
@@ -192,6 +193,20 @@ class Remind(Command):
         if reminder:
             self._snooze_reminder(data, reminder, 1)
 
+    def _show_help(self, data):
+        """Reply to the user with help for all major subcommands."""
+        parts = [
+            ("Add new", "!remind [time] [message]"),
+            ("List all", "!reminders"),
+            ("Get info", "!remind [id]"),
+            ("Cancel", "!remind cancel [id]"),
+            ("Adjust", "!remind adjust [id] [time]"),
+            ("Restart", "!snooze [id]")
+        ]
+        extra = "In all cases, \x0306[id]\x0F can be omitted if you have only one reminder."
+        joined = " ".join("{0}: \x0306{1}\x0F.".format(k, v) for k, v in parts)
+        self.reply(data, joined + " " + extra)
+
     def setup(self):
         self.reminders = {}
 
@@ -204,6 +219,8 @@ class Remind(Command):
         user = data.host
         if len(data.args) == 1:
             command = data.args[0]
+            if command == "help":
+                return self._show_help(data)
             if command in DISPLAY + CANCEL + SNOOZE:
                 if user not in self.reminders:
                     msg = "You have no reminders to {0}."
@@ -254,10 +271,14 @@ class _Reminder(object):
         """Internal callback function to be executed by the reminder thread."""
         thread = self._thread
         while time.time() < thread.end:
+            time.sleep(1)
             if thread.abort:
                 return
+        self._cmdobj.reply(self._data, self.message)
+        for i in xrange(60):
             time.sleep(1)
-        time.sleep(60)
+            if thread.abort:
+                return
         try:
             self._cmdobj.reminders[self._user].remove(self)
             if not self._cmdobj.reminders[self._user]:
@@ -269,8 +290,8 @@ class _Reminder(object):
     def end_time(self):
         """Return a string representing the end time of a reminder."""
         if self.end >= time.time():
-            end_time = time.strftime("%b %d %H:%M:%S %Z", self.end)
-            return "ends {0}".format(end_time)
+            ends = time.strftime("%b %d %H:%M:%S %Z", time.localtime(self.end))
+            return "ends {0}".format(ends)
         return "expired"
 
     def start(self):
