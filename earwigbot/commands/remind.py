@@ -203,7 +203,7 @@ class Remind(Command):
             ("Adjust", "!remind adjust [id] [time]"),
             ("Restart", "!snooze [id]")
         ]
-        extra = "In all cases, \x0306[id]\x0F can be omitted if you have only one reminder."
+        extra = "In most cases, \x0306[id]\x0F can be omitted if you have only one reminder."
         joined = " ".join("{0}: \x0306{1}\x0F.".format(k, v) for k, v in parts)
         self.reply(data, joined + " " + extra)
 
