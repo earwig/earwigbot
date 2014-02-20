@@ -211,12 +211,12 @@ class Site(object):
         return "&".join(args)
 
     def _api_query(self, params, tries=0, wait=5, ignore_maxlag=False,
-                   ae_retry=True):
+                   no_assert=False, ae_retry=True):
         """Do an API query with *params* as a dict of parameters.
 
         See the documentation for :py:meth:`api_query` for full implementation
         details. *tries*, *wait*, and *ignore_maxlag* are for maxlag;
-        *ae_retry* is for AssertEdit.
+        *no_assert* and *ae_retry* are for AssertEdit.
         """
         since_last_query = time() - self._last_query_time  # Throttling support
         if since_last_query < self._wait_between_queries:
@@ -226,7 +226,7 @@ class Site(object):
             sleep(wait_time)
         self._last_query_time = time()
 
-        url, data = self._build_api_query(params, ignore_maxlag)
+        url, data = self._build_api_query(params, ignore_maxlag, no_assert)
         if "lgpassword" in params:
             self._logger.debug("{0} -> <hidden>".format(url))
         else:
@@ -252,7 +252,7 @@ class Site(object):
 
         return self._handle_api_result(result, params, tries, wait, ae_retry)
 
-    def _build_api_query(self, params, ignore_maxlag):
+    def _build_api_query(self, params, ignore_maxlag, no_assert):
         """Given API query params, return the URL to query and POST data."""
         if not self._base_url or self._script_path is None:
             e = "Tried to do an API query, but no API URL is known."
@@ -260,7 +260,7 @@ class Site(object):
 
         url = ''.join((self.url, self._script_path, "/api.php"))
         params["format"] = "json"  # This is the only format we understand
-        if self._assert_edit and params.get("action") != "login":
+        if self._assert_edit and not no_assert:
             # If requested, ensure that we're logged in
             params["assert"] = self._assert_edit
         if self._maxlag and not ignore_maxlag:
@@ -332,12 +332,14 @@ class Site(object):
 
         if not self._namespaces or force:
             params["siprop"] += "|namespaces|namespacealiases"
-            result = self.api_query(**params)
+            with self._api_lock:
+                result = self._api_query(params, no_assert=True)
             self._load_namespaces(result)
         elif all(attrs):  # Everything is already specified and we're not told
             return        # to force a reload, so do nothing
         else:  # We're only loading attributes other than _namespaces
-            result = self.api_query(**params)
+            with self._api_lock:
+                result = self._api_query(params, no_assert=True)
 
         res = result["query"]["general"]
         self._name = res["wikiid"]
@@ -484,12 +486,12 @@ class Site(object):
         loop if MediaWiki isn't acting right.
         """
         name, password = login
+
+        params = {"action": "login", "lgname": name, "lgpassword": password}
         if token:
-            result = self.api_query(action="login", lgname=name,
-                                    lgpassword=password, lgtoken=token)
-        else:
-            result = self.api_query(action="login", lgname=name,
-                                    lgpassword=password)
+            params["lgtoken"] = token
+        with self._api_lock:
+            result = self._api_query(params, no_assert=True)
 
         res = result["login"]["result"]
         if res == "Success":

@@ -56,7 +56,7 @@ class PermissionsDB(object):
         query = """CREATE TABLE users (user_nick, user_ident, user_host,
                                        user_rank);
                    CREATE TABLE attributes (attr_uid, attr_key, attr_value);"""
-        conn.execute(query)
+        conn.executescript(query)
 
     def _is_rank(self, user, rank):
         """Return True if the given user has the given rank, else False."""
