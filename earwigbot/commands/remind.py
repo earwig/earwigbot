@@ -79,6 +79,7 @@ class Remind(Command):
 
         Raises IndexError on failure.
         """
+        rid = rid.upper()
         if user not in self.reminders:
             raise IndexError(rid)
         return [robj for robj in self.reminders[user] if robj.id == rid][0]
