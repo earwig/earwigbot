@@ -60,7 +60,8 @@ class Remind(Command):
         def _evaluate(node):
             """Convert an AST node into a real number or raise an exception."""
             if isinstance(node, ast.Num):
-                assert isinstance(node.n, (int, long, float))
+                if not isinstance(node.n, (int, long, float)):
+                    raise ValueError(node.n)
                 return node.n
             elif isinstance(node, ast.BinOp):
                 left, right = _evaluate(node.left), _evaluate(node.right)
@@ -69,9 +70,10 @@ class Remind(Command):
                 raise ValueError(node)
         try:
             parsed = int(_evaluate(ast.parse(arg, mode="eval").body))
-            assert parsed > 0
-        except (SyntaxError, AssertionError, KeyError):
+        except (SyntaxError, KeyError):
             raise ValueError(arg)
+        if parsed <= 0:
+            raise ValueError(parsed)
         return parsed
 
     def _really_get_reminder_by_id(self, user, rid):
