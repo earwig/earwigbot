@@ -57,6 +57,7 @@ class Remind(Command):
             ast.FloorDiv: operator.floordiv, ast.Mod: operator.mod,
             ast.Pow: operator.pow
         }
+        time_units = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}
         def _evaluate(node):
             """Convert an AST node into a real number or raise an exception."""
             if isinstance(node, ast.Num):
@@ -68,8 +69,13 @@ class Remind(Command):
                 return ast_to_op[type(node.op)](left, right)
             else:
                 raise ValueError(node)
+
+        if arg and arg[-1] in time_units:
+            factor, arg = time_units[arg[-1]], arg[:-1]
+        else:
+            factor = 1
         try:
-            parsed = int(_evaluate(ast.parse(arg, mode="eval").body))
+            parsed = int(_evaluate(ast.parse(arg, mode="eval").body)) * factor
         except (SyntaxError, KeyError):
             raise ValueError(arg)
         if parsed <= 0:
