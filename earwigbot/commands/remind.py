@@ -75,7 +75,7 @@ class Remind(Command):
         else:
             factor = 1
         try:
-            parsed = int(_evaluate(ast.parse(arg, mode="eval").body)) * factor
+            parsed = int(_evaluate(ast.parse(arg, mode="eval").body) * factor)
         except (SyntaxError, KeyError):
             raise ValueError(arg)
         if parsed <= 0:
