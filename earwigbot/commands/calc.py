@@ -73,7 +73,7 @@ class Calc(Command):
             ('\$', 'USD '),
             (r'\bKB\b', 'kilobytes'),
             (r'\bMB\b', 'megabytes'),
-            (r'\bGB\b', 'kilobytes'),
+            (r'\bGB\b', 'gigabytes'),
             ('kbps', '(kilobits / second)'),
             ('mbps', '(megabits / second)')
         ]
