@@ -33,7 +33,7 @@ class Time(Command):
     """Report the current time in any timezone (UTC default), UNIX epoch time,
     or beat time."""
     name = "time"
-    commands = ["time", "beats", "swatch", "epoch"]
+    commands = ["time", "beats", "swatch", "epoch", "date"]
 
     def process(self, data):
         if data.command in ["beats", "swatch"]:
