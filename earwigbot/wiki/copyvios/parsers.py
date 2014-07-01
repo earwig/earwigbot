@@ -136,6 +136,10 @@ class HTMLTextParser(BaseTextParser):
         except ValueError:
             soup = bs4.BeautifulSoup(self.text).body
 
+        if not soup:
+            # No <body> tag present in HTML ->
+            # no scrapable content (possibly JS or <frame> magic):
+            return ""
         is_comment = lambda text: isinstance(text, bs4.element.Comment)
         for comment in soup.find_all(text=is_comment):
             comment.extract()
