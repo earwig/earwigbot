@@ -110,7 +110,8 @@ class CopyvioMixIn(object):
         """
         html = self._open_url_ignoring_errors(url)
         if not html:
-            return 0, ()
+            empty = MarkovChain("")
+            return 0, (empty, MarkovChainIntersection(empty, empty))
 
         source = MarkovChain(HTMLTextParser(html).strip())
         delta = MarkovChainIntersection(article, source)
