@@ -112,7 +112,7 @@ class Access(Command):
 
     def get_user_from_args(self, data, permdb):
         if not permdb.is_owner(data):
-            msg = "You must be a bot owner to add users to the access list."
+            msg = "You must be a bot owner to add or remove users to the access list."
             self.reply(data, msg)
             return
         levels = ["owner", "owners", "admin", "admins"]
