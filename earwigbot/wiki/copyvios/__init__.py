@@ -46,6 +46,8 @@ class CopyvioMixIn(object):
     against a given URL. Credentials for the search engine API are stored in
     the :py:class:`~earwigbot.wiki.site.Site`'s config.
     """
+    EMPTY = MarkovChain("")
+    EMPTY_INTERSECTION = MarkovChainIntersection(EMPTY, EMPTY)
 
     def __init__(self, site):
         self._search_config = site._search_config
@@ -121,8 +123,7 @@ class CopyvioMixIn(object):
         """
         text = self._open_url_ignoring_errors(url)
         if not text:
-            empty = MarkovChain("")
-            return 0, (empty, MarkovChainIntersection(empty, empty))
+            return 0, (self.EMPTY, self.EMPTY_INTERSECTION)
 
         source = MarkovChain(text)
         delta = MarkovChainIntersection(article, source)
@@ -160,8 +161,7 @@ class CopyvioMixIn(object):
         best_confidence = 0
         best_match = None
         num_queries = 0
-        empty = MarkovChain("")
-        best_chains = (empty, MarkovChainIntersection(empty, empty))
+        best_chains = (self.EMPTY, self.EMPTY_INTERSECTION)
         parser = ArticleTextParser(self.get())
         clean = parser.strip()
         chunks = parser.chunk(self._search_config["nltk_dir"], max_queries)
@@ -244,8 +244,7 @@ class CopyvioMixIn(object):
         article_chain = MarkovChain(clean)
 
         if not url:
-            empty = MarkovChain("")
-            chns = (empty, MarkovChainIntersection(empty, empty))
+            chns = (self.EMPTY, self.EMPTY_INTERSECTION)
             return CopyvioCheckResult(False, 0, url, 0, 0, article_chain, chns)
 
         confidence, chains = self._copyvio_compare_content(article_chain, url)
