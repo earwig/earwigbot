@@ -64,7 +64,7 @@ class ArticleTextParser(BaseTextParser):
         """
         wikicode = mwparserfromhell.parse(self.text)
         clean = wikicode.strip_code(normalize=True, collapse=True)
-        self.clean = clean.replace("\n\n", "\n")  # Collapse extra newlines
+        self.clean = clean.replace("\n\n", "\n").strip()
         return self.clean
 
     def chunk(self, nltk_dir, max_chunks, max_query=256):
