@@ -54,12 +54,16 @@ class CopyvioMixIn(object):
         self._opener.addheaders = site._opener.addheaders
 
     def _open_url_ignoring_errors(self, url):
-        """Open a URL using self._opener and return its content, or None.
+        """Open a URL and return its parsed content, or None.
 
-        Will decompress the content if the headers contain "gzip" as its
-        content encoding, and will return None if URLError is raised while
-        opening the URL. IOErrors while gunzipping a compressed response are
-        ignored, and the original content is returned.
+        First, we will decompress the content if the headers contain "gzip" as
+        its content encoding. Then, we will return the content stripped using
+        an HTML parser if the headers indicate it is HTML, or return the
+        content directly if it is plain text. If we don't understand the
+        content type, we'll return None.
+
+        If a URLError was raised while opening the URL or an IOError was raised
+        while decompressing, None will be returned.
         """
         try:
             response = self._opener.open(url.encode("utf8"), timeout=5)
@@ -73,9 +77,16 @@ class CopyvioMixIn(object):
             try:
                 result = gzipper.read()
             except IOError:
-                pass
+                return None
 
-        return result
+        ctype_full = response.headers.get("Content-Type", "text/plain")
+        ctype = ctype_full.split(" ", 1)[0]
+        if ctype in ["text/html", "application/xhtml+xml"]:
+            return HTMLTextParser(result).strip()
+        elif ctype == "text/plain":
+            return result.strip()
+        else:
+            return None
 
     def _select_search_engine(self):
         """Return a function that can be called to do web searches.
@@ -108,12 +119,12 @@ class CopyvioMixIn(object):
         The *article* is a Markov chain, whereas the *url* is just a string
         that we'll try to open and read ourselves.
         """
-        html = self._open_url_ignoring_errors(url)
-        if not html:
+        text = self._open_url_ignoring_errors(url)
+        if not text:
             empty = MarkovChain("")
             return 0, (empty, MarkovChainIntersection(empty, empty))
 
-        source = MarkovChain(HTMLTextParser(html).strip())
+        source = MarkovChain(text)
         delta = MarkovChainIntersection(article, source)
         return float(delta.size()) / article.size(), (source, delta)
 
