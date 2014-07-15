@@ -82,7 +82,7 @@ class CopyvioMixIn(object):
                 return None
 
         ctype_full = response.headers.get("Content-Type", "text/plain")
-        ctype = ctype_full.split(" ", 1)[0]
+        ctype = ctype_full.split("; ", 1)[0]
         if ctype in ["text/html", "application/xhtml+xml"]:
             return HTMLTextParser(result).strip()
         elif ctype == "text/plain":
