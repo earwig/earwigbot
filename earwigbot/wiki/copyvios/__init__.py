@@ -55,7 +55,7 @@ class CopyvioMixIn(object):
         self._opener = build_opener()
         self._opener.addheaders = site._opener.addheaders
 
-    def _open_url_ignoring_errors(self, url):
+    def _open_url_ignoring_errors(self, url, max_time=5):
         """Open a URL and return its parsed content, or None.
 
         First, we will decompress the content if the headers contain "gzip" as
@@ -68,7 +68,7 @@ class CopyvioMixIn(object):
         while decompressing, None will be returned.
         """
         try:
-            response = self._opener.open(url.encode("utf8"), timeout=5)
+            response = self._opener.open(url.encode("utf8"), timeout=max_time)
             result = response.read()
         except (URLError, timeout):
             return None
@@ -115,13 +115,13 @@ class CopyvioMixIn(object):
 
         raise exceptions.UnknownSearchEngineError(engine)
 
-    def _copyvio_compare_content(self, article, url):
+    def _copyvio_compare_content(self, article, url, max_time=5):
         """Return a number comparing an article and a URL.
 
         The *article* is a Markov chain, whereas the *url* is just a string
         that we'll try to open and read ourselves.
         """
-        text = self._open_url_ignoring_errors(url)
+        text = self._open_url_ignoring_errors(url, max_time)
         if not text:
             return 0, (self.EMPTY, self.EMPTY_INTERSECTION)
 
@@ -216,7 +216,7 @@ class CopyvioMixIn(object):
                                   num_queries, ctime, article_chain,
                                   best_chains)
 
-    def copyvio_compare(self, url, min_confidence=0.5):
+    def copyvio_compare(self, url, min_confidence=0.5, max_time=15):
         """Check the page like :py:meth:`copyvio_check` against a specific URL.
 
         This is essentially a reduced version of the above - a copyivo
@@ -247,7 +247,7 @@ class CopyvioMixIn(object):
             chns = (self.EMPTY, self.EMPTY_INTERSECTION)
             return CopyvioCheckResult(False, 0, url, 0, 0, article_chain, chns)
 
-        confidence, chains = self._copyvio_compare_content(article_chain, url)
+        confidence, chains = self._copyvio_compare_content(article_chain, url, max_time)
         ctime = time() - start_time
         if confidence >= min_confidence:
             is_violation = True
