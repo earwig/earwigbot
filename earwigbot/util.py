@@ -143,7 +143,7 @@ def main():
             pass
         finally:
             if thread.is_alive():
-                bot.tasks.logger.warn("The task is will be killed")
+                bot.tasks.logger.warn("The task will be killed")
     else:
         try:
             bot.run()
