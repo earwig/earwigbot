@@ -63,6 +63,13 @@ class ArticleTextParser(BaseTextParser):
         The actual stripping is handled by :py:mod:`mwparserfromhell`.
         """
         wikicode = mwparserfromhell.parse(self.text)
+
+        # Preemtively strip some links mwparser doesn't know about:
+        bad_prefixes = ("file:", "image:", "category:")
+        for link in wikicode.filter_wikilinks():
+            if link.title.strip().lower().startswith(bad_prefixes):
+                wikicode.remove(link)
+
         clean = wikicode.strip_code(normalize=True, collapse=True)
         self.clean = clean.replace("\n\n", "\n").strip()
         return self.clean
