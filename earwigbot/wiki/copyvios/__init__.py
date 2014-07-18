@@ -216,7 +216,7 @@ class CopyvioMixIn(object):
                                   num_queries, ctime, article_chain,
                                   best_chains)
 
-    def copyvio_compare(self, url, min_confidence=0.5, max_time=15):
+    def copyvio_compare(self, url, min_confidence=0.5, max_time=30):
         """Check the page like :py:meth:`copyvio_check` against a specific URL.
 
         This is essentially a reduced version of the above - a copyivo
