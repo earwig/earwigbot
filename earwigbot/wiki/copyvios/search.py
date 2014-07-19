@@ -77,7 +77,7 @@ class YahooBOSSSearchEngine(BaseSearchEngine):
             "oauth_nonce": oauth.generate_nonce(),
             "oauth_timestamp": oauth.Request.make_timestamp(),
             "oauth_consumer_key": consumer.key,
-            "q": quote_plus('"' + query.encode("utf8") + '"'),
+            "q": quote_plus(query.encode("utf8")),
             "type": "html,text",
             "format": "json",
         }

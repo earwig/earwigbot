@@ -74,7 +74,7 @@ class ArticleTextParser(BaseTextParser):
         self.clean = clean.replace("\n\n", "\n").strip()
         return self.clean
 
-    def chunk(self, nltk_dir, max_chunks, max_query=256):
+    def chunk(self, nltk_dir, max_chunks, min_query=8, max_query=128):
         """Convert the clean article text into a list of web-searchable chunks.
 
         No greater than *max_chunks* will be returned. Each chunk will only be
@@ -99,6 +99,8 @@ class ArticleTextParser(BaseTextParser):
 
         sentences = []
         for sentence in tokenizer.tokenize(self.clean):
+            if len(sentence) < min_query:
+                continue
             if len(sentence) > max_query:
                 words = sentence.split()
                 while len(" ".join(words)) > max_query:
