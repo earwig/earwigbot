@@ -161,13 +161,15 @@ class ExclusionsDB(object):
 
         Return ``True`` if the URL is in the database, or ``False`` otherwise.
         """
-        normalized = re.sub(r"https?://(www\.)?", "", url.lower())
+        normalized = re.sub(r"^https?://(www\.)?", "", url.lower())
         query = """SELECT exclusion_url FROM exclusions
                    WHERE exclusion_sitename = ? OR exclusion_sitename = ?"""
         with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
             for (excl,) in conn.execute(query, (sitename, "all")):
                 if excl.startswith("*."):
                     matches = excl[2:] in urlparse(url.lower()).netloc
+                elif excl.startswith("re:"):
+                    matches = re.match(excl[3:], normalized)
                 else:
                     matches = normalized.startswith(excl)
                 if matches:
