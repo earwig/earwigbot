@@ -61,3 +61,10 @@ class CopyvioCheckResult(object):
         """Return a nice string representation of the result."""
         res = "<CopyvioCheckResult ({0} with {1} conf)>"
         return res.format(self.violation, self.confidence)
+
+    def get_log_message(self, title):
+        """Build a relevant log message for this copyvio check result."""
+        log = u"{0} for [[{1}]] (confidence: {2}; URL: {3}; {4} queries; {5} seconds)"
+        is_vio = "Violation detected" if self.violation else "No violation"
+        return log.format(is_vio, title, self.confidence, self.url,
+                          self.queries, self.time)

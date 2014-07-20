@@ -124,8 +124,17 @@ class ArticleTextParser(BaseTextParser):
             else:
                 chunk = sentences.pop(3 * len(sentences) / 4)  # Pop from Q3
             chunks.append(chunk)
-
         return chunks
+
+    def get_links(self):
+        """Return a list of all external links in the article.
+
+        The list is restricted to things that we suspect we can parse: i.e.,
+        those with schemes of ``http`` and ``https``.
+        """
+        schemes = ("http://", "https://")
+        links = mwparserfromhell.parse(self.text).ifilter_external_links()
+        return [link.url for link in links if link.url.startswith(schemes)]
 
 
 class HTMLTextParser(BaseTextParser):

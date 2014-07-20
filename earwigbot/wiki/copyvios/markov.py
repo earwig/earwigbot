@@ -23,7 +23,8 @@
 from collections import defaultdict
 from re import sub, UNICODE
 
-__all__ = ["MarkovChain", "MarkovChainIntersection"]
+__all__ = ["EMPTY", "EMPTY_INTERSECTION", "MarkovChain",
+           "MarkovChainIntersection"]
 
 class MarkovChain(object):
     """Implements a basic ngram Markov chain of words."""
@@ -85,3 +86,7 @@ class MarkovChainIntersection(MarkovChain):
         """Return a nice string representation of the intersection."""
         res = "<MarkovChainIntersection of size {0} ({1} ^ {2})>"
         return res.format(self.size(), self.mc1, self.mc2)
+
+
+EMPTY = MarkovChain("")
+EMPTY_INTERSECTION = MarkovChainIntersection(EMPTY, EMPTY)
