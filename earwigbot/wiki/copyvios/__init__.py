@@ -286,18 +286,20 @@ class CopyvioMixIn(object):
         workspace.enqueue(parser.get_links(), exclude)
 
         chunks = parser.chunk(self._search_config["nltk_dir"], max_queries)
+        num_queries = 0
         for chunk in chunks:
             if workspace.best.confidence >= min_confidence:
                 break
             log = u"[[{0}]] -> querying {1} for {2!r}"
             self._logger.debug(log.format(self.title, searcher.name, chunk))
             workspace.enqueue(searcher.search(chunk), exclude)
+            num_queries += 1
             sleep(1)
 
         workspace.wait()
         result = CopyvioCheckResult(
             workspace.best.confidence >= min_confidence,
-            workspace.best.confidence, workspace.best.url, len(chunks),
+            workspace.best.confidence, workspace.best.url, num_queries,
             time() - start_time, article, workspace.best.chains)
         self._logger.info(result.get_log_message(self.title))
         return result
