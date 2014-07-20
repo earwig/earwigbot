@@ -45,13 +45,15 @@ _WorkingResult = namedtuple("_WorkingResult", ["url", "confidence", "chains"])
 class _CopyvioWorkspace(object):
     """Manages a single copyvio check distributed across threads."""
 
-    def __init__(self, article, min_confidence, until, headers, url_timeout=5):
+    def __init__(self, article, min_confidence, until, logger, headers,
+                 url_timeout=5):
         self.best = _WorkingResult(None, 0.0, (EMPTY, EMPTY_INTERSECTION))
         self.until = until
 
         self._article = article
         self._handled_urls = []
         self._headers = headers
+        self._logger = logger.getChild("copyvios")
         self._min_confidence = min_confidence
         self._queue = Queue()
         self._result_lock = Lock()
@@ -115,6 +117,7 @@ class _CopyvioWorkspace(object):
         """Compare a source to the article, and update the working result."""
         delta = MarkovChainIntersection(self._article, source)
         confidence = self._calculate_confidence(delta)
+        self._logger.debug("{0} -> {1}".format(url, confidence))
         with self._result_lock:
             if confidence > self.best.confidence:
                 self.best = _WorkingResult(url, confidence, (source, delta))
@@ -266,7 +269,7 @@ class CopyvioMixIn(object):
         parser = ArticleTextParser(self.get())
         article = MarkovChain(parser.strip())
         workspace = _CopyvioWorkspace(article, min_confidence,
-                                      until, self._addheaders)
+                                      until, self._logger, self._addheaders)
         if self._exclusions_db:
             self._exclusions_db.sync(self.site.name)
             exclude = lambda u: self._exclusions_db.check(self.site.name, u)
@@ -276,7 +279,7 @@ class CopyvioMixIn(object):
         if article.size() < 20:  # Auto-fail very small articles
             result = CopyvioCheckResult(False, 0.0, None, 0, 0, article,
                                         workspace.best.chains)
-            self._logger.debug(result.get_log_message(self.title))
+            self._logger.info(result.get_log_message(self.title))
             return result
 
         workspace.spawn(worker_threads)
@@ -296,7 +299,7 @@ class CopyvioMixIn(object):
             workspace.best.confidence >= min_confidence,
             workspace.best.confidence, workspace.best.url, len(chunks),
             time() - start_time, article, workspace.best.chains)
-        self._logger.debug(result.get_log_message(self.title))
+        self._logger.info(result.get_log_message(self.title))
         return result
 
     def copyvio_compare(self, url, min_confidence=0.5, max_time=30):
@@ -324,12 +327,12 @@ class CopyvioMixIn(object):
         until = (start_time + max_time) if max_time > 0 else None
         article = MarkovChain(ArticleTextParser(self.get()).strip())
         workspace = _CopyvioWorkspace(article, min_confidence,
-                                      until, self._addheaders)
+                                      until, self._logger, self._addheaders)
         workspace.enqueue([url])
         workspace.spawn(1)
         workspace.wait()
         url, conf, chains = workspace.best
         result = CopyvioCheckResult(conf >= min_confidence, conf, url, 0,
                                     time() - start_time, article, chains)
-        self._logger.debug(result.get_log_message(self.title))
+        self._logger.info(result.get_log_message(self.title))
         return result
