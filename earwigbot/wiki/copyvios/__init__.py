@@ -182,7 +182,7 @@ class _CopyvioWorker(object):
                 if max_time <= 0:
                     return
                 try:
-                    url = self._workspace.dequeue(timeout=max_time)
+                    url = self._workspace.dequeue(max_time)
                 except Empty:
                     return
             else:
