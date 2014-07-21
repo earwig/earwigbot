@@ -29,22 +29,21 @@ until they are used (i.e. their attributes are read or modified).
 
 from imp import acquire_lock, release_lock
 import sys
+from threading import RLock
 from types import ModuleType
 
 __all__ = ["LazyImporter"]
 
-def _getattribute(self, attr):
-    _load(self)
-    return self.__getattribute__(attr)
+_real_get = ModuleType.__getattribute__
 
-def _setattr(self, attr, value):
-    _load(self)
-    self.__setattr__(attr, value)
-
-def _load(self):
-    type(self).__getattribute__ = ModuleType.__getattribute__
-    type(self).__setattr__ = ModuleType.__setattr__
-    reload(self)
+def _mock_get(self, attr):
+    with _real_get(self, "_lock"):
+        if _real_get(self, "_unloaded"):
+            type(self)._unloaded = False
+            reload(self)
+            type(self).__getattribute__ = _real_get
+            del type(self)._lock
+        return _real_get(self, attr)
 
 
 class _LazyModule(type):
@@ -54,8 +53,9 @@ class _LazyModule(type):
             if name not in sys.modules:
                 attributes = {
                     "__name__": name,
-                    "__getattribute__": _getattribute,
-                    "__setattr__": _setattr
+                    "__getattribute__": _mock_get,
+                    "_unloaded": True,
+                    "_lock": RLock()
                 }
                 parents = (ModuleType,)
                 klass = type.__new__(cls, "module", parents, attributes)

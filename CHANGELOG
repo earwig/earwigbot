@@ -4,7 +4,8 @@ v0.2 (unreleased):
 - Fixed API behavior when blocked, when using AssertEdit, and under other
   circumstances.
 - Added copyvio detector functionality: specifying a max time for checks;
-  improved exclusion support. Fixed assorted bugs.
+  improved exclusion support. URL loading and parsing is parallelized to speed
+  up check times. Fixed assorted bugs.
 - Added support for Wikimedia Labs when creating a config file.
 - Added and improved lazy importing for various dependencies.
 - Fixed a bug in job scheduling.
