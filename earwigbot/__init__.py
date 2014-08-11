@@ -45,7 +45,7 @@ if not __release__:
         commit_id = Repo(path).head.object.hexsha
         return commit_id[:8]
     try:
-        __version__ += ".git+" + _get_git_commit_id()
+        __version__ += "+git-" + _get_git_commit_id()
     except Exception:
         pass
     finally:
