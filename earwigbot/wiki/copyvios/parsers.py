@@ -134,7 +134,8 @@ class ArticleTextParser(BaseTextParser):
         """
         schemes = ("http://", "https://")
         links = mwparserfromhell.parse(self.text).ifilter_external_links()
-        return [link.url for link in links if link.url.startswith(schemes)]
+        return [unicode(link.url) for link in links
+                if link.url.startswith(schemes)]
 
 
 class HTMLTextParser(BaseTextParser):

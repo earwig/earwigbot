@@ -268,8 +268,8 @@ class CopyvioMixIn(object):
         searcher = self._get_search_engine()
         parser = ArticleTextParser(self.get())
         article = MarkovChain(parser.strip())
-        workspace = _CopyvioWorkspace(article, min_confidence,
-                                      until, self._logger, self._addheaders)
+        workspace = _CopyvioWorkspace(article, min_confidence, until,
+                                      self._logger, self._addheaders)
         if self._exclusions_db:
             self._exclusions_db.sync(self.site.name)
             exclude = lambda u: self._exclusions_db.check(self.site.name, u)
@@ -328,8 +328,8 @@ class CopyvioMixIn(object):
         start_time = time()
         until = (start_time + max_time) if max_time > 0 else None
         article = MarkovChain(ArticleTextParser(self.get()).strip())
-        workspace = _CopyvioWorkspace(article, min_confidence,
-                                      until, self._logger, self._addheaders)
+        workspace = _CopyvioWorkspace(article, min_confidence, until,
+                                      self._logger, self._addheaders, max_time)
         workspace.enqueue([url])
         workspace.spawn(1)
         workspace.wait()
