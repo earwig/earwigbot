@@ -43,6 +43,7 @@ extra_deps = {
         "lxml >= 2.3.5",  # Faster parser for BeautifulSoup
         "nltk >= 2.0.2",  # Parsing sentences to split article content
         "oauth2 >= 1.5.211",  # Interfacing with Yahoo! BOSS Search
+        "tldextract >= 1.4",  # Getting domains for the multithreaded workers
     ],
     "time": [
         "pytz >= 2012d",  # Handling timezones for the !time IRC command
