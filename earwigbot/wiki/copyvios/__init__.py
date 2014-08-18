@@ -106,10 +106,7 @@ class _CopyvioWorkspace(object):
                     self._logger.debug(logmsg.format("NEW", key, url))
                     worker = _CopyvioWorker(*self._worker_args)
                     worker.queue.put(url)
-                    thread = Thread(target=worker.run)
-                    thread.name = "cvworker-" + key.encode("utf8")
-                    thread.daemon = True
-                    thread.start()
+                    worker.start(key.encode("utf8"))
                     self._workers[key] = worker
 
     def wait(self):
@@ -138,6 +135,7 @@ class _CopyvioWorker(object):
     def __init__(self, workspace, until, headers, url_timeout):
         self.queue = Queue()
 
+        self._thread = None
         self._workspace = workspace
         self._until = until
         self._opener = build_opener()
@@ -180,8 +178,8 @@ class _CopyvioWorker(object):
         else:
             return None
 
-    def run(self):
-        """Main entry point for the worker.
+    def _run(self):
+        """Main entry point for the worker thread.
 
         We will keep fetching URLs from the queue and handling them until
         either we run out of time, or we get an exit signal that the queue is
@@ -203,6 +201,17 @@ class _CopyvioWorker(object):
             text = self._open_url(url.encode("utf8"))
             if text:
                 self._workspace.compare(url, MarkovChain(text))
+
+    def start(self, name):
+        """Start the worker in a new thread, with a given name."""
+        self._thread = thread = Thread(target=self._run)
+        thread.name = "cvworker-" + name
+        thread.daemon = True
+        thread.start()
+
+    def join(self):
+        """Join to the worker thread, blocking until it finishes."""
+        self._thread.join()
 
 
 class CopyvioMixIn(object):
