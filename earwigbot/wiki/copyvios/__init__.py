@@ -72,7 +72,7 @@ class _CopyvioWorkspace(object):
         with self._enqueue_lock:
             for worker in self._workers.itervalues():
                 with worker.queue.mutex:
-                    worker.queue.clear()
+                    worker.queue.queue.clear()
                     worker.queue.put(None)
             self._is_finished = True
 
