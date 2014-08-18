@@ -23,7 +23,6 @@
 from gzip import GzipFile
 from json import loads
 from StringIO import StringIO
-from urllib import quote_plus
 
 from earwigbot import importer
 from earwigbot.exceptions import SearchQueryError
@@ -64,9 +63,9 @@ class YahooBOSSSearchEngine(BaseSearchEngine):
     def search(self, query):
         """Do a Yahoo! BOSS web search for *query*.
 
-        Returns a list of URLs, no more than fifty, ranked by relevance (as
-        determined by Yahoo). Raises
-        :py:exc:`~earwigbot.exceptions.SearchQueryError` on errors.
+        Returns a list of URLs, no more than five, ranked by relevance
+        (as determined by Yahoo).
+        Raises :py:exc:`~earwigbot.exceptions.SearchQueryError` on errors.
         """
         key, secret = self.cred["key"], self.cred["secret"]
         consumer = oauth.Consumer(key=key, secret=secret)
@@ -77,7 +76,7 @@ class YahooBOSSSearchEngine(BaseSearchEngine):
             "oauth_nonce": oauth.generate_nonce(),
             "oauth_timestamp": oauth.Request.make_timestamp(),
             "oauth_consumer_key": consumer.key,
-            "q": quote_plus(query.encode("utf8")), "count": 5,
+            "q": query.encode("utf8"), "count": 5,
             "type": "html,text", "format": "json",
         }
 
