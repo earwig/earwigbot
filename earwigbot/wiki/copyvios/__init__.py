@@ -73,7 +73,7 @@ class _CopyvioWorkspace(object):
             for worker in self._workers.itervalues():
                 with worker.queue.mutex:
                     worker.queue.queue.clear()
-                    worker.queue.put(None)
+                    worker.queue.queue.append(None)
             self._is_finished = True
 
     def enqueue(self, urls, exclude_check=None):
