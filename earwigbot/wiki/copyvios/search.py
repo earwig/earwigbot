@@ -64,7 +64,7 @@ class YahooBOSSSearchEngine(BaseSearchEngine):
     @staticmethod
     def _build_url(base, params):
         """Works like urllib.urlencode(), but uses %20 for spaces over +."""
-        enc = lambda s: quote(s, safe="")
+        enc = lambda s: quote(s.encode("utf8"), safe="")
         args = ["=".join((enc(k), enc(v))) for k, v in params.iteritems()]
         return base + "?" + "&".join(args)
 
