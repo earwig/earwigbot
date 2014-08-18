@@ -23,6 +23,7 @@
 from gzip import GzipFile
 from json import loads
 from StringIO import StringIO
+from urllib import quote
 
 from earwigbot import importer
 from earwigbot.exceptions import SearchQueryError
@@ -60,6 +61,13 @@ class YahooBOSSSearchEngine(BaseSearchEngine):
     """A search engine interface with Yahoo! BOSS."""
     name = "Yahoo! BOSS"
 
+    @staticmethod
+    def _build_url(base, params):
+        """Works like urllib.urlencode(), but uses %20 for spaces over +."""
+        enc = lambda s: quote(s, safe="")
+        args = ["=".join((enc(k), enc(v))) for k, v in params.iteritems()]
+        return base + "?" + "&".join(args)
+
     def search(self, query):
         """Do a Yahoo! BOSS web search for *query*.
 
@@ -76,13 +84,13 @@ class YahooBOSSSearchEngine(BaseSearchEngine):
             "oauth_nonce": oauth.generate_nonce(),
             "oauth_timestamp": oauth.Request.make_timestamp(),
             "oauth_consumer_key": consumer.key,
-            "q": query.encode("utf8"), "count": 5,
+            "q": query.encode("utf8"), "count": "5",
             "type": "html,text", "format": "json",
         }
 
         req = oauth.Request(method="GET", url=url, parameters=params)
         req.sign_request(oauth.SignatureMethod_HMAC_SHA1(), consumer, None)
-        response = self.opener.open(req.to_url())
+        response = self.opener.open(self._build_url(url, req))
         result = response.read()
 
         if response.headers.get("Content-Encoding") == "gzip":
