@@ -157,26 +157,37 @@ class _CopyvioWorker(object):
         with self._workspace.request_semaphore:
             try:
                 response = self._opener.open(url, timeout=self._url_timeout)
-                result = response.read()
             except (URLError, timeout):
                 return None
 
-        if response.headers.get("Content-Encoding") == "gzip":
-            stream = StringIO(result)
-            gzipper = GzipFile(fileobj=stream)
-            try:
-                result = gzipper.read()
-            except IOError:
-                return None
+        try:
+            size = int(response.headers.get("Content-Length", 0))
+        except ValueError:
+            return None
+        if size > 1024 ** 2:  # Ignore URLs larger than a megabyte
+            return None
 
         ctype_full = response.headers.get("Content-Type", "text/plain")
         ctype = ctype_full.split(";", 1)[0]
         if ctype in ["text/html", "application/xhtml+xml"]:
-            return HTMLTextParser(result).strip()
+            handler = lambda res: HTMLTextParser(res).strip()
         elif ctype == "text/plain":
-            return result.strip()
+            handler = lambda res: res.strip()
         else:
             return None
+
+        with self._workspace.request_semaphore:
+            content = response.read()
+
+        if response.headers.get("Content-Encoding") == "gzip":
+            stream = StringIO(content)
+            gzipper = GzipFile(fileobj=stream)
+            try:
+                content = gzipper.read(2 * 1024 ** 2)
+            except IOError:
+                return None
+
+        return handler(content)
 
     def _run(self):
         """Main entry point for the worker thread.
