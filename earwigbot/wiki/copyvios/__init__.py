@@ -64,7 +64,27 @@ class _CopyvioWorkspace(object):
 
     def _calculate_confidence(self, delta):
         """Return the confidence of a violation as a float between 0 and 1."""
-        return float(delta.size()) / self._article.size()
+        def conf_with_article_and_delta(article, delta):
+            """Calculate confidence using the article and delta chain sizes."""
+            return float(delta) / article
+
+        def conf_with_delta(delta):
+            """Calculate confidence using just the delta chain size."""
+            # This piecewise function, CΔ(Δ), was derived from experimental
+            # data using reference points at (0, 0), (100, 0.5), (250, 0.75),
+            # (500, 0.9), and (1000, 0.95) with lim Δ→+∞ CΔ(Δ) = 1.
+            # A graph can be viewed here: ...
+            if delta <= 100:
+                return delta / (delta + 100)
+            elif delta <= 250:
+                return (delta - 25) / (delta + 50)
+            elif delta <= 500:
+                return (10.5 * delta - 750) / (10 * delta)
+            else:
+                return (delta - 50) / delta
+
+        return max(conf_with_article_and_delta(self._article.size, delta.size),
+                   conf_with_delta(delta.size))
 
     def _finish_early(self):
         """Finish handling links prematurely (if we've hit min_confidence)."""
@@ -98,7 +118,7 @@ class _CopyvioWorkspace(object):
                     from urlparse import urlparse
                     key = u".".join(urlparse(url).netloc.split(".")[-2:])
 
-                logmsg = "enqueue(): {0} {1} -> {2}"
+                logmsg = u"enqueue(): {0} {1} -> {2}"
                 if key in self._workers:
                     self._logger.debug(logmsg.format("PUT", key, url))
                     self._workers[key].queue.put(url)
@@ -121,7 +141,7 @@ class _CopyvioWorkspace(object):
         """Compare a source to the article, and update the working result."""
         delta = MarkovChainIntersection(self._article, source)
         confidence = self._calculate_confidence(delta)
-        self._logger.debug("compare(): {0} -> {1}".format(url, confidence))
+        self._logger.debug(u"compare(): {0} -> {1}".format(url, confidence))
         with self._result_lock:
             if confidence > self.best.confidence:
                 self.best = _WorkingResult(url, confidence, (source, delta))
@@ -268,7 +288,7 @@ class CopyvioMixIn(object):
 
         raise exceptions.UnknownSearchEngineError(engine)
 
-    def copyvio_check(self, min_confidence=0.5, max_queries=15, max_time=-1):
+    def copyvio_check(self, min_confidence=0.75, max_queries=15, max_time=-1):
         """Check the page for copyright violations.
 
         Returns a :class:`.CopyvioCheckResult` object with information on the
@@ -290,7 +310,7 @@ class CopyvioMixIn(object):
         (:exc:`.UnknownSearchEngineError`, :exc:`.SearchQueryError`, ...) on
         errors.
         """
-        log = "Starting copyvio check for [[{0}]]"
+        log = u"Starting copyvio check for [[{0}]]"
         self._logger.info(log.format(self.title))
         start_time = time()
         until = (start_time + max_time) if max_time > 0 else None
@@ -305,7 +325,7 @@ class CopyvioMixIn(object):
         else:
             exclude = None
 
-        if article.size() < 20:  # Auto-fail very small articles
+        if article.size < 20:  # Auto-fail very small articles
             result = CopyvioCheckResult(False, 0.0, None, 0, 0, article,
                                         workspace.best.chains)
             self._logger.info(result.get_log_message(self.title))
@@ -331,7 +351,7 @@ class CopyvioMixIn(object):
         self._logger.info(result.get_log_message(self.title))
         return result
 
-    def copyvio_compare(self, url, min_confidence=0.5, max_time=30):
+    def copyvio_compare(self, url, min_confidence=0.75, max_time=30):
         """Check the page like :py:meth:`copyvio_check` against a specific URL.
 
         This is essentially a reduced version of :meth:`copyvio_check` - a
@@ -352,7 +372,7 @@ class CopyvioMixIn(object):
         Since no searching is done, neither :exc:`.UnknownSearchEngineError`
         nor :exc:`.SearchQueryError` will be raised.
         """
-        log = "Starting copyvio compare for [[{0}]] against {1}"
+        log = u"Starting copyvio compare for [[{0}]] against {1}"
         self._logger.info(log.format(self.title, url))
         start_time = time()
         until = (start_time + max_time) if max_time > 0 else None
