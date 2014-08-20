@@ -66,7 +66,7 @@ class _CopyvioWorkspace(object):
         """Return the confidence of a violation as a float between 0 and 1."""
         def conf_with_article_and_delta(article, delta):
             """Calculate confidence using the article and delta chain sizes."""
-            return float(delta) / article
+            return delta / article
 
         def conf_with_delta(delta):
             """Calculate confidence using just the delta chain size."""
@@ -84,8 +84,9 @@ class _CopyvioWorkspace(object):
             else:
                 return (delta - 50) / delta
 
-        return max(conf_with_article_and_delta(self._article.size, delta.size),
-                   conf_with_delta(delta.size))
+        d_size = float(delta.size)
+        return max(conf_with_article_and_delta(self._article.size, d_size),
+                   conf_with_delta(d_size))
 
     def _finish_early(self):
         """Finish handling links prematurely (if we've hit min_confidence)."""
