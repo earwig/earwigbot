@@ -22,6 +22,7 @@
 
 from collections import namedtuple
 from gzip import GzipFile
+from math import log
 from Queue import Empty, Queue
 from socket import timeout
 from StringIO import StringIO
@@ -66,13 +67,23 @@ class _CopyvioWorkspace(object):
         """Return the confidence of a violation as a float between 0 and 1."""
         def conf_with_article_and_delta(article, delta):
             """Calculate confidence using the article and delta chain sizes."""
-            return delta / article
+            # This piecewise function, C_AΔ(Δ), was defined such that
+            # confidence exhibits exponential growth until it reaches the
+            # default "suspect" confidence threshold, at which point it
+            # transitions to polynomial growth with lim (A/Δ)→1 C_AΔ(A,Δ) = 1.
+            # A graph can be viewed here:
+            # http://benkurtovic.com/static/article-delta_confidence_function.pdf
+            ratio = delta / article
+            if ratio <= 0.52763:
+                return log(1 / (1 - ratio))
+            else:
+                return (-0.8939 * (ratio ** 2)) + (1.8948 * ratio) - 0.0009
 
         def conf_with_delta(delta):
             """Calculate confidence using just the delta chain size."""
-            # This piecewise function, CΔ(Δ), was derived from experimental
+            # This piecewise function, C_Δ(Δ), was derived from experimental
             # data using reference points at (0, 0), (100, 0.5), (250, 0.75),
-            # (500, 0.9), and (1000, 0.95) with lim Δ→+∞ CΔ(Δ) = 1.
+            # (500, 0.9), and (1000, 0.95) with lim Δ→+∞ C_Δ(Δ) = 1.
             # A graph can be viewed here:
             # http://benkurtovic.com/static/delta_confidence_function.pdf
             if delta <= 100:
