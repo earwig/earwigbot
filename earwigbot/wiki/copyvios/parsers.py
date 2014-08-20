@@ -70,6 +70,10 @@ class ArticleTextParser(BaseTextParser):
             if link.title.strip().lower().startswith(bad_prefixes):
                 wikicode.remove(link)
 
+        # Also strip references:
+        for tag in wikicode.filter_tags(matches=lambda tag: tag.tag == "ref"):
+            wikicode.remove(tag)
+
         clean = wikicode.strip_code(normalize=True, collapse=True)
         self.clean = clean.replace("\n\n", "\n").strip()
         return self.clean
