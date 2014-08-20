@@ -99,13 +99,13 @@ class ArticleTextParser(BaseTextParser):
 
         sentences = []
         for sentence in tokenizer.tokenize(self.clean):
-            if len(sentence) < min_query:
-                continue
             if len(sentence) > max_query:
                 words = sentence.split()
                 while len(" ".join(words)) > max_query:
                     words.pop()
                 sentence = " ".join(words)
+            if len(sentence) < min_query:
+                continue
             sentences.append(sentence)
 
         if max_chunks >= len(sentences):
