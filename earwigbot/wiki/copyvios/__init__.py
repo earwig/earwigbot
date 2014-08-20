@@ -73,7 +73,8 @@ class _CopyvioWorkspace(object):
             # This piecewise function, CΔ(Δ), was derived from experimental
             # data using reference points at (0, 0), (100, 0.5), (250, 0.75),
             # (500, 0.9), and (1000, 0.95) with lim Δ→+∞ CΔ(Δ) = 1.
-            # A graph can be viewed here: ...
+            # A graph can be viewed here:
+            # http://benkurtovic.com/static/delta_confidence_function.pdf
             if delta <= 100:
                 return delta / (delta + 100)
             elif delta <= 250:
