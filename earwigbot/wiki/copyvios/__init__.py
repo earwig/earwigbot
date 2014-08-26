@@ -24,7 +24,7 @@ from collections import namedtuple
 from gzip import GzipFile
 from math import log
 from Queue import Empty, Queue
-from socket import timeout
+from socket import error
 from StringIO import StringIO
 from threading import Lock, Semaphore, Thread
 from time import sleep, time
@@ -190,7 +190,7 @@ class _CopyvioWorker(object):
         with self._workspace.request_semaphore:
             try:
                 response = self._opener.open(url, timeout=self._url_timeout)
-            except (URLError, timeout):
+            except (URLError, error):
                 return None
 
         try:
