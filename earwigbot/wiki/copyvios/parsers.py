@@ -62,17 +62,29 @@ class ArticleTextParser(BaseTextParser):
 
         The actual stripping is handled by :py:mod:`mwparserfromhell`.
         """
+        def remove(code, node):
+            """Remove a node from a code object, ignoring ValueError.
+
+            Sometimes we will remove a node that contains another node we wish
+            to remove, and we fail when we try to remove the inner one. Easiest
+            solution is to just ignore the exception.
+            """
+            try:
+                code.remove(node)
+            except ValueError:
+                pass
+
         wikicode = mwparserfromhell.parse(self.text)
 
         # Preemtively strip some links mwparser doesn't know about:
         bad_prefixes = ("file:", "image:", "category:")
         for link in wikicode.filter_wikilinks():
             if link.title.strip().lower().startswith(bad_prefixes):
-                wikicode.remove(link)
+                remove(wikicode, link)
 
         # Also strip references:
         for tag in wikicode.filter_tags(matches=lambda tag: tag.tag == "ref"):
-            wikicode.remove(tag)
+            remove(wikicode, tag)
 
         clean = wikicode.strip_code(normalize=True, collapse=True)
         self.clean = clean.replace("\n\n", "\n").strip()
