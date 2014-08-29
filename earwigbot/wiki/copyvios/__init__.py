@@ -210,7 +210,10 @@ class _CopyvioWorker(object):
             return None
 
         with self._workspace.request_semaphore:
-            content = response.read()
+            try:
+                content = response.read()
+            except (URLError, error):
+                return None
 
         if response.headers.get("Content-Encoding") == "gzip":
             stream = StringIO(content)
