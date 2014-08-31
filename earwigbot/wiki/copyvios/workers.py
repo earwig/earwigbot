@@ -281,6 +281,7 @@ class CopyvioWorkspace(object):
             self._queues = _global_queues
         else:
             self._queues = _CopyvioQueues()
+            self._num_workers = num_workers
             for i in xrange(num_workers):
                 name = "local-{0:04}.{1}".format(id(self) % 10000, i)
                 worker = _CopyvioWorker(name, self._queues, until)
@@ -372,7 +373,7 @@ class CopyvioWorkspace(object):
             self._logger.debug("Waiting on source: {0}".format(source.url))
             source.join(self._until)
         if not _is_globalized:
-            for i in xrange(len(self._workers)):
+            for i in xrange(self._num_workers):
                 self._queues.unassigned.put((StopIteration, None))
         self._logger.debug("Done waiting")
 
