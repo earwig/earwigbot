@@ -255,8 +255,7 @@ class _CopyvioWorker(object):
                 self._logger.debug("Exiting: got stop signal")
                 return
             text = self._open_url(source)
-            if text:
-                source.workspace.compare(source, MarkovChain(text))
+            source.workspace.compare(source, MarkovChain(text or ""))
 
 
 class CopyvioWorkspace(object):
