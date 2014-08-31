@@ -167,13 +167,14 @@ class CopyvioMixIn(object):
         start_time = time()
         until = (start_time + max_time) if max_time > 0 else None
         article = MarkovChain(ArticleTextParser(self.get()).strip())
-        workspace = CopyvioWorkspace(article, min_confidence, until,
-                                     self._logger, self._addheaders, max_time)
+        workspace = CopyvioWorkspace(
+            article, min_confidence, until, self._logger, self._addheaders,
+            max_time, 1)
         workspace.enqueue([url])
         workspace.wait()
         best = workspace.best
-        result = CopyvioCheckResult(best.confidence >= min_confidence,
-                                    best.confidence, best.url, 0,
-                                    time() - start_time, article, best.chains)
+        result = CopyvioCheckResult(
+            best.confidence >= min_confidence, best.confidence, best.url, 0,
+            time() - start_time, article, best.chains)
         self._logger.info(result.get_log_message(self.title))
         return result
