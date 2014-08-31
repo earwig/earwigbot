@@ -254,11 +254,11 @@ class _CopyvioWorker(object):
 
     def start(self, name):
         """Start the worker in a new thread, with a given name."""
+        self._logger = getLogger("earwigbot.wiki.cvworker." + name)
         self._thread = thread = Thread(target=self._run)
         thread.name = "cvworker-" + name
         thread.daemon = True
         thread.start()
-        self._logger = getLogger("earwigbot.wiki.cvworker." + name)
 
 
 class CopyvioWorkspace(object):
