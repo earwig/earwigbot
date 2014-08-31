@@ -219,7 +219,7 @@ class _CopyvioWorker(object):
         if not self._queue:
             self._acquire_new_site()
 
-        logmsg = u"Fetching a new source URL from site queue {0}"
+        logmsg = u"Fetching source URL from queue {0}"
         self._logger.debug(logmsg.format(self._site))
         self._queues.lock.acquire()
         try:
@@ -371,6 +371,9 @@ class CopyvioWorkspace(object):
         for source in self.sources:
             self._logger.debug("Waiting on source: {0}".format(source.url))
             source.join(self._until)
+        if not _is_globalized:
+            for i in xrange(len(self._workers)):
+                self._queues.unassigned.put((StopIteration, None))
         self._logger.debug("Done waiting")
 
     def compare(self, source, source_chain):
