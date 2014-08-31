@@ -216,7 +216,7 @@ class _CopyvioWorker(object):
 
     def _dequeue(self):
         """Remove a source from one of the queues."""
-        if not self._queue:
+        if not self._site:
             self._acquire_new_site()
 
         logmsg = u"Fetching source URL from queue {0}"
@@ -227,6 +227,7 @@ class _CopyvioWorker(object):
         except IndexError:
             self._logger.debug("Queue is empty")
             del self._queues.sites[self._site]
+            self._site = None
             self._queue = None
             self._queues.lock.release()
             return self._dequeue()
@@ -369,12 +370,10 @@ class CopyvioWorkspace(object):
         """Wait for the workers to finish handling the sources."""
         self._logger.debug("Waiting on {0} sources".format(len(self.sources)))
         for source in self.sources:
-            self._logger.debug("Waiting on source: {0}".format(source.url))
             source.join(self._until)
         if not _is_globalized:
             for i in xrange(self._num_workers):
                 self._queues.unassigned.put((StopIteration, None))
-        self._logger.debug("Done waiting")
 
     def compare(self, source, source_chain):
         """Compare a source to the article, and update the best known one."""
