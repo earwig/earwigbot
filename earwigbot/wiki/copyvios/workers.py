@@ -88,6 +88,7 @@ class _CopyvioSource(object):
     """Represents a single suspected violation source (a URL)."""
 
     def __init__(self, workspace, url, key, headers=None, timeout=5):
+        self.workspace = workspace
         self.url = url
         self.key = key
         self.headers = headers
@@ -95,7 +96,6 @@ class _CopyvioSource(object):
         self.confidence = 0.0
         self.chains = (EMPTY, EMPTY_INTERSECTION)
 
-        self._workspace = workspace
         self._event = Event()
 
     def active(self):
