@@ -39,8 +39,8 @@ tldextract = importer.new("tldextract")
 __all__ = ["globalize", "localize", "CopyvioWorkspace"]
 
 _is_globalized = False
-_global_workers = []
 _global_queues = None
+_global_workers = []
 
 def globalize(num_workers=8):
     """Cause all copyvio checks to be done by one global set of workers.
@@ -73,14 +73,14 @@ def localize():
     This function is not thread-safe and should only be called when no checks
     are being done.
     """
-    global _is_globalized, _global_queues
+    global _is_globalized, _global_queues, _global_workers
     if not _is_globalized:
         return
 
     for i in xrange(len(_global_workers)):
         _global_queues.unassigned.put((StopIteration, None))
     _global_queues = None
-    _global_workers = None
+    _global_workers = []
     _is_globalized = False
 
 
@@ -252,7 +252,7 @@ class CopyvioWorkspace(object):
 
     def __init__(self, article, min_confidence, until, logger, headers,
                  url_timeout=5, num_workers=8):
-        self.best = _CopyvioSource(self, None)
+        self.best = _CopyvioSource(self, None, None)
         self.sources = []
 
         self._article = article
@@ -263,7 +263,7 @@ class CopyvioWorkspace(object):
         self._is_finished = False
         self._compare_lock = Lock()
         self._source_args = {"workspace": self, "headers": headers,
-                             "timeout": url_timeout)
+                             "timeout": url_timeout}
 
         if _is_globalized:
             self._queues = _global_queues

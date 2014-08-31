@@ -171,8 +171,9 @@ class CopyvioMixIn(object):
                                      self._logger, self._addheaders, max_time)
         workspace.enqueue([url])
         workspace.wait()
-        url, conf, chains = workspace.best
-        result = CopyvioCheckResult(conf >= min_confidence, conf, url, 0,
-                                    time() - start_time, article, chains)
+        best = workspace.best
+        result = CopyvioCheckResult(best.confidence >= min_confidence,
+                                    best.confidence, best.url, 0,
+                                    time() - start_time, article, best.chains)
         self._logger.info(result.get_log_message(self.title))
         return result
