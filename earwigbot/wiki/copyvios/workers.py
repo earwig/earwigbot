@@ -267,13 +267,11 @@ class CopyvioWorkspace(object):
 
         if _is_globalized:
             self._queues = _global_queues
-            self._workers = _global_workers
         else:
             self._queues = _CopyvioQueues()
             for i in xrange(num_workers):
                 worker = _CopyvioWorker(self._queues, until)
                 worker.start("local-{0:04}.{1}".format(id(self) % 10000, i))
-                self._workers.append(worker)
 
     def _calculate_confidence(self, delta):
         """Return the confidence of a violation as a float between 0 and 1."""
