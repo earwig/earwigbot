@@ -130,9 +130,9 @@ class CopyvioMixIn(object):
 
         if not no_links:
             workspace.enqueue(parser.get_links(), exclude)
+        num_queries = 0
         if not no_searches:
             chunks = parser.chunk(self._search_config["nltk_dir"], max_queries)
-            num_queries = 0
             for chunk in chunks:
                 if workspace.best.confidence >= min_confidence:
                     break
