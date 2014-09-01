@@ -296,7 +296,7 @@ class CopyvioWorkspace(object):
             self._num_workers = num_workers
             for i in xrange(num_workers):
                 name = "local-{0:04}.{1}".format(id(self) % 10000, i)
-                worker = _CopyvioWorker(name, self._queues, until)
+                _CopyvioWorker(name, self._queues, until)
 
     def _calculate_confidence(self, delta):
         """Return the confidence of a violation as a float between 0 and 1."""
