@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from collections import deque
 from gzip import GzipFile
 from logging import getLogger
 from math import log
@@ -231,7 +232,7 @@ class _CopyvioWorker(object):
         self._logger.debug(logmsg.format(self._site))
         self._queues.lock.acquire()
         try:
-            source = self._queue.pop()
+            source = self._queue.popleft()
         except IndexError:
             self._logger.debug("Queue is empty")
             del self._queues.sites[self._site]
@@ -373,7 +374,7 @@ class CopyvioWorkspace(object):
                     self._queues.sites[key].append(source)
                 else:
                     self._logger.debug(logmsg.format("new", key, url))
-                    self._queues.sites[key] = queue = []
+                    self._queues.sites[key] = queue = deque()
                     queue.append(source)
                     self._queues.unassigned.put((key, queue))
 
