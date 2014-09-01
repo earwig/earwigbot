@@ -78,7 +78,8 @@ class CopyvioMixIn(object):
 
         raise exceptions.UnknownSearchEngineError(engine)
 
-    def copyvio_check(self, min_confidence=0.75, max_queries=15, max_time=-1):
+    def copyvio_check(self, min_confidence=0.75, max_queries=15, max_time=-1,
+                      no_searches=False, no_links=False):
         """Check the page for copyright violations.
 
         Returns a :class:`.CopyvioCheckResult` object with information on the
@@ -95,6 +96,12 @@ class CopyvioMixIn(object):
         a set amount of time (generally around a minute), which can be useful
         if checks are called through a web server with timeouts. We will stop
         checking new URLs as soon as this limit is reached.
+
+        Setting *no_searches* to ``True`` will cause only URLs in the wikitext
+        of the page to be checked; no search engine queries will be made.
+        Setting *no_links* to ``True`` will cause the opposite to happen: URLs
+        in the wikitext will be ignored; search engine queries will be made
+        only. Setting both of these to ``True`` is pointless.
 
         Raises :exc:`.CopyvioCheckError` or subclasses
         (:exc:`.UnknownSearchEngineError`, :exc:`.SearchQueryError`, ...) on
@@ -121,17 +128,19 @@ class CopyvioMixIn(object):
             self._logger.info(result.get_log_message(self.title))
             return result
 
-        workspace.enqueue(parser.get_links(), exclude)
-        chunks = parser.chunk(self._search_config["nltk_dir"], max_queries)
-        num_queries = 0
-        for chunk in chunks:
-            if workspace.best.confidence >= min_confidence:
-                break
-            log = u"[[{0}]] -> querying {1} for {2!r}"
-            self._logger.debug(log.format(self.title, searcher.name, chunk))
-            workspace.enqueue(searcher.search(chunk), exclude)
-            num_queries += 1
-            sleep(1)
+        if not no_links:
+            workspace.enqueue(parser.get_links(), exclude)
+        if not no_searches:
+            chunks = parser.chunk(self._search_config["nltk_dir"], max_queries)
+            num_queries = 0
+            for chunk in chunks:
+                if workspace.best.confidence >= min_confidence:
+                    break
+                log = u"[[{0}]] -> querying {1} for {2!r}"
+                self._logger.debug(log.format(self.title, searcher.name, chunk))
+                workspace.enqueue(searcher.search(chunk), exclude)
+                num_queries += 1
+                sleep(1)
 
         workspace.wait()
         result = CopyvioCheckResult(
