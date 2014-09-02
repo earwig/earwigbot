@@ -354,7 +354,7 @@ class CopyvioWorkspace(object):
             with self._queues.lock:
                 if self._is_finished:
                     break
-                if url in self._handled_urls:
+                if not url or url in self._handled_urls:
                     continue
                 self._handled_urls.append(url)
                 if exclude_check and exclude_check(url):
