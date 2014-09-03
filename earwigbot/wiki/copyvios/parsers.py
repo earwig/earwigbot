@@ -107,9 +107,7 @@ class ArticleTextParser(BaseTextParser):
         datafile = path.join(nltk_dir, "tokenizers", "punkt", "english.pickle")
         try:
             tokenizer = nltk.data.load("file:" + datafile)
-        except IOError as exc:
-            if exc.errno != errno.ENOENT:
-                raise
+        except LookupError:
             nltk.download("punkt", nltk_dir)
             tokenizer = nltk.data.load("file:" + datafile)
 

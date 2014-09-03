@@ -20,7 +20,57 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-__all__ = ["CopyvioCheckResult"]
+from threading import Event
+from time import time
+
+from earwigbot.wiki.copyvios.markov import EMPTY, EMPTY_INTERSECTION
+
+__all__ = ["CopyvioSource", "CopyvioCheckResult"]
+
+class CopyvioSource(object):
+    """Represents a single suspected violation source (a URL)."""
+
+    def __init__(self, workspace, url, key, headers=None, timeout=5):
+        self.workspace = workspace
+        self.url = url
+        self.key = key
+        self.headers = headers
+        self.timeout = timeout
+        self.confidence = 0.0
+        self.chains = (EMPTY, EMPTY_INTERSECTION)
+
+        self._event1 = Event()
+        self._event2 = Event()
+        self._event2.set()
+
+    def touched(self):
+        """Return whether one of start_work() and cancel() have been called."""
+        return self._event1.is_set()
+
+    def start_work(self):
+        """Mark this source as being worked on right now."""
+        self._event2.clear()
+        self._event1.set()
+
+    def finish_work(self, confidence, source_chain, delta_chain):
+        """Complete the confidence information inside this source."""
+        self.confidence = confidence
+        self.chains = (source_chain, delta_chain)
+        self._event2.set()
+
+    def cancel(self):
+        """Deactivate this source without filling in the relevant data."""
+        self._event1.set()
+
+    def join(self, until):
+        """Block until this violation result is filled out."""
+        for event in [self._event1, self._event2]:
+            if until:
+                timeout = until - time()
+                if timeout <= 0:
+                    return
+                event.wait(timeout)
+
 
 class CopyvioCheckResult(object):
     """

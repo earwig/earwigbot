@@ -27,14 +27,14 @@ from math import log
 from Queue import Empty, Queue
 from socket import error
 from StringIO import StringIO
-from threading import Event, Lock, Thread
+from threading import Lock, Thread
 from time import time
 from urllib2 import build_opener, URLError
 
 from earwigbot import importer
-from earwigbot.wiki.copyvios.markov import (
-    EMPTY, EMPTY_INTERSECTION, MarkovChain, MarkovChainIntersection)
+from earwigbot.wiki.copyvios.markov import MarkovChain, MarkovChainIntersection
 from earwigbot.wiki.copyvios.parsers import HTMLTextParser
+from earwigbot.wiki.copyvios.result import CopyvioSource
 
 tldextract = importer.new("tldextract")
 
@@ -62,6 +62,7 @@ def globalize(num_workers=8):
     _global_queues = _CopyvioQueues()
     for i in xrange(num_workers):
         worker = _CopyvioWorker("global-{0}".format(i), _global_queues)
+        worker.start()
         _global_workers.append(worker)
     _is_globalized = True
 
@@ -85,51 +86,6 @@ def localize():
     _is_globalized = False
 
 
-class _CopyvioSource(object):
-    """Represents a single suspected violation source (a URL)."""
-
-    def __init__(self, workspace, url, key, headers=None, timeout=5):
-        self.workspace = workspace
-        self.url = url
-        self.key = key
-        self.headers = headers
-        self.timeout = timeout
-        self.confidence = 0.0
-        self.chains = (EMPTY, EMPTY_INTERSECTION)
-
-        self._event1 = Event()
-        self._event2 = Event()
-        self._event2.set()
-
-    def touched(self):
-        """Return whether one of start_work() and cancel() have been called."""
-        return self._event1.is_set()
-
-    def start_work(self):
-        """Mark this source as being worked on right now."""
-        self._event2.clear()
-        self._event1.set()
-
-    def finish_work(self, confidence, source_chain, delta_chain):
-        """Complete the confidence information inside this source."""
-        self.confidence = confidence
-        self.chains = (source_chain, delta_chain)
-        self._event2.set()
-
-    def cancel(self):
-        """Deactivate this source without filling in the relevant data."""
-        self._event1.set()
-
-    def join(self, until):
-        """Block until this violation result is filled out."""
-        for event in [self._event1, self._event2]:
-            if until:
-                timeout = until - time()
-                if timeout <= 0:
-                    return
-                event.wait(timeout)
-
-
 class _CopyvioQueues(object):
     """Stores data necessary to maintain the various queues during a check."""
 
@@ -143,18 +99,14 @@ class _CopyvioWorker(object):
     """A multithreaded URL opener/parser instance."""
 
     def __init__(self, name, queues, until=None):
+        self._name = name
         self._queues = queues
         self._until = until
 
-        self._thread = thread = Thread(target=self._run)
         self._site = None
         self._queue = None
         self._opener = build_opener()
         self._logger = getLogger("earwigbot.wiki.cvworker." + name)
-
-        thread.name = "cvworker-" + name
-        thread.daemon = True
-        thread.start()
 
     def _open_url(self, source):
         """Open a URL and return its parsed content, or None.
@@ -270,13 +222,19 @@ class _CopyvioWorker(object):
             text = self._open_url(source)
             source.workspace.compare(source, MarkovChain(text or ""))
 
+    def start(self):
+        """Start the copyvio worker in a new thread."""
+        thread = Thread(target=self._run, name="cvworker-" + self._name)
+        thread.daemon = True
+        thread.start()
+
 
 class CopyvioWorkspace(object):
     """Manages a single copyvio check distributed across threads."""
 
     def __init__(self, article, min_confidence, until, logger, headers,
                  url_timeout=5, num_workers=8):
-        self.best = _CopyvioSource(self, None, None)
+        self.best = CopyvioSource(self, None, None)
         self.sources = []
 
         self._article = article
@@ -296,7 +254,7 @@ class CopyvioWorkspace(object):
             self._num_workers = num_workers
             for i in xrange(num_workers):
                 name = "local-{0:04}.{1}".format(id(self) % 10000, i)
-                _CopyvioWorker(name, self._queues, until)
+                _CopyvioWorker(name, self._queues, until).start()
 
     def _calculate_confidence(self, delta):
         """Return the confidence of a violation as a float between 0 and 1."""
@@ -366,7 +324,7 @@ class CopyvioWorkspace(object):
                     from urlparse import urlparse
                     key = u".".join(urlparse(url).netloc.split(".")[-2:])
 
-                source = _CopyvioSource(url=url, key=key, **self._source_args)
+                source = CopyvioSource(url=url, key=key, **self._source_args)
                 self.sources.append(source)
                 logmsg = u"enqueue(): {0} {1} -> {2}"
                 if key in self._queues.sites:
