@@ -36,11 +36,21 @@ __all__ = ["LazyImporter"]
 
 _real_get = ModuleType.__getattribute__
 
+def _create_failing_get(exc):
+    def _fail(self, attr):
+        raise exc
+    return _fail
+
 def _mock_get(self, attr):
     with _real_get(self, "_lock"):
         if _real_get(self, "_unloaded"):
             type(self)._unloaded = False
-            reload(self)
+            try:
+                reload(self)
+            except ImportError as exc:
+                type(self).__getattribute__ = _create_failing_get(exc)
+                del type(self)._lock
+                raise
             type(self).__getattribute__ = _real_get
             del type(self)._lock
         return _real_get(self, attr)
