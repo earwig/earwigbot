@@ -34,7 +34,7 @@ from urllib2 import build_opener, URLError
 from earwigbot import importer
 from earwigbot.wiki.copyvios.markov import MarkovChain, MarkovChainIntersection
 from earwigbot.wiki.copyvios.parsers import HTMLTextParser
-from earwigbot.wiki.copyvios.result import CopyvioSource
+from earwigbot.wiki.copyvios.result import CopyvioCheckResult, CopyvioSource
 
 tldextract = importer.new("tldextract")
 
@@ -120,7 +120,8 @@ class _CopyvioWorker(object):
         If a URLError was raised while opening the URL or an IOError was raised
         while decompressing, None will be returned.
         """
-        self._opener.addheaders = source.headers
+        if source.headers:
+            self._opener.addheaders = source.headers
         url = source.url.encode("utf8")
         try:
             response = self._opener.open(url, timeout=source.timeout)
@@ -194,8 +195,8 @@ class _CopyvioWorker(object):
             return self._dequeue()
 
         self._logger.debug(u"Got source URL: {0}".format(source.url))
-        if source.touched():
-            self._logger.debug("Source has been cancelled")
+        if source.skipped:
+            self._logger.debug("Source has been skipped")
             self._queues.lock.release()
             return self._dequeue()
 
@@ -232,18 +233,18 @@ class _CopyvioWorker(object):
 class CopyvioWorkspace(object):
     """Manages a single copyvio check distributed across threads."""
 
-    def __init__(self, article, min_confidence, until, logger, headers,
+    def __init__(self, article, min_confidence, max_time, logger, headers,
                  url_timeout=5, num_workers=8):
-        self.best = CopyvioSource(self, None, None)
         self.sources = []
+        self.finished = False
 
         self._article = article
         self._logger = logger.getChild("copyvios")
         self._min_confidence = min_confidence
-        self._until = until
+        self._start_time = time()
+        self._until = (self._start_time + max_time) if max_time > 0 else None
         self._handled_urls = []
-        self._is_finished = False
-        self._compare_lock = Lock()
+        self._finish_lock = Lock()
         self._source_args = {"workspace": self, "headers": headers,
                              "timeout": url_timeout}
 
@@ -254,7 +255,7 @@ class CopyvioWorkspace(object):
             self._num_workers = num_workers
             for i in xrange(num_workers):
                 name = "local-{0:04}.{1}".format(id(self) % 10000, i)
-                _CopyvioWorker(name, self._queues, until).start()
+                _CopyvioWorker(name, self._queues, self._until).start()
 
     def _calculate_confidence(self, delta):
         """Return the confidence of a violation as a float between 0 and 1."""
@@ -294,13 +295,11 @@ class CopyvioWorkspace(object):
 
     def _finish_early(self):
         """Finish handling links prematurely (if we've hit min_confidence)."""
-        if self._is_finished:
-            return
-        self._logger.debug("Confidence threshold met; cancelling remaining sources")
+        self._logger.debug("Confidence threshold met; skipping remaining sources")
         with self._queues.lock:
             for source in self.sources:
-                source.cancel()
-            self._is_finished = True
+                source.skip()
+            self.finished = True
 
     def enqueue(self, urls, exclude_check=None):
         """Put a list of URLs into the various worker queues.
@@ -310,9 +309,9 @@ class CopyvioWorkspace(object):
         """
         for url in urls:
             with self._queues.lock:
-                if self._is_finished:
+                if self.finished:
                     break
-                if not url or url in self._handled_urls:
+                if url in self._handled_urls:
                     continue
                 self._handled_urls.append(url)
                 if exclude_check and exclude_check(url):
@@ -336,26 +335,29 @@ class CopyvioWorkspace(object):
                     queue.append(source)
                     self._queues.unassigned.put((key, queue))
 
+    def compare(self, source, source_chain):
+        """Compare a source to the article; call _finish_early if necessary."""
+        delta = MarkovChainIntersection(self._article, source_chain)
+        conf = self._calculate_confidence(delta)
+        self._logger.debug(u"compare(): {0} -> {1}".format(source.url, conf))
+        with self._finish_lock:
+            source.finish_work(conf, source_chain, delta)
+            if not self.finished and conf >= self._min_confidence:
+                self._finish_early()
+
     def wait(self):
         """Wait for the workers to finish handling the sources."""
         self._logger.debug("Waiting on {0} sources".format(len(self.sources)))
         for source in self.sources:
             source.join(self._until)
-        with self._compare_lock:
+        with self._finish_lock:
             pass  # Wait for any remaining comparisons to be finished
         if not _is_globalized:
             for i in xrange(self._num_workers):
                 self._queues.unassigned.put((StopIteration, None))
 
-    def compare(self, source, source_chain):
-        """Compare a source to the article, and update the best known one."""
-        delta = MarkovChainIntersection(self._article, source_chain)
-        conf = self._calculate_confidence(delta)
-        self._logger.debug(u"compare(): {0} -> {1}".format(source.url, conf))
-
-        with self._compare_lock:
-            source.finish_work(conf, source_chain, delta)
-            if conf > self.best.confidence:
-                self.best = source
-                if conf >= self._min_confidence:
-                    self._finish_early()
+    def get_result(self, num_queries=0):
+        """Return a CopyvioCheckResult containing the results of this check."""
+        self.sources.sort(key=lambda source: source.confidence, reverse=True)
+        return CopyvioCheckResult(self.finished, self.sources, num_queries,
+                                  time() - self._start_time, self._article)

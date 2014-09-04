@@ -28,7 +28,12 @@ from earwigbot.wiki.copyvios.markov import EMPTY, EMPTY_INTERSECTION
 __all__ = ["CopyvioSource", "CopyvioCheckResult"]
 
 class CopyvioSource(object):
-    """Represents a single suspected violation source (a URL)."""
+    """
+    **EarwigBot: Wiki Toolset: Copyvio Source**
+
+    A class that represents a single possible source of a copyright violation,
+    i.e., a URL.
+    """
 
     def __init__(self, workspace, url, key, headers=None, timeout=5):
         self.workspace = workspace
@@ -38,14 +43,23 @@ class CopyvioSource(object):
         self.timeout = timeout
         self.confidence = 0.0
         self.chains = (EMPTY, EMPTY_INTERSECTION)
+        self.skipped = False
 
         self._event1 = Event()
         self._event2 = Event()
         self._event2.set()
 
-    def touched(self):
-        """Return whether one of start_work() and cancel() have been called."""
-        return self._event1.is_set()
+    def __repr__(self):
+        """Return the canonical string representation of the source."""
+        res = "CopyvioSource(url={0!r}, confidence={1!r}, skipped={2!r})"
+        return res.format(self.url, self.confidence, self.skipped)
+
+    def __str__(self):
+        """Return a nice string representation of the source."""
+        if self.skipped:
+            return "<CopyvioSource ({0}, skipped)>".format(self.url)
+        res = "<CopyvioSource ({0} with {1} conf)>"
+        return res.format(self.url, self.confidence)
 
     def start_work(self):
         """Mark this source as being worked on right now."""
@@ -58,8 +72,11 @@ class CopyvioSource(object):
         self.chains = (source_chain, delta_chain)
         self._event2.set()
 
-    def cancel(self):
+    def skip(self):
         """Deactivate this source without filling in the relevant data."""
+        if self._event1.is_set():
+            return
+        self.skipped = True
         self._event1.set()
 
     def join(self, until):
@@ -70,6 +87,8 @@ class CopyvioSource(object):
                 if timeout <= 0:
                     return
                 event.wait(timeout)
+            else:
+                event.wait()
 
 
 class CopyvioCheckResult(object):
@@ -81,40 +100,51 @@ class CopyvioCheckResult(object):
     *Attributes:*
 
     - :py:attr:`violation`:     ``True`` if this is a violation, else ``False``
-    - :py:attr:`confidence`:    a float between 0 and 1 indicating accuracy
-    - :py:attr:`url`:           the URL of the violated page
+    - :py:attr:`sources`:       a list of CopyvioSources, sorted by confidence
     - :py:attr:`queries`:       the number of queries used to reach a result
     - :py:attr:`time`:          the amount of time the check took to complete
     - :py:attr:`article_chain`: the MarkovChain of the article text
-    - :py:attr:`source_chain`:  the MarkovChain of the violated page text
-    - :py:attr:`delta_chain`:   the MarkovChainIntersection comparing the two
     """
 
-    def __init__(self, violation, confidence, url, queries, time, article,
-                 chains):
+    def __init__(self, violation, sources, queries, check_time, article_chain):
         self.violation = violation
-        self.confidence = confidence
-        self.url = url
+        self.sources = sources
         self.queries = queries
-        self.time = time
-        self.article_chain = article
-        self.source_chain = chains[0]
-        self.delta_chain = chains[1]
+        self.time = check_time
+        self.article_chain = article_chain
 
     def __repr__(self):
         """Return the canonical string representation of the result."""
-        res = "CopyvioCheckResult(violation={0!r}, confidence={1!r}, url={2!r}, queries={3!r})"
-        return res.format(self.violation, self.confidence, self.url,
-                          self.queries)
+        res = "CopyvioCheckResult(violation={0!r}, sources={1!r}, queries={2!r}, time={3!r})"
+        return res.format(self.violation, self.sources, self.queries,
+                          self.time)
 
     def __str__(self):
         """Return a nice string representation of the result."""
-        res = "<CopyvioCheckResult ({0} with {1} conf)>"
-        return res.format(self.violation, self.confidence)
+        res = "<CopyvioCheckResult ({0} with best {1})>"
+        return res.format(self.violation, self.best)
+
+    @property
+    def best(self):
+        """The best known source, or None if no sources exist."""
+        return self.sources[0] if self.sources else None
+
+    @property
+    def confidence(self):
+        """The confidence of the best source, or 0 if no sources exist."""
+        return self.best.confidence if self.best else 0.0
+
+    @property
+    def url(self):
+        """The url of the best source, or None if no sources exist."""
+        return self.best.url if self.best else None
 
     def get_log_message(self, title):
         """Build a relevant log message for this copyvio check result."""
-        log = u"{0} for [[{1}]] (confidence: {2}; URL: {3}; {4} queries; {5} seconds)"
+        if not self.sources:
+            log = u"No violation for [[{0}]] (no sources; {1} queries; {2} seconds)"
+            return log.format(title, self.queries, self.time)
+        log = u"{0} for [[{1}]] (best: {2} ({3} confidence); {4} queries; {5} seconds)"
         is_vio = "Violation detected" if self.violation else "No violation"
-        return log.format(is_vio, title, self.confidence, self.url,
+        return log.format(is_vio, title, self.url, self.confidence,
                           self.queries, self.time)

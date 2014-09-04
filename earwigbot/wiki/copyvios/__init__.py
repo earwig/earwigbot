@@ -26,7 +26,6 @@ from urllib2 import build_opener
 from earwigbot import exceptions, importer
 from earwigbot.wiki.copyvios.markov import MarkovChain
 from earwigbot.wiki.copyvios.parsers import ArticleTextParser
-from earwigbot.wiki.copyvios.result import CopyvioCheckResult
 from earwigbot.wiki.copyvios.search import YahooBOSSSearchEngine
 from earwigbot.wiki.copyvios.workers import (
     globalize, localize, CopyvioWorkspace)
@@ -109,12 +108,10 @@ class CopyvioMixIn(object):
         """
         log = u"Starting copyvio check for [[{0}]]"
         self._logger.info(log.format(self.title))
-        start_time = time()
-        until = (start_time + max_time) if max_time > 0 else None
         searcher = self._get_search_engine()
         parser = ArticleTextParser(self.get())
         article = MarkovChain(parser.strip())
-        workspace = CopyvioWorkspace(article, min_confidence, until,
+        workspace = CopyvioWorkspace(article, min_confidence, max_time,
                                      self._logger, self._addheaders)
         if self._exclusions_db:
             self._exclusions_db.sync(self.site.name)
@@ -123,8 +120,7 @@ class CopyvioMixIn(object):
             exclude = None
 
         if article.size < 20:  # Auto-fail very small articles
-            result = CopyvioCheckResult(False, 0.0, None, 0, 0, article,
-                                        workspace.best.chains)
+            result = workspace.get_result()
             self._logger.info(result.get_log_message(self.title))
             return result
 
@@ -134,19 +130,15 @@ class CopyvioMixIn(object):
         if not no_searches:
             chunks = parser.chunk(self._search_config["nltk_dir"], max_queries)
             for chunk in chunks:
-                if workspace.best.confidence >= min_confidence:
+                if workspace.finished:
                     break
                 log = u"[[{0}]] -> querying {1} for {2!r}"
                 self._logger.debug(log.format(self.title, searcher.name, chunk))
                 workspace.enqueue(searcher.search(chunk), exclude)
                 num_queries += 1
                 sleep(1)
-
         workspace.wait()
-        result = CopyvioCheckResult(
-            workspace.best.confidence >= min_confidence,
-            workspace.best.confidence, workspace.best.url, num_queries,
-            time() - start_time, article, workspace.best.chains)
+        result = workspace.get_result(num_queries)
         self._logger.info(result.get_log_message(self.title))
         return result
 
@@ -173,17 +165,12 @@ class CopyvioMixIn(object):
         """
         log = u"Starting copyvio compare for [[{0}]] against {1}"
         self._logger.info(log.format(self.title, url))
-        start_time = time()
-        until = (start_time + max_time) if max_time > 0 else None
         article = MarkovChain(ArticleTextParser(self.get()).strip())
         workspace = CopyvioWorkspace(
-            article, min_confidence, until, self._logger, self._addheaders,
+            article, min_confidence, max_time, self._logger, self._addheaders,
             max_time, 1)
         workspace.enqueue([url])
         workspace.wait()
-        best = workspace.best
-        result = CopyvioCheckResult(
-            best.confidence >= min_confidence, best.confidence, best.url, 0,
-            time() - start_time, article, best.chains)
+        result = workspace.get_result()
         self._logger.info(result.get_log_message(self.title))
         return result

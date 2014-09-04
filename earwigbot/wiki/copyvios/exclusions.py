@@ -30,7 +30,7 @@ from earwigbot import exceptions
 
 __all__ = ["ExclusionsDB"]
 
-default_sources = {
+DEFAULT_SOURCES = {
     "all": [  # Applies to all, but located on enwiki
         "User:EarwigBot/Copyvios/Exclusions"
     ],
@@ -74,7 +74,7 @@ class ExclusionsDB(object):
         """
         query = "INSERT INTO sources VALUES (?, ?);"
         sources = []
-        for sitename, pages in default_sources.iteritems():
+        for sitename, pages in DEFAULT_SOURCES.iteritems():
             for page in pages:
                 sources.append((sitename, page))
 
@@ -95,8 +95,9 @@ class ExclusionsDB(object):
             r"\*\s*Site:\s*(?:\[|\<nowiki\>)?(?:https?:)?(?://)?(.*?)(?:\].*?|\</nowiki\>.*?)?\s*$"
         ]
         for regex in regexes:
-            find = re.findall(regex, data, re.I|re.M)
-            [urls.add(url.lower().strip()) for url in find if url.strip()]
+            for url in re.findall(regex, data, re.I|re.M):
+                if url.strip():
+                    urls.add(url.lower().strip())
         return urls
 
     def _update(self, sitename):
