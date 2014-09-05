@@ -234,7 +234,7 @@ class CopyvioWorkspace(object):
     """Manages a single copyvio check distributed across threads."""
 
     def __init__(self, article, min_confidence, max_time, logger, headers,
-                 url_timeout=5, num_workers=8):
+                 url_timeout=5, num_workers=8, short_circuit=True):
         self.sources = []
         self.finished = False
 
@@ -245,6 +245,7 @@ class CopyvioWorkspace(object):
         self._until = (self._start_time + max_time) if max_time > 0 else None
         self._handled_urls = []
         self._finish_lock = Lock()
+        self._short_circuit = short_circuit
         self._source_args = {"workspace": self, "headers": headers,
                              "timeout": url_timeout}
 
@@ -309,7 +310,7 @@ class CopyvioWorkspace(object):
         """
         for url in urls:
             with self._queues.lock:
-                if self.finished:
+                if self._short_circuit and self.finished:
                     break
                 if url in self._handled_urls:
                     continue
@@ -343,7 +344,10 @@ class CopyvioWorkspace(object):
         with self._finish_lock:
             source.finish_work(conf, source_chain, delta)
             if not self.finished and conf >= self._min_confidence:
-                self._finish_early()
+                if self._short_circuit:
+                    self._finish_early()
+                else:
+                    self.finished = True
 
     def wait(self):
         """Wait for the workers to finish handling the sources."""

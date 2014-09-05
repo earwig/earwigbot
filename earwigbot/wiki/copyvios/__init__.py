@@ -78,7 +78,7 @@ class CopyvioMixIn(object):
         raise exceptions.UnknownSearchEngineError(engine)
 
     def copyvio_check(self, min_confidence=0.75, max_queries=15, max_time=-1,
-                      no_searches=False, no_links=False):
+                      no_searches=False, no_links=False, short_circuit=True):
         """Check the page for copyright violations.
 
         Returns a :class:`.CopyvioCheckResult` object with information on the
@@ -102,6 +102,11 @@ class CopyvioMixIn(object):
         in the wikitext will be ignored; search engine queries will be made
         only. Setting both of these to ``True`` is pointless.
 
+        Normally, the checker will short-circuit if it finds a URL that meets
+        *min_confidence*. This behavior normally causes it to skip any
+        remaining URLs and web queries, but setting *short_circuit* to
+        ``False`` will prevent this.
+
         Raises :exc:`.CopyvioCheckError` or subclasses
         (:exc:`.UnknownSearchEngineError`, :exc:`.SearchQueryError`, ...) on
         errors.
@@ -111,8 +116,9 @@ class CopyvioMixIn(object):
         searcher = self._get_search_engine()
         parser = ArticleTextParser(self.get())
         article = MarkovChain(parser.strip())
-        workspace = CopyvioWorkspace(article, min_confidence, max_time,
-                                     self._logger, self._addheaders)
+        workspace = CopyvioWorkspace(
+            article, min_confidence, max_time, self._logger, self._addheaders,
+            short_circuit=short_circuit)
         if self._exclusions_db:
             self._exclusions_db.sync(self.site.name)
             exclude = lambda u: self._exclusions_db.check(self.site.name, u)
@@ -130,7 +136,7 @@ class CopyvioMixIn(object):
         if not no_searches:
             chunks = parser.chunk(self._search_config["nltk_dir"], max_queries)
             for chunk in chunks:
-                if workspace.finished:
+                if short_circuit and workspace.finished:
                     break
                 log = u"[[{0}]] -> querying {1} for {2!r}"
                 self._logger.debug(log.format(self.title, searcher.name, chunk))
