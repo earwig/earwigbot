@@ -137,6 +137,7 @@ class CopyvioMixIn(object):
                 workspace.enqueue(searcher.search(chunk), exclude)
                 num_queries += 1
                 sleep(1)
+
         workspace.wait()
         result = workspace.get_result(num_queries)
         self._logger.info(result.get_log_message(self.title))

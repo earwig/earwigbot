@@ -358,6 +358,11 @@ class CopyvioWorkspace(object):
 
     def get_result(self, num_queries=0):
         """Return a CopyvioCheckResult containing the results of this check."""
-        self.sources.sort(key=lambda source: source.confidence, reverse=True)
+        def cmpfunc(s1, s2):
+            if s2.confidence != s1.confidence:
+                return 1 if s2.confidence > s1.confidence else -1
+            return int(s1.skipped) - int(s2.skipped)
+
+        self.sources.sort(cmpfunc)
         return CopyvioCheckResult(self.finished, self.sources, num_queries,
                                   time() - self._start_time, self._article)

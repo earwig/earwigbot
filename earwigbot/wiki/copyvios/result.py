@@ -33,6 +33,13 @@ class CopyvioSource(object):
 
     A class that represents a single possible source of a copyright violation,
     i.e., a URL.
+
+    *Attributes:*
+
+    - :py:attr:`url`:        the URL of the source
+    - :py:attr:`confidence`: the confidence of a violation, between 0 and 1
+    - :py:attr:`chains`:     a 2-tuple of the source chain and the delta chain
+    - :py:attr:`skipped`:    whether this URL was skipped during the check
     """
 
     def __init__(self, workspace, url, key, headers=None, timeout=5):
@@ -101,6 +108,9 @@ class CopyvioCheckResult(object):
 
     - :py:attr:`violation`:     ``True`` if this is a violation, else ``False``
     - :py:attr:`sources`:       a list of CopyvioSources, sorted by confidence
+    - :py:attr:`best`:          the best matching CopyvioSource, or ``None``
+    - :py:attr:`confidence`:    the best matching source's confidence, or 0
+    - :py:attr:`url`:           the best matching source's URL, or ``None``
     - :py:attr:`queries`:       the number of queries used to reach a result
     - :py:attr:`time`:          the amount of time the check took to complete
     - :py:attr:`article_chain`: the MarkovChain of the article text
@@ -136,7 +146,7 @@ class CopyvioCheckResult(object):
 
     @property
     def url(self):
-        """The url of the best source, or None if no sources exist."""
+        """The URL of the best source, or None if no sources exist."""
         return self.best.url if self.best else None
 
     def get_log_message(self, title):
@@ -144,7 +154,7 @@ class CopyvioCheckResult(object):
         if not self.sources:
             log = u"No violation for [[{0}]] (no sources; {1} queries; {2} seconds)"
             return log.format(title, self.queries, self.time)
-        log = u"{0} for [[{1}]] (best: {2} ({3} confidence); {4} queries; {5} seconds)"
+        log = u"{0} for [[{1}]] (best: {2} ({3} confidence); {4} sources; {5} queries; {6} seconds)"
         is_vio = "Violation detected" if self.violation else "No violation"
         return log.format(is_vio, title, self.url, self.confidence,
-                          self.queries, self.time)
+                          len(self.sources), self.queries, self.time)
