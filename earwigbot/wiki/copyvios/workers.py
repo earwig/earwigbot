@@ -323,7 +323,7 @@ class CopyvioWorkspace(object):
                     from urlparse import urlparse
                     key = u".".join(urlparse(url).netloc.split(".")[-2:])
 
-                source = CopyvioSource(url=url, key=key, **self._source_args)
+                source = CopyvioSource(url=url, **self._source_args)
                 self.sources.append(source)
                 logmsg = u"enqueue(): {0} {1} -> {2}"
                 if key in self._queues.sites:

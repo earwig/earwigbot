@@ -42,10 +42,9 @@ class CopyvioSource(object):
     - :py:attr:`skipped`:    whether this URL was skipped during the check
     """
 
-    def __init__(self, workspace, url, key, headers=None, timeout=5):
+    def __init__(self, workspace, url, headers=None, timeout=5):
         self.workspace = workspace
         self.url = url
-        self.key = key
         self.headers = headers
         self.timeout = timeout
         self.confidence = 0.0
