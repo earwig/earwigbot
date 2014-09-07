@@ -22,8 +22,10 @@
 
 from gzip import GzipFile
 from json import loads
+from socket import error
 from StringIO import StringIO
 from urllib import quote
+from urllib2 import URLError
 
 from earwigbot import importer
 from earwigbot.exceptions import SearchQueryError
@@ -90,8 +92,11 @@ class YahooBOSSSearchEngine(BaseSearchEngine):
 
         req = oauth.Request(method="GET", url=url, parameters=params)
         req.sign_request(oauth.SignatureMethod_HMAC_SHA1(), consumer, None)
-        response = self.opener.open(self._build_url(url, req))
-        result = response.read()
+        try:
+            response = self.opener.open(self._build_url(url, req))
+            result = response.read()
+        except (URLError, error) as exc:
+            raise SearchQueryError("Yahoo! BOSS Error: " + str(exc))
 
         if response.headers.get("Content-Encoding") == "gzip":
             stream = StringIO(result)
