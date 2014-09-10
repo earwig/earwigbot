@@ -25,8 +25,9 @@ from gzip import GzipFile
 from logging import getLogger
 from math import log
 from Queue import Empty, Queue
-from socket import error
+from socket import error as socket_error
 from StringIO import StringIO
+from struct import error as struct_error
 from threading import Lock, Thread
 from time import time
 from urllib2 import build_opener, URLError
@@ -125,7 +126,7 @@ class _CopyvioWorker(object):
         url = source.url.encode("utf8")
         try:
             response = self._opener.open(url, timeout=source.timeout)
-        except (URLError, error):
+        except (URLError, socket_error):
             return None
 
         try:
@@ -146,7 +147,7 @@ class _CopyvioWorker(object):
 
         try:
             content = response.read()
-        except (URLError, error):
+        except (URLError, socket_error):
             return None
 
         if response.headers.get("Content-Encoding") == "gzip":
@@ -154,7 +155,7 @@ class _CopyvioWorker(object):
             gzipper = GzipFile(fileobj=stream)
             try:
                 content = gzipper.read(2 * 1024 ** 2)
-            except IOError:
+            except (IOError, struct_error):
                 return None
 
         return handler(content)
