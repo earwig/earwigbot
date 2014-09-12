@@ -34,7 +34,7 @@ from urllib2 import build_opener, URLError
 
 from earwigbot import importer
 from earwigbot.wiki.copyvios.markov import MarkovChain, MarkovChainIntersection
-from earwigbot.wiki.copyvios.parsers import HTMLTextParser
+from earwigbot.wiki.copyvios.parsers import HTMLTextParser, PlainTextParser
 from earwigbot.wiki.copyvios.result import CopyvioCheckResult, CopyvioSource
 
 tldextract = importer.new("tldextract")
@@ -139,9 +139,9 @@ class _CopyvioWorker(object):
         ctype_full = response.headers.get("Content-Type", "text/plain")
         ctype = ctype_full.split(";", 1)[0]
         if ctype in ["text/html", "application/xhtml+xml"]:
-            handler = lambda res: HTMLTextParser(res).strip()
+            handler = HTMLTextParser
         elif ctype == "text/plain":
-            handler = lambda res: res.strip()
+            handler = PlainTextParser
         else:
             return None
 
@@ -158,7 +158,7 @@ class _CopyvioWorker(object):
             except (IOError, struct_error):
                 return None
 
-        return handler(content)
+        return handler(content).parse()
 
     def _acquire_new_site(self):
         """Block for a new unassigned site queue."""

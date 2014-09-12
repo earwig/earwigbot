@@ -40,6 +40,7 @@ extra_deps = {
     ],
     "copyvios": [
         "beautifulsoup4 >= 4.1.1",  # Parsing/scraping HTML
+        "cchardet >= 0.3.5",  # Encoding detection for BeautifulSoup
         "lxml >= 2.3.5",  # Faster parser for BeautifulSoup
         "nltk >= 2.0.2",  # Parsing sentences to split article content
         "oauth2 >= 1.5.211",  # Interfacing with Yahoo! BOSS Search

@@ -29,7 +29,8 @@ from earwigbot import importer
 bs4 = importer.new("bs4")
 nltk = importer.new("nltk")
 
-__all__ = ["BaseTextParser", "ArticleTextParser", "HTMLTextParser"]
+__all__ = ["BaseTextParser", "ArticleTextParser", "HTMLTextParser",
+           "PlainTextParser"]
 
 class BaseTextParser(object):
     """Base class for a parser that handles text."""
@@ -157,7 +158,7 @@ class HTMLTextParser(BaseTextParser):
         "script", "style"
     ]
 
-    def strip(self):
+    def parse(self):
         """Return the actual text contained within an HTML document.
 
         Implemented using :py:mod:`BeautifulSoup <bs4>`
@@ -180,3 +181,11 @@ class HTMLTextParser(BaseTextParser):
                 element.extract()
 
         return "\n".join(soup.stripped_strings)
+
+
+class PlainTextParser(BaseTextParser):
+    """A parser that can unicode-ify and strip text from a plain text page."""
+
+    def parse(self):
+        """Unicode-ify and strip whitespace from the plain text document."""
+        return bs4.UnicodeDammit(self.text).unicode_markup.strip()
