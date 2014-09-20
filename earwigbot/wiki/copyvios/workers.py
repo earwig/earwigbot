@@ -34,7 +34,7 @@ from urllib2 import build_opener, URLError
 
 from earwigbot import importer
 from earwigbot.wiki.copyvios.markov import MarkovChain, MarkovChainIntersection
-from earwigbot.wiki.copyvios.parsers import HTMLTextParser, PlainTextParser
+from earwigbot.wiki.copyvios.parsers import get_parser
 from earwigbot.wiki.copyvios.result import CopyvioCheckResult, CopyvioSource
 
 tldextract = importer.new("tldextract")
@@ -136,13 +136,9 @@ class _CopyvioWorker(object):
         if size > 1024 ** 2:  # Ignore URLs larger than a megabyte
             return None
 
-        ctype_full = response.headers.get("Content-Type", "text/plain")
-        ctype = ctype_full.split(";", 1)[0]
-        if ctype in ["text/html", "application/xhtml+xml"]:
-            handler = HTMLTextParser
-        elif ctype == "text/plain":
-            handler = PlainTextParser
-        else:
+        content_type = response.headers.get("Content-Type", "text/plain")
+        handler = get_parser(content_type)
+        if not handler:
             return None
 
         try:
@@ -222,7 +218,8 @@ class _CopyvioWorker(object):
                 self._logger.debug("Exiting: got stop signal")
                 return
             text = self._open_url(source)
-            source.workspace.compare(source, MarkovChain(text or ""))
+            chain = MarkovChain(text) if text else None
+            source.workspace.compare(source, chain)
 
     def start(self):
         """Start the copyvio worker in a new thread."""
@@ -339,11 +336,16 @@ class CopyvioWorkspace(object):
 
     def compare(self, source, source_chain):
         """Compare a source to the article; call _finish_early if necessary."""
-        delta = MarkovChainIntersection(self._article, source_chain)
-        conf = self._calculate_confidence(delta)
+        if source_chain:
+            delta = MarkovChainIntersection(self._article, source_chain)
+            conf = self._calculate_confidence(delta)
+        else:
+            conf = 0.0
         self._logger.debug(u"compare(): {0} -> {1}".format(source.url, conf))
         with self._finish_lock:
-            source.finish_work(conf, source_chain, delta)
+            if source_chain:
+                source.update(conf, source_chain, delta)
+            source.finish_work()
             if not self.finished and conf >= self._min_confidence:
                 if self._short_circuit:
                     self._finish_early()

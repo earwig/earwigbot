@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 from os import path
+from StringIO import StringIO
 
 import mwparserfromhell
 
@@ -28,11 +29,11 @@ from earwigbot import importer
 
 bs4 = importer.new("bs4")
 nltk = importer.new("nltk")
+PyPDF2 = importer.new("PyPDF2")
 
-__all__ = ["BaseTextParser", "ArticleTextParser", "HTMLTextParser",
-           "PlainTextParser"]
+__all__ = ["ArticleTextParser", "get_parser"]
 
-class BaseTextParser(object):
+class _BaseTextParser(object):
     """Base class for a parser that handles text."""
 
     def __init__(self, text):
@@ -48,7 +49,7 @@ class BaseTextParser(object):
         return "<{0} of text with size {1}>".format(name, len(self.text))
 
 
-class ArticleTextParser(BaseTextParser):
+class ArticleTextParser(_BaseTextParser):
     """A parser that can strip and chunk wikicode article text."""
 
     def strip(self):
@@ -152,7 +153,7 @@ class ArticleTextParser(BaseTextParser):
                 if link.url.startswith(schemes)]
 
 
-class HTMLTextParser(BaseTextParser):
+class _HTMLParser(_BaseTextParser):
     """A parser that can extract the text from an HTML document."""
     hidden_tags = [
         "script", "style"
@@ -183,9 +184,30 @@ class HTMLTextParser(BaseTextParser):
         return "\n".join(soup.stripped_strings)
 
 
-class PlainTextParser(BaseTextParser):
+class _PDFParser(_BaseTextParser):
+    """A parser that can extract text from a PDF file."""
+
+    def parse(self):
+        """Return extracted text from the PDF."""
+        raise NotImplementedError()
+
+
+class _PlainTextParser(_BaseTextParser):
     """A parser that can unicode-ify and strip text from a plain text page."""
 
     def parse(self):
         """Unicode-ify and strip whitespace from the plain text document."""
         return bs4.UnicodeDammit(self.text).unicode_markup.strip()
+
+
+_CONTENT_TYPES = {
+    "text/html": _HTMLParser,
+    "application/xhtml+xml": _HTMLParser,
+    "application/pdf": _PDFParser,
+    "application/x-pdf": _PDFParser,
+    "text/plain": _PlainTextParser
+}
+
+def get_parser(content_type):
+    """Return the parser most able to handle a given content type, or None."""
+    return _CONTENT_TYPES.get(content_type.split(";", 1)[0])

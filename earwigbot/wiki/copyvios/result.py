@@ -72,10 +72,13 @@ class CopyvioSource(object):
         self._event2.clear()
         self._event1.set()
 
-    def finish_work(self, confidence, source_chain, delta_chain):
-        """Complete the confidence information inside this source."""
+    def update(self, confidence, source_chain, delta_chain):
+        """Fill out the confidence and chain information inside this source."""
         self.confidence = confidence
         self.chains = (source_chain, delta_chain)
+
+    def finish_work(self):
+        """Mark this source as finished."""
         self._event2.set()
 
     def skip(self):
