@@ -190,6 +190,10 @@ class _HTMLParser(_BaseTextParser):
 
 class _PDFParser(_BaseTextParser):
     """A parser that can extract text from a PDF file."""
+    substitutions = [
+        (u"\x0c", u"\n"),
+        (u"\u2022", u" "),
+    ]
 
     def parse(self):
         """Return extracted text from the PDF."""
@@ -197,15 +201,20 @@ class _PDFParser(_BaseTextParser):
         manager = pdfinterp.PDFResourceManager()
         conv = converter.TextConverter(manager, output)
         interp = pdfinterp.PDFPageInterpreter(manager, conv)
+
         try:
             pages = pdfpage.PDFPage.get_pages(StringIO(self.text))
             for page in pages:
                 interp.process_page(page)
         except pdftypes.PDFException:
             return output.getvalue().decode("utf8")
-        conv.close()
+        finally:
+            conv.close()
+
         value = output.getvalue().decode("utf8")
-        return re.sub("\n\n+", "\n", value.replace("\x0c", "\n")).strip()
+        for orig, new in self.substitutions:
+            value = value.replace(orig, new)
+        return re.sub("\n\n+", "\n", value).strip()
 
 
 class _PlainTextParser(_BaseTextParser):
