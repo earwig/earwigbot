@@ -44,7 +44,7 @@ extra_deps = {
         "lxml >= 2.3.5",  # Faster parser for BeautifulSoup
         "nltk >= 2.0.2",  # Parsing sentences to split article content
         "oauth2 >= 1.5.211",  # Interfacing with Yahoo! BOSS Search
-        "PyPDF2 >= 1.23",  # Extracting text from PDF files
+        "pdfminer >= 20140328",  # Extracting text from PDF files
         "tldextract >= 1.4",  # Getting domains for the multithreaded workers
     ],
     "time": [

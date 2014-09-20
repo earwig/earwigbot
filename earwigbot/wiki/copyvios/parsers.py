@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 from os import path
+import re
 from StringIO import StringIO
 
 import mwparserfromhell
@@ -29,7 +30,10 @@ from earwigbot import importer
 
 bs4 = importer.new("bs4")
 nltk = importer.new("nltk")
-PyPDF2 = importer.new("PyPDF2")
+converter = importer.new("pdfminer.converter")
+pdfinterp = importer.new("pdfminer.pdfinterp")
+pdfpage = importer.new("pdfminer.pdfpage")
+pdftypes = importer.new("pdfminer.pdftypes")
 
 __all__ = ["ArticleTextParser", "get_parser"]
 
@@ -88,7 +92,7 @@ class ArticleTextParser(_BaseTextParser):
             remove(wikicode, tag)
 
         clean = wikicode.strip_code(normalize=True, collapse=True)
-        self.clean = clean.replace("\n\n", "\n").strip()
+        self.clean = re.sub("\n\n+", "\n", clean).strip()
         return self.clean
 
     def chunk(self, nltk_dir, max_chunks, min_query=8, max_query=128):
@@ -189,7 +193,19 @@ class _PDFParser(_BaseTextParser):
 
     def parse(self):
         """Return extracted text from the PDF."""
-        raise NotImplementedError()
+        output = StringIO()
+        manager = pdfinterp.PDFResourceManager()
+        conv = converter.TextConverter(manager, output)
+        interp = pdfinterp.PDFPageInterpreter(manager, conv)
+        try:
+            pages = pdfpage.PDFPage.get_pages(StringIO(self.text))
+            for page in pages:
+                interp.process_page(page)
+        except pdftypes.PDFException:
+            return output.getvalue().decode("utf8")
+        conv.close()
+        value = output.getvalue().decode("utf8")
+        return re.sub("\n\n+", "\n", value.replace("\x0c", "\n")).strip()
 
 
 class _PlainTextParser(_BaseTextParser):
