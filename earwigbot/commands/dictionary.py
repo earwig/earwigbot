@@ -66,12 +66,13 @@ class Dictionary(Command):
             return u"Couldn't parse {0}!".format(page.url)
 
         if "#" in term:  # Requesting a specific language
-            lang = term.rsplit("#", 1)[1]
-            langs = {key.lower(): val for (key, val) in languages.iteritems()}
-            if lang.lower() not in langs:
+            lcase_langs = {lang.lower(): lang for lang in languages}
+            request = term.rsplit("#", 1)[1]
+            lang = lcase_langs.get(request.lower())
+            if not lang:
                 resp = u"Language {0} not found in definition."
-                return resp.format(lang)
-            definition = self.get_definition(langs[lang.lower()], level)
+                return resp.format(request)
+            definition = self.get_definition(lang, level)
             return u"({0}) {1}".format(lang, definition)
 
         result = []
