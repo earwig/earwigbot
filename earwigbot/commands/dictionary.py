@@ -67,10 +67,11 @@ class Dictionary(Command):
 
         if "#" in term:  # Requesting a specific language
             lang = term.rsplit("#", 1)[1]
-            if lang not in languages:
+            langs = {key.lower(): val for (key, val) in languages.iteritems()}
+            if lang.lower() not in langs:
                 resp = u"Language {0} not found in definition."
                 return resp.format(lang)
-            definition = self.get_definition(languages[lang], level)
+            definition = self.get_definition(langs[lang.lower()], level)
             return u"({0}) {1}".format(lang, definition)
 
         result = []
