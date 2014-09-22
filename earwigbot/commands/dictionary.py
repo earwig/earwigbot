@@ -51,9 +51,6 @@ class Dictionary(Command):
         except exceptions.SiteNotFoundError:
             site = self.bot.wiki.add_site(project="wiktionary", lang=lang)
 
-        multilingual = "#" in term
-        if multilingual:
-            lang_requested = term.rsplit("#", 1)[1]
         page = site.get_page(term, follow_redirects=True)
         try:
             entry = page.get()
@@ -68,11 +65,17 @@ class Dictionary(Command):
         if not languages:
             return u"Couldn't parse {0}!".format(page.url)
 
+        if "#" in term:  # Requesting a specific language
+            lang = term.rsplit("#", 1)[1]
+            if lang not in languages:
+                resp = u"Language {0} not found in definition."
+                return resp.format(lang)
+            definition = self.get_definition(languages[lang], level)
+            return u"({0}) {1}".format(lang, definition)
+
         result = []
         for lang, section in sorted(languages.items()):
             definition = self.get_definition(section, level)
-            if multilingual and lang == lang_requested:
-                return u"({0}) {1}".format(lang, definition)
             result.append(u"({0}) {1}".format(lang, definition))
         return u"; ".join(result)
 
