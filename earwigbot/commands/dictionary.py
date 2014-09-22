@@ -72,7 +72,7 @@ class Dictionary(Command):
             if not lang:
                 resp = u"Language {0} not found in definition."
                 return resp.format(request)
-            definition = self.get_definition(lang, level)
+            definition = self.get_definition(languages[lang], level)
             return u"({0}) {1}".format(lang, definition)
 
         result = []
