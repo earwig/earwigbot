@@ -116,7 +116,6 @@ class Page(CopyvioMixIn):
         self._creator = None
 
         # Attributes used for editing/deleting/protecting/etc:
-        self._token = None
         self._basetimestamp = None
         self._starttimestamp = None
 
@@ -199,18 +198,18 @@ class Page(CopyvioMixIn):
         """Load various data from the API in a single query.
 
         Loads self._title, ._exists, ._is_redirect, ._pageid, ._fullurl,
-        ._protection, ._namespace, ._is_talkpage, ._creator, ._lastrevid,
-        ._token, and ._starttimestamp using the API. It will do a query of
-        its own unless *result* is provided, in which case we'll pretend
-        *result* is what the query returned.
+        ._protection, ._namespace, ._is_talkpage, ._creator, ._lastrevid, and
+        ._starttimestamp using the API. It will do a query of its own unless
+        *result* is provided, in which case we'll pretend *result* is what the
+        query returned.
 
         Assuming the API is sound, this should not raise any exceptions.
         """
         if not result:
             query = self.site.api_query
-            result = query(action="query", rvprop="user", intoken="edit",
-                           prop="info|revisions", rvlimit=1, rvdir="newer",
-                           titles=self._title, inprop="protection|url")
+            result = query(action="query", prop="info|revisions",
+                           inprop="protection|url", rvprop="user", rvlimit=1,
+                           rvdir="newer", titles=self._title)
 
         res = result["query"]["pages"].values()[0]
 
@@ -233,13 +232,7 @@ class Page(CopyvioMixIn):
 
         self._fullurl = res["fullurl"]
         self._protection = res["protection"]
-
-        try:
-            self._token = res["edittoken"]
-        except KeyError:
-            pass
-        else:
-            self._starttimestamp = strftime("%Y-%m-%dT%H:%M:%SZ", gmtime())
+        self._starttimestamp = strftime("%Y-%m-%dT%H:%M:%SZ", gmtime())
 
         # We've determined the namespace and talkpage status in __init__()
         # based on the title, but now we can be sure:
@@ -291,13 +284,6 @@ class Page(CopyvioMixIn):
         in _handle_edit_errors(). We'll then throw these back as subclasses of
         EditError.
         """
-        # Try to get our edit token, and die if we can't:
-        if not self._token:
-            self._load_attributes()
-        if not self._token:
-            e = "You don't have permission to edit this page."
-            raise exceptions.PermissionsError(e)
-
         # Weed out invalid pages before we get too far:
         self._assert_validity()
 
@@ -306,8 +292,7 @@ class Page(CopyvioMixIn):
             params = self._build_edit_params(text, summary, minor, bot, force,
                                              section, captcha_id, captcha_word)
         else: # Make sure we have the right token:
-            params["token"] = self._token
-        self._token = None  # Token now invalid
+            params["token"] = self.site.get_token()
 
         # Try the API query, catching most errors with our handler:
         try:
@@ -332,8 +317,9 @@ class Page(CopyvioMixIn):
         """Given some keyword arguments, build an API edit query string."""
         unitxt = text.encode("utf8") if isinstance(text, unicode) else text
         hashed = md5(unitxt).hexdigest()  # Checksum to ensure text is correct
-        params = {"action": "edit", "title": self._title, "text": text,
-                  "token": self._token, "summary": summary, "md5": hashed}
+        params = {
+            "action": "edit", "title": self._title, "text": text,
+            "token": self.site.get_token(), "summary": summary, "md5": hashed}
 
         if section:
             params["section"] = section
@@ -378,13 +364,13 @@ class Page(CopyvioMixIn):
             self._exists = self.PAGE_UNKNOWN
             raise exceptions.EditConflictError(error.info)
         elif error.code == "badtoken" and retry:
-            params["token"] = self.site.get_token("edit")
+            params["token"] = self.site.get_token(force=True)
             try:
                 return self.site.api_query(**params)
-            except exceptions.APIError as error:
-                if not hasattr(error, "code"):
+            except exceptions.APIError as err:
+                if not hasattr(err, "code"):
                     raise  # We can only handle errors with a code attribute
-                return self._handle_edit_errors(error, params, retry=False)
+                return self._handle_edit_errors(err, params, retry=False)
         elif error.code in ["emptypage", "emptynewsection"]:
             raise exceptions.NoContentError(error.info)
         elif error.code == "contenttoobig":
@@ -577,7 +563,7 @@ class Page(CopyvioMixIn):
             query = self.site.api_query
             result = query(action="query", rvlimit=1, titles=self._title,
                            prop="info|revisions", inprop="protection|url",
-                           intoken="edit", rvprop="content|timestamp")
+                           rvprop="content|timestamp")
             self._load_attributes(result=result)
             self._assert_existence()
             self._load_content(result=result)
@@ -610,7 +596,7 @@ class Page(CopyvioMixIn):
         :py:exc:`~earwigbot.exceptions.RedirectError` if the page is not a
         redirect.
         """
-        re_redirect = "^\s*\#\s*redirect\s*\[\[(.*?)\]\]"
+        re_redirect = r"^\s*\#\s*redirect\s*\[\[(.*?)\]\]"
         content = self.get()
         try:
             return re.findall(re_redirect, content, flags=re.I)[0]
@@ -709,7 +695,7 @@ class Page(CopyvioMixIn):
         username = username.lower()
         optouts = [optout.lower() for optout in optouts] if optouts else []
 
-        r_bots = "\{\{\s*(no)?bots\s*(\||\}\})"
+        r_bots = r"\{\{\s*(no)?bots\s*(\||\}\})"
         filter = self.parse().ifilter_templates(recursive=True, matches=r_bots)
         for template in filter:
             if template.has_param("deny"):

@@ -83,6 +83,8 @@ class Site(object):
     """
     SERVICE_API = 1
     SERVICE_SQL = 2
+    SPECIAL_TOKENS = ["deleteglobalaccount", "patrol", "rollback",
+                      "setglobalaccountstatus", "userrights", "watch"]
 
     def __init__(self, name=None, project=None, lang=None, base_url=None,
                  article_path=None, script_path=None, sql=None,
@@ -124,6 +126,7 @@ class Site(object):
         self._wait_between_queries = wait_between_queries
         self._max_retries = 6
         self._last_query_time = 0
+        self._tokens = {}
         self._api_lock = RLock()
         self._api_info_cache = {"maxlag": 0, "lastcheck": 0}
 
@@ -252,13 +255,25 @@ class Site(object):
 
         return self._handle_api_result(result, params, tries, wait, ae_retry)
 
+    def _request_csrf_token(self, params):
+        """If possible, add a request for a CSRF token to an API query."""
+        if params.get("action") == "query":
+            if params.get("meta"):
+                if "tokens" not in params["meta"].split("|"):
+                    params["meta"] += "|tokens"
+            else:
+                params["meta"] = "tokens"
+            if params.get("type"):
+                if "csrf" not in params["type"].split("|"):
+                    params["type"] += "|csrf"
+
     def _build_api_query(self, params, ignore_maxlag, no_assert):
         """Given API query params, return the URL to query and POST data."""
         if not self._base_url or self._script_path is None:
             e = "Tried to do an API query, but no API URL is known."
             raise exceptions.APIError(e)
 
-        url = ''.join((self.url, self._script_path, "/api.php"))
+        url = self.url + self._script_path + "/api.php"
         params["format"] = "json"  # This is the only format we understand
         if self._assert_edit and not no_assert:
             # If requested, ensure that we're logged in
@@ -266,6 +281,9 @@ class Site(object):
         if self._maxlag and not ignore_maxlag:
             # If requested, don't overload the servers:
             params["maxlag"] = self._maxlag
+        if "csrf" not in self._tokens:
+            # If we don't have a CSRF token, try to fetch one:
+            self._request_csrf_token(params)
 
         data = self._urlencode_utf8(params)
         return url, data
@@ -282,6 +300,9 @@ class Site(object):
             code = res["error"]["code"]
             info = res["error"]["info"]
         except (TypeError, KeyError):  # If there's no error code/info, return
+            if "query" in res and "tokens" in res["query"]:
+                for name, token in res["query"]["tokens"].iteritems():
+                    self._tokens[name.split("token")[0]] = token
             return res
 
         if code == "maxlag":  # We've been throttled by the server
@@ -326,7 +347,7 @@ class Site(object):
         # All attributes to be loaded, except _namespaces, which is a special
         # case because it requires additional params in the API query:
         attrs = [self._name, self._project, self._lang, self._base_url,
-            self._article_path, self._script_path]
+                 self._article_path, self._script_path]
 
         params = {"action": "query", "meta": "siteinfo", "siprop": "general"}
 
@@ -485,6 +506,7 @@ class Site(object):
         from our first request, and *attempt* is to prevent getting stuck in a
         loop if MediaWiki isn't acting right.
         """
+        self._tokens.clear()
         name, password = login
 
         params = {"action": "login", "lgname": name, "lgpassword": password}
@@ -764,25 +786,26 @@ class Site(object):
         result = list(self.sql_query(query))
         return int(result[0][0])
 
-    def get_token(self, action):
+    def get_token(self, action=None, force=False):
         """Return a token for a data-modifying API action.
 
-        *action* must be one of the types listed on
-        <https://www.mediawiki.org/wiki/API:Tokens>. If it's given as a union
-        of types separated by |, then the function will return a dictionary
-        of tokens instead of a single one.
+        In general, this will be a CSRF token, unless *action* is in a special
+        list of non-CSRF tokens. Tokens are cached for the session (until
+        :meth:`_login` is called again); set *force* to ``True`` to force a new
+        token to be fetched.
 
-        Raises :py:exc:`~earwigbot.exceptions.PermissionsError` if we don't
-        have permissions for the requested action(s), or they are invalid.
-        Raises :py:exc:`~earwigbot.exceptions.APIError` if there was some other
-        API issue.
+        Raises :exc:`.APIError` if there was an API issue.
         """
-        res = self.api_query(action="tokens", type=action)
-        if "warnings" in res and "tokens" in res["warnings"]:
-            raise exceptions.PermissionsError(res["warnings"]["tokens"]["*"])
-        if "|" in action:
-            return res["tokens"]
-        return res["tokens"].values()[0]
+        if action not in self.SPECIAL_TOKENS:
+            action = "csrf"
+        if action in self._tokens and not force:
+            return self._tokens[action]
+
+        res = self.api_query(action="query", meta="tokens", type=action)
+        if action not in self._tokens:
+            err = "Tried to fetch a {0} token, but API returned: {1}"
+            raise exceptions.APIError(err.format(action, res))
+        return self._tokens[action]
 
     def namespace_id_to_name(self, ns_id, all=False):
         """Given a namespace ID, returns associated namespace names.
