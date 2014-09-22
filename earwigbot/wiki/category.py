@@ -65,7 +65,7 @@ class Category(Page):
     def _get_members_via_api(self, limit, follow):
         """Iterate over Pages in the category using the API."""
         params = {"action": "query", "list": "categorymembers",
-                  "cmtitle": self.title}
+                  "cmtitle": self.title, "continue": ""}
 
         while 1:
             params["cmlimit"] = limit if limit else "max"
@@ -74,9 +74,8 @@ class Category(Page):
                 title = member["title"]
                 yield self.site.get_page(title, follow_redirects=follow)
 
-            if "query-continue" in result:
-                qcontinue = result["query-continue"]["categorymembers"]
-                params["cmcontinue"] = qcontinue["cmcontinue"]
+            if "continue" in result:
+                params.update(result["continue"])
                 if limit:
                     limit -= len(result["query"]["categorymembers"])
             else:
@@ -104,7 +103,7 @@ class Category(Page):
             else:  # Avoid doing a silly (albeit valid) ":Pagename" thing
                 title = base
             yield self.site.get_page(title, follow_redirects=follow,
-                                      pageid=row[2])
+                                     pageid=row[2])
 
     def _get_size_via_api(self, member_type):
         """Return the size of the category using the API."""
