@@ -268,7 +268,7 @@ class CopyvioWorkspace(object):
             # http://benkurtovic.com/static/article-delta_confidence_function.pdf
             ratio = delta / article
             if ratio <= 0.52763:
-                return log(1 / (1 - ratio))
+                return -log(1 - ratio)
             else:
                 return (-0.8939 * (ratio ** 2)) + (1.8948 * ratio) - 0.0009
 
