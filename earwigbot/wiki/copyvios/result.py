@@ -116,14 +116,17 @@ class CopyvioCheckResult(object):
     - :py:attr:`queries`:       the number of queries used to reach a result
     - :py:attr:`time`:          the amount of time the check took to complete
     - :py:attr:`article_chain`: the MarkovChain of the article text
+    - :py:attr:`possible_miss`: whether some URLs might have been missed
     """
 
-    def __init__(self, violation, sources, queries, check_time, article_chain):
+    def __init__(self, violation, sources, queries, check_time, article_chain,
+                 possible_miss):
         self.violation = violation
         self.sources = sources
         self.queries = queries
         self.time = check_time
         self.article_chain = article_chain
+        self.possible_miss = possible_miss
 
     def __repr__(self):
         """Return the canonical string representation of the result."""

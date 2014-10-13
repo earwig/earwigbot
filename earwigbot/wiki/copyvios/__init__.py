@@ -137,6 +137,7 @@ class CopyvioMixIn(object):
             chunks = parser.chunk(self._search_config["nltk_dir"], max_queries)
             for chunk in chunks:
                 if short_circuit and workspace.finished:
+                    workspace.possible_miss = True
                     break
                 log = u"[[{0}]] -> querying {1} for {2!r}"
                 self._logger.debug(log.format(self.title, searcher.name, chunk))

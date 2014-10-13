@@ -235,13 +235,14 @@ class CopyvioWorkspace(object):
                  url_timeout=5, num_workers=8, short_circuit=True):
         self.sources = []
         self.finished = False
+        self.possible_miss = False
 
         self._article = article
         self._logger = logger.getChild("copyvios")
         self._min_confidence = min_confidence
         self._start_time = time()
         self._until = (self._start_time + max_time) if max_time > 0 else None
-        self._handled_urls = []
+        self._handled_urls = set()
         self._finish_lock = Lock()
         self._short_circuit = short_circuit
         self._source_args = {"workspace": self, "headers": headers,
@@ -308,12 +309,17 @@ class CopyvioWorkspace(object):
         """
         for url in urls:
             with self._queues.lock:
-                if self._short_circuit and self.finished:
-                    break
                 if url in self._handled_urls:
                     continue
-                self._handled_urls.append(url)
+                self._handled_urls.add(url)
                 if exclude_check and exclude_check(url):
+                    continue
+
+                source = CopyvioSource(url=url, **self._source_args)
+                self.sources.append(source)
+                if self._short_circuit and self.finished:
+                    self._logger.debug(u"enqueue(): auto-skip {0}".format(url))
+                    source.skip()
                     continue
 
                 try:
@@ -322,8 +328,6 @@ class CopyvioWorkspace(object):
                     from urlparse import urlparse
                     key = u".".join(urlparse(url).netloc.split(".")[-2:])
 
-                source = CopyvioSource(url=url, **self._source_args)
-                self.sources.append(source)
                 logmsg = u"enqueue(): {0} {1} -> {2}"
                 if key in self._queues.sites:
                     self._logger.debug(logmsg.format("append", key, url))
@@ -372,4 +376,5 @@ class CopyvioWorkspace(object):
 
         self.sources.sort(cmpfunc)
         return CopyvioCheckResult(self.finished, self.sources, num_queries,
-                                  time() - self._start_time, self._article)
+                                  time() - self._start_time, self._article,
+                                  self.possible_miss)
