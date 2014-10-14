@@ -87,7 +87,7 @@ class YahooBOSSSearchEngine(BaseSearchEngine):
             "oauth_timestamp": oauth.Request.make_timestamp(),
             "oauth_consumer_key": consumer.key,
             "q": '"' + query.encode("utf8") + '"', "count": "5",
-            "type": "html,text", "format": "json",
+            "type": "html,text,pdf", "format": "json",
         }
 
         req = oauth.Request(method="GET", url=url, parameters=params)
