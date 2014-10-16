@@ -261,12 +261,11 @@ class CopyvioWorkspace(object):
         """Return the confidence of a violation as a float between 0 and 1."""
         def conf_with_article_and_delta(article, delta):
             """Calculate confidence using the article and delta chain sizes."""
-            # This piecewise function, C_AΔ(Δ), was defined such that
-            # confidence exhibits exponential growth until it reaches the
-            # default "suspect" confidence threshold, at which point it
-            # transitions to polynomial growth with lim (A/Δ)→1 C_AΔ(A,Δ) = 1.
-            # A graph can be viewed here:
-            # http://benkurtovic.com/static/article-delta_confidence_function.pdf
+            # This piecewise function exhibits exponential growth until it
+            # reaches the default "suspect" confidence threshold, at which
+            # point it transitions to polynomial growth with a limit of 1 as
+            # (delta / article) approaches 1.
+            # A graph can be viewed here: http://goo.gl/mKPhvr
             ratio = delta / article
             if ratio <= 0.52763:
                 return -log(1 - ratio)
@@ -275,11 +274,10 @@ class CopyvioWorkspace(object):
 
         def conf_with_delta(delta):
             """Calculate confidence using just the delta chain size."""
-            # This piecewise function, C_Δ(Δ), was derived from experimental
-            # data using reference points at (0, 0), (100, 0.5), (250, 0.75),
-            # (500, 0.9), and (1000, 0.95) with lim Δ→+∞ C_Δ(Δ) = 1.
-            # A graph can be viewed here:
-            # http://benkurtovic.com/static/delta_confidence_function.pdf
+            # This piecewise function was derived from experimental data using
+            # reference points at (0, 0), (100, 0.5), (250, 0.75), (500, 0.9),
+            # and (1000, 0.95), with a limit of 1 as delta approaches infinity.
+            # A graph can be viewed here: http://goo.gl/lVl7or
             if delta <= 100:
                 return delta / (delta + 100)
             elif delta <= 250:
