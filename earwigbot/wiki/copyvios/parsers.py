@@ -34,6 +34,7 @@ converter = importer.new("pdfminer.converter")
 pdfinterp = importer.new("pdfminer.pdfinterp")
 pdfpage = importer.new("pdfminer.pdfpage")
 pdftypes = importer.new("pdfminer.pdftypes")
+psparser = importer.new("pdfminer.psparser")
 
 __all__ = ["ArticleTextParser", "get_parser"]
 
@@ -206,7 +207,7 @@ class _PDFParser(_BaseTextParser):
             pages = pdfpage.PDFPage.get_pages(StringIO(self.text))
             for page in pages:
                 interp.process_page(page)
-        except pdftypes.PDFException:
+        except (pdftypes.PDFException, psparser.PSException):
             return output.getvalue().decode("utf8")
         finally:
             conv.close()
