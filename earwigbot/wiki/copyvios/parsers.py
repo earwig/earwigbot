@@ -207,7 +207,7 @@ class _PDFParser(_BaseTextParser):
             pages = pdfpage.PDFPage.get_pages(StringIO(self.text))
             for page in pages:
                 interp.process_page(page)
-        except (pdftypes.PDFException, psparser.PSException):
+        except (pdftypes.PDFException, psparser.PSException, AssertionError):
             return output.getvalue().decode("utf8")
         finally:
             conv.close()
