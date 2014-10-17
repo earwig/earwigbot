@@ -288,8 +288,8 @@ class CopyvioWorkspace(object):
                 return (delta - 50) / delta
 
         d_size = float(delta.size)
-        return max(conf_with_article_and_delta(self._article.size, d_size),
-                   conf_with_delta(d_size), 0.0)
+        return abs(conf_with_article_and_delta(self._article.size, d_size),
+                   conf_with_delta(d_size))
 
     def _finish_early(self):
         """Finish handling links prematurely (if we've hit min_confidence)."""
