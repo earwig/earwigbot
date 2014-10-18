@@ -844,7 +844,7 @@ class Site(object):
             if lname in lnames:
                 return ns_id
 
-        e = "There is no namespace with name '{0}'.".format(name)
+        e = u"There is no namespace with name '{0}'.".format(name)
         raise exceptions.NamespaceNotFoundError(e)
 
     def get_page(self, title, follow_redirects=False, pageid=None):
