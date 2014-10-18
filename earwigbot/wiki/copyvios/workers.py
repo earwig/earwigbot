@@ -22,6 +22,7 @@
 
 from collections import deque
 from gzip import GzipFile
+from httplib import HTTPException
 from logging import getLogger
 from math import log
 from Queue import Empty, Queue
@@ -126,7 +127,7 @@ class _CopyvioWorker(object):
         url = source.url.encode("utf8")
         try:
             response = self._opener.open(url, timeout=source.timeout)
-        except (URLError, socket_error):
+        except (URLError, HTTPException, socket_error):
             return None
 
         try:
