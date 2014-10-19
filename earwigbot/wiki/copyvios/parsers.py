@@ -223,7 +223,8 @@ class _PlainTextParser(_BaseTextParser):
 
     def parse(self):
         """Unicode-ify and strip whitespace from the plain text document."""
-        return bs4.UnicodeDammit(self.text).unicode_markup.strip()
+        converted = bs4.UnicodeDammit(self.text).unicode_markup
+        return converted.strip() if converted else ""
 
 
 _CONTENT_TYPES = {
