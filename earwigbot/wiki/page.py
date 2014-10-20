@@ -211,8 +211,12 @@ class Page(CopyvioMixIn):
                            inprop="protection|url", rvprop="user", rvlimit=1,
                            rvdir="newer", titles=self._title)
 
-        res = result["query"]["pages"].values()[0]
+        if "interwiki" in result["query"]:
+            self._title = result["query"]["interwiki"][0]["title"]
+            self._exists = self.PAGE_INVALID
+            return
 
+        res = result["query"]["pages"].values()[0]
         self._title = res["title"]  # Normalize our pagename/title
         self._is_redirect = "redirect" in res
 
