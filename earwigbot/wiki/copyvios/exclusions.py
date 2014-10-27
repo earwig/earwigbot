@@ -155,7 +155,7 @@ class ExclusionsDB(object):
             log = u"Database for {0} is still fresh (last updated {1} seconds ago)"
             self._logger.debug(log.format(sitename, time_since_update))
         if sitename != "all":
-            self.sync("all")
+            self.sync("all", force=force)
 
     def check(self, sitename, url):
         """Check whether a given URL is in the exclusions database.
