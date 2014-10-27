@@ -30,13 +30,15 @@ import time
 from earwigbot.commands import Command
 
 DISPLAY = ["display", "show", "list", "info", "details"]
-CANCEL = ["cancel", "stop", "delete", "del", "stop"]
+CANCEL = ["cancel", "stop", "delete", "del", "stop", "unremind", "forget",
+          "disregard"]
 SNOOZE = ["snooze", "delay", "reset", "adjust", "modify", "change"]
 
 class Remind(Command):
     """Set a message to be repeated to you in a certain amount of time."""
     name = "remind"
-    commands = ["remind", "reminder", "reminders", "snooze"]
+    commands = ["remind", "reminder", "reminders", "snooze", "cancel",
+                "unremind", "forget"]
 
     @staticmethod
     def _normalize(command):
@@ -202,6 +204,21 @@ class Remind(Command):
         if reminder:
             self._snooze_reminder(data, reminder, 1)
 
+    def _process_cancel_command(self, data, user):
+        """Process the !cancel, !unremind, and !forget commands."""
+        if not data.args:
+            if user not in self.reminders:
+                self.reply(data, "You have no reminders to cancel.")
+            elif len(self.reminders[user]) == 1:
+                self._cancel_reminder(data, user, self.reminders[user][0])
+            else:
+                msg = "You have {0} reminders. Cancel which one?"
+                self.reply(data, msg.format(len(self.reminders[user])))
+            return
+        reminder = self._get_reminder_by_id(user, data.args[0], data)
+        if reminder:
+            self._cancel_reminder(data, user, reminder)
+
     def _show_help(self, data):
         """Reply to the user with help for all major subcommands."""
         parts = [
@@ -222,6 +239,8 @@ class Remind(Command):
     def process(self, data):
         if data.command == "snooze":
             return self._process_snooze_command(data, data.host)
+        if data.command in ["cancel", "unremind", "forget"]:
+            return self._process_cancel_command(data, data.host)
         if not data.args:
             return self._show_reminders(data, data.host)
 
