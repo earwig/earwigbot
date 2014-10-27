@@ -140,14 +140,14 @@ class ExclusionsDB(object):
                 return 0
             return result[0] if result else 0
 
-    def sync(self, sitename):
+    def sync(self, sitename, force=False):
         """Update the database if it hasn't been updated in the past day.
 
-        This only updates the exclusions database for the *sitename* site.
+        This updates the exclusions database for the site *sitename* and "all".
         """
         max_staleness = 60 * 60 * 24
         time_since_update = int(time() - self._get_last_update(sitename))
-        if time_since_update > max_staleness:
+        if force or time_since_update > max_staleness:
             log = u"Updating stale database: {0} (last updated {1} seconds ago)"
             self._logger.info(log.format(sitename, time_since_update))
             self._update(sitename)
