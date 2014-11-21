@@ -50,6 +50,7 @@ class Page(CopyvioMixIn):
     - :py:attr:`pageid`:      an integer ID representing the page
     - :py:attr:`url`:         the page's URL
     - :py:attr:`namespace`:   the page's namespace as an integer
+    - :py:attr:`lastrevid`:   the ID of the page's most recent revision
     - :py:attr:`protection`:  the page's current protection status
     - :py:attr:`is_talkpage`: ``True`` if this is a talkpage, else ``False``
     - :py:attr:`is_redirect`: ``True`` if this is a redirect, else ``False``
@@ -462,6 +463,19 @@ class Page(CopyvioMixIn):
         namespace ourselves based on the title.
         """
         return self._namespace
+
+    @property
+    def lastrevid(self):
+        """The ID of the page's most recent revision.
+
+        Raises :py:exc:`~earwigbot.exceptions.InvalidPageError` or
+        :py:exc:`~earwigbot.exceptions.PageNotFoundError` if the page name is
+        invalid or the page does not exist, respectively.
+        """
+        if self._exists == self.PAGE_UNKNOWN:
+            self._load()
+        self._assert_existence()  # Missing pages don't have revisions
+        return self._lastrevid
 
     @property
     def protection(self):
