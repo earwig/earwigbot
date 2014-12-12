@@ -40,6 +40,7 @@ __all__ = ["ArticleTextParser", "get_parser"]
 
 class _BaseTextParser(object):
     """Base class for a parser that handles text."""
+    TYPE = None
 
     def __init__(self, text):
         self.text = text
@@ -56,6 +57,7 @@ class _BaseTextParser(object):
 
 class ArticleTextParser(_BaseTextParser):
     """A parser that can strip and chunk wikicode article text."""
+    TYPE = "Article"
 
     def strip(self):
         """Clean the page's raw text by removing templates and formatting.
@@ -160,6 +162,7 @@ class ArticleTextParser(_BaseTextParser):
 
 class _HTMLParser(_BaseTextParser):
     """A parser that can extract the text from an HTML document."""
+    TYPE = "HTML"
     hidden_tags = [
         "script", "style"
     ]
@@ -191,6 +194,7 @@ class _HTMLParser(_BaseTextParser):
 
 class _PDFParser(_BaseTextParser):
     """A parser that can extract text from a PDF file."""
+    TYPE = "PDF"
     substitutions = [
         (u"\x0c", u"\n"),
         (u"\u2022", u" "),
@@ -220,6 +224,7 @@ class _PDFParser(_BaseTextParser):
 
 class _PlainTextParser(_BaseTextParser):
     """A parser that can unicode-ify and strip text from a plain text page."""
+    TYPE = "Text"
 
     def parse(self):
         """Unicode-ify and strip whitespace from the plain text document."""

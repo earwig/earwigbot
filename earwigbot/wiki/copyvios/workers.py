@@ -134,12 +134,12 @@ class _CopyvioWorker(object):
             size = int(response.headers.get("Content-Length", 0))
         except ValueError:
             return None
-        if size > 1024 ** 2:  # Ignore URLs larger than a megabyte
-            return None
 
         content_type = response.headers.get("Content-Type", "text/plain")
         handler = get_parser(content_type)
         if not handler:
+            return None
+        if size > (15 if handler.TYPE == "PDF" else 2) * 1024 ** 2:
             return None
 
         try:
@@ -151,7 +151,7 @@ class _CopyvioWorker(object):
             stream = StringIO(content)
             gzipper = GzipFile(fileobj=stream)
             try:
-                content = gzipper.read(2 * 1024 ** 2)
+                content = gzipper.read()
             except (IOError, struct_error):
                 return None
 
