@@ -32,7 +32,8 @@ __all__ = ["ExclusionsDB"]
 
 DEFAULT_SOURCES = {
     "all": [  # Applies to all, but located on enwiki
-        "User:EarwigBot/Copyvios/Exclusions"
+        "User:EarwigBot/Copyvios/Exclusions",
+        "User:EranBot/Copyright/Blacklist"
     ],
     "enwiki": [
         "Wikipedia:Mirrors and forks/Abc", "Wikipedia:Mirrors and forks/Def",
@@ -89,6 +90,13 @@ class ExclusionsDB(object):
             data = site.get_page(source).get()
         except exceptions.PageNotFoundError:
             return urls
+
+        if site == "enwiki" and source == "User:EranBot/Copyright/Blacklist":
+            for line in data.splitlines()[1:]:
+                line = re.sub(r"(#|==).*$", "", line).strip()
+                if line:
+                    urls.add("re:" + line)
+            return
 
         regexes = [
             r"url\s*=\s*(?:\<nowiki\>)?(?:https?:)?(?://)?(.*?)(?:\</nowiki\>.*?)?\s*$",
@@ -168,7 +176,11 @@ class ExclusionsDB(object):
         with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
             for (excl,) in conn.execute(query, (sitename, "all")):
                 if excl.startswith("*."):
-                    matches = excl[2:] in urlparse(url.lower()).netloc
+                    parsed = urlparse(url.lower())
+                    matches = excl[2:] in parsed.netloc
+                    if matches and "/" in excl:
+                        excl_path = excl[excl.index("/") + 1]
+                        matches = excl_path.startswith(parsed.path)
                 elif excl.startswith("re:"):
                     matches = re.match(excl[3:], normalized)
                 else:
