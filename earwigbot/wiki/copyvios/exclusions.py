@@ -96,7 +96,7 @@ class ExclusionsDB(object):
                 line = re.sub(r"(#|==).*$", "", line).strip()
                 if line:
                     urls.add("re:" + line)
-            return
+            return urls
 
         regexes = [
             r"url\s*=\s*(?:\<nowiki\>)?(?:https?:)?(?://)?(.*?)(?:\</nowiki\>.*?)?\s*$",
