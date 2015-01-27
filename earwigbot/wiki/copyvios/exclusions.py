@@ -91,7 +91,7 @@ class ExclusionsDB(object):
         except exceptions.PageNotFoundError:
             return urls
 
-        if site == "enwiki" and source == "User:EranBot/Copyright/Blacklist":
+        if source == "User:EranBot/Copyright/Blacklist":
             for line in data.splitlines()[1:]:
                 line = re.sub(r"(#|==).*$", "", line).strip()
                 if line:
