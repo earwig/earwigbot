@@ -182,7 +182,10 @@ class ExclusionsDB(object):
                         excl_path = excl[excl.index("/") + 1]
                         matches = excl_path.startswith(parsed.path)
                 elif excl.startswith("re:"):
-                    matches = re.match(excl[3:], normalized)
+                    try:
+                        matches = re.match(excl[3:], normalized)
+                    except re.error:
+                        continue
                 else:
                     matches = normalized.startswith(excl)
                 if matches:
