@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2014 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,7 @@ details. This documentation is also available `online
 """
 
 __author__ = "Ben Kurtovic"
-__copyright__ = "Copyright (C) 2009, 2010, 2011, 2012, 2013, 2014 Ben Kurtovic"
+__copyright__ = "Copyright (C) 2009-2015 Ben Kurtovic"
 __license__ = "MIT License"
 __version__ = "0.2.dev"
 __email__ = "ben.kurtovic@gmail.com"
