@@ -118,6 +118,10 @@ class Remind(Command):
         except ValueError:
             msg = "Invalid time \x02{0}\x0F. Time must be a positive integer, in seconds."
             return self.reply(data, msg.format(data.args[0]))
+        if wait > 1000 * 365 * 24 * 60 * 60:
+            # Hard to think of a good upper limit, but 1000 years works.
+            msg = "Given time \x02{0}\x0F is too large. Keep it reasonable."
+            return self.reply(data, msg.format(data.args[0]))
         message = " ".join(data.args[1:])
         try:
             rid = self._get_new_id()
