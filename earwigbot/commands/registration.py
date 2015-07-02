@@ -20,7 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import time
+from datetime import datetime
+from time import mktime
 
 from earwigbot import exceptions
 from earwigbot.commands import Command
@@ -46,8 +47,9 @@ class Registration(Command):
             self.reply(data, msg.format(name))
             return
 
-        date = time.strftime("%b %d, %Y at %H:%M:%S UTC", reg)
-        age = self.get_diff(time.mktime(reg), time.mktime(time.gmtime()))
+        dt = datetime.fromtimestamp(mktime(reg))
+        date = dt.strftime("%b %d, %Y at %H:%M:%S UTC")
+        age = self.get_age(dt)
 
         if user.gender == "male":
             gender = "He's"
@@ -59,14 +61,24 @@ class Registration(Command):
         msg = "\x0302{0}\x0F registered on {1}. {2} {3} old."
         self.reply(data, msg.format(name, date, gender, age))
 
-    def get_diff(self, t1, t2):
-        parts = [("year", 31536000), ("day", 86400), ("hour", 3600),
-                 ("minute", 60), ("second", 1)]
+    def get_age(self, birth):
         msg = []
-        for name, size in parts:
-            num = int(t2 - t1) / size
-            t1 += num * size
-            if num:
-                chunk = "{0} {1}".format(num, name if num == 1 else name + "s")
-                msg.append(chunk)
+        def insert(unit, num):
+            if not num:
+                return
+            msg.append("{0} {1}".format(num, unit if num == 1 else unit + "s"))
+
+        now = datetime.utcnow()
+        bd_passed = (now.month, now.day) < (birth.month, birth.day)
+        years = now.year - birth.year - bd_passed
+        delta = now - birth.replace(year=birth.year + years)
+        insert("year", years)
+        insert("day", delta.days)
+
+        seconds = delta.seconds
+        units = [("hour", 3600), ("minute", 60), ("second", 1)]
+        for unit, size in units:
+            num = seconds / size
+            seconds -= num * size
+            insert(unit, num)
         return ", ".join(msg) if msg else "0 seconds"
