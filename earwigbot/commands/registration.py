@@ -69,7 +69,7 @@ class Registration(Command):
             msg.append("{0} {1}".format(num, unit if num == 1 else unit + "s"))
 
         now = datetime.utcnow()
-        bd_passed = (now.month, now.day) < (birth.month, birth.day)
+        bd_passed = now.timetuple()[1:-3] < birth.timetuple()[1:-3]
         years = now.year - birth.year - bd_passed
         delta = now - birth.replace(year=birth.year + years)
         insert("year", years)
