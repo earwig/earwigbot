@@ -200,7 +200,11 @@ class CommandManager(_ResourceManager):
             self.logger.exception(e.format(command.name))
 
     def call(self, hook, data):
-        """Respond to a hook type and a :py:class:`Data` object."""
+        """Respond to a hook type and a :py:class:`~.Data` object.
+
+        .. note::
+           The special ``rc`` hook actually passes a :class:`~.RC` object.
+        """
         for command in self:
             if hook in command.hooks and self._wrap_check(command, data):
                 thread = Thread(target=self._wrap_process,

@@ -1,6 +1,10 @@
 v0.2 (unreleased):
 
-- Added !epoch command; expanded !remind; improved !access and !threads.
+- Added 'rc' hook type to allow IRC commands to respond to RC watcher events.
+- Added !stalk/!watch.
+- Added !epoch as a subcommand of !time.
+- Expanded and improved !remind.
+- Improved general behavior of !access and !threads.
 - Fixed API behavior when blocked, when using AssertEdit, and under other
   circumstances.
 - Added copyvio detector functionality: specifying a max time for checks;
