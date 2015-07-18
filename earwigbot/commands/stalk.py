@@ -210,8 +210,8 @@ class Stalk(Command):
                "View your active {2} with \x0306!{2}\x0F.")
         if data.is_admin:
             msg += (" As a bot admin, you can clear all active {2} on that "
-                    "{1} with \x0306!un{0}all {2}\x0F.")
-        self.reply(data, msg.format(verb, stalktype, plural))
+                    "{1} with \x0306!un{0}all {3}\x0F.")
+        self.reply(data, msg.format(verb, stalktype, plural, target))
 
     def _remove_all_stalks(self, stalktype, data, target):
         """Remove all entries for a particular target from the given table."""
