@@ -89,7 +89,7 @@ class Site(object):
     def __init__(self, name=None, project=None, lang=None, base_url=None,
                  article_path=None, script_path=None, sql=None,
                  namespaces=None, login=(None, None), cookiejar=None,
-                 user_agent=None, use_https=False, assert_edit=None,
+                 user_agent=None, use_https=True, assert_edit=None,
                  maxlag=None, wait_between_queries=2, logger=None,
                  search_config=None):
         """Constructor for new Site instances.

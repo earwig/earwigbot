@@ -188,7 +188,7 @@ class SitesDB(object):
         config = self.config
         login = (config.wiki.get("username"), config.wiki.get("password"))
         user_agent = config.wiki.get("userAgent")
-        use_https = config.wiki.get("useHTTPS", False)
+        use_https = config.wiki.get("useHTTPS", True)
         assert_edit = config.wiki.get("assert")
         maxlag = config.wiki.get("maxlag")
         wait_between_queries = config.wiki.get("waitTime", 2)
