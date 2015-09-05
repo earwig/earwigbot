@@ -339,7 +339,8 @@ class Page(CopyvioMixIn):
             params["bot"] = "true"
 
         if not force:
-            params["starttimestamp"] = self._starttimestamp
+            if self._starttimestamp:
+                params["starttimestamp"] = self._starttimestamp
             if self._basetimestamp:
                 params["basetimestamp"] = self._basetimestamp
             if self._exists == self.PAGE_MISSING:
