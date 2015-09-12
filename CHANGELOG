@@ -2,6 +2,7 @@ v0.2 (unreleased):
 
 - Added 'rc' hook type to allow IRC commands to respond to RC watcher events.
 - Added !stalk/!watch.
+- Added !watchers.
 - Added !epoch as a subcommand of !time.
 - Expanded and improved !remind.
 - Improved general behavior of !access and !threads.
@@ -15,6 +16,7 @@ v0.2 (unreleased):
 - Added and improved lazy importing for various dependencies.
 - Fixed a bug in job scheduling.
 - Improved client-side SQL buffering; made Category objects iterable.
+- Default to using HTTPS for new sites.
 - Updated documentation.
 
 v0.1 (released August 31, 2012):
