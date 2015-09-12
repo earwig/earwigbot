@@ -43,7 +43,10 @@ class Watchers(Command):
             self.reply(data, msg.format(title))
             return
 
-        watchers = page["watchers"]
+        if "watchers" in page:
+            watchers = page["watchers"]
+        else:
+            watchers = "<30"
         plural = "" if watchers == 1 else "s"
         msg = "\x0302{0}\x0F has \x02{1}\x0F watcher{2}."
         self.reply(data, msg.format(title, watchers, plural))
