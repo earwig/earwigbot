@@ -81,6 +81,11 @@ class Data(object):
         except IndexError:
             return
 
+        # e.g. "!command>user arg1 arg2"
+        if ">" in self.command:
+            command_uc, self._reply_nick = command_uc.split(">", 1)
+            self._command = command_uc.lower()
+
         if self.command.startswith("!") or self.command.startswith("."):
             # e.g. "!command arg1 arg2"
             self._is_command = True
@@ -104,11 +109,6 @@ class Data(object):
                             self._command = self.command[:-1]
                 except IndexError:
                     pass
-
-        # e.g. "!command>user arg1 arg2"
-        if ">" in self.command:
-            command_uc, self._reply_nick = command_uc.split(">", 1)
-            self._command = command_uc.lower()
 
         # e.g. "!command >user arg1 arg2"
         if self.args and self.args[0].startswith(">"):
