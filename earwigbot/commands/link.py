@@ -44,6 +44,10 @@ class Link(Command):
             self.reply(data, links.encode("utf8"))
 
         elif data.command == "link":
+            if data.args and data.args[0].startswith(">"):
+                nick = data.args.pop(0)[1:]
+                data._nick = nick  # XXX: hack - should be generally supported
+
             if not data.args:
                 if data.chan in self.last:
                     links = u" , ".join(self.parse_line(self.last[data.chan]))
