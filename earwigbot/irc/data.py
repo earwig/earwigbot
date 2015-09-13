@@ -108,7 +108,7 @@ class Data(object):
         # e.g. "!command>user arg1 arg2"
         if ">" in self.command:
             command_uc, self._reply_nick = command_uc.split(">", 1)
-            self._command = command_uc
+            self._command = command_uc.lower()
 
         # e.g. "!command >user arg1 arg2"
         if self.args and self.args[0].startswith(">"):
