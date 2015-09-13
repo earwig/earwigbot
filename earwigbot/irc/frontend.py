@@ -62,6 +62,10 @@ class Frontend(IRCConnection):
             data = Data(self.bot, self.nick, line, msgtype="JOIN")
             self.bot.commands.call("join", data)
 
+        elif line[1] == "PART":
+            data = Data(self.bot, self.nick, line, msgtype="PART")
+            self.bot.commands.call("part", data)
+
         elif line[1] == "PRIVMSG":
             data = Data(self.bot, self.nick, line, msgtype="PRIVMSG")
             if data.is_private:

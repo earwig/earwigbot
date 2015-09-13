@@ -1,6 +1,9 @@
 v0.2 (unreleased):
 
+- Added a new command syntax allowing the caller to redirect replies to another
+  user. Example: "!dictionary >Fred earwig"
 - Added 'rc' hook type to allow IRC commands to respond to RC watcher events.
+- Added 'part' hook type as a counterpart to 'join'.
 - Added !stalk/!watch.
 - Added !watchers.
 - Added !epoch as a subcommand of !time.

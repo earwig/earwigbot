@@ -108,9 +108,10 @@ are the basics:
 - Class attribute :py:attr:`~earwigbot.commands.Command.hooks` is a list of the
   "IRC events" that this command might respond to. It defaults to ``["msg"]``,
   but options include ``"msg_private"`` (for private messages only),
-  ``"msg_public"`` (for channel messages only), and ``"join"`` (for when a user
-  joins a channel). See the afc_status_ plugin for a command that responds to
-  other hook types.
+  ``"msg_public"`` (for channel messages only), ``"join"`` (for when a user
+  joins a channel), ``"part"`` (for when a user parts a channel), and ``"rc"``
+  (for recent change messages from the IRC watcher). See the afc_status_ plugin
+  for a command that responds to other hook types.
 
 - Method :py:meth:`~earwigbot.commands.Command.setup` is called *once* with no
   arguments immediately after the command is first loaded. Does nothing by

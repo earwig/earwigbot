@@ -43,9 +43,9 @@ class Command(object):
     # be triggered by the command's name and its name only:
     commands = []
 
-    # Hooks are "msg", "msg_private", "msg_public", and "join". "msg" is the
-    # default behavior; if you wish to override that, change the value in your
-    # command subclass:
+    # Hooks are "msg", "msg_private", "msg_public", "join", "part", and "rc".
+    # "msg" is the default behavior; if you wish to override that, change the
+    # value in your command subclass:
     hooks = ["msg"]
 
     def __init__(self, bot):
