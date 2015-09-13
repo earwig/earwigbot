@@ -76,7 +76,8 @@ class Data(object):
         self._args = self.msg.strip().split()
 
         try:
-            self._command = self.args.pop(0).lower()
+            command_uc = self.args.pop(0)
+            self._command = command_uc.lower()
         except IndexError:
             return
 
@@ -106,7 +107,8 @@ class Data(object):
 
         # e.g. "!command>user arg1 arg2"
         if ">" in self.command:
-            self._command, self._reply_nick = self.command.split(">", 1)
+            command_uc, self._reply_nick = command_uc.split(">", 1)
+            self._command = command_uc
 
         # e.g. "!command >user arg1 arg2"
         if self.args and self.args[0].startswith(">"):
