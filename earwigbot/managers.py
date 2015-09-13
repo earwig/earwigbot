@@ -131,6 +131,7 @@ class _ResourceManager(object):
             if modname in disabled:
                 log = "Skipping disabled module {0}".format(modname)
                 self.logger.debug(log)
+                processed.append(modname)
                 continue
             if modname not in processed:
                 self._load_module(modname, dir)
