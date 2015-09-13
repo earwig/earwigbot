@@ -172,7 +172,7 @@ class IRCConnection(object):
         if data.is_private:
             self.say(data.chan, msg, hidelog)
         else:
-            msg = "\x02{0}\x0F: {1}".format(data.nick, msg)
+            msg = "\x02{0}\x0F: {1}".format(data.reply_nick, msg)
             self.say(data.chan, msg, hidelog)
 
     def action(self, target, msg, hidelog=False):

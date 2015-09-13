@@ -52,6 +52,7 @@ class Data(object):
         """Parse a line from IRC into its components as instance attributes."""
         sender = re.findall(r":(.*?)!(.*?)@(.*?)\Z", self.line[0])[0]
         self._nick, self._ident, self._host = sender
+        self._reply_nick = self._nick
         self._chan = self.line[2]
 
         if msgtype == "PRIVMSG":
@@ -103,6 +104,14 @@ class Data(object):
                 except IndexError:
                     pass
 
+        # e.g. "!command>user arg1 arg2"
+        if ">" in self.command:
+            self._command, self._reply_nick = self.command.split(">", 1)
+
+        # e.g. "!command >user arg1 arg2"
+        if self.args and self.args[0].startswith(">"):
+            self._reply_nick = self.args.pop(0)[1:]
+
     def _parse_kwargs(self):
         """Parse keyword arguments embedded in self.args.
 
@@ -150,6 +159,11 @@ class Data(object):
     def host(self):
         """Hostname of the sender."""
         return self._host
+
+    @property
+    def reply_nick(self):
+        """Nickname of the person to reply to. Sender by default."""
+        return self._reply_nick
 
     @property
     def msg(self):
