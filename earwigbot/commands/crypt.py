@@ -82,5 +82,5 @@ class Crypt(Command):
                     self.reply(data, cipher.encrypt(text).encode("hex"))
                 else:
                     self.reply(data, cipher.decrypt(text.decode("hex")))
-            except ValueError as error:
+            except (ValueError, TypeError) as error:
                 self.reply(data, error.message)
