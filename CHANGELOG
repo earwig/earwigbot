@@ -7,6 +7,7 @@ v0.2 (unreleased):
 - Added !stalk/!watch.
 - Added !watchers.
 - Added !epoch as a subcommand of !time.
+- Added !version as a subcommand of !help.
 - Expanded and improved !remind.
 - Improved general behavior of !access and !threads.
 - Fixed API behavior when blocked, when using AssertEdit, and under other
