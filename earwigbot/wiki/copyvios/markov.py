@@ -35,7 +35,7 @@ class MarkovChain(object):
     def __init__(self, text):
         self.text = text
         self.chain = defaultdict(lambda: defaultdict(lambda: 0))
-        words = sub("[^\w\s-]", "", text.lower(), flags=UNICODE).split()
+        words = sub(r"[^\w\s-]", "", text.lower(), flags=UNICODE).split()
 
         padding = self.degree - 1
         words = ([self.START] * padding) + words + ([self.END] * padding)

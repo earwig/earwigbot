@@ -118,7 +118,7 @@ class CopyvioMixIn(object):
         article = MarkovChain(parser.strip())
         workspace = CopyvioWorkspace(
             article, min_confidence, max_time, self._logger, self._addheaders,
-            short_circuit=short_circuit, detect_exclusions=True)
+            short_circuit=short_circuit, parser_args={"mirror_hints": ["wikipedia.org/w/"]})
         if self._exclusions_db:
             self._exclusions_db.sync(self.site.name)
             exclude = lambda u: self._exclusions_db.check(self.site.name, u)

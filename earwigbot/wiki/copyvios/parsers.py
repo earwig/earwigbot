@@ -28,7 +28,6 @@ import mwparserfromhell
 
 from earwigbot import importer
 from earwigbot.exceptions import ParserExclusionError
-from earwigbot.wiki.copyvios.exclusions import MIRROR_HINTS
 
 bs4 = importer.new("bs4")
 nltk = importer.new("nltk")
@@ -44,8 +43,9 @@ class _BaseTextParser(object):
     """Base class for a parser that handles text."""
     TYPE = None
 
-    def __init__(self, text):
+    def __init__(self, text, args=None):
         self.text = text
+        self._args = args or {}
 
     def __repr__(self):
         """Return the canonical string representation of the text parser."""
@@ -187,7 +187,7 @@ class _HTMLParser(_BaseTextParser):
         "script", "style"
     ]
 
-    def parse(self, **kwargs):
+    def parse(self):
         """Return the actual text contained within an HTML document.
 
         Implemented using :py:mod:`BeautifulSoup <bs4>`
@@ -203,10 +203,10 @@ class _HTMLParser(_BaseTextParser):
             # no scrapable content (possibly JS or <frame> magic):
             return ""
 
-        if kwargs["detect_exclusions"]:
+        if "mirror_hints" in self._args:
             # Look for obvious signs that this is a mirror:
             func = lambda attr: attr and any(
-                hint in attr for hint in MIRROR_HINTS)
+                hint in attr for hint in self._args["mirror_hints"])
             if soup.find_all(href=func) or soup.find_all(src=func):
                 raise ParserExclusionError()
 
@@ -229,7 +229,7 @@ class _PDFParser(_BaseTextParser):
         (u"\u2022", u" "),
     ]
 
-    def parse(self, **kwargs):
+    def parse(self):
         """Return extracted text from the PDF."""
         output = StringIO()
         manager = pdfinterp.PDFResourceManager()
@@ -255,7 +255,7 @@ class _PlainTextParser(_BaseTextParser):
     """A parser that can unicode-ify and strip text from a plain text page."""
     TYPE = "Text"
 
-    def parse(self, **kwargs):
+    def parse(self):
         """Unicode-ify and strip whitespace from the plain text document."""
         converted = bs4.UnicodeDammit(self.text).unicode_markup
         return converted.strip() if converted else ""
