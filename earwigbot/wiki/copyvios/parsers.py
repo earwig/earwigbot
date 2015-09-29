@@ -27,6 +27,7 @@ from StringIO import StringIO
 import mwparserfromhell
 
 from earwigbot import importer
+from earwigbot.exceptions import ParserExclusionError
 
 bs4 = importer.new("bs4")
 nltk = importer.new("nltk")

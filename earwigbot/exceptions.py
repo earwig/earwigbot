@@ -52,6 +52,7 @@ This module contains all exceptions used by EarwigBot::
                +-- UnknownSearchEngineError
                +-- UnsupportedSearchEngineError
                +-- SearchQueryError
+               +-- ParserExclusionError
 """
 
 class EarwigBotError(Exception):
@@ -231,9 +232,7 @@ class UnknownSearchEngineError(CopyvioCheckError):
     :py:attr:`config.wiki["search"]["engine"]`.
 
     Raised by :py:meth:`Page.copyvio_check
-    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>` and
-    :py:meth:`Page.copyvio_compare
-    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_compare>`.
+    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>`.
     """
 
 class UnsupportedSearchEngineError(CopyvioCheckError):
@@ -243,16 +242,20 @@ class UnsupportedSearchEngineError(CopyvioCheckError):
     couldn't be imported.
 
     Raised by :py:meth:`Page.copyvio_check
-    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>` and
-    :py:meth:`Page.copyvio_compare
-    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_compare>`.
+    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>`.
     """
 
 class SearchQueryError(CopyvioCheckError):
     """Some error ocurred while doing a search query.
 
     Raised by :py:meth:`Page.copyvio_check
-    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>` and
-    :py:meth:`Page.copyvio_compare
-    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_compare>`.
+    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>`.
+    """
+
+class ParserExclusionError(CopyvioCheckError):
+    """A content parser detected that the given source should be excluded.
+
+    Raised internally by :py:meth:`Page.copyvio_check
+    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>`; should not be
+    exposed in client code.
     """

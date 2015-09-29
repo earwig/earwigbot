@@ -34,6 +34,7 @@ from time import time
 from urllib2 import build_opener, URLError
 
 from earwigbot import importer
+from earwigbot.exceptions import ParserExclusionError
 from earwigbot.wiki.copyvios.markov import MarkovChain, MarkovChainIntersection
 from earwigbot.wiki.copyvios.parsers import get_parser
 from earwigbot.wiki.copyvios.result import CopyvioCheckResult, CopyvioSource
@@ -218,9 +219,15 @@ class _CopyvioWorker(object):
             except StopIteration:
                 self._logger.debug("Exiting: got stop signal")
                 return
-            text = self._open_url(source)
-            chain = MarkovChain(text) if text else None
-            source.workspace.compare(source, chain)
+
+            try:
+                text = self._open_url(source)
+            except ParserExclusionError:
+                source.skipped = source.excluded = True
+                source.finish_work()
+            else:
+                chain = MarkovChain(text) if text else None
+                source.workspace.compare(source, chain)
 
     def start(self):
         """Start the copyvio worker in a new thread."""
