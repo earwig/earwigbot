@@ -58,6 +58,21 @@ class _BaseTextParser(object):
 class ArticleTextParser(_BaseTextParser):
     """A parser that can strip and chunk wikicode article text."""
     TYPE = "Article"
+    TEMPLATE_MERGE_THRESHOLD = 35
+
+    def _merge_templates(self, code):
+        """Merge template contents in to wikicode when the values are long."""
+        for template in code.filter_templates(recursive=code.RECURSE_OTHERS):
+            chunks = []
+            for param in template.params:
+                if len(param.value) >= self.TEMPLATE_MERGE_THRESHOLD:
+                    self._merge_templates(param.value)
+                    chunks.append(param.value)
+            if chunks:
+                subst = u" ".join(map(unicode, chunks))
+                code.replace(template, u" " + subst + u" ")
+            else:
+                code.remove(template)
 
     def strip(self):
         """Clean the page's raw text by removing templates and formatting.
@@ -93,6 +108,9 @@ class ArticleTextParser(_BaseTextParser):
         # Also strip references:
         for tag in wikicode.filter_tags(matches=lambda tag: tag.tag == "ref"):
             remove(wikicode, tag)
+
+        # Merge in template contents when the values are long:
+        self._merge_templates(code)
 
         clean = wikicode.strip_code(normalize=True, collapse=True)
         self.clean = re.sub("\n\n+", "\n", clean).strip()
