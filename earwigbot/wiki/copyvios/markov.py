@@ -30,7 +30,7 @@ class MarkovChain(object):
     """Implements a basic ngram Markov chain of words."""
     START = -1
     END = -2
-    degree = 3  # 2 for bigrams, 3 for trigrams, etc.
+    degree = 5  # 2 for bigrams, 3 for trigrams, etc.
 
     def __init__(self, text):
         self.text = text

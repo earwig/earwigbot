@@ -27,6 +27,8 @@ from StringIO import StringIO
 import mwparserfromhell
 
 from earwigbot import importer
+from earwigbot.exceptions import ParserExclusionError
+from earwigbot.wiki.copyvios.exclusions import MIRROR_HINTS
 
 bs4 = importer.new("bs4")
 nltk = importer.new("nltk")
@@ -58,6 +60,21 @@ class _BaseTextParser(object):
 class ArticleTextParser(_BaseTextParser):
     """A parser that can strip and chunk wikicode article text."""
     TYPE = "Article"
+    TEMPLATE_MERGE_THRESHOLD = 35
+
+    def _merge_templates(self, code):
+        """Merge template contents in to wikicode when the values are long."""
+        for template in code.filter_templates(recursive=code.RECURSE_OTHERS):
+            chunks = []
+            for param in template.params:
+                if len(param.value) >= self.TEMPLATE_MERGE_THRESHOLD:
+                    self._merge_templates(param.value)
+                    chunks.append(param.value)
+            if chunks:
+                subst = u" ".join(map(unicode, chunks))
+                code.replace(template, u" " + subst + u" ")
+            else:
+                code.remove(template)
 
     def strip(self):
         """Clean the page's raw text by removing templates and formatting.
@@ -93,6 +110,9 @@ class ArticleTextParser(_BaseTextParser):
         # Also strip references:
         for tag in wikicode.filter_tags(matches=lambda tag: tag.tag == "ref"):
             remove(wikicode, tag)
+
+        # Merge in template contents when the values are long:
+        self._merge_templates(wikicode)
 
         clean = wikicode.strip_code(normalize=True, collapse=True)
         self.clean = re.sub("\n\n+", "\n", clean).strip()
@@ -167,21 +187,30 @@ class _HTMLParser(_BaseTextParser):
         "script", "style"
     ]
 
-    def parse(self):
+    def parse(self, **kwargs):
         """Return the actual text contained within an HTML document.
 
         Implemented using :py:mod:`BeautifulSoup <bs4>`
         (http://www.crummy.com/software/BeautifulSoup/).
         """
         try:
-            soup = bs4.BeautifulSoup(self.text, "lxml").body
+            soup = bs4.BeautifulSoup(self.text, "lxml")
         except ValueError:
-            soup = bs4.BeautifulSoup(self.text).body
+            soup = bs4.BeautifulSoup(self.text)
 
-        if not soup:
+        if not soup.body:
             # No <body> tag present in HTML ->
             # no scrapable content (possibly JS or <frame> magic):
             return ""
+
+        if kwargs["detect_exclusions"]:
+            # Look for obvious signs that this is a mirror:
+            func = lambda attr: attr and any(
+                hint in attr for hint in MIRROR_HINTS)
+            if soup.find_all(href=func) or soup.find_all(src=func):
+                raise ParserExclusionError()
+
+        soup = soup.body
         is_comment = lambda text: isinstance(text, bs4.element.Comment)
         for comment in soup.find_all(text=is_comment):
             comment.extract()
@@ -200,7 +229,7 @@ class _PDFParser(_BaseTextParser):
         (u"\u2022", u" "),
     ]
 
-    def parse(self):
+    def parse(self, **kwargs):
         """Return extracted text from the PDF."""
         output = StringIO()
         manager = pdfinterp.PDFResourceManager()
@@ -226,7 +255,7 @@ class _PlainTextParser(_BaseTextParser):
     """A parser that can unicode-ify and strip text from a plain text page."""
     TYPE = "Text"
 
-    def parse(self):
+    def parse(self, **kwargs):
         """Unicode-ify and strip whitespace from the plain text document."""
         converted = bs4.UnicodeDammit(self.text).unicode_markup
         return converted.strip() if converted else ""

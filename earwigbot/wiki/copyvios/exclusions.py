@@ -28,7 +28,7 @@ from urlparse import urlparse
 
 from earwigbot import exceptions
 
-__all__ = ["ExclusionsDB"]
+__all__ = ["ExclusionsDB", "MIRROR_HINTS"]
 
 DEFAULT_SOURCES = {
     "all": [  # Applies to all, but located on enwiki
@@ -42,6 +42,8 @@ DEFAULT_SOURCES = {
         "Wikipedia:Mirrors and forks/Stu", "Wikipedia:Mirrors and forks/Vwxyz"
     ]
 }
+
+MIRROR_HINTS = ["wikipedia.org/w/"]
 
 class ExclusionsDB(object):
     """

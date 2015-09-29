@@ -34,6 +34,7 @@ from time import time
 from urllib2 import build_opener, URLError
 
 from earwigbot import importer
+from earwigbot.exceptions import ParserExclusionError
 from earwigbot.wiki.copyvios.markov import MarkovChain, MarkovChainIntersection
 from earwigbot.wiki.copyvios.parsers import get_parser
 from earwigbot.wiki.copyvios.result import CopyvioCheckResult, CopyvioSource
@@ -155,7 +156,8 @@ class _CopyvioWorker(object):
             except (IOError, struct_error):
                 return None
 
-        return handler(content).parse()
+        return handler(content).parse(
+            detect_exclusions=source.detect_exclusions)
 
     def _acquire_new_site(self):
         """Block for a new unassigned site queue."""
@@ -218,9 +220,15 @@ class _CopyvioWorker(object):
             except StopIteration:
                 self._logger.debug("Exiting: got stop signal")
                 return
-            text = self._open_url(source)
-            chain = MarkovChain(text) if text else None
-            source.workspace.compare(source, chain)
+
+            try:
+                text = self._open_url(source)
+            except ParserExclusionError:
+                source.skipped = source.excluded = True
+                source.finish_work()
+            else:
+                chain = MarkovChain(text) if text else None
+                source.workspace.compare(source, chain)
 
     def start(self):
         """Start the copyvio worker in a new thread."""
@@ -233,7 +241,8 @@ class CopyvioWorkspace(object):
     """Manages a single copyvio check distributed across threads."""
 
     def __init__(self, article, min_confidence, max_time, logger, headers,
-                 url_timeout=5, num_workers=8, short_circuit=True):
+                 url_timeout=5, num_workers=8, short_circuit=True,
+                 detect_exclusions=False):
         self.sources = []
         self.finished = False
         self.possible_miss = False
@@ -247,7 +256,8 @@ class CopyvioWorkspace(object):
         self._finish_lock = Lock()
         self._short_circuit = short_circuit
         self._source_args = {"workspace": self, "headers": headers,
-                             "timeout": url_timeout}
+                             "timeout": url_timeout,
+                             "detect_exclusions": detect_exclusions}
 
         if _is_globalized:
             self._queues = _global_queues
@@ -311,11 +321,15 @@ class CopyvioWorkspace(object):
                 if url in self._handled_urls:
                     continue
                 self._handled_urls.add(url)
-                if exclude_check and exclude_check(url):
-                    continue
 
                 source = CopyvioSource(url=url, **self._source_args)
                 self.sources.append(source)
+
+                if exclude_check and exclude_check(url):
+                    self._logger.debug(u"enqueue(): exclude {0}".format(url))
+                    source.excluded = True
+                    source.skip()
+                    continue
                 if self._short_circuit and self.finished:
                     self._logger.debug(u"enqueue(): auto-skip {0}".format(url))
                     source.skip()
@@ -371,6 +385,8 @@ class CopyvioWorkspace(object):
         def cmpfunc(s1, s2):
             if s2.confidence != s1.confidence:
                 return 1 if s2.confidence > s1.confidence else -1
+            if s2.excluded != s1.excluded:
+                return 1 if s1.excluded else -1
             return int(s1.skipped) - int(s2.skipped)
 
         self.sources.sort(cmpfunc)

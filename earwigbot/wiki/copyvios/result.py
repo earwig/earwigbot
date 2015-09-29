@@ -40,16 +40,21 @@ class CopyvioSource(object):
     - :py:attr:`confidence`: the confidence of a violation, between 0 and 1
     - :py:attr:`chains`:     a 2-tuple of the source chain and the delta chain
     - :py:attr:`skipped`:    whether this URL was skipped during the check
+    - :py:attr:`excluded`:   whether this URL was in the exclusions list
     """
 
-    def __init__(self, workspace, url, headers=None, timeout=5):
+    def __init__(self, workspace, url, headers=None, timeout=5,
+                 detect_exclusions=False):
         self.workspace = workspace
         self.url = url
         self.headers = headers
         self.timeout = timeout
+        self.detect_exclusions = detect_exclusions
+
         self.confidence = 0.0
         self.chains = (EMPTY, EMPTY_INTERSECTION)
         self.skipped = False
+        self.excluded = False
 
         self._event1 = Event()
         self._event2 = Event()
@@ -57,11 +62,15 @@ class CopyvioSource(object):
 
     def __repr__(self):
         """Return the canonical string representation of the source."""
-        res = "CopyvioSource(url={0!r}, confidence={1!r}, skipped={2!r})"
-        return res.format(self.url, self.confidence, self.skipped)
+        res = ("CopyvioSource(url={0!r}, confidence={1!r}, skipped={2!r}, "
+               "excluded={3!r})")
+        return res.format(
+            self.url, self.confidence, self.skipped, self.excluded)
 
     def __str__(self):
         """Return a nice string representation of the source."""
+        if self.excluded:
+            return "<CopyvioSource ({0}, excluded)>".format(self.url)
         if self.skipped:
             return "<CopyvioSource ({0}, skipped)>".format(self.url)
         res = "<CopyvioSource ({0} with {1} conf)>"

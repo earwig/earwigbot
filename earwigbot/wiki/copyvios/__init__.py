@@ -118,7 +118,7 @@ class CopyvioMixIn(object):
         article = MarkovChain(parser.strip())
         workspace = CopyvioWorkspace(
             article, min_confidence, max_time, self._logger, self._addheaders,
-            short_circuit=short_circuit)
+            short_circuit=short_circuit, detect_exclusions=True)
         if self._exclusions_db:
             self._exclusions_db.sync(self.site.name)
             exclude = lambda u: self._exclusions_db.check(self.site.name, u)
@@ -176,7 +176,7 @@ class CopyvioMixIn(object):
         article = MarkovChain(ArticleTextParser(self.get()).strip())
         workspace = CopyvioWorkspace(
             article, min_confidence, max_time, self._logger, self._addheaders,
-            max_time, 1)
+            max_time, num_workers=1)
         workspace.enqueue([url])
         workspace.wait()
         result = workspace.get_result()
