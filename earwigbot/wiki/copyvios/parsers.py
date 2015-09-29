@@ -110,7 +110,7 @@ class ArticleTextParser(_BaseTextParser):
             remove(wikicode, tag)
 
         # Merge in template contents when the values are long:
-        self._merge_templates(code)
+        self._merge_templates(wikicode)
 
         clean = wikicode.strip_code(normalize=True, collapse=True)
         self.clean = re.sub("\n\n+", "\n", clean).strip()
