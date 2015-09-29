@@ -311,11 +311,15 @@ class CopyvioWorkspace(object):
                 if url in self._handled_urls:
                     continue
                 self._handled_urls.add(url)
-                if exclude_check and exclude_check(url):
-                    continue
 
                 source = CopyvioSource(url=url, **self._source_args)
                 self.sources.append(source)
+
+                if exclude_check and exclude_check(url):
+                    self._logger.debug(u"enqueue(): exclude {0}".format(url))
+                    source.excluded = True
+                    source.skip()
+                    continue
                 if self._short_circuit and self.finished:
                     self._logger.debug(u"enqueue(): auto-skip {0}".format(url))
                     source.skip()
@@ -371,6 +375,8 @@ class CopyvioWorkspace(object):
         def cmpfunc(s1, s2):
             if s2.confidence != s1.confidence:
                 return 1 if s2.confidence > s1.confidence else -1
+            if s2.excluded != s1.excluded:
+                return 1 if s1.excluded else -1
             return int(s1.skipped) - int(s2.skipped)
 
         self.sources.sort(cmpfunc)
