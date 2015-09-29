@@ -156,7 +156,7 @@ class _CopyvioWorker(object):
             except (IOError, struct_error):
                 return None
 
-        return handler(content).parse()
+        return handler(content).parse(source.detect_exclusions)
 
     def _acquire_new_site(self):
         """Block for a new unassigned site queue."""
@@ -240,7 +240,8 @@ class CopyvioWorkspace(object):
     """Manages a single copyvio check distributed across threads."""
 
     def __init__(self, article, min_confidence, max_time, logger, headers,
-                 url_timeout=5, num_workers=8, short_circuit=True):
+                 url_timeout=5, num_workers=8, short_circuit=True,
+                 detect_exclusions=False):
         self.sources = []
         self.finished = False
         self.possible_miss = False
@@ -254,7 +255,8 @@ class CopyvioWorkspace(object):
         self._finish_lock = Lock()
         self._short_circuit = short_circuit
         self._source_args = {"workspace": self, "headers": headers,
-                             "timeout": url_timeout}
+                             "timeout": url_timeout,
+                             "detect_exclusions": detect_exclusions}
 
         if _is_globalized:
             self._queues = _global_queues

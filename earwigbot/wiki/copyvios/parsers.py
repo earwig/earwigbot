@@ -28,6 +28,7 @@ import mwparserfromhell
 
 from earwigbot import importer
 from earwigbot.exceptions import ParserExclusionError
+from earwigbot.copyvios.exclusions import MIRROR_HINTS
 
 bs4 = importer.new("bs4")
 nltk = importer.new("nltk")
@@ -186,21 +187,30 @@ class _HTMLParser(_BaseTextParser):
         "script", "style"
     ]
 
-    def parse(self):
+    def parse(self, detect_exclusions=False):
         """Return the actual text contained within an HTML document.
 
         Implemented using :py:mod:`BeautifulSoup <bs4>`
         (http://www.crummy.com/software/BeautifulSoup/).
         """
         try:
-            soup = bs4.BeautifulSoup(self.text, "lxml").body
+            soup = bs4.BeautifulSoup(self.text, "lxml")
         except ValueError:
-            soup = bs4.BeautifulSoup(self.text).body
+            soup = bs4.BeautifulSoup(self.text)
 
-        if not soup:
+        if not soup.body:
             # No <body> tag present in HTML ->
             # no scrapable content (possibly JS or <frame> magic):
             return ""
+
+        if detect_exclusions:
+            # Look for obvious signs that this is a mirror:
+            func = lambda attr: attr and any(
+                hint in attr for hint in MIRROR_HINTS)
+            if soup.find_all(href=func) or soup.find_all(src=func):
+                raise ParserExclusionError()
+
+        soup = soup.body
         is_comment = lambda text: isinstance(text, bs4.element.Comment)
         for comment in soup.find_all(text=is_comment):
             comment.extract()
@@ -219,7 +229,7 @@ class _PDFParser(_BaseTextParser):
         (u"\u2022", u" "),
     ]
 
-    def parse(self):
+    def parse(self, detect_exclusions=False):
         """Return extracted text from the PDF."""
         output = StringIO()
         manager = pdfinterp.PDFResourceManager()
@@ -245,7 +255,7 @@ class _PlainTextParser(_BaseTextParser):
     """A parser that can unicode-ify and strip text from a plain text page."""
     TYPE = "Text"
 
-    def parse(self):
+    def parse(self, detect_exclusions=False):
         """Unicode-ify and strip whitespace from the plain text document."""
         converted = bs4.UnicodeDammit(self.text).unicode_markup
         return converted.strip() if converted else ""

@@ -43,11 +43,14 @@ class CopyvioSource(object):
     - :py:attr:`excluded`:   whether this URL was in the exclusions list
     """
 
-    def __init__(self, workspace, url, headers=None, timeout=5):
+    def __init__(self, workspace, url, headers=None, timeout=5,
+                 detect_exclusions=False):
         self.workspace = workspace
         self.url = url
         self.headers = headers
         self.timeout = timeout
+        self.detect_exclusions = detect_exclusions
+
         self.confidence = 0.0
         self.chains = (EMPTY, EMPTY_INTERSECTION)
         self.skipped = False
