@@ -156,7 +156,8 @@ class _CopyvioWorker(object):
             except (IOError, struct_error):
                 return None
 
-        return handler(content).parse(source.detect_exclusions)
+        return handler(content).parse(
+            detect_exclusions=source.detect_exclusions)
 
     def _acquire_new_site(self):
         """Block for a new unassigned site queue."""

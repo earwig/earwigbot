@@ -28,7 +28,7 @@ import mwparserfromhell
 
 from earwigbot import importer
 from earwigbot.exceptions import ParserExclusionError
-from earwigbot.copyvios.exclusions import MIRROR_HINTS
+from earwigbot.wiki.copyvios.exclusions import MIRROR_HINTS
 
 bs4 = importer.new("bs4")
 nltk = importer.new("nltk")
@@ -187,7 +187,7 @@ class _HTMLParser(_BaseTextParser):
         "script", "style"
     ]
 
-    def parse(self, detect_exclusions=False):
+    def parse(self, **kwargs):
         """Return the actual text contained within an HTML document.
 
         Implemented using :py:mod:`BeautifulSoup <bs4>`
@@ -203,7 +203,7 @@ class _HTMLParser(_BaseTextParser):
             # no scrapable content (possibly JS or <frame> magic):
             return ""
 
-        if detect_exclusions:
+        if kwargs["detect_exclusions"]:
             # Look for obvious signs that this is a mirror:
             func = lambda attr: attr and any(
                 hint in attr for hint in MIRROR_HINTS)
@@ -229,7 +229,7 @@ class _PDFParser(_BaseTextParser):
         (u"\u2022", u" "),
     ]
 
-    def parse(self, detect_exclusions=False):
+    def parse(self, **kwargs):
         """Return extracted text from the PDF."""
         output = StringIO()
         manager = pdfinterp.PDFResourceManager()
@@ -255,7 +255,7 @@ class _PlainTextParser(_BaseTextParser):
     """A parser that can unicode-ify and strip text from a plain text page."""
     TYPE = "Text"
 
-    def parse(self, detect_exclusions=False):
+    def parse(self, **kwargs):
         """Unicode-ify and strip whitespace from the plain text document."""
         converted = bs4.UnicodeDammit(self.text).unicode_markup
         return converted.strip() if converted else ""
