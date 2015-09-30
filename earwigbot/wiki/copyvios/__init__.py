@@ -116,14 +116,19 @@ class CopyvioMixIn(object):
         searcher = self._get_search_engine()
         parser = ArticleTextParser(self.get())
         article = MarkovChain(parser.strip())
-        workspace = CopyvioWorkspace(
-            article, min_confidence, max_time, self._logger, self._addheaders,
-            short_circuit=short_circuit, parser_args={"mirror_hints": ["wikipedia.org/w/"]})
+        parser_args = {}
+
         if self._exclusions_db:
             self._exclusions_db.sync(self.site.name)
             exclude = lambda u: self._exclusions_db.check(self.site.name, u)
+            parser_args["mirror_hints"] = self._exclusions_db.get_mirror_hints(
+                self.site.name)
         else:
             exclude = None
+
+        workspace = CopyvioWorkspace(
+            article, min_confidence, max_time, self._logger, self._addheaders,
+            short_circuit=short_circuit, parser_args=parser_args)
 
         if article.size < 20:  # Auto-fail very small articles
             result = workspace.get_result()

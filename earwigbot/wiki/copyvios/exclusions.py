@@ -196,3 +196,22 @@ class ExclusionsDB(object):
         log = u"No exclusions in {0} for {1}".format(sitename, url)
         self._logger.debug(log)
         return False
+
+    def get_mirror_hints(self, sitename, try_mobile=True):
+        """Return a list of strings that indicate the existence of a mirror.
+
+        The source parser checks for the presence of these strings inside of
+        certain HTML tag attributes (``"href"`` and ``"src"``).
+        """
+        site = self._sitesdb.get_site(sitename)
+        base = site.domain + site._script_path
+        roots = [base]
+        scripts = ["index.php", "load.php", "api.php"]
+
+        if try_mobile:
+            fragments = re.search(r"^([\w]+)\.([\w]+).([\w]+)$", site.domain)
+            if fragments:
+                mobile = "{0}.m.{1}.{2}".format(*fragments.groups())
+                roots.append(mobile + site._script_path)
+
+        return [root + "/" + script for root in roots for script in scripts]
