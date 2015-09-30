@@ -223,6 +223,7 @@ class _CopyvioWorker(object):
             try:
                 text = self._open_url(source)
             except ParserExclusionError:
+                self._logger.debug("Source excluded by content parser")
                 source.skipped = source.excluded = True
                 source.finish_work()
             else:
