@@ -149,11 +149,14 @@ class ExclusionsDB(object):
             return result[0] if result else 0
 
     def sync(self, sitename, force=False):
-        """Update the database if it hasn't been updated in the past day.
+        """Update the database if it hasn't been updated recently.
 
         This updates the exclusions database for the site *sitename* and "all".
+
+        Site-specific lists are considered stale after 48 hours; global lists
+        after 12 hours.
         """
-        max_staleness = 60 * 60 * 24
+        max_staleness = 60 * 60 * (12 if sitename == "all" else 48)
         time_since_update = int(time() - self._get_last_update(sitename))
         if force or time_since_update > max_staleness:
             log = u"Updating stale database: {0} (last updated {1} seconds ago)"
