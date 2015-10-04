@@ -133,8 +133,8 @@ Custom IRC commands
 ~~~~~~~~~~~~~~~~~~~
 
 Custom commands are subclasses of `earwigbot.commands.Command`_ that override
-``Command``'s ``process()`` (and optionally ``check()`` or ``setup()``)
-methods.
+``Command``'s ``process()`` (and optionally ``check()``, ``setup()``, or
+``unload()``) methods.
 
 The bot has a wide selection of built-in commands and plugins to act as sample
 code and/or to give ideas. Start with test_, and then check out chanops_ and
@@ -144,7 +144,7 @@ Custom bot tasks
 ~~~~~~~~~~~~~~~~
 
 Custom tasks are subclasses of `earwigbot.tasks.Task`_ that override ``Task``'s
-``run()`` (and optionally ``setup()``) methods.
+``run()`` (and optionally ``setup()`` or ``unload()``) methods.
 
 See the built-in wikiproject_tagger_ task for a relatively straightforward
 task, or the afc_statistics_ plugin for a more complicated one.

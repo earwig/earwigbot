@@ -84,6 +84,13 @@ class Task(object):
         """
         pass
 
+    def unload(self):
+        """Hook called immediately before the task is unloaded.
+
+        Does nothing by default; feel free to override.
+        """
+        pass
+
     def make_summary(self, comment):
         """Make an edit summary by filling in variables in a config value.
 

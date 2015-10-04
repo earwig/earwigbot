@@ -86,8 +86,9 @@ Custom IRC commands
 Custom commands are subclasses of :py:class:`earwigbot.commands.Command` that
 override :py:class:`~earwigbot.commands.Command`'s
 :py:meth:`~earwigbot.commands.Command.process` (and optionally
-:py:meth:`~earwigbot.commands.Command.check` or
-:py:meth:`~earwigbot.commands.Command.setup`) methods.
+:py:meth:`~earwigbot.commands.Command.check`,
+:py:meth:`~earwigbot.commands.Command.setup`, or
+:py:meth:`~earwigbot.commands.Command.unload`) methods.
 
 :py:class:`~earwigbot.commands.Command`'s docstrings should explain what each
 attribute and method is for and what they should be overridden with, but these
@@ -154,6 +155,10 @@ are the basics:
   <earwigbot.irc.connection.IRCConnection.join>`, and
   :py:meth:`part(chan) <earwigbot.irc.connection.IRCConnection.part>`.
 
+- Method :py:meth:`~earwigbot.commands.Command.unload` is called *once* with no
+  arguments immediately before the command is unloaded, such as when someone
+  uses ``!reload``. Does nothing by default.
+
 Commands have access to :py:attr:`config.commands[command_name]` for config
 information, which is a node in :file:`config.yml` like every other attribute
 of :py:attr:`bot.config`. This can be used to store, for example, API keys or
@@ -175,7 +180,8 @@ Custom bot tasks
 Custom tasks are subclasses of :py:class:`earwigbot.tasks.Task` that
 override :py:class:`~earwigbot.tasks.Task`'s
 :py:meth:`~earwigbot.tasks.Task.run` (and optionally
-:py:meth:`~earwigbot.tasks.Task.setup`) methods.
+:py:meth:`~earwigbot.tasks.Task.setup` or
+:py:meth:`~earwigbot.tasks.Task.unload`) methods.
 
 :py:class:`~earwigbot.tasks.Task`'s docstrings should explain what each
 attribute and method is for and what they should be overridden with, but these
@@ -219,6 +225,10 @@ are the basics:
   <earwigbot.managers.TaskManager.start>`, usually). This is where the bulk of
   the task's code goes. For interfacing with MediaWiki sites, read up on the
   :doc:`Wiki Toolset <toolset>`.
+
+- Method :py:meth:`~earwigbot.tasks.Task.unload` is called *once* with no
+  arguments immediately before the task is unloaded. Does nothing by
+  default.
 
 Tasks have access to :py:attr:`config.tasks[task_name]` for config information,
 which is a node in :file:`config.yml` like every other attribute of

@@ -137,6 +137,19 @@ class _ResourceManager(object):
                 self._load_module(modname, dir)
                 processed.append(modname)
 
+    def _unload_resources(self):
+        """Unload all resources, calling their unload hooks in the process."""
+        res_type = self._resource_name[:-1]  # e.g. "command" or "task"
+        for resource in self:
+            if not hasattr(resource, "unload"):
+                continue
+            try:
+                resource.unload()
+            except Exception:
+                e = "Error unloading {0} '{1}'"
+                self.logger.exception(e.format(res_type, resource.name))
+        self._resources.clear()
+
     @property
     def lock(self):
         """The resource access/modify lock."""
@@ -146,7 +159,7 @@ class _ResourceManager(object):
         """Load (or reload) all valid resources into :py:attr:`_resources`."""
         name = self._resource_name  # e.g. "commands" or "tasks"
         with self.lock:
-            self._resources.clear()
+            self._unload_resources()
             builtin_dir = path.join(path.dirname(__file__), name)
             plugins_dir = path.join(self.bot.config.root_dir, name)
             if getattr(self.bot.config, name).get("disable") is True:

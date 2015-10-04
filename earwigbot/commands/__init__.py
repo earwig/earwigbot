@@ -120,3 +120,10 @@ class Command(object):
         command's body here.
         """
         pass
+
+    def unload(self):
+        """Hook called immediately before a command is unloaded.
+
+        Does nothing by default; feel free to override.
+        """
+        pass
