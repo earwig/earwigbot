@@ -154,7 +154,7 @@ class Bot(object):
                 tasks.append(thread.name)
         if tasks:
             log = "The following commands or tasks will be killed: {0}"
-            self.logger.warn(log.format(" ".join(tasks)))
+            self.logger.warn(log.format(", ".join(tasks)))
 
     @property
     def is_running(self):
