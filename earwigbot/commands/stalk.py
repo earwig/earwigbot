@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from ast import literal_eval
+
 from earwigbot.commands import Command
 from earwigbot.irc import RC
 
@@ -35,6 +37,7 @@ class Stalk(Command):
     def setup(self):
         self._users = {}
         self._pages = {}
+        self._load_stalks()
 
     def check(self, data):
         if isinstance(data, RC):
@@ -179,6 +182,7 @@ class Stalk(Command):
 
         msg = "Now {0}ing {1} \x0302{2}\x0F. Remove with \x0306!un{0} {2}\x0F."
         self.reply(data, msg.format(verb, stalktype, target))
+        self._save_stalks()
 
     def _remove_stalk(self, stalktype, data, target):
         """Remove a stalk entry from the given table."""
@@ -197,21 +201,22 @@ class Stalk(Command):
                 if info[0] == data.nick:
                     to_remove.append(info)
 
-        if to_remove:
-            for info in to_remove:
-                table[target].remove(info)
-            if not table[target]:
-                del table[target]
-            msg = "No longer {0}ing {1} \x0302{2}\x0F for you."
-            self.reply(data, msg.format(verb, stalktype, target))
+        if not to_remove:
+            msg = ("I haven't been {0}ing that {1} for you in the first "
+                   "place. View your active {2} with \x0306!{2}\x0F.")
+            if data.is_admin:
+                msg += (" As a bot admin, you can clear all active {2} on "
+                        "that {1} with \x0306!un{0}all {3}\x0F.")
+            self.reply(data, msg.format(verb, stalktype, plural, target))
             return
 
-        msg = ("I haven't been {0}ing that {1} for you in the first place. "
-               "View your active {2} with \x0306!{2}\x0F.")
-        if data.is_admin:
-            msg += (" As a bot admin, you can clear all active {2} on that "
-                    "{1} with \x0306!un{0}all {3}\x0F.")
-        self.reply(data, msg.format(verb, stalktype, plural, target))
+        for info in to_remove:
+            table[target].remove(info)
+        if not table[target]:
+            del table[target]
+        msg = "No longer {0}ing {1} \x0302{2}\x0F for you."
+        self.reply(data, msg.format(verb, stalktype, target))
+        self._save_stalks()
 
     def _remove_all_stalks(self, stalktype, data, target):
         """Remove all entries for a particular target from the given table."""
@@ -233,6 +238,7 @@ class Stalk(Command):
         else:
             msg = "No longer {0}ing {1} \x0302{2}\x0F for anyone."
             self.reply(data, msg.format(verb, stalktype, target))
+            self._save_stalks()
 
     def _current_stalks(self, nick):
         """Return the given user's current stalks."""
@@ -288,3 +294,18 @@ class Stalk(Command):
         return msg.format(len(users), "s" if len(users) != 1 else "",
                           len(pages), "s" if len(pages) != 1 else "",
                           uinfo if users else "", pinfo if pages else "")
+
+    def _load_stalks(self):
+        """Load saved stalks from the database."""
+        permdb = self.config.irc["permissions"]
+        try:
+            data = permdb.get_attr("command:stalk", "data")
+        except KeyError:
+            return
+        self._users, self._pages = literal_eval(data)
+
+    def _save_stalks(self):
+        """Save stalks to the database."""
+        permdb = self.config.irc["permissions"]
+        data = str((self._users, self._pages))
+        permdb.set_attr("command:stalk", "data", data)
