@@ -21,7 +21,6 @@
 # SOFTWARE.
 
 import imp
-import os
 
 from earwigbot.irc import IRCConnection, RC
 

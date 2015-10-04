@@ -27,35 +27,35 @@ __all__ = ["Data"]
 class Data(object):
     """Store data from an individual line received on IRC."""
 
-    def __init__(self, bot, my_nick, line, msgtype):
-        self._bot = bot
+    def __init__(self, my_nick, line, msgtype):
         self._my_nick = my_nick.lower()
         self._line = line
+        self._msgtype = msgtype
 
         self._is_private = self._is_command = False
         self._msg = self._command = self._trigger = None
         self._args = []
         self._kwargs = {}
 
-        self._parse(msgtype)
+        self._parse()
 
     def __repr__(self):
         """Return the canonical string representation of the Data."""
-        res = "Data(bot={0!r}, my_nick={1!r}, line={2!r})"
-        return res.format(self._bot, self.my_nick, self.line)
+        res = "Data(my_nick={0!r}, line={1!r})"
+        return res.format(self.my_nick, self.line)
 
     def __str__(self):
         """Return a nice string representation of the Data."""
         return "<Data of {0!r}>".format(" ".join(self.line))
 
-    def _parse(self, msgtype):
+    def _parse(self):
         """Parse a line from IRC into its components as instance attributes."""
         sender = re.findall(r":(.*?)!(.*?)@(.*?)\Z", self.line[0])[0]
         self._nick, self._ident, self._host = sender
         self._reply_nick = self._nick
         self._chan = self.line[2]
 
-        if msgtype == "PRIVMSG":
+        if self._msgtype == "PRIVMSG":
             if self.chan.lower() == self.my_nick:
                 # This is a privmsg to us, so set 'chan' as the nick of the
                 # sender instead of the 'channel', which is ourselves:
@@ -226,3 +226,12 @@ class Data(object):
         arguments.
         """
         return self._kwargs
+
+    def serialize(self):
+        """Serialize this object into a tuple and return it."""
+        return (self._my_nick, self._line, self._msgtype)
+
+    @classmethod
+    def unserialize(cls, data):
+        """Return a new Data object built from a serialized tuple."""
+        return cls(*data)

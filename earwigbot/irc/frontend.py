@@ -59,15 +59,15 @@ class Frontend(IRCConnection):
     def _process_message(self, line):
         """Process a single message from IRC."""
         if line[1] == "JOIN":
-            data = Data(self.bot, self.nick, line, msgtype="JOIN")
+            data = Data(self.nick, line, msgtype="JOIN")
             self.bot.commands.call("join", data)
 
         elif line[1] == "PART":
-            data = Data(self.bot, self.nick, line, msgtype="PART")
+            data = Data(self.nick, line, msgtype="PART")
             self.bot.commands.call("part", data)
 
         elif line[1] == "PRIVMSG":
-            data = Data(self.bot, self.nick, line, msgtype="PRIVMSG")
+            data = Data(self.nick, line, msgtype="PRIVMSG")
             if data.is_private:
                 self.bot.commands.call("msg_private", data)
             else:
