@@ -402,7 +402,11 @@ class _Reminder(object):
     def end_time(self):
         """Return a string representing the end time of a reminder."""
         if self.end >= time.time():
-            ends = time.strftime("%b %d %H:%M:%S %Z", time.localtime(self.end))
+            lctime = time.localtime(self.end)
+            if lctime.tm_year == time.localtime().tm_year:
+                ends = time.strftime("%b %d %H:%M:%S %Z", lctime)
+            else:
+                ends = time.strftime("%b %d, %Y %H:%M:%S %Z", lctime)
             return "ends {0}".format(ends)
         return "expired"
 
