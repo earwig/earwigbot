@@ -61,7 +61,9 @@ class Remind(Command):
             ast.FloorDiv: operator.floordiv, ast.Mod: operator.mod,
             ast.Pow: operator.pow
         }
-        time_units = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}
+        time_units = {
+            "s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800, "y": 31536000
+        }
 
         def _evaluate(node):
             """Convert an AST node into a real number or raise an exception."""
