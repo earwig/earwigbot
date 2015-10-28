@@ -76,11 +76,12 @@ class Stalk(Command):
             self.reply(data, self._current_stalks(data.nick))
             return
 
-        target = " ".join(data.args)
+        target = " ".join(data.args).replace("_", " ")
         if target.startswith("[[") and target.endswith("]]"):
             target = target[2:-2]
         if target.startswith("User:") and "stalk" in data.command:
             target = target[5:]
+        target = target[0].upper() + target[1:]
 
         if data.command in ["stalk", "watch"]:
             if data.is_private:
@@ -118,11 +119,18 @@ class Stalk(Command):
                 else:
                     chans[item[0]] = None
 
+        def _wildcard_match(target, tag):
+            return target[-1] == "*" and tag.startswith(target[:-1])
+
+        def _process(table, tag):
+            for target, stalks in table.iteritems():
+                if target == tag or _wildcard_match(target, tag):
+                    _update_chans(stalks)
+
         chans = {}
-        if rc.user in self._users:
-            _update_chans(self._users[rc.user])
-        if rc.is_edit and rc.page in self._pages:
-            _update_chans(self._pages[rc.page])
+        _process(self._users, rc.user)
+        if rc.is_edit:
+            _process(self._pages, rc.page)
         if not chans:
             return
 
