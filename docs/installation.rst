@@ -54,5 +54,5 @@ features (``feature/*`` branches)::
 .. _earwigbot-plugins:        https://github.com/earwig/earwigbot-plugins
 .. _Python Package Index:     http://pypi.python.org
 .. _get pip:                  http://pypi.python.org/pypi/pip
-.. _this StackOverflow post:        http://stackoverflow.com/questions/6504810/how-to-install-lxml-on-ubuntu/6504860#6504860
+.. _this StackOverflow post:  http://stackoverflow.com/questions/6504810/how-to-install-lxml-on-ubuntu/6504860#6504860
 .. _git flow:                 http://nvie.com/posts/a-successful-git-branching-model/

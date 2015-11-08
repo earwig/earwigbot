@@ -23,7 +23,7 @@
 from collections import OrderedDict
 from getpass import getpass
 from hashlib import sha256
-from os import chmod, mkdir, path
+from os import chmod, makedirs, mkdir, path
 import re
 import stat
 import sys
@@ -441,6 +441,7 @@ class ConfigScript(object):
     def make_new(self):
         """Make a new config file based on the user's input."""
         try:
+            makedirs(path.dirname(self.config.path))
             open(self.config.path, "w").close()
             chmod(self.config.path, stat.S_IRUSR|stat.S_IWUSR)
         except IOError:
