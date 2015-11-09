@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,7 @@ __all__ = ["RC"]
 class RC(object):
     """Store data from an event received from our IRC watcher."""
     re_color = re.compile("\x03([0-9]{1,2}(,[0-9]{1,2})?)?")
-    re_edit = re.compile("\A\[\[(.*?)\]\]\s(.*?)\s(http://.*?)\s\*\s(.*?)\s\*\s(.*?)\Z")
+    re_edit = re.compile("\A\[\[(.*?)\]\]\s(.*?)\s(https?://.*?)\s\*\s(.*?)\s\*\s(.*?)\Z")
     re_log = re.compile("\A\[\[(.*?)\]\]\s(.*?)\s\s\*\s(.*?)\s\*\s(.*?)\Z")
 
     pretty_edit = "\x02New {0}\x0F: \x0314[[\x0307{1}\x0314]]\x0306 * \x0303{2}\x0306 * \x0302{3}\x0306 * \x0310{4}"
@@ -60,7 +60,7 @@ class RC(object):
             # We're probably missing the http:// part, because it's a log
             # entry, which lacks a URL:
             page, flags, user, comment = self.re_log.findall(msg)[0]
-            url = "http://{0}.org/wiki/{1}".format(self.chan[1:], page)
+            url = "https://{0}.org/wiki/{1}".format(self.chan[1:], page)
 
             self.is_edit = False  # This is a log entry, not edit
 

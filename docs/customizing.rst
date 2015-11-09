@@ -86,8 +86,9 @@ Custom IRC commands
 Custom commands are subclasses of :py:class:`earwigbot.commands.Command` that
 override :py:class:`~earwigbot.commands.Command`'s
 :py:meth:`~earwigbot.commands.Command.process` (and optionally
-:py:meth:`~earwigbot.commands.Command.check` or
-:py:meth:`~earwigbot.commands.Command.setup`) methods.
+:py:meth:`~earwigbot.commands.Command.check`,
+:py:meth:`~earwigbot.commands.Command.setup`, or
+:py:meth:`~earwigbot.commands.Command.unload`) methods.
 
 :py:class:`~earwigbot.commands.Command`'s docstrings should explain what each
 attribute and method is for and what they should be overridden with, but these
@@ -108,9 +109,10 @@ are the basics:
 - Class attribute :py:attr:`~earwigbot.commands.Command.hooks` is a list of the
   "IRC events" that this command might respond to. It defaults to ``["msg"]``,
   but options include ``"msg_private"`` (for private messages only),
-  ``"msg_public"`` (for channel messages only), and ``"join"`` (for when a user
-  joins a channel). See the afc_status_ plugin for a command that responds to
-  other hook types.
+  ``"msg_public"`` (for channel messages only), ``"join"`` (for when a user
+  joins a channel), ``"part"`` (for when a user parts a channel), and ``"rc"``
+  (for recent change messages from the IRC watcher). See the afc_status_ plugin
+  for a command that responds to other hook types.
 
 - Method :py:meth:`~earwigbot.commands.Command.setup` is called *once* with no
   arguments immediately after the command is first loaded. Does nothing by
@@ -153,6 +155,10 @@ are the basics:
   <earwigbot.irc.connection.IRCConnection.join>`, and
   :py:meth:`part(chan) <earwigbot.irc.connection.IRCConnection.part>`.
 
+- Method :py:meth:`~earwigbot.commands.Command.unload` is called *once* with no
+  arguments immediately before the command is unloaded, such as when someone
+  uses ``!reload``. Does nothing by default.
+
 Commands have access to :py:attr:`config.commands[command_name]` for config
 information, which is a node in :file:`config.yml` like every other attribute
 of :py:attr:`bot.config`. This can be used to store, for example, API keys or
@@ -174,7 +180,8 @@ Custom bot tasks
 Custom tasks are subclasses of :py:class:`earwigbot.tasks.Task` that
 override :py:class:`~earwigbot.tasks.Task`'s
 :py:meth:`~earwigbot.tasks.Task.run` (and optionally
-:py:meth:`~earwigbot.tasks.Task.setup`) methods.
+:py:meth:`~earwigbot.tasks.Task.setup` or
+:py:meth:`~earwigbot.tasks.Task.unload`) methods.
 
 :py:class:`~earwigbot.tasks.Task`'s docstrings should explain what each
 attribute and method is for and what they should be overridden with, but these
@@ -218,6 +225,10 @@ are the basics:
   <earwigbot.managers.TaskManager.start>`, usually). This is where the bulk of
   the task's code goes. For interfacing with MediaWiki sites, read up on the
   :doc:`Wiki Toolset <toolset>`.
+
+- Method :py:meth:`~earwigbot.tasks.Task.unload` is called *once* with no
+  arguments immediately before the task is unloaded. Does nothing by
+  default.
 
 Tasks have access to :py:attr:`config.tasks[task_name]` for config information,
 which is a node in :file:`config.yml` like every other attribute of

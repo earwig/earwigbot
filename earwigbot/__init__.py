@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -30,11 +30,11 @@ details. This documentation is also available `online
 """
 
 __author__ = "Ben Kurtovic"
-__copyright__ = "Copyright (C) 2009, 2010, 2011, 2012 Ben Kurtovic"
+__copyright__ = "Copyright (C) 2009-2015 Ben Kurtovic"
 __license__ = "MIT License"
-__version__ = "0.1"
-__email__ = "ben.kurtovic@verizon.net"
-__release__ = True
+__version__ = "0.2"
+__email__ = "ben.kurtovic@gmail.com"
+__release__ = False
 
 if not __release__:
     def _get_git_commit_id():
@@ -45,7 +45,7 @@ if not __release__:
         commit_id = Repo(path).head.object.hexsha
         return commit_id[:8]
     try:
-        __version__ += ".git+" + _get_git_commit_id()
+        __version__ += "+git-" + _get_git_commit_id()
     except Exception:
         pass
     finally:
@@ -64,5 +64,3 @@ managers = importer.new("earwigbot.managers")
 tasks = importer.new("earwigbot.tasks")
 util = importer.new("earwigbot.util")
 wiki = importer.new("earwigbot.wiki")
-
-del importer

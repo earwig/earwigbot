@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -27,34 +27,35 @@ __all__ = ["Data"]
 class Data(object):
     """Store data from an individual line received on IRC."""
 
-    def __init__(self, bot, my_nick, line, msgtype):
-        self._bot = bot
+    def __init__(self, my_nick, line, msgtype):
         self._my_nick = my_nick.lower()
         self._line = line
+        self._msgtype = msgtype
 
         self._is_private = self._is_command = False
         self._msg = self._command = self._trigger = None
         self._args = []
         self._kwargs = {}
 
-        self._parse(msgtype)
+        self._parse()
 
     def __repr__(self):
         """Return the canonical string representation of the Data."""
-        res = "Data(bot={0!r}, my_nick={1!r}, line={2!r})"
-        return res.format(self._bot, self.my_nick, self.line)
+        res = "Data(my_nick={0!r}, line={1!r})"
+        return res.format(self.my_nick, self.line)
 
     def __str__(self):
         """Return a nice string representation of the Data."""
         return "<Data of {0!r}>".format(" ".join(self.line))
 
-    def _parse(self, msgtype):
+    def _parse(self):
         """Parse a line from IRC into its components as instance attributes."""
         sender = re.findall(r":(.*?)!(.*?)@(.*?)\Z", self.line[0])[0]
         self._nick, self._ident, self._host = sender
+        self._reply_nick = self._nick
         self._chan = self.line[2]
 
-        if msgtype == "PRIVMSG":
+        if self._msgtype == "PRIVMSG":
             if self.chan.lower() == self.my_nick:
                 # This is a privmsg to us, so set 'chan' as the nick of the
                 # sender instead of the 'channel', which is ourselves:
@@ -75,9 +76,15 @@ class Data(object):
         self._args = self.msg.strip().split()
 
         try:
-            self._command = self.args.pop(0).lower()
+            command_uc = self.args.pop(0)
+            self._command = command_uc.lower()
         except IndexError:
             return
+
+        # e.g. "!command>user arg1 arg2"
+        if ">" in self.command:
+            command_uc, self._reply_nick = command_uc.split(">", 1)
+            self._command = command_uc.lower()
 
         if self.command.startswith("!") or self.command.startswith("."):
             # e.g. "!command arg1 arg2"
@@ -102,6 +109,10 @@ class Data(object):
                             self._command = self.command[:-1]
                 except IndexError:
                     pass
+
+        # e.g. "!command >user arg1 arg2"
+        if self.args and self.args[0].startswith(">"):
+            self._reply_nick = self.args.pop(0)[1:]
 
     def _parse_kwargs(self):
         """Parse keyword arguments embedded in self.args.
@@ -150,6 +161,11 @@ class Data(object):
     def host(self):
         """Hostname of the sender."""
         return self._host
+
+    @property
+    def reply_nick(self):
+        """Nickname of the person to reply to. Sender by default."""
+        return self._reply_nick
 
     @property
     def msg(self):
@@ -210,3 +226,12 @@ class Data(object):
         arguments.
         """
         return self._kwargs
+
+    def serialize(self):
+        """Serialize this object into a tuple and return it."""
+        return (self._my_nick, self._line, self._msgtype)
+
+    @classmethod
+    def unserialize(cls, data):
+        """Return a new Data object built from a serialized tuple."""
+        return cls(*data)

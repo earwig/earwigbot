@@ -20,34 +20,33 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from urllib import quote_plus
-
-from earwigbot import exceptions
 from earwigbot.commands import Command
 
-class Editcount(Command):
-    """Return a user's edit count."""
-    name = "editcount"
-    commands = ["ec", "editcount"]
+class Watchers(Command):
+    """Get the number of users watching a given page."""
+    name = "watchers"
 
     def process(self, data):
         if not data.args:
-            name = data.nick
-        else:
-            name = ' '.join(data.args)
-
-        site = self.bot.wiki.get_site()
-        user = site.get_user(name)
-
-        try:
-            count = user.editcount
-        except exceptions.UserNotFoundError:
-            msg = "The user \x0302{0}\x0F does not exist."
-            self.reply(data, msg.format(name))
+            msg = "Which page do you want me to count the watchers of?"
+            self.reply(data, msg)
             return
 
-        safe = quote_plus(user.name.encode("utf8"))
-        url = "http://tools.wmflabs.org/xtools-ec/index.php?user={0}&lang={1}&wiki={2}"
-        fullurl = url.format(safe, site.lang, site.project)
-        msg = "\x0302{0}\x0F has {1} edits ({2})."
-        self.reply(data, msg.format(name, count, fullurl))
+        site = self.bot.wiki.get_site()
+        query = site.api_query(action="query", prop="info", inprop="watchers",
+                               titles=" ".join(data.args))
+        page = query["query"]["pages"].values()[0]
+        title = page["title"].encode("utf8")
+
+        if "invalid" in page:
+            msg = "\x0302{0}\x0F is an invalid page title."
+            self.reply(data, msg.format(title))
+            return
+
+        if "watchers" in page:
+            watchers = page["watchers"]
+        else:
+            watchers = "<30"
+        plural = "" if watchers == 1 else "s"
+        msg = "\x0302{0}\x0F has \x02{1}\x0F watcher{2}."
+        self.reply(data, msg.format(title, watchers, plural))

@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,14 +23,14 @@
 from earwigbot.commands import Command
 
 class Langcode(Command):
-    """Convert a language code into its name and a list of WMF sites in that
-    language, or a name into its code."""
+    """Convert a language code into its name (or vice versa), and give a list
+    of WMF sites in that language."""
     name = "langcode"
     commands = ["langcode", "lang", "language"]
 
     def process(self, data):
         if not data.args:
-            self.reply(data, "Please specify a language code.")
+            self.reply(data, "Please specify a language code or name.")
             return
 
         code, lcase = data.args[0], data.args[0].lower()

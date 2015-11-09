@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@ from earwigbot import exceptions
 from earwigbot.commands import Command
 
 class Lag(Command):
-    """Return the replag for a specific database on the Toolserver."""
+    """Return replag or maxlag information on specific databases."""
     name = "lag"
     commands = ["lag", "replag", "maxlag"]
 
@@ -45,7 +45,7 @@ class Lag(Command):
         self.reply(data, msg)
 
     def get_replag(self, site):
-        return "Toolserver replag is {0}".format(self.time(site.get_replag()))
+        return "replag is {0}".format(self.time(site.get_replag()))
 
     def get_maxlag(self, site):
         return "database maxlag is {0}".format(self.time(site.get_maxlag()))

@@ -42,5 +42,5 @@ Tips
 
 .. _logging:         http://docs.python.org/library/logging.html
 .. _!git plugin:     https://github.com/earwig/earwigbot-plugins/blob/develop/commands/git.py
-.. _Let me know:     ben.kurtovic@verizon.net
+.. _Let me know:     ben.kurtovic@gmail.com
 .. _create an issue: https://github.com/earwig/earwigbot/issues

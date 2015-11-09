@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,9 +22,10 @@
 
 import hashlib
 
-from Crypto.Cipher import Blowfish
-
+from earwigbot import importer
 from earwigbot.commands import Command
+
+Blowfish = importer.new("Crypto.Cipher.Blowfish")
 
 class Crypt(Command):
     """Provides hash functions with !hash (!hash list for supported algorithms)
@@ -66,7 +67,13 @@ class Crypt(Command):
                 self.reply(data, msg.format(data.command))
                 return
 
-            cipher = Blowfish.new(hashlib.sha256(key).digest())
+            try:
+                cipher = Blowfish.new(hashlib.sha256(key).digest())
+            except ImportError:
+                msg = "This command requires the 'pycrypto' package: https://www.dlitz.net/software/pycrypto/"
+                self.reply(data, msg)
+                return
+
             try:
                 if data.command == "encrypt":
                     if len(text) % 8:
@@ -75,5 +82,5 @@ class Crypt(Command):
                     self.reply(data, cipher.encrypt(text).encode("hex"))
                 else:
                     self.reply(data, cipher.decrypt(text.decode("hex")))
-            except ValueError as error:
+            except (ValueError, TypeError) as error:
                 self.reply(data, error.message)

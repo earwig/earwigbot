@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,18 +24,23 @@ from datetime import datetime
 from math import floor
 from time import time
 
-import pytz
-
+from earwigbot import importer
 from earwigbot.commands import Command
 
+pytz = importer.new("pytz")
+
 class Time(Command):
-    """Report the current time in any timezone (UTC default), or in beats."""
+    """Report the current time in any timezone (UTC default), UNIX epoch time,
+    or beat time."""
     name = "time"
-    commands = ["time", "beats", "swatch"]
+    commands = ["time", "beats", "swatch", "epoch", "date"]
 
     def process(self, data):
         if data.command in ["beats", "swatch"]:
             self.do_beats(data)
+            return
+        if data.command == "epoch":
+            self.reply(data, time())
             return
         if data.args:
             timezone = data.args[0]
@@ -52,12 +57,12 @@ class Time(Command):
         self.reply(data, "@{0:0>3}".format(beats))
 
     def do_time(self, data, timezone):
-        if not pytz:
-            msg = "This command requires the 'pytz' module: http://pytz.sourceforge.net/"
-            self.reply(data, msg)
-            return
         try:
             tzinfo = pytz.timezone(timezone)
+        except ImportError:
+            msg = "This command requires the 'pytz' package: http://pytz.sourceforge.net/"
+            self.reply(data, msg)
+            return
         except pytz.exceptions.UnknownTimeZoneError:
             self.reply(data, "Unknown timezone: {0}.".format(timezone))
             return

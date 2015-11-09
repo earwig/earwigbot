@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,7 @@ from earwigbot.commands import Command
 class Dictionary(Command):
     """Define words and stuff."""
     name = "dictionary"
-    commands = ["dict", "dictionary", "define"]
+    commands = ["dict", "dictionary", "define", "def"]
 
     def process(self, data):
         if not data.args:
@@ -64,6 +64,16 @@ class Dictionary(Command):
         level, languages = self.get_languages(entry)
         if not languages:
             return u"Couldn't parse {0}!".format(page.url)
+
+        if "#" in term:  # Requesting a specific language
+            lcase_langs = {lang.lower(): lang for lang in languages}
+            request = term.rsplit("#", 1)[1]
+            lang = lcase_langs.get(request.lower())
+            if not lang:
+                resp = u"Language {0} not found in definition."
+                return resp.format(request)
+            definition = self.get_definition(languages[lang], level)
+            return u"({0}) {1}".format(lang, definition)
 
         result = []
         for lang, section in sorted(languages.items()):

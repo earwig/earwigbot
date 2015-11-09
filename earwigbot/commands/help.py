@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,17 +20,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from platform import python_version
 import re
 
+from earwigbot import __version__
 from earwigbot.commands import Command
 
 class Help(Command):
-    """Displays help information."""
+    """Displays information about the bot."""
     name = "help"
+    commands = ["help", "version"]
 
     def check(self, data):
         if data.is_command:
-            if data.command == "help":
+            if data.command in self.commands:
                 return True
             if not data.command and data.trigger == data.my_nick:
                 return True
@@ -39,6 +42,8 @@ class Help(Command):
     def process(self, data):
         if not data.command:
             self.do_hello(data)
+        elif data.command == "version":
+            self.do_version(data)
         elif data.args:
             self.do_command_help(data)
         else:
@@ -69,3 +74,7 @@ class Help(Command):
 
     def do_hello(self, data):
         self.say(data.chan, "Yes, {0}?".format(data.nick))
+
+    def do_version(self, data):
+        vers = "EarwigBot v{bot} on Python {python}: https://github.com/earwig/earwigbot"
+        self.reply(data, vers.format(bot=__version__, python=python_version()))

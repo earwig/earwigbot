@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -50,7 +50,8 @@ class Notes(Command):
         }
 
         if not data.args:
-            msg = "\x0302The Earwig Mini-Wiki\x0F: running v{0}. Subcommands are: {1}. You can get help on any with '!{2} help subcommand'."
+            msg = ("\x0302The Earwig Mini-Wiki\x0F: running v{0}. Subcommands "
+                   "are: {1}. You can get help on any with '!{2} help subcommand'.")
             cmnds = ", ".join((commands))
             self.reply(data, msg.format(self.version, cmnds, data.command))
             return
@@ -101,7 +102,7 @@ class Notes(Command):
                 entries = []
 
         if entries:
-            entries = [entry[0] for entry in entries]
+            entries = [entry[0].encode("utf8") for entry in entries]
             self.reply(data, "Entries: {0}".format(", ".join(entries)))
         else:
             self.reply(data, "No entries in the database.")
@@ -123,8 +124,10 @@ class Notes(Command):
             except (sqlite.OperationalError, TypeError):
                 title, content = slug, None
 
+        title = title.encode("utf8")
         if content:
-            self.reply(data, "\x0302{0}\x0F: {1}".format(title, content))
+            msg = "\x0302{0}\x0F: {1}"
+            self.reply(data, msg.format(title, content.encode("utf8")))
         else:
             self.reply(data, "Entry \x0302{0}\x0F not found.".format(title))
 
@@ -142,7 +145,7 @@ class Notes(Command):
         except IndexError:
             self.reply(data, "Please specify an entry to edit.")
             return
-        content = " ".join(data.args[2:]).strip()
+        content = " ".join(data.args[2:]).strip().decode("utf8")
         if not content:
             self.reply(data, "Please give some content to put in the entry.")
             return
@@ -153,11 +156,11 @@ class Notes(Command):
                 id_, title, author = conn.execute(query1, (slug,)).fetchone()
                 create = False
             except sqlite.OperationalError:
-                id_, title, author = 1, data.args[1], data.host
+                id_, title, author = 1, data.args[1].decode("utf8"), data.host
                 self.create_db(conn)
             except TypeError:
                 id_ = self.get_next_entry(conn)
-                title, author = data.args[1], data.host
+                title, author = data.args[1].decode("utf8"), data.host
             permdb = self.config.irc["permissions"]
             if author != data.host and not permdb.is_admin(data):
                 msg = "You must be an author or a bot admin to edit this entry."
@@ -172,7 +175,8 @@ class Notes(Command):
             else:
                 conn.execute(query4, (revid, id_))
 
-        self.reply(data, "Entry \x0302{0}\x0F updated.".format(title))
+        msg = "Entry \x0302{0}\x0F updated."
+        self.reply(data, msg.format(title.encode("utf8")))
 
     def do_info(self, data):
         """Get info on an entry in the notes database."""
@@ -197,7 +201,7 @@ class Notes(Command):
             times = [datum[1] for datum in info]
             earliest = min(times)
             msg = "\x0302{0}\x0F: {1} edits since {2}"
-            msg = msg.format(title, len(info), earliest)
+            msg = msg.format(title.encode("utf8"), len(info), earliest)
             if len(times) > 1:
                 latest = max(times)
                 msg += "; last edit on {0}".format(latest)
@@ -242,7 +246,8 @@ class Notes(Command):
                 msg = "You must be an author or a bot admin to rename this entry."
                 self.reply(data, msg)
                 return
-            conn.execute(query2, (self.slugify(newtitle), newtitle, id_))
+            args = (self.slugify(newtitle), newtitle.decode("utf8"), id_)
+            conn.execute(query2, args)
 
         msg = "Entry \x0302{0}\x0F renamed to \x0302{1}\x0F."
         self.reply(data, msg.format(data.args[1], newtitle))
@@ -280,7 +285,7 @@ class Notes(Command):
 
     def slugify(self, name):
         """Convert *name* into an identifier for storing in the database."""
-        return name.lower().replace("_", "").replace("-", "")
+        return name.lower().replace("_", "").replace("-", "").decode("utf8")
 
     def create_db(self, conn):
         """Initialize the notes database with its necessary tables."""

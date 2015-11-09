@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -131,10 +131,24 @@ class _ResourceManager(object):
             if modname in disabled:
                 log = "Skipping disabled module {0}".format(modname)
                 self.logger.debug(log)
+                processed.append(modname)
                 continue
             if modname not in processed:
                 self._load_module(modname, dir)
                 processed.append(modname)
+
+    def _unload_resources(self):
+        """Unload all resources, calling their unload hooks in the process."""
+        res_type = self._resource_name[:-1]  # e.g. "command" or "task"
+        for resource in self:
+            if not hasattr(resource, "unload"):
+                continue
+            try:
+                resource.unload()
+            except Exception:
+                e = "Error unloading {0} '{1}'"
+                self.logger.exception(e.format(res_type, resource.name))
+        self._resources.clear()
 
     @property
     def lock(self):
@@ -145,7 +159,7 @@ class _ResourceManager(object):
         """Load (or reload) all valid resources into :py:attr:`_resources`."""
         name = self._resource_name  # e.g. "commands" or "tasks"
         with self.lock:
-            self._resources.clear()
+            self._unload_resources()
             builtin_dir = path.join(path.dirname(__file__), name)
             plugins_dir = path.join(self.bot.config.root_dir, name)
             if getattr(self.bot.config, name).get("disable") is True:
@@ -200,7 +214,11 @@ class CommandManager(_ResourceManager):
             self.logger.exception(e.format(command.name))
 
     def call(self, hook, data):
-        """Respond to a hook type and a :py:class:`Data` object."""
+        """Respond to a hook type and a :py:class:`~.Data` object.
+
+        .. note::
+           The special ``rc`` hook actually passes a :class:`~.RC` object.
+        """
         for command in self:
             if hook in command.hooks and self._wrap_check(command, data):
                 thread = Thread(target=self._wrap_process,

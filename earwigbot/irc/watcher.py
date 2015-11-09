@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,6 @@
 # SOFTWARE.
 
 import imp
-import os
 
 from earwigbot.irc import IRCConnection, RC
 
@@ -72,6 +71,7 @@ class Watcher(IRCConnection):
             rc = RC(chan, msg)  # New RC object to store this event's data
             rc.parse()  # Parse a message into pagenames, usernames, etc.
             self._process_rc_event(rc)
+            self.bot.commands.call("rc", rc)
 
         # When we've finished starting up, join all watcher channels:
         elif line[1] == "376":

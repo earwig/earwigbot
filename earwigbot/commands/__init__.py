@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -43,9 +43,9 @@ class Command(object):
     # be triggered by the command's name and its name only:
     commands = []
 
-    # Hooks are "msg", "msg_private", "msg_public", and "join". "msg" is the
-    # default behavior; if you wish to override that, change the value in your
-    # command subclass:
+    # Hooks are "msg", "msg_private", "msg_public", "join", "part", and "rc".
+    # "msg" is the default behavior; if you wish to override that, change the
+    # value in your command subclass:
     hooks = ["msg"]
 
     def __init__(self, bot):
@@ -118,5 +118,12 @@ class Command(object):
         to :py:meth:`check` which is called automatically by the command
         handler, we know this is something we should respond to. Place your
         command's body here.
+        """
+        pass
+
+    def unload(self):
+        """Hook called immediately before a command is unloaded.
+
+        Does nothing by default; feel free to override.
         """
         pass

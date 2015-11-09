@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,19 +26,19 @@ from json import loads
 from logging import getLogger, NullHandler
 from os.path import expanduser
 from StringIO import StringIO
-from threading import Lock
+from threading import RLock
 from time import sleep, time
 from urllib import quote_plus, unquote_plus
 from urllib2 import build_opener, HTTPCookieProcessor, URLError
 from urlparse import urlparse
 
-import oursql
-
-from earwigbot import exceptions
+from earwigbot import exceptions, importer
 from earwigbot.wiki import constants
 from earwigbot.wiki.category import Category
 from earwigbot.wiki.page import Page
 from earwigbot.wiki.user import User
+
+oursql = importer.new("oursql")
 
 __all__ = ["Site"]
 
@@ -73,6 +73,7 @@ class Site(object):
     - :py:meth:`sql_query`:            does an SQL query and yields its results
     - :py:meth:`get_maxlag`:           returns the internal database lag
     - :py:meth:`get_replag`:           estimates the external database lag
+    - :py:meth:`get_token`:            gets a token for a specific API action
     - :py:meth:`namespace_id_to_name`: returns names associated with an NS id
     - :py:meth:`namespace_name_to_id`: returns the ID associated with a NS name
     - :py:meth:`get_page`:             returns a Page for the given title
@@ -82,11 +83,13 @@ class Site(object):
     """
     SERVICE_API = 1
     SERVICE_SQL = 2
+    SPECIAL_TOKENS = ["deleteglobalaccount", "patrol", "rollback",
+                      "setglobalaccountstatus", "userrights", "watch"]
 
     def __init__(self, name=None, project=None, lang=None, base_url=None,
                  article_path=None, script_path=None, sql=None,
                  namespaces=None, login=(None, None), cookiejar=None,
-                 user_agent=None, use_https=False, assert_edit=None,
+                 user_agent=None, use_https=True, assert_edit=None,
                  maxlag=None, wait_between_queries=2, logger=None,
                  search_config=None):
         """Constructor for new Site instances.
@@ -123,7 +126,8 @@ class Site(object):
         self._wait_between_queries = wait_between_queries
         self._max_retries = 6
         self._last_query_time = 0
-        self._api_lock = Lock()
+        self._tokens = {}
+        self._api_lock = RLock()
         self._api_info_cache = {"maxlag": 0, "lastcheck": 0}
 
         # Attributes used for SQL queries:
@@ -132,7 +136,7 @@ class Site(object):
         else:
             self._sql_data = {}
         self._sql_conn = None
-        self._sql_lock = Lock()
+        self._sql_lock = RLock()
         self._sql_info_cache = {"replag": 0, "lastcheck": 0, "usable": None}
 
         # Attribute used in copyright violation checks (see CopyrightMixIn):
@@ -209,11 +213,13 @@ class Site(object):
             args.append(key + "=" + val)
         return "&".join(args)
 
-    def _api_query(self, params, tries=0, wait=5, ignore_maxlag=False):
+    def _api_query(self, params, tries=0, wait=5, ignore_maxlag=False,
+                   no_assert=False, ae_retry=True):
         """Do an API query with *params* as a dict of parameters.
 
         See the documentation for :py:meth:`api_query` for full implementation
-        details.
+        details. *tries*, *wait*, and *ignore_maxlag* are for maxlag;
+        *no_assert* and *ae_retry* are for AssertEdit.
         """
         since_last_query = time() - self._last_query_time  # Throttling support
         if since_last_query < self._wait_between_queries:
@@ -223,7 +229,7 @@ class Site(object):
             sleep(wait_time)
         self._last_query_time = time()
 
-        url, data = self._build_api_query(params, ignore_maxlag)
+        url, data = self._build_api_query(params, ignore_maxlag, no_assert)
         if "lgpassword" in params:
             self._logger.debug("{0} -> <hidden>".format(url))
         else:
@@ -247,26 +253,42 @@ class Site(object):
             gzipper = GzipFile(fileobj=stream)
             result = gzipper.read()
 
-        return self._handle_api_query_result(result, params, tries, wait)
+        return self._handle_api_result(result, params, tries, wait, ae_retry)
 
-    def _build_api_query(self, params, ignore_maxlag):
+    def _request_csrf_token(self, params):
+        """If possible, add a request for a CSRF token to an API query."""
+        if params.get("action") == "query":
+            if params.get("meta"):
+                if "tokens" not in params["meta"].split("|"):
+                    params["meta"] += "|tokens"
+            else:
+                params["meta"] = "tokens"
+            if params.get("type"):
+                if "csrf" not in params["type"].split("|"):
+                    params["type"] += "|csrf"
+
+    def _build_api_query(self, params, ignore_maxlag, no_assert):
         """Given API query params, return the URL to query and POST data."""
         if not self._base_url or self._script_path is None:
             e = "Tried to do an API query, but no API URL is known."
             raise exceptions.APIError(e)
 
-        url = ''.join((self.url, self._script_path, "/api.php"))
+        url = self.url + self._script_path + "/api.php"
         params["format"] = "json"  # This is the only format we understand
-        if self._assert_edit:  # If requested, ensure that we're logged in
+        if self._assert_edit and not no_assert:
+            # If requested, ensure that we're logged in
             params["assert"] = self._assert_edit
         if self._maxlag and not ignore_maxlag:
             # If requested, don't overload the servers:
             params["maxlag"] = self._maxlag
+        if "csrf" not in self._tokens:
+            # If we don't have a CSRF token, try to fetch one:
+            self._request_csrf_token(params)
 
         data = self._urlencode_utf8(params)
         return url, data
 
-    def _handle_api_query_result(self, result, params, tries, wait):
+    def _handle_api_result(self, result, params, tries, wait, ae_retry):
         """Given the result of an API query, attempt to return useful data."""
         try:
             res = loads(result)  # Try to parse as a JSON object
@@ -277,8 +299,11 @@ class Site(object):
         try:
             code = res["error"]["code"]
             info = res["error"]["info"]
-        except (TypeError, KeyError):  # Having these keys indicates a problem
-            return res  # All is well; return the decoded JSON
+        except (TypeError, KeyError):  # If there's no error code/info, return
+            if "query" in res and "tokens" in res["query"]:
+                for name, token in res["query"]["tokens"].iteritems():
+                    self._tokens[name.split("token")[0]] = token
+            return res
 
         if code == "maxlag":  # We've been throttled by the server
             if tries >= self._max_retries:
@@ -288,7 +313,21 @@ class Site(object):
             msg = 'Server says "{0}"; retrying in {1} seconds ({2}/{3})'
             self._logger.info(msg.format(info, wait, tries, self._max_retries))
             sleep(wait)
-            return self._api_query(params, tries=tries, wait=wait*2)
+            return self._api_query(params, tries, wait * 2, ae_retry=ae_retry)
+        elif code in ["assertuserfailed", "assertbotfailed"]:  # AssertEdit
+            if ae_retry and all(self._login_info):
+                # Try to log in if we got logged out:
+                self._login(self._login_info)
+                if "token" in params:  # Fetch a new one; this is invalid now
+                    params["token"] = self.get_token(params["action"])
+                return self._api_query(params, tries, wait, ae_retry=False)
+            if not all(self._login_info):
+                e = "Assertion failed, and no login info was provided."
+            elif code == "assertbotfailed":
+                e = "Bot assertion failed: we don't have a bot flag!"
+            else:
+                e = "User assertion failed due to an unknown issue. Cookie problem?"
+            raise exceptions.PermissionsError("AssertEdit: " + e)
         else:  # Some unknown error occurred
             e = 'API query failed: got error "{0}"; server says: "{1}".'
             error = exceptions.APIError(e.format(code, info))
@@ -308,18 +347,20 @@ class Site(object):
         # All attributes to be loaded, except _namespaces, which is a special
         # case because it requires additional params in the API query:
         attrs = [self._name, self._project, self._lang, self._base_url,
-            self._article_path, self._script_path]
+                 self._article_path, self._script_path]
 
         params = {"action": "query", "meta": "siteinfo", "siprop": "general"}
 
         if not self._namespaces or force:
             params["siprop"] += "|namespaces|namespacealiases"
-            result = self.api_query(**params)
+            with self._api_lock:
+                result = self._api_query(params, no_assert=True)
             self._load_namespaces(result)
         elif all(attrs):  # Everything is already specified and we're not told
             return        # to force a reload, so do nothing
         else:  # We're only loading attributes other than _namespaces
-            result = self.api_query(**params)
+            with self._api_lock:
+                result = self._api_query(params, no_assert=True)
 
         res = result["query"]["general"]
         self._name = res["wikiid"]
@@ -465,13 +506,14 @@ class Site(object):
         from our first request, and *attempt* is to prevent getting stuck in a
         loop if MediaWiki isn't acting right.
         """
+        self._tokens.clear()
         name, password = login
+
+        params = {"action": "login", "lgname": name, "lgpassword": password}
         if token:
-            result = self.api_query(action="login", lgname=name,
-                                    lgpassword=password, lgtoken=token)
-        else:
-            result = self.api_query(action="login", lgname=name,
-                                    lgpassword=password)
+            params["lgtoken"] = token
+        with self._api_lock:
+            result = self._api_query(params, no_assert=True)
 
         res = result["login"]["result"]
         if res == "Success":
@@ -514,24 +556,23 @@ class Site(object):
         may raise its own exceptions (e.g. oursql.InterfaceError) if it cannot
         establish a connection.
         """
-        if not oursql:
-            e = "Module 'oursql' is required for SQL queries."
-            raise exceptions.SQLError(e)
-
         args = self._sql_data
         for key, value in kwargs.iteritems():
             args[key] = value
-
         if "read_default_file" not in args and "user" not in args and "passwd" not in args:
             args["read_default_file"] = expanduser("~/.my.cnf")
-
+        elif "read_default_file" in args:
+            args["read_default_file"] = expanduser(args["read_default_file"])
         if "autoping" not in args:
             args["autoping"] = True
-
         if "autoreconnect" not in args:
             args["autoreconnect"] = True
 
-        self._sql_conn = oursql.connect(**args)
+        try:
+            self._sql_conn = oursql.connect(**args)
+        except ImportError:
+            e = "SQL querying requires the 'oursql' package: http://packages.python.org/oursql/"
+            raise exceptions.SQLError(e)
 
     def _get_service_order(self):
         """Return a preferred order for using services (e.g. the API and SQL).
@@ -639,13 +680,13 @@ class Site(object):
         query until we exceed :py:attr:`self._max_retries`.
 
         There is helpful MediaWiki API documentation at `MediaWiki.org
-        <http://www.mediawiki.org/wiki/API>`_.
+        <https://www.mediawiki.org/wiki/API>`_.
         """
         with self._api_lock:
             return self._api_query(kwargs)
 
     def sql_query(self, query, params=(), plain_query=False, dict_cursor=False,
-                  cursor_class=None, show_table=False):
+                  cursor_class=None, show_table=False, buffsize=1024):
         """Do an SQL query and yield its results.
 
         If *plain_query* is ``True``, we will force an unparameterized query.
@@ -655,6 +696,13 @@ class Site(object):
         *cursor_class* is given, it will override this option. If *show_table*
         is True, the name of the table will be prepended to the name of the
         column. This will mainly affect an :py:class:`~oursql.DictCursor`.
+
+        *buffsize* is the size of each memory-buffered group of results, to
+        reduce the number of conversations with the database; it is passed to
+        :py:meth:`cursor.fetchmany() <oursql.Cursor.fetchmany>`. If set to
+        ``0```, all results will be buffered in memory at once (this uses
+        :py:meth:`fetchall() <oursql.Cursor.fetchall>`). If set to ``1``, it is
+        equivalent to using :py:meth:`fetchone() <oursql.Cursor.fetchone>`.
 
         Example usage::
 
@@ -688,7 +736,14 @@ class Site(object):
                 self._sql_connect()
             with self._sql_conn.cursor(klass, show_table=show_table) as cur:
                 cur.execute(query, params, plain_query)
-                for result in cur:
+                if buffsize:
+                    while True:
+                        group = cur.fetchmany(buffsize)
+                        if not group:
+                            return
+                        for result in group:
+                            yield result
+                for result in cur.fetchall():
                     yield result
 
     def get_maxlag(self, showall=False):
@@ -729,7 +784,28 @@ class Site(object):
         query = """SELECT UNIX_TIMESTAMP() - UNIX_TIMESTAMP(rc_timestamp) FROM
                    recentchanges ORDER BY rc_timestamp DESC LIMIT 1"""
         result = list(self.sql_query(query))
-        return result[0][0]
+        return int(result[0][0])
+
+    def get_token(self, action=None, force=False):
+        """Return a token for a data-modifying API action.
+
+        In general, this will be a CSRF token, unless *action* is in a special
+        list of non-CSRF tokens. Tokens are cached for the session (until
+        :meth:`_login` is called again); set *force* to ``True`` to force a new
+        token to be fetched.
+
+        Raises :exc:`.APIError` if there was an API issue.
+        """
+        if action not in self.SPECIAL_TOKENS:
+            action = "csrf"
+        if action in self._tokens and not force:
+            return self._tokens[action]
+
+        res = self.api_query(action="query", meta="tokens", type=action)
+        if action not in self._tokens:
+            err = "Tried to fetch a {0} token, but API returned: {1}"
+            raise exceptions.APIError(err.format(action, res))
+        return self._tokens[action]
 
     def namespace_id_to_name(self, ns_id, all=False):
         """Given a namespace ID, returns associated namespace names.
@@ -768,7 +844,7 @@ class Site(object):
             if lname in lnames:
                 return ns_id
 
-        e = "There is no namespace with name '{0}'.".format(name)
+        e = u"There is no namespace with name '{0}'.".format(name)
         raise exceptions.NamespaceNotFoundError(e)
 
     def get_page(self, title, follow_redirects=False, pageid=None):
@@ -826,7 +902,7 @@ class Site(object):
         (:py:attr:`self.SERVICE_API <SERVICE_API>` or
         :py:attr:`self.SERVICE_SQL <SERVICE_SQL>`), and the value is the
         function to call for this service. All functions will be passed the
-        same arguments the tuple *args* and the dict **kwargs**, which are both
+        same arguments the tuple *args* and the dict *kwargs*, which are both
         empty by default. The service order is determined by
         :py:meth:`_get_service_order`.
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -73,7 +73,7 @@ class Calc(Command):
             ('\$', 'USD '),
             (r'\bKB\b', 'kilobytes'),
             (r'\bMB\b', 'megabytes'),
-            (r'\bGB\b', 'kilobytes'),
+            (r'\bGB\b', 'gigabytes'),
             ('kbps', '(kilobits / second)'),
             ('mbps', '(megabits / second)')
         ]

@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -21,18 +21,31 @@
 # SOFTWARE.
 
 from os import path
+import re
+from StringIO import StringIO
 
-import bs4
 import mwparserfromhell
-import nltk
 
-__all__ = ["BaseTextParser", "ArticleTextParser", "HTMLTextParser"]
+from earwigbot import importer
+from earwigbot.exceptions import ParserExclusionError
 
-class BaseTextParser(object):
+bs4 = importer.new("bs4")
+nltk = importer.new("nltk")
+converter = importer.new("pdfminer.converter")
+pdfinterp = importer.new("pdfminer.pdfinterp")
+pdfpage = importer.new("pdfminer.pdfpage")
+pdftypes = importer.new("pdfminer.pdftypes")
+psparser = importer.new("pdfminer.psparser")
+
+__all__ = ["ArticleTextParser", "get_parser"]
+
+class _BaseTextParser(object):
     """Base class for a parser that handles text."""
+    TYPE = None
 
-    def __init__(self, text):
+    def __init__(self, text, args=None):
         self.text = text
+        self._args = args or {}
 
     def __repr__(self):
         """Return the canonical string representation of the text parser."""
@@ -44,8 +57,24 @@ class BaseTextParser(object):
         return "<{0} of text with size {1}>".format(name, len(self.text))
 
 
-class ArticleTextParser(BaseTextParser):
+class ArticleTextParser(_BaseTextParser):
     """A parser that can strip and chunk wikicode article text."""
+    TYPE = "Article"
+    TEMPLATE_MERGE_THRESHOLD = 35
+
+    def _merge_templates(self, code):
+        """Merge template contents in to wikicode when the values are long."""
+        for template in code.filter_templates(recursive=code.RECURSE_OTHERS):
+            chunks = []
+            for param in template.params:
+                if len(param.value) >= self.TEMPLATE_MERGE_THRESHOLD:
+                    self._merge_templates(param.value)
+                    chunks.append(param.value)
+            if chunks:
+                subst = u" ".join(map(unicode, chunks))
+                code.replace(template, u" " + subst + u" ")
+            else:
+                code.remove(template)
 
     def strip(self):
         """Clean the page's raw text by removing templates and formatting.
@@ -58,12 +87,38 @@ class ArticleTextParser(BaseTextParser):
 
         The actual stripping is handled by :py:mod:`mwparserfromhell`.
         """
+        def remove(code, node):
+            """Remove a node from a code object, ignoring ValueError.
+
+            Sometimes we will remove a node that contains another node we wish
+            to remove, and we fail when we try to remove the inner one. Easiest
+            solution is to just ignore the exception.
+            """
+            try:
+                code.remove(node)
+            except ValueError:
+                pass
+
         wikicode = mwparserfromhell.parse(self.text)
+
+        # Preemtively strip some links mwparser doesn't know about:
+        bad_prefixes = ("file:", "image:", "category:")
+        for link in wikicode.filter_wikilinks():
+            if link.title.strip().lower().startswith(bad_prefixes):
+                remove(wikicode, link)
+
+        # Also strip references:
+        for tag in wikicode.filter_tags(matches=lambda tag: tag.tag == "ref"):
+            remove(wikicode, tag)
+
+        # Merge in template contents when the values are long:
+        self._merge_templates(wikicode)
+
         clean = wikicode.strip_code(normalize=True, collapse=True)
-        self.clean = clean.replace("\n\n", "\n")  # Collapse extra newlines
+        self.clean = re.sub("\n\n+", "\n", clean).strip()
         return self.clean
 
-    def chunk(self, nltk_dir, max_chunks, max_query=256):
+    def chunk(self, nltk_dir, max_chunks, min_query=8, max_query=128):
         """Convert the clean article text into a list of web-searchable chunks.
 
         No greater than *max_chunks* will be returned. Each chunk will only be
@@ -91,6 +146,8 @@ class ArticleTextParser(BaseTextParser):
                 while len(" ".join(words)) > max_query:
                     words.pop()
                 sentence = " ".join(words)
+            if len(sentence) < min_query:
+                continue
             sentences.append(sentence)
 
         if max_chunks >= len(sentences):
@@ -109,30 +166,109 @@ class ArticleTextParser(BaseTextParser):
             else:
                 chunk = sentences.pop(3 * len(sentences) / 4)  # Pop from Q3
             chunks.append(chunk)
-
         return chunks
 
+    def get_links(self):
+        """Return a list of all external links in the article.
 
-class HTMLTextParser(BaseTextParser):
+        The list is restricted to things that we suspect we can parse: i.e.,
+        those with schemes of ``http`` and ``https``.
+        """
+        schemes = ("http://", "https://")
+        links = mwparserfromhell.parse(self.text).ifilter_external_links()
+        return [unicode(link.url) for link in links
+                if link.url.startswith(schemes)]
+
+
+class _HTMLParser(_BaseTextParser):
     """A parser that can extract the text from an HTML document."""
+    TYPE = "HTML"
     hidden_tags = [
         "script", "style"
     ]
 
-    def strip(self):
+    def parse(self):
         """Return the actual text contained within an HTML document.
 
         Implemented using :py:mod:`BeautifulSoup <bs4>`
         (http://www.crummy.com/software/BeautifulSoup/).
         """
         try:
-            soup = bs4.BeautifulSoup(self.text, "lxml").body
+            soup = bs4.BeautifulSoup(self.text, "lxml")
         except ValueError:
-            soup = bs4.BeautifulSoup(self.text).body
+            soup = bs4.BeautifulSoup(self.text)
 
+        if not soup.body:
+            # No <body> tag present in HTML ->
+            # no scrapable content (possibly JS or <frame> magic):
+            return ""
+
+        if "mirror_hints" in self._args:
+            # Look for obvious signs that this is a mirror:
+            func = lambda attr: attr and any(
+                hint in attr for hint in self._args["mirror_hints"])
+            if soup.find_all(href=func) or soup.find_all(src=func):
+                raise ParserExclusionError()
+
+        soup = soup.body
         is_comment = lambda text: isinstance(text, bs4.element.Comment)
-        [comment.extract() for comment in soup.find_all(text=is_comment)]
+        for comment in soup.find_all(text=is_comment):
+            comment.extract()
         for tag in self.hidden_tags:
-            [element.extract() for element in soup.find_all(tag)]
+            for element in soup.find_all(tag):
+                element.extract()
 
         return "\n".join(soup.stripped_strings)
+
+
+class _PDFParser(_BaseTextParser):
+    """A parser that can extract text from a PDF file."""
+    TYPE = "PDF"
+    substitutions = [
+        (u"\x0c", u"\n"),
+        (u"\u2022", u" "),
+    ]
+
+    def parse(self):
+        """Return extracted text from the PDF."""
+        output = StringIO()
+        manager = pdfinterp.PDFResourceManager()
+        conv = converter.TextConverter(manager, output)
+        interp = pdfinterp.PDFPageInterpreter(manager, conv)
+
+        try:
+            pages = pdfpage.PDFPage.get_pages(StringIO(self.text))
+            for page in pages:
+                interp.process_page(page)
+        except (pdftypes.PDFException, psparser.PSException, AssertionError):
+            return output.getvalue().decode("utf8")
+        finally:
+            conv.close()
+
+        value = output.getvalue().decode("utf8")
+        for orig, new in self.substitutions:
+            value = value.replace(orig, new)
+        return re.sub("\n\n+", "\n", value).strip()
+
+
+class _PlainTextParser(_BaseTextParser):
+    """A parser that can unicode-ify and strip text from a plain text page."""
+    TYPE = "Text"
+
+    def parse(self):
+        """Unicode-ify and strip whitespace from the plain text document."""
+        converted = bs4.UnicodeDammit(self.text).unicode_markup
+        return converted.strip() if converted else ""
+
+
+_CONTENT_TYPES = {
+    "text/html": _HTMLParser,
+    "application/xhtml+xml": _HTMLParser,
+    "application/pdf": _PDFParser,
+    "application/x-pdf": _PDFParser,
+    "text/plain": _PlainTextParser
+}
+
+def get_parser(content_type):
+    """Return the parser most able to handle a given content type, or None."""
+    return _CONTENT_TYPES.get(content_type.split(";", 1)[0])

@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,21 +20,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from gzip import GzipFile
-from socket import timeout
-from StringIO import StringIO
 from time import sleep, time
-from urllib2 import build_opener, URLError
+from urllib2 import build_opener
 
-import oauth2 as oauth
-
-from earwigbot import exceptions
-from earwigbot.wiki.copyvios.markov import MarkovChain, MarkovChainIntersection
-from earwigbot.wiki.copyvios.parsers import ArticleTextParser, HTMLTextParser
-from earwigbot.wiki.copyvios.result import CopyvioCheckResult
+from earwigbot import exceptions, importer
+from earwigbot.wiki.copyvios.markov import MarkovChain
+from earwigbot.wiki.copyvios.parsers import ArticleTextParser
 from earwigbot.wiki.copyvios.search import YahooBOSSSearchEngine
+from earwigbot.wiki.copyvios.workers import (
+    globalize, localize, CopyvioWorkspace)
 
-__all__ = ["CopyvioMixIn"]
+oauth = importer.new("oauth2")
+
+__all__ = ["CopyvioMixIn", "globalize", "localize"]
 
 class CopyvioMixIn(object):
     """
@@ -50,34 +48,9 @@ class CopyvioMixIn(object):
     def __init__(self, site):
         self._search_config = site._search_config
         self._exclusions_db = self._search_config.get("exclusions_db")
-        self._opener = build_opener()
-        self._opener.addheaders = site._opener.addheaders
+        self._addheaders = site._opener.addheaders
 
-    def _open_url_ignoring_errors(self, url):
-        """Open a URL using self._opener and return its content, or None.
-
-        Will decompress the content if the headers contain "gzip" as its
-        content encoding, and will return None if URLError is raised while
-        opening the URL. IOErrors while gunzipping a compressed response are
-        ignored, and the original content is returned.
-        """
-        try:
-            response = self._opener.open(url.encode("utf8"), timeout=5)
-        except (URLError, timeout):
-            return None
-        result = response.read()
-
-        if response.headers.get("Content-Encoding") == "gzip":
-            stream = StringIO(result)
-            gzipper = GzipFile(fileobj=stream)
-            try:
-                result = gzipper.read()
-            except IOError:
-                pass
-
-        return result
-
-    def _select_search_engine(self):
+    def _get_search_engine(self):
         """Return a function that can be called to do web searches.
 
         The function takes one argument, a search query, and returns a list of
@@ -93,137 +66,124 @@ class CopyvioMixIn(object):
         credentials = self._search_config["credentials"]
 
         if engine == "Yahoo! BOSS":
-            if not oauth:
-                e = "The package 'oauth2' could not be imported"
+            try:
+                oauth.__version__  # Force-load the lazy module
+            except ImportError:
+                e = "Yahoo! BOSS requires the 'oauth2' package: https://github.com/simplegeo/python-oauth2"
                 raise exceptions.UnsupportedSearchEngineError(e)
-            return YahooBOSSSearchEngine(credentials)
+            opener = build_opener()
+            opener.addheaders = self._addheaders
+            return YahooBOSSSearchEngine(credentials, opener)
 
         raise exceptions.UnknownSearchEngineError(engine)
 
-    def _copyvio_compare_content(self, article, url):
-        """Return a number comparing an article and a URL.
-
-        The *article* is a Markov chain, whereas the *url* is just a string
-        that we'll try to open and read ourselves.
-        """
-        html = self._open_url_ignoring_errors(url)
-        if not html:
-            return 0
-
-        source = MarkovChain(HTMLTextParser(html).strip())
-        delta = MarkovChainIntersection(article, source)
-        return float(delta.size()) / article.size(), (source, delta)
-
-    def copyvio_check(self, min_confidence=0.5, max_queries=-1,
-                      interquery_sleep=1):
+    def copyvio_check(self, min_confidence=0.75, max_queries=15, max_time=-1,
+                      no_searches=False, no_links=False, short_circuit=True):
         """Check the page for copyright violations.
 
-        Returns a
-        :py:class:`~earwigbot.wiki.copyvios.result.CopyvioCheckResult` object
-        with information on the results of the check.
+        Returns a :class:`.CopyvioCheckResult` object with information on the
+        results of the check.
+
+        *min_confidence* is the minimum amount of confidence we must have in
+        the similarity between a source text and the article in order for us to
+        consider it a suspected violation. This is a number between 0 and 1.
 
         *max_queries* is self-explanatory; we will never make more than this
-        number of queries in a given check. If it's lower than 0, we will not
-        limit the number of queries.
+        number of queries in a given check.
 
-        *interquery_sleep* is the minimum amount of time we will sleep between
-        search engine queries, in seconds.
+        *max_time* can be set to prevent copyvio checks from taking longer than
+        a set amount of time (generally around a minute), which can be useful
+        if checks are called through a web server with timeouts. We will stop
+        checking new URLs as soon as this limit is reached.
 
-        Raises :py:exc:`~earwigbot.exceptions.CopyvioCheckError` or subclasses
-        (:py:exc:`~earwigbot.exceptions.UnknownSearchEngineError`,
-        :py:exc:`~earwigbot.exceptions.SearchQueryError`, ...) on errors.
+        Setting *no_searches* to ``True`` will cause only URLs in the wikitext
+        of the page to be checked; no search engine queries will be made.
+        Setting *no_links* to ``True`` will cause the opposite to happen: URLs
+        in the wikitext will be ignored; search engine queries will be made
+        only. Setting both of these to ``True`` is pointless.
+
+        Normally, the checker will short-circuit if it finds a URL that meets
+        *min_confidence*. This behavior normally causes it to skip any
+        remaining URLs and web queries, but setting *short_circuit* to
+        ``False`` will prevent this.
+
+        Raises :exc:`.CopyvioCheckError` or subclasses
+        (:exc:`.UnknownSearchEngineError`, :exc:`.SearchQueryError`, ...) on
+        errors.
         """
-        searcher = self._select_search_engine()
+        log = u"Starting copyvio check for [[{0}]]"
+        self._logger.info(log.format(self.title))
+        searcher = self._get_search_engine()
+        parser = ArticleTextParser(self.get())
+        article = MarkovChain(parser.strip())
+        parser_args = {}
+
         if self._exclusions_db:
             self._exclusions_db.sync(self.site.name)
-        handled_urls = []
-        best_confidence = 0
-        best_match = None
-        num_queries = 0
-        empty = MarkovChain("")
-        best_chains = (empty, MarkovChainIntersection(empty, empty))
-        parser = ArticleTextParser(self.get())
-        clean = parser.strip()
-        chunks = parser.chunk(self._search_config["nltk_dir"], max_queries)
-        article_chain = MarkovChain(clean)
-        last_query = time()
-
-        if article_chain.size() < 20:  # Auto-fail very small articles
-            return CopyvioCheckResult(False, best_confidence, best_match,
-                                      num_queries, article_chain, best_chains)
-
-        while (chunks and best_confidence < min_confidence and
-               (max_queries < 0 or num_queries < max_queries)):
-            chunk = chunks.pop(0)
-            log = u"[[{0}]] -> querying {1} for {2!r}"
-            self._logger.debug(log.format(self.title, searcher.name, chunk))
-            urls = searcher.search(chunk)
-            urls = [url for url in urls if url not in handled_urls]
-            for url in urls:
-                handled_urls.append(url)
-                if self._exclusions_db:
-                    if self._exclusions_db.check(self.site.name, url):
-                        continue
-                conf, chains = self._copyvio_compare_content(article_chain, url)
-                if conf > best_confidence:
-                    best_confidence = conf
-                    best_match = url
-                    best_chains = chains
-            num_queries += 1
-            diff = time() - last_query
-            if diff < interquery_sleep:
-                sleep(interquery_sleep - diff)
-            last_query = time()
-
-        if best_confidence >= min_confidence:
-            is_violation = True
-            log = u"Violation detected for [[{0}]] (confidence: {1}; URL: {2}; using {3} queries)"
-            self._logger.debug(log.format(self.title, best_confidence,
-                                          best_match, num_queries))
+            exclude = lambda u: self._exclusions_db.check(self.site.name, u)
+            parser_args["mirror_hints"] = self._exclusions_db.get_mirror_hints(
+                self.site.name)
         else:
-            is_violation = False
-            log = u"No violation for [[{0}]] (confidence: {1}; using {2} queries)"
-            self._logger.debug(log.format(self.title, best_confidence,
-                                          num_queries))
+            exclude = None
 
-        return CopyvioCheckResult(is_violation, best_confidence, best_match,
-                                  num_queries, article_chain, best_chains)
+        workspace = CopyvioWorkspace(
+            article, min_confidence, max_time, self._logger, self._addheaders,
+            short_circuit=short_circuit, parser_args=parser_args)
 
-    def copyvio_compare(self, url, min_confidence=0.5):
+        if article.size < 20:  # Auto-fail very small articles
+            result = workspace.get_result()
+            self._logger.info(result.get_log_message(self.title))
+            return result
+
+        if not no_links:
+            workspace.enqueue(parser.get_links(), exclude)
+        num_queries = 0
+        if not no_searches:
+            chunks = parser.chunk(self._search_config["nltk_dir"], max_queries)
+            for chunk in chunks:
+                if short_circuit and workspace.finished:
+                    workspace.possible_miss = True
+                    break
+                log = u"[[{0}]] -> querying {1} for {2!r}"
+                self._logger.debug(log.format(self.title, searcher.name, chunk))
+                workspace.enqueue(searcher.search(chunk), exclude)
+                num_queries += 1
+                sleep(1)
+
+        workspace.wait()
+        result = workspace.get_result(num_queries)
+        self._logger.info(result.get_log_message(self.title))
+        return result
+
+    def copyvio_compare(self, url, min_confidence=0.75, max_time=30):
         """Check the page like :py:meth:`copyvio_check` against a specific URL.
 
-        This is essentially a reduced version of the above - a copyivo
-        comparison is made using Markov chains and the result is returned in a
-        :py:class:`~earwigbot.wiki.copyvios.result.CopyvioCheckResult` object -
-        but without using a search engine, since the suspected "violated" URL
-        is supplied from the start.
+        This is essentially a reduced version of :meth:`copyvio_check` - a
+        copyivo comparison is made using Markov chains and the result is
+        returned in a :class:`.CopyvioCheckResult` object - but without using a
+        search engine, since the suspected "violated" URL is supplied from the
+        start.
 
         Its primary use is to generate a result when the URL is retrieved from
-        a cache, like the one used in EarwigBot's Toolserver site. After a
-        search is done, the resulting URL is stored in a cache for 24 hours so
+        a cache, like the one used in EarwigBot's Tool Labs site. After a
+        search is done, the resulting URL is stored in a cache for 72 hours so
         future checks against that page will not require another set of
         time-and-money-consuming search engine queries. However, the comparison
         itself (which includes the article's and the source's content) cannot
         be stored for data retention reasons, so a fresh comparison is made
         using this function.
 
-        Since no searching is done, neither
-        :py:exc:`~earwigbot.exceptions.UnknownSearchEngineError` nor
-        :py:exc:`~earwigbot.exceptions.SearchQueryError` will be raised.
+        Since no searching is done, neither :exc:`.UnknownSearchEngineError`
+        nor :exc:`.SearchQueryError` will be raised.
         """
-        content = self.get()
-        clean = ArticleTextParser(content).strip()
-        article_chain = MarkovChain(clean)
-        confidence, chains = self._copyvio_compare_content(article_chain, url)
-
-        if confidence >= min_confidence:
-            is_violation = True
-            log = u"Violation detected for [[{0}]] (confidence: {1}; URL: {2})"
-            self._logger.debug(log.format(self.title, confidence, url))
-        else:
-            is_violation = False
-            log = u"No violation for [[{0}]] (confidence: {1}; URL: {2})"
-            self._logger.debug(log.format(self.title, confidence, url))
-
-        return CopyvioCheckResult(is_violation, confidence, url, 0,
-                                  article_chain, chains)
+        log = u"Starting copyvio compare for [[{0}]] against {1}"
+        self._logger.info(log.format(self.title, url))
+        article = MarkovChain(ArticleTextParser(self.get()).strip())
+        workspace = CopyvioWorkspace(
+            article, min_confidence, max_time, self._logger, self._addheaders,
+            max_time, num_workers=1)
+        workspace.enqueue([url])
+        workspace.wait()
+        result = workspace.get_result()
+        self._logger.info(result.get_log_message(self.title))
+        return result

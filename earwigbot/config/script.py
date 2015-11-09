@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,18 +23,19 @@
 from collections import OrderedDict
 from getpass import getpass
 from hashlib import sha256
-from os import chmod, mkdir, path
+from os import chmod, makedirs, mkdir, path
 import re
 import stat
 import sys
 from textwrap import fill, wrap
 
-from Crypto.Cipher import Blowfish
-import bcrypt
 import yaml
 
-from earwigbot import exceptions
+from earwigbot import exceptions, importer
 from earwigbot.config.ordered_yaml import OrderedDumper
+
+Blowfish = importer.new("Crypto.Cipher.Blowfish")
+bcrypt = importer.new("bcrypt")
 
 __all__ = ["ConfigScript"]
 
@@ -145,17 +146,30 @@ class ConfigScript(object):
                        is to run on a public computer like the Toolserver, but
                        otherwise the need to enter a key everytime you start
                        the bot may be annoying.""")
+        self.data["metadata"]["encryptPasswords"] = False
         if self._ask_bool("Encrypt stored passwords?"):
-            self.data["metadata"]["encryptPasswords"] = True
             key = getpass(self.PROMPT + "Enter an encryption key: ")
             msg = "Running {0} rounds of bcrypt...".format(self.BCRYPT_ROUNDS)
             self._print_no_nl(msg)
-            signature = bcrypt.hashpw(key, bcrypt.gensalt(self.BCRYPT_ROUNDS))
-            self.data["metadata"]["signature"] = signature
-            self._cipher = Blowfish.new(sha256(key).digest())
-            print " done."
-        else:
-            self.data["metadata"]["encryptPasswords"] = False
+            try:
+                salt = bcrypt.gensalt(self.BCRYPT_ROUNDS)
+                signature = bcrypt.hashpw(key, salt)
+                self._cipher = Blowfish.new(sha256(key).digest())
+            except ImportError:
+                print " error!"
+                self._print("""Encryption requires the 'py-bcrypt' and
+                               'pycrypto' packages:""")
+                strt, end = " * \x1b[36m", "\x1b[0m"
+                print strt + "http://www.mindrot.org/projects/py-bcrypt/" + end
+                print strt + "https://www.dlitz.net/software/pycrypto/" + end
+                self._print("""I will disable encryption for now; restart
+                               configuration after installing these packages if
+                               you want it.""")
+                self._pause()
+            else:
+                self.data["metadata"]["encryptPasswords"] = True
+                self.data["metadata"]["signature"] = signature
+                print " done."
 
         print
         self._print("""The bot can temporarily store its logs in the logs/
@@ -265,11 +279,19 @@ class ConfigScript(object):
         self.data["wiki"]["sql"] = {}
 
         if self._wmf:
-            msg = "Will this bot run from the Wikimedia Toolserver?"
-            toolserver = self._ask_bool(msg, default=False)
-            if toolserver:
-                args = [("host", "$1-p.rrdb.toolserver.org"), ("db", "$1_p")]
+            msg = "Will this bot run from the Wikimedia Tool Labs?"
+            labs = self._ask_bool(msg, default=False)
+            if labs:
+                args = [("host", "$1.labsdb"), ("db", "$1_p"),
+                        ("read_default_file", "~/replica.my.cnf")]
                 self.data["wiki"]["sql"] = OrderedDict(args)
+            else:
+                msg = "Will this bot run from the Wikimedia Toolserver?"
+                toolserver = self._ask_bool(msg, default=False)
+                if toolserver:
+                    args = [("host", "$1-p.rrdb.toolserver.org"),
+                            ("db", "$1_p")]
+                    self.data["wiki"]["sql"] = OrderedDict(args)
 
         self.data["wiki"]["shutoff"] = {}
         msg = "Would you like to enable an automatic shutoff page for the bot?"
@@ -419,6 +441,7 @@ class ConfigScript(object):
     def make_new(self):
         """Make a new config file based on the user's input."""
         try:
+            makedirs(path.dirname(self.config.path))
             open(self.config.path, "w").close()
             chmod(self.config.path, stat.S_IRUSR|stat.S_IWUSR)
         except IOError:

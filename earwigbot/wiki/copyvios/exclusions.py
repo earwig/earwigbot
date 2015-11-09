@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -30,13 +30,16 @@ from earwigbot import exceptions
 
 __all__ = ["ExclusionsDB"]
 
-default_sources = {
+DEFAULT_SOURCES = {
+    "all": [  # Applies to all, but located on enwiki
+        "User:EarwigBot/Copyvios/Exclusions",
+        "User:EranBot/Copyright/Blacklist"
+    ],
     "enwiki": [
         "Wikipedia:Mirrors and forks/Abc", "Wikipedia:Mirrors and forks/Def",
         "Wikipedia:Mirrors and forks/Ghi", "Wikipedia:Mirrors and forks/Jkl",
         "Wikipedia:Mirrors and forks/Mno", "Wikipedia:Mirrors and forks/Pqr",
-        "Wikipedia:Mirrors and forks/Stu", "Wikipedia:Mirrors and forks/Vwxyz",
-        "User:EarwigBot/Copyvios/Exclusions"
+        "Wikipedia:Mirrors and forks/Stu", "Wikipedia:Mirrors and forks/Vwxyz"
     ]
 }
 
@@ -72,8 +75,9 @@ class ExclusionsDB(object):
         """
         query = "INSERT INTO sources VALUES (?, ?);"
         sources = []
-        for sitename, pages in default_sources.iteritems():
-            [sources.append((sitename, page)) for page in pages]
+        for sitename, pages in DEFAULT_SOURCES.iteritems():
+            for page in pages:
+                sources.append((sitename, page))
 
         with sqlite.connect(self._dbfile) as conn:
             conn.executescript(script)
@@ -87,25 +91,37 @@ class ExclusionsDB(object):
         except exceptions.PageNotFoundError:
             return urls
 
+        if source == "User:EranBot/Copyright/Blacklist":
+            for line in data.splitlines()[1:]:
+                line = re.sub(r"(#|==).*$", "", line).strip()
+                if line:
+                    urls.add("re:" + line)
+            return urls
+
         regexes = [
-            "url\s*=\s*<nowiki>(?:https?:)?(?://)?(.*)</nowiki>",
-            "\*\s*Site:\s*\[?(?:https?:)?(?://)?(.*)\]?"
+            r"url\s*=\s*(?:\<nowiki\>)?(?:https?:)?(?://)?(.*?)(?:\</nowiki\>.*?)?\s*$",
+            r"\*\s*Site:\s*(?:\[|\<nowiki\>)?(?:https?:)?(?://)?(.*?)(?:\].*?|\</nowiki\>.*?)?\s*$"
         ]
         for regex in regexes:
-            [urls.add(url.lower()) for (url,) in re.findall(regex, data, re.I)]
+            for url in re.findall(regex, data, re.I|re.M):
+                if url.strip():
+                    urls.add(url.lower().strip())
         return urls
 
     def _update(self, sitename):
         """Update the database from listed sources in the index."""
-        query1 = "SELECT source_page FROM sources WHERE source_sitename = ?;"
+        query1 = "SELECT source_page FROM sources WHERE source_sitename = ?"
         query2 = "SELECT exclusion_url FROM exclusions WHERE exclusion_sitename = ?"
         query3 = "DELETE FROM exclusions WHERE exclusion_sitename = ? AND exclusion_url = ?"
-        query4 = "INSERT INTO exclusions VALUES (?, ?);"
-        query5 = "SELECT 1 FROM updates WHERE update_sitename = ?;"
-        query6 = "UPDATE updates SET update_time = ? WHERE update_sitename = ?;"
-        query7 = "INSERT INTO updates VALUES (?, ?);"
+        query4 = "INSERT INTO exclusions VALUES (?, ?)"
+        query5 = "SELECT 1 FROM updates WHERE update_sitename = ?"
+        query6 = "UPDATE updates SET update_time = ? WHERE update_sitename = ?"
+        query7 = "INSERT INTO updates VALUES (?, ?)"
 
-        site = self._sitesdb.get_site(sitename)
+        if sitename == "all":
+            site = self._sitesdb.get_site("enwiki")
+        else:
+            site = self._sitesdb.get_site(sitename)
         with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
             urls = set()
             for (source,) in conn.execute(query1, (sitename,)):
@@ -123,7 +139,7 @@ class ExclusionsDB(object):
 
     def _get_last_update(self, sitename):
         """Return the UNIX timestamp of the last time the db was updated."""
-        query = "SELECT update_time FROM updates WHERE update_sitename = ?;"
+        query = "SELECT update_time FROM updates WHERE update_sitename = ?"
         with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
             try:
                 result = conn.execute(query, (sitename,)).fetchone()
@@ -132,35 +148,49 @@ class ExclusionsDB(object):
                 return 0
             return result[0] if result else 0
 
-    def sync(self, sitename):
-        """Update the database if it hasn't been updated in the past week.
+    def sync(self, sitename, force=False):
+        """Update the database if it hasn't been updated recently.
 
-        This only updates the exclusions database for the *sitename* site.
+        This updates the exclusions database for the site *sitename* and "all".
+
+        Site-specific lists are considered stale after 48 hours; global lists
+        after 12 hours.
         """
-        max_staleness = 60 * 60 * 24 * 7
+        max_staleness = 60 * 60 * (12 if sitename == "all" else 48)
         time_since_update = int(time() - self._get_last_update(sitename))
-        if time_since_update > max_staleness:
+        if force or time_since_update > max_staleness:
             log = u"Updating stale database: {0} (last updated {1} seconds ago)"
             self._logger.info(log.format(sitename, time_since_update))
             self._update(sitename)
         else:
             log = u"Database for {0} is still fresh (last updated {1} seconds ago)"
             self._logger.debug(log.format(sitename, time_since_update))
+        if sitename != "all":
+            self.sync("all", force=force)
 
     def check(self, sitename, url):
         """Check whether a given URL is in the exclusions database.
 
         Return ``True`` if the URL is in the database, or ``False`` otherwise.
         """
-        normalized = re.sub("https?://", "", url.lower())
-        query = "SELECT exclusion_url FROM exclusions WHERE exclusion_sitename = ?"
+        normalized = re.sub(r"^https?://(www\.)?", "", url.lower())
+        query = """SELECT exclusion_url FROM exclusions
+                   WHERE exclusion_sitename = ? OR exclusion_sitename = ?"""
         with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
-            for (excl,) in conn.execute(query, (sitename,)):
+            for (excl,) in conn.execute(query, (sitename, "all")):
                 if excl.startswith("*."):
-                    netloc = urlparse(url.lower()).netloc
-                    matches = True if excl[2:] in netloc else False
+                    parsed = urlparse(url.lower())
+                    matches = excl[2:] in parsed.netloc
+                    if matches and "/" in excl:
+                        excl_path = excl[excl.index("/") + 1]
+                        matches = excl_path.startswith(parsed.path)
+                elif excl.startswith("re:"):
+                    try:
+                        matches = re.match(excl[3:], normalized)
+                    except re.error:
+                        continue
                 else:
-                    matches = True if normalized.startswith(excl) else False
+                    matches = normalized.startswith(excl)
                 if matches:
                     log = u"Exclusion detected in {0} for {1}"
                     self._logger.debug(log.format(sitename, url))
@@ -169,3 +199,22 @@ class ExclusionsDB(object):
         log = u"No exclusions in {0} for {1}".format(sitename, url)
         self._logger.debug(log)
         return False
+
+    def get_mirror_hints(self, sitename, try_mobile=True):
+        """Return a list of strings that indicate the existence of a mirror.
+
+        The source parser checks for the presence of these strings inside of
+        certain HTML tag attributes (``"href"`` and ``"src"``).
+        """
+        site = self._sitesdb.get_site(sitename)
+        base = site.domain + site._script_path
+        roots = [base]
+        scripts = ["index.php", "load.php", "api.php"]
+
+        if try_mobile:
+            fragments = re.search(r"^([\w]+)\.([\w]+).([\w]+)$", site.domain)
+            if fragments:
+                mobile = "{0}.m.{1}.{2}".format(*fragments.groups())
+                roots.append(mobile + site._script_path)
+
+        return [root + "/" + script for root in roots for script in scripts]

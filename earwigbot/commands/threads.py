@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -69,21 +69,28 @@ class Threads(Command):
 
         for thread in threads:
             tname = thread.name
+            ident = thread.ident % 10000
             if tname == "MainThread":
                 t = "\x0302MainThread\x0F (id {0})"
-                normal_threads.append(t.format(thread.ident))
+                normal_threads.append(t.format(ident))
             elif tname in self.config.components:
                 t = "\x0302{0}\x0F (id {1})"
-                normal_threads.append(t.format(tname, thread.ident))
-            elif tname.startswith("reminder"):
-                tname = tname.replace("reminder ", "")
-                t = "\x0302reminder\x0F (until {0})"
-                normal_threads.append(t.format(tname))
+                normal_threads.append(t.format(tname, ident))
+            elif tname.startswith("remind-"):
+                t = "\x0302reminder\x0F (id {0})"
+                daemon_threads.append(t.format(tname[len("remind-"):]))
+            elif tname.startswith("cvworker-"):
+                t = "\x0302copyvio worker\x0F (site {0})"
+                daemon_threads.append(t.format(tname[len("cvworker-"):]))
             else:
-                tname, start_time = re.findall("^(.*?) \((.*?)\)$", tname)[0]
-                t = "\x0302{0}\x0F (id {1}, since {2})"
-                daemon_threads.append(t.format(tname, thread.ident,
-                                               start_time))
+                match = re.findall("^(.*?) \((.*?)\)$", tname)
+                if match:
+                    t = "\x0302{0}\x0F (id {1}, since {2})"
+                    thread_info = t.format(match[0][0], ident, match[0][1])
+                    daemon_threads.append(thread_info)
+                else:
+                    t = "\x0302{0}\x0F (id {1})"
+                    daemon_threads.append(t.format(tname, ident))
 
         if daemon_threads:
             if len(daemon_threads) > 1:

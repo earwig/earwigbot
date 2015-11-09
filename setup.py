@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,23 +25,34 @@ from setuptools import setup, find_packages
 
 from earwigbot import __version__
 
-# Not all of these dependencies are required, particularly the copyvio-specific
-# ones (bs4, lxml, nltk, and oauth2) and the command-specific one (pytz). The
-# bot should run fine without them, but will raise an exception if you try to
-# detect copyvios or run a command that requries one.
-
-dependencies = [
-    "PyYAML >= 3.10",  # Parsing config files
-    "beautifulsoup4 >= 4.1.1",  # Parsing/scraping HTML for copyvios
-    "lxml >= 2.3.5",  # Faster parser for BeautifulSoup
-    "mwparserfromhell >= 0.1",  # Parsing wikicode for manipulation
-    "nltk >= 2.0.2",  # Parsing sentences to split article content for copyvios
-    "oauth2 >= 1.5.211",  # Interfacing with Yahoo! BOSS Search for copyvios
-    "oursql >= 0.9.3.1",  # Interfacing with MediaWiki databases
-    "py-bcrypt >= 0.2",  # Hashing the bot key in the config file
-    "pycrypto >= 2.6",  # Storing bot passwords and keys in the config file
-    "pytz >= 2012d",  # Handling timezones for the !time IRC command
+required_deps = [
+    "PyYAML >= 3.11",  # Parsing config files
+    "mwparserfromhell >= 0.4.3",  # Parsing wikicode for manipulation
 ]
+
+extra_deps = {
+    "crypto": [
+        "py-bcrypt >= 0.4",  # Hashing the bot key in the config file
+        "pycrypto >= 2.6.1",  # Storing bot passwords + keys in the config file
+    ],
+    "sql": [
+        "oursql >= 0.9.3.1",  # Interfacing with MediaWiki databases
+    ],
+    "copyvios": [
+        "beautifulsoup4 >= 4.4.1",  # Parsing/scraping HTML
+        "cchardet >= 1.0.0",  # Encoding detection for BeautifulSoup
+        "lxml >= 3.4.4",  # Faster parser for BeautifulSoup
+        "nltk >= 3.1",  # Parsing sentences to split article content
+        "oauth2 >= 1.9.0",  # Interfacing with Yahoo! BOSS Search
+        "pdfminer >= 20140328",  # Extracting text from PDF files
+        "tldextract >= 1.7.1",  # Getting domains for the multithreaded workers
+    ],
+    "time": [
+        "pytz >= 2015.7",  # Handling timezones for the !time IRC command
+    ],
+}
+
+dependencies = required_deps + sum(extra_deps.values(), [])
 
 with open("README.rst") as fp:
     long_docs = fp.read()
@@ -54,7 +65,7 @@ setup(
     test_suite = "tests",
     version = __version__,
     author = "Ben Kurtovic",
-    author_email = "ben.kurtovic@verizon.net",
+    author_email = "ben.kurtovic@gmail.com",
     url = "https://github.com/earwig/earwigbot",
     description = "EarwigBot is a Python robot that edits Wikipedia and interacts with people over IRC.",
     long_description = long_docs,

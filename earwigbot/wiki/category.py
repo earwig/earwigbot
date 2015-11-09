@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -58,10 +58,14 @@ class Category(Page):
         """Return a nice string representation of the Category."""
         return '<Category "{0}" of {1}>'.format(self.title, str(self.site))
 
+    def __iter__(self):
+        """Iterate over all members of the category."""
+        return self.get_members()
+
     def _get_members_via_api(self, limit, follow):
         """Iterate over Pages in the category using the API."""
         params = {"action": "query", "list": "categorymembers",
-                  "cmtitle": self.title}
+                  "cmtitle": self.title, "continue": ""}
 
         while 1:
             params["cmlimit"] = limit if limit else "max"
@@ -70,9 +74,8 @@ class Category(Page):
                 title = member["title"]
                 yield self.site.get_page(title, follow_redirects=follow)
 
-            if "query-continue" in result:
-                qcontinue = result["query-continue"]["categorymembers"]
-                params["cmcontinue"] = qcontinue["cmcontinue"]
+            if "continue" in result:
+                params.update(result["continue"])
                 if limit:
                     limit -= len(result["query"]["categorymembers"])
             else:
@@ -87,9 +90,9 @@ class Category(Page):
 
         if limit:
             query += " LIMIT ?"
-            result = self.site.sql_query(query, (title, limit))
+            result = self.site.sql_query(query, (title, limit), buffsize=0)
         else:
-            result = self.site.sql_query(query, (title,))
+            result = self.site.sql_query(query, (title,), buffsize=0)
 
         members = list(result)
         for row in members:
@@ -100,7 +103,7 @@ class Category(Page):
             else:  # Avoid doing a silly (albeit valid) ":Pagename" thing
                 title = base
             yield self.site.get_page(title, follow_redirects=follow,
-                                      pageid=row[2])
+                                     pageid=row[2])
 
     def _get_size_via_api(self, member_type):
         """Return the size of the category using the API."""

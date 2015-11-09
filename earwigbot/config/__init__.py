@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -28,16 +28,18 @@ import logging.handlers
 from os import mkdir, path
 import stat
 
-from Crypto.Cipher import Blowfish
-import bcrypt
 import yaml
 
+from earwigbot import importer
 from earwigbot.config.formatter import BotFormatter
 from earwigbot.config.node import ConfigNode
 from earwigbot.config.ordered_yaml import OrderedLoader
 from earwigbot.config.permissions import PermissionsDB
 from earwigbot.config.script import ConfigScript
 from earwigbot.exceptions import NoConfigError
+
+Blowfish = importer.new("Crypto.Cipher.Blowfish")
+bcrypt = importer.new("bcrypt")
 
 __all__ = ["BotConfig"]
 
@@ -280,10 +282,18 @@ class BotConfig(object):
         self._setup_logging()
         if self.is_encrypted():
             if not self._decryption_cipher:
+                try:
+                    blowfish_new = Blowfish.new
+                    hashpw = bcrypt.hashpw
+                except ImportError:
+                    url1 = "http://www.mindrot.org/projects/py-bcrypt"
+                    url2 = "https://www.dlitz.net/software/pycrypto/"
+                    e = "Encryption requires the 'py-bcrypt' and 'pycrypto' packages: {0}, {1}"
+                    raise NoConfigError(e.format(url1, url2))
                 key = getpass("Enter key to decrypt bot passwords: ")
-                self._decryption_cipher = Blowfish.new(sha256(key).digest())
+                self._decryption_cipher = blowfish_new(sha256(key).digest())
                 signature = self.metadata["signature"]
-                if bcrypt.hashpw(key, signature) != signature:
+                if hashpw(key, signature) != signature:
                     raise RuntimeError("Incorrect password.")
             for node, nodes in self._decryptable_nodes:
                 self._decrypt(node, nodes)

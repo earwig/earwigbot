@@ -36,15 +36,18 @@ setup.py test`` from the project's root directory. Note that some
 tests require an internet connection, and others may take a while to run.
 Coverage is currently rather incomplete.
 
-Latest release (v0.1)
+Latest release (v0.2)
 ~~~~~~~~~~~~~~~~~~~~~
 
 EarwigBot is available from the `Python Package Index`_, so you can install the
 latest release with ``pip install earwigbot`` (`get pip`_).
 
+If you get an error while pip is installing dependencies, you may be missing
+some header files. For example, on Ubuntu, see `this StackOverflow post`_.
+
 You can also install it from source [1]_ directly::
 
-    curl -Lo earwigbot.tgz https://github.com/earwig/earwigbot/tarball/v0.1
+    curl -Lo earwigbot.tgz https://github.com/earwig/earwigbot/tarball/v0.2
     tar -xf earwigbot.tgz
     cd earwig-earwigbot-*
     python setup.py install
@@ -55,10 +58,10 @@ Development version
 ~~~~~~~~~~~~~~~~~~~
 
 You can install the development version of the bot from ``git`` by using
-setuptools/distribute's ``develop`` command [1]_, probably on the ``develop``
-branch which contains (usually) working code. ``master`` contains the latest
-release. EarwigBot uses `git flow`_, so you're free to
-browse by tags or by new features (``feature/*`` branches)::
+setuptools's ``develop`` command [1]_, probably on the ``develop`` branch which
+contains (usually) working code. ``master`` contains the latest release.
+EarwigBot uses `git flow`_, so you're free to browse by tags or by new features
+(``feature/*`` branches)::
 
     git clone git://github.com/earwig/earwigbot.git earwigbot
     cd earwigbot
@@ -133,8 +136,8 @@ Custom IRC commands
 ~~~~~~~~~~~~~~~~~~~
 
 Custom commands are subclasses of `earwigbot.commands.Command`_ that override
-``Command``'s ``process()`` (and optionally ``check()`` or ``setup()``)
-methods.
+``Command``'s ``process()`` (and optionally ``check()``, ``setup()``, or
+``unload()``) methods.
 
 The bot has a wide selection of built-in commands and plugins to act as sample
 code and/or to give ideas. Start with test_, and then check out chanops_ and
@@ -144,7 +147,7 @@ Custom bot tasks
 ~~~~~~~~~~~~~~~~
 
 Custom tasks are subclasses of `earwigbot.tasks.Task`_ that override ``Task``'s
-``run()`` (and optionally ``setup()``) methods.
+``run()`` (and optionally ``setup()`` or ``unload()``) methods.
 
 See the built-in wikiproject_tagger_ task for a relatively straightforward
 task, or the afc_statistics_ plugin for a more complicated one.
@@ -188,8 +191,9 @@ Footnotes
 .. _several ongoing tasks:          http://en.wikipedia.org/wiki/User:EarwigBot#Tasks
 .. _my instance of EarwigBot:       http://en.wikipedia.org/wiki/User:EarwigBot
 .. _earwigbot-plugins:              https://github.com/earwig/earwigbot-plugins
-.. _Python Package Index:           http://pypi.python.org
+.. _Python Package Index:           https://pypi.python.org/pypi/earwigbot
 .. _get pip:                        http://pypi.python.org/pypi/pip
+.. _this StackOverflow post:        http://stackoverflow.com/questions/6504810/how-to-install-lxml-on-ubuntu/6504860#6504860
 .. _git flow:                       http://nvie.com/posts/a-successful-git-branching-model/
 .. _explanation of YAML:            http://en.wikipedia.org/wiki/YAML
 .. _earwigbot.bot.Bot:              https://github.com/earwig/earwigbot/blob/develop/earwigbot/bot.py
@@ -202,4 +206,4 @@ Footnotes
 .. _wikiproject_tagger:             https://github.com/earwig/earwigbot/blob/develop/earwigbot/tasks/wikiproject_tagger.py
 .. _afc_statistics:                 https://github.com/earwig/earwigbot-plugins/blob/develop/tasks/afc_statistics.py
 .. _its code and docstrings:        https://github.com/earwig/earwigbot/tree/develop/earwigbot/wiki
-.. _Let me know:                    ben.kurtovic@verizon.net
+.. _Let me know:                    ben.kurtovic@gmail.com

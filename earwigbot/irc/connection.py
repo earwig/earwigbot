@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -172,7 +172,7 @@ class IRCConnection(object):
         if data.is_private:
             self.say(data.chan, msg, hidelog)
         else:
-            msg = "\x02{0}\x0F: {1}".format(data.nick, msg)
+            msg = "\x02{0}\x0F: {1}".format(data.reply_nick, msg)
             self.say(data.chan, msg, hidelog)
 
     def action(self, target, msg, hidelog=False):

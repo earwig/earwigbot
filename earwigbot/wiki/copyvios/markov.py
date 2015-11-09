@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,24 +23,34 @@
 from collections import defaultdict
 from re import sub, UNICODE
 
-__all__ = ["MarkovChain", "MarkovChainIntersection"]
+__all__ = ["EMPTY", "EMPTY_INTERSECTION", "MarkovChain",
+           "MarkovChainIntersection"]
 
 class MarkovChain(object):
     """Implements a basic ngram Markov chain of words."""
     START = -1
     END = -2
-    degree = 3  # 2 for bigrams, 3 for trigrams, etc.
+    degree = 5  # 2 for bigrams, 3 for trigrams, etc.
 
     def __init__(self, text):
         self.text = text
         self.chain = defaultdict(lambda: defaultdict(lambda: 0))
-        words = sub("[^\w\s-]", "", text.lower(), flags=UNICODE).split()
+        words = sub(r"[^\w\s-]", "", text.lower(), flags=UNICODE).split()
 
         padding = self.degree - 1
         words = ([self.START] * padding) + words + ([self.END] * padding)
         for i in range(len(words) - self.degree + 1):
             last = i + self.degree - 1
             self.chain[tuple(words[i:last])][words[last]] += 1
+        self.size = self._get_size()
+
+    def _get_size(self):
+        """Return the size of the Markov chain: the total number of nodes."""
+        size = 0
+        for node in self.chain.itervalues():
+            for hits in node.itervalues():
+                size += hits
+        return size
 
     def __repr__(self):
         """Return the canonical string representation of the MarkovChain."""
@@ -48,15 +58,7 @@ class MarkovChain(object):
 
     def __str__(self):
         """Return a nice string representation of the MarkovChain."""
-        return "<MarkovChain of size {0}>".format(self.size())
-
-    def size(self):
-        """Return the size of the Markov chain: the total number of nodes."""
-        count = 0
-        for node in self.chain.itervalues():
-            for hits in node.itervalues():
-                count += hits
-        return count
+        return "<MarkovChain of size {0}>".format(self.size)
 
 
 class MarkovChainIntersection(MarkovChain):
@@ -75,6 +77,7 @@ class MarkovChainIntersection(MarkovChain):
                     if node in nodes2:
                         count2 = nodes2[node]
                         self.chain[word][node] = min(count1, count2)
+        self.size = self._get_size()
 
     def __repr__(self):
         """Return the canonical string representation of the intersection."""
@@ -84,4 +87,8 @@ class MarkovChainIntersection(MarkovChain):
     def __str__(self):
         """Return a nice string representation of the intersection."""
         res = "<MarkovChainIntersection of size {0} ({1} ^ {2})>"
-        return res.format(self.size(), self.mc1, self.mc2)
+        return res.format(self.size, self.mc1, self.mc2)
+
+
+EMPTY = MarkovChain("")
+EMPTY_INTERSECTION = MarkovChainIntersection(EMPTY, EMPTY)

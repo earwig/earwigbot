@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -50,6 +50,7 @@ class Page(CopyvioMixIn):
     - :py:attr:`pageid`:      an integer ID representing the page
     - :py:attr:`url`:         the page's URL
     - :py:attr:`namespace`:   the page's namespace as an integer
+    - :py:attr:`lastrevid`:   the ID of the page's most recent revision
     - :py:attr:`protection`:  the page's current protection status
     - :py:attr:`is_talkpage`: ``True`` if this is a talkpage, else ``False``
     - :py:attr:`is_redirect`: ``True`` if this is a redirect, else ``False``
@@ -116,7 +117,6 @@ class Page(CopyvioMixIn):
         self._creator = None
 
         # Attributes used for editing/deleting/protecting/etc:
-        self._token = None
         self._basetimestamp = None
         self._starttimestamp = None
 
@@ -199,21 +199,25 @@ class Page(CopyvioMixIn):
         """Load various data from the API in a single query.
 
         Loads self._title, ._exists, ._is_redirect, ._pageid, ._fullurl,
-        ._protection, ._namespace, ._is_talkpage, ._creator, ._lastrevid,
-        ._token, and ._starttimestamp using the API. It will do a query of
-        its own unless *result* is provided, in which case we'll pretend
-        *result* is what the query returned.
+        ._protection, ._namespace, ._is_talkpage, ._creator, ._lastrevid, and
+        ._starttimestamp using the API. It will do a query of its own unless
+        *result* is provided, in which case we'll pretend *result* is what the
+        query returned.
 
         Assuming the API is sound, this should not raise any exceptions.
         """
         if not result:
             query = self.site.api_query
-            result = query(action="query", rvprop="user", intoken="edit",
-                           prop="info|revisions", rvlimit=1, rvdir="newer",
-                           titles=self._title, inprop="protection|url")
+            result = query(action="query", prop="info|revisions",
+                           inprop="protection|url", rvprop="user", rvlimit=1,
+                           rvdir="newer", titles=self._title)
+
+        if "interwiki" in result["query"]:
+            self._title = result["query"]["interwiki"][0]["title"]
+            self._exists = self.PAGE_INVALID
+            return
 
         res = result["query"]["pages"].values()[0]
-
         self._title = res["title"]  # Normalize our pagename/title
         self._is_redirect = "redirect" in res
 
@@ -233,13 +237,7 @@ class Page(CopyvioMixIn):
 
         self._fullurl = res["fullurl"]
         self._protection = res["protection"]
-
-        try:
-            self._token = res["edittoken"]
-        except KeyError:
-            pass
-        else:
-            self._starttimestamp = strftime("%Y-%m-%dT%H:%M:%SZ", gmtime())
+        self._starttimestamp = strftime("%Y-%m-%dT%H:%M:%SZ", gmtime())
 
         # We've determined the namespace and talkpage status in __init__()
         # based on the title, but now we can be sure:
@@ -280,8 +278,7 @@ class Page(CopyvioMixIn):
             self._assert_existence()
 
     def _edit(self, params=None, text=None, summary=None, minor=None, bot=None,
-              force=None, section=None, captcha_id=None, captcha_word=None,
-              tries=0):
+              force=None, section=None, captcha_id=None, captcha_word=None):
         """Edit the page!
 
         If *params* is given, we'll use it as our API query parameters.
@@ -292,13 +289,6 @@ class Page(CopyvioMixIn):
         in _handle_edit_errors(). We'll then throw these back as subclasses of
         EditError.
         """
-        # Try to get our edit token, and die if we can't:
-        if not self._token:
-            self._load_attributes()
-        if not self._token:
-            e = "You don't have permission to edit this page."
-            raise exceptions.PermissionsError(e)
-
         # Weed out invalid pages before we get too far:
         self._assert_validity()
 
@@ -307,7 +297,7 @@ class Page(CopyvioMixIn):
             params = self._build_edit_params(text, summary, minor, bot, force,
                                              section, captcha_id, captcha_word)
         else: # Make sure we have the right token:
-            params["token"] = self._token
+            params["token"] = self.site.get_token()
 
         # Try the API query, catching most errors with our handler:
         try:
@@ -315,7 +305,7 @@ class Page(CopyvioMixIn):
         except exceptions.APIError as error:
             if not hasattr(error, "code"):
                 raise  # We can only handle errors with a code attribute
-            result = self._handle_edit_errors(error, params, tries)
+            result = self._handle_edit_errors(error, params)
 
         # If everything was successful, reset invalidated attributes:
         if result["edit"]["result"] == "Success":
@@ -324,21 +314,17 @@ class Page(CopyvioMixIn):
             self._exists = self.PAGE_UNKNOWN
             return
 
-        # If we're here, then the edit failed. If it's because of AssertEdit,
-        # handle that. Otherwise, die - something odd is going on:
-        try:
-            assertion = result["edit"]["assert"]
-        except KeyError:
-            raise exceptions.EditError(result["edit"])
-        self._handle_assert_edit(assertion, params, tries)
+        # Otherwise, there was some kind of problem. Throw an exception:
+        raise exceptions.EditError(result["edit"])
 
     def _build_edit_params(self, text, summary, minor, bot, force, section,
                            captcha_id, captcha_word):
         """Given some keyword arguments, build an API edit query string."""
         unitxt = text.encode("utf8") if isinstance(text, unicode) else text
         hashed = md5(unitxt).hexdigest()  # Checksum to ensure text is correct
-        params = {"action": "edit", "title": self._title, "text": text,
-                  "token": self._token, "summary": summary, "md5": hashed}
+        params = {
+            "action": "edit", "title": self._title, "text": text,
+            "token": self.site.get_token(), "summary": summary, "md5": hashed}
 
         if section:
             params["section"] = section
@@ -353,7 +339,8 @@ class Page(CopyvioMixIn):
             params["bot"] = "true"
 
         if not force:
-            params["starttimestamp"] = self._starttimestamp
+            if self._starttimestamp:
+                params["starttimestamp"] = self._starttimestamp
             if self._basetimestamp:
                 params["basetimestamp"] = self._basetimestamp
             if self._exists == self.PAGE_MISSING:
@@ -364,92 +351,41 @@ class Page(CopyvioMixIn):
 
         return params
 
-    def _handle_edit_errors(self, error, params, tries):
+    def _handle_edit_errors(self, error, params, retry=True):
         """If our edit fails due to some error, try to handle it.
 
         We'll either raise an appropriate exception (for example, if the page
-        is protected), or we'll try to fix it (for example, if we can't edit
-        due to being logged out, we'll try to log in).
+        is protected), or we'll try to fix it (for example, if the token is
+        invalid, we'll try to get a new one).
         """
-        if error.code in ["noedit", "cantcreate", "protectedtitle",
-                          "noimageredirect"]:
+        perms = ["noedit", "noedit-anon", "cantcreate", "cantcreate-anon",
+                 "protectedtitle", "noimageredirect", "noimageredirect-anon",
+                 "blocked"]
+        if error.code in perms:
             raise exceptions.PermissionsError(error.info)
-
-        elif error.code in ["noedit-anon", "cantcreate-anon",
-                            "noimageredirect-anon"]:
-            if not all(self.site._login_info):
-                # Insufficient login info:
-                raise exceptions.PermissionsError(error.info)
-            if tries == 0:
-                # We have login info; try to login:
-                self.site._login(self.site._login_info)
-                self._token = None  # Need a new token; old one is invalid now
-                return self._edit(params=params, tries=1)
-            else:
-                # We already tried to log in and failed!
-                e = "Although we should be logged in, we are not. This may be a cookie problem or an odd bug."
-                raise exceptions.LoginError(e)
-
         elif error.code in ["editconflict", "pagedeleted", "articleexists"]:
             # These attributes are now invalidated:
             self._content = None
             self._basetimestamp = None
             self._exists = self.PAGE_UNKNOWN
             raise exceptions.EditConflictError(error.info)
-
+        elif error.code == "badtoken" and retry:
+            params["token"] = self.site.get_token(force=True)
+            try:
+                return self.site.api_query(**params)
+            except exceptions.APIError as err:
+                if not hasattr(err, "code"):
+                    raise  # We can only handle errors with a code attribute
+                return self._handle_edit_errors(err, params, retry=False)
         elif error.code in ["emptypage", "emptynewsection"]:
             raise exceptions.NoContentError(error.info)
-
         elif error.code == "contenttoobig":
             raise exceptions.ContentTooBigError(error.info)
-
         elif error.code == "spamdetected":
             raise exceptions.SpamDetectedError(error.info)
-
         elif error.code == "filtered":
             raise exceptions.FilteredError(error.info)
-
         raise exceptions.EditError(": ".join((error.code, error.info)))
-
-    def _handle_assert_edit(self, assertion, params, tries):
-        """If we can't edit due to a failed AssertEdit assertion, handle that.
-
-        If the assertion was 'user' and we have valid login information, try to
-        log in. Otherwise, raise PermissionsError with details.
-        """
-        if assertion == "user":
-            if not all(self.site._login_info):
-                # Insufficient login info:
-                e = "AssertEdit: user assertion failed, and no login info was provided."
-                raise exceptions.PermissionsError(e)
-            if tries == 0:
-                # We have login info; try to login:
-                self.site._login(self.site._login_info)
-                self._token = None  # Need a new token; old one is invalid now
-                return self._edit(params=params, tries=1)
-            else:
-                # We already tried to log in and failed!
-                e = "Although we should be logged in, we are not. This may be a cookie problem or an odd bug."
-                raise exceptions.LoginError(e)
-
-        elif assertion == "bot":
-            if not all(self.site._login_info):
-                # Insufficient login info:
-                e = "AssertEdit: bot assertion failed, and no login info was provided."
-                raise exceptions.PermissionsError(e)
-            if tries == 0:
-                # Try to log in if we got logged out:
-                self.site._login(self.site._login_info)
-                self._token = None  # Need a new token; old one is invalid now
-                return self._edit(params=params, tries=1)
-            else:
-                # We already tried to log in, so we don't have a bot flag:
-                e = "AssertEdit: bot assertion failed: we don't have a bot flag!"
-                raise exceptions.PermissionsError(e)
-
-        # Unknown assertion, maybe "true", "false", or "exists":
-        e = "AssertEdit: assertion '{0}' failed.".format(assertion)
-        raise exceptions.PermissionsError(e)
 
     @property
     def site(self):
@@ -528,6 +464,19 @@ class Page(CopyvioMixIn):
         namespace ourselves based on the title.
         """
         return self._namespace
+
+    @property
+    def lastrevid(self):
+        """The ID of the page's most recent revision.
+
+        Raises :py:exc:`~earwigbot.exceptions.InvalidPageError` or
+        :py:exc:`~earwigbot.exceptions.PageNotFoundError` if the page name is
+        invalid or the page does not exist, respectively.
+        """
+        if self._exists == self.PAGE_UNKNOWN:
+            self._load()
+        self._assert_existence()  # Missing pages don't have revisions
+        return self._lastrevid
 
     @property
     def protection(self):
@@ -633,7 +582,7 @@ class Page(CopyvioMixIn):
             query = self.site.api_query
             result = query(action="query", rvlimit=1, titles=self._title,
                            prop="info|revisions", inprop="protection|url",
-                           intoken="edit", rvprop="content|timestamp")
+                           rvprop="content|timestamp")
             self._load_attributes(result=result)
             self._assert_existence()
             self._load_content(result=result)
@@ -666,7 +615,7 @@ class Page(CopyvioMixIn):
         :py:exc:`~earwigbot.exceptions.RedirectError` if the page is not a
         redirect.
         """
-        re_redirect = "^\s*\#\s*redirect\s*\[\[(.*?)\]\]"
+        re_redirect = r"^\s*\#\s*redirect\s*\[\[(.*?)\]\]"
         content = self.get()
         try:
             return re.findall(re_redirect, content, flags=re.I)[0]
@@ -765,7 +714,7 @@ class Page(CopyvioMixIn):
         username = username.lower()
         optouts = [optout.lower() for optout in optouts] if optouts else []
 
-        r_bots = "\{\{\s*(no)?bots\s*(\||\}\})"
+        r_bots = r"\{\{\s*(no)?bots\s*(\||\}\})"
         filter = self.parse().ifilter_templates(recursive=True, matches=r_bots)
         for template in filter:
             if template.has_param("deny"):

@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -188,7 +188,7 @@ class SitesDB(object):
         config = self.config
         login = (config.wiki.get("username"), config.wiki.get("password"))
         user_agent = config.wiki.get("userAgent")
-        use_https = config.wiki.get("useHTTPS", False)
+        use_https = config.wiki.get("useHTTPS", True)
         assert_edit = config.wiki.get("assert")
         maxlag = config.wiki.get("maxlag")
         wait_between_queries = config.wiki.get("waitTime", 2)

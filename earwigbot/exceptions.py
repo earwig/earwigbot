@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -36,13 +36,13 @@ This module contains all exceptions used by EarwigBot::
           |    +-- SQLError
           +-- NoServiceError
           +-- LoginError
+          +-- PermissionsError
           +-- NamespaceNotFoundError
           +-- PageNotFoundError
           +-- InvalidPageError
           +-- RedirectError
           +-- UserNotFoundError
           +-- EditError
-          |    +-- PermissionsError
           |    +-- EditConflictError
           |    +-- NoContentError
           |    +-- ContentTooBigError
@@ -52,6 +52,7 @@ This module contains all exceptions used by EarwigBot::
                +-- UnknownSearchEngineError
                +-- UnsupportedSearchEngineError
                +-- SearchQueryError
+               +-- ParserExclusionError
 """
 
 class EarwigBotError(Exception):
@@ -120,6 +121,19 @@ class LoginError(WikiToolsetError):
     Raised by :py:meth:`Site._login <earwigbot.wiki.site.Site._login>`.
     """
 
+class PermissionsError(WikiToolsetError):
+    """A permissions error ocurred.
+
+    We tried to do something we don't have permission to, like trying to delete
+    a page as a non-admin, or trying to edit a page without login information
+    and AssertEdit enabled. This will also be raised if we have been blocked
+    from editing.
+
+    Raised by :py:meth:`Page.edit <earwigbot.wiki.page.Page.edit>`,
+    :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`, and
+    other API methods depending on settings.
+    """
+
 class NamespaceNotFoundError(WikiToolsetError):
     """A requested namespace name or namespace ID does not exist.
 
@@ -159,17 +173,6 @@ class EditError(WikiToolsetError):
 
     This is used as a base class for all editing errors; this one specifically
     is used only when a generic error occurs that we don't know about.
-
-    Raised by :py:meth:`Page.edit <earwigbot.wiki.page.Page.edit>` and
-    :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`.
-    """
-
-class PermissionsError(EditError):
-    """A permissions error ocurred while editing.
-
-    We tried to do something we don't have permission to, like trying to delete
-    a page as a non-admin, or trying to edit a page without login information
-    and AssertEdit enabled.
 
     Raised by :py:meth:`Page.edit <earwigbot.wiki.page.Page.edit>` and
     :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`.
@@ -229,9 +232,7 @@ class UnknownSearchEngineError(CopyvioCheckError):
     :py:attr:`config.wiki["search"]["engine"]`.
 
     Raised by :py:meth:`Page.copyvio_check
-    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>` and
-    :py:meth:`Page.copyvio_compare
-    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_compare>`.
+    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>`.
     """
 
 class UnsupportedSearchEngineError(CopyvioCheckError):
@@ -241,16 +242,20 @@ class UnsupportedSearchEngineError(CopyvioCheckError):
     couldn't be imported.
 
     Raised by :py:meth:`Page.copyvio_check
-    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>` and
-    :py:meth:`Page.copyvio_compare
-    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_compare>`.
+    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>`.
     """
 
 class SearchQueryError(CopyvioCheckError):
     """Some error ocurred while doing a search query.
 
     Raised by :py:meth:`Page.copyvio_check
-    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>` and
-    :py:meth:`Page.copyvio_compare
-    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_compare>`.
+    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>`.
+    """
+
+class ParserExclusionError(CopyvioCheckError):
+    """A content parser detected that the given source should be excluded.
+
+    Raised internally by :py:meth:`Page.copyvio_check
+    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>`; should not be
+    exposed in client code.
     """

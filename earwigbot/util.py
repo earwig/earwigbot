@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2012 Ben Kurtovic <ben.kurtovic@verizon.net>
+# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -143,7 +143,7 @@ def main():
             pass
         finally:
             if thread.is_alive():
-                bot.tasks.logger.warn("The task is will be killed")
+                bot.tasks.logger.warn("The task will be killed")
     else:
         try:
             bot.run()
