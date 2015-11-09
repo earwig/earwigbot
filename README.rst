@@ -36,7 +36,7 @@ setup.py test`` from the project's root directory. Note that some
 tests require an internet connection, and others may take a while to run.
 Coverage is currently rather incomplete.
 
-Latest release (v0.1)
+Latest release (v0.2)
 ~~~~~~~~~~~~~~~~~~~~~
 
 EarwigBot is available from the `Python Package Index`_, so you can install the
@@ -47,7 +47,7 @@ some header files. For example, on Ubuntu, see `this StackOverflow post`_.
 
 You can also install it from source [1]_ directly::
 
-    curl -Lo earwigbot.tgz https://github.com/earwig/earwigbot/tarball/v0.1
+    curl -Lo earwigbot.tgz https://github.com/earwig/earwigbot/tarball/v0.2
     tar -xf earwigbot.tgz
     cd earwig-earwigbot-*
     python setup.py install

@@ -26,29 +26,29 @@ from setuptools import setup, find_packages
 from earwigbot import __version__
 
 required_deps = [
-    "PyYAML >= 3.10",  # Parsing config files
-    "mwparserfromhell >= 0.1",  # Parsing wikicode for manipulation
+    "PyYAML >= 3.11",  # Parsing config files
+    "mwparserfromhell >= 0.4.3",  # Parsing wikicode for manipulation
 ]
 
 extra_deps = {
     "crypto": [
-        "py-bcrypt >= 0.2",  # Hashing the bot key in the config file
-        "pycrypto >= 2.6",  # Storing bot passwords and keys in the config file
+        "py-bcrypt >= 0.4",  # Hashing the bot key in the config file
+        "pycrypto >= 2.6.1",  # Storing bot passwords + keys in the config file
     ],
     "sql": [
         "oursql >= 0.9.3.1",  # Interfacing with MediaWiki databases
     ],
     "copyvios": [
-        "beautifulsoup4 >= 4.1.1",  # Parsing/scraping HTML
-        "cchardet >= 0.3.5",  # Encoding detection for BeautifulSoup
-        "lxml >= 2.3.5",  # Faster parser for BeautifulSoup
-        "nltk >= 2.0.2",  # Parsing sentences to split article content
-        "oauth2 >= 1.5.211",  # Interfacing with Yahoo! BOSS Search
+        "beautifulsoup4 >= 4.4.1",  # Parsing/scraping HTML
+        "cchardet >= 1.0.0",  # Encoding detection for BeautifulSoup
+        "lxml >= 3.4.4",  # Faster parser for BeautifulSoup
+        "nltk >= 3.1",  # Parsing sentences to split article content
+        "oauth2 >= 1.9.0",  # Interfacing with Yahoo! BOSS Search
         "pdfminer >= 20140328",  # Extracting text from PDF files
-        "tldextract >= 1.4",  # Getting domains for the multithreaded workers
+        "tldextract >= 1.7.1",  # Getting domains for the multithreaded workers
     ],
     "time": [
-        "pytz >= 2012d",  # Handling timezones for the !time IRC command
+        "pytz >= 2015.7",  # Handling timezones for the !time IRC command
     ],
 }
 

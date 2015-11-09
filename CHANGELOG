@@ -1,4 +1,4 @@
-v0.2 (unreleased):
+v0.2 (released November 8, 2015):
 
 - Added a new command syntax allowing the caller to redirect replies to another
   user. Example: "!dictionary >Fred earwig"
