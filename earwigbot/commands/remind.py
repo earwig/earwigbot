@@ -221,9 +221,8 @@ class Remind(Command):
     def _show_reminders(self, data, user):
         """Show all of a user's current reminders."""
         shorten = lambda s: (s[:37] + "..." if len(s) > 40 else s)
-        tmpl = '\x0303{0}\x0F ("{1}", {2})'
-        fmt = lambda robj: tmpl.format(robj.id, shorten(robj.message),
-                                       robj.end_time)
+        fmt = lambda robj: '\x0303{0}\x0F ("{1}", {2})'.format(
+            robj.id, shorten(robj.message), robj.end_time)
 
         if user in self.reminders:
             rlist = ", ".join(fmt(robj) for robj in self.reminders[user])
@@ -231,6 +230,26 @@ class Remind(Command):
         else:
             msg = ("You have no reminders. Set one with \x0306!remind [time] "
                    "[message]\x0F. See also: \x0306!remind help\x0F.")
+        self.reply(data, msg)
+
+    def _show_all_reminders(self, data):
+        """Show all reminders to bot admins."""
+        if not self.config.irc["permissions"].is_admin(data):
+            self.reply(data, "You must be a bot admin to view other users' "
+                             "reminders. View your own with "
+                             "\x0306!reminders\x0F.")
+            return
+        if not self.reminders:
+            self.reply(data, "There are no active reminders.")
+            return
+
+        shorten = lambda s: (s[:37] + "..." if len(s) > 40 else s)
+        fmt = lambda robj, user: '\x0303{0}\x0F ("{1}" for {2}, {3})'.format(
+            robj.id, shorten(robj.message), user, robj.end_time)
+
+        rlist = (fmt(rem, user) for user, rems in self.reminders.iteritems()
+                 for rem in rems)
+        msg = "All reminders: {0}.".format(", ".join(rlist))
         self.reply(data, msg)
 
     def _process_snooze_command(self, data, user):
@@ -271,7 +290,8 @@ class Remind(Command):
             ("Get info", "!remind [id]"),
             ("Cancel", "!remind cancel [id]"),
             ("Adjust", "!remind adjust [id] [time]"),
-            ("Restart", "!snooze [id]")
+            ("Restart", "!snooze [id]"),
+            ("Admin", "!remind all")
         ]
         extra = "In most cases, \x0306[id]\x0F can be omitted if you have only one reminder."
         joined = " ".join("{0}: \x0306{1}\x0F.".format(k, v) for k, v in parts)
@@ -295,6 +315,8 @@ class Remind(Command):
             command = data.args[0]
             if command == "help":
                 return self._show_help(data)
+            if command == "all":
+                return self._show_all_reminders(data)
             if command in DISPLAY + CANCEL + SNOOZE:
                 if user not in self.reminders:
                     msg = "You have no reminders to {0}."
