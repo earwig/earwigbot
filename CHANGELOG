@@ -1,6 +1,7 @@
 v0.3 (unreleased):
 
 - Added !remind all.
+- Improved detection of maximum IRC message length.
 
 v0.2 (released November 8, 2015):
 

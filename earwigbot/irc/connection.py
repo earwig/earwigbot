@@ -45,6 +45,7 @@ class IRCConnection(object):
         self._last_recv = time()
         self._last_send = 0
         self._last_ping = 0
+        self._myhost = "." * 63  # default: longest possible hostname
 
     def __repr__(self):
         """Return the canonical string representation of the IRCConnection."""
@@ -100,8 +101,19 @@ class IRCConnection(object):
                     self.logger.debug(msg)
                 self._last_send = time()
 
-    def _split(self, msgs, maxlen, maxsplits=3):
-        """Split a large message into multiple messages smaller than maxlen."""
+    def _get_maxlen(self, extra):
+        """Return our best guess of the maximum length of a standard message.
+
+        This applies mainly to PRIVMSGs and NOTICEs.
+        """
+        base_max = 512
+        userhost = len(self.nick) + len(self.ident) + len(self._myhost) + 2
+        padding = 4  # "\r\n" at end, ":" at beginning, and " " after userhost
+        return base_max - userhost - padding - extra
+
+    def _split(self, msgs, extralen, maxsplits=3):
+        """Split a large message into multiple messages."""
+        maxlen = self._get_maxlen(extralen)
         words = msgs.split(" ")
         splits = 0
         while words and splits < maxsplits:
@@ -128,6 +140,19 @@ class IRCConnection(object):
         self._last_recv = time()
         if line[0] == "PING":  # If we are pinged, pong back
             self.pong(line[1][1:])
+        elif line[1] == "001":  # Update nickname on startup
+            if line[2] != self.nick:
+                self.logger.warn("Nickname changed from {0} to {1}".format(
+                    self.nick, line[2]))
+                self._nick = line[2]
+        elif line[1] == "376":  # After sign-on, get our userhost
+            self._send("WHOIS {0}".format(self.nick))
+        elif line[1] == "311":  # Receiving WHOIS result
+            if line[2] == self.nick:
+                self._ident = line[4]
+                self._myhost = line[5]
+        elif line[1] == "396":  # Hostname change
+            self._myhost = line[3]
 
     def _process_message(self, line):
         """To be overridden in subclasses."""
@@ -163,7 +188,7 @@ class IRCConnection(object):
 
     def say(self, target, msg, hidelog=False):
         """Send a private message to a target on the server."""
-        for msg in self._split(msg, 400):
+        for msg in self._split(msg, len(target) + 10):
             msg = "PRIVMSG {0} :{1}".format(target, msg)
             self._send(msg, hidelog)
 
@@ -182,7 +207,7 @@ class IRCConnection(object):
 
     def notice(self, target, msg, hidelog=False):
         """Send a notice to a target on the server."""
-        for msg in self._split(msg, 400):
+        for msg in self._split(msg, len(target) + 9):
             msg = "NOTICE {0} :{1}".format(target, msg)
             self._send(msg, hidelog)
 
