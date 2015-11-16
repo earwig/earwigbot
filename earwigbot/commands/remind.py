@@ -220,17 +220,20 @@ class Remind(Command):
 
     def _show_reminders(self, data, user):
         """Show all of a user's current reminders."""
-        shorten = lambda s: (s[:37] + "..." if len(s) > 40 else s)
-        fmt = lambda robj: '\x0303{0}\x0F ("{1}", {2})'.format(
-            robj.id, shorten(robj.message), robj.end_time)
+        if user not in self.reminders:
+            self.reply(data, "You have no reminders. Set one with "
+                             "\x0306!remind [time] [message]\x0F. See also: "
+                             "\x0306!remind help\x0F.")
+            return
 
-        if user in self.reminders:
-            rlist = ", ".join(fmt(robj) for robj in self.reminders[user])
-            msg = "Your reminders: {0}.".format(rlist)
-        else:
-            msg = ("You have no reminders. Set one with \x0306!remind [time] "
-                   "[message]\x0F. See also: \x0306!remind help\x0F.")
-        self.reply(data, msg)
+        shorten = lambda s: (s[:37] + "..." if len(s) > 40 else s)
+        dest = lambda data: (
+            "privately" if data.is_private else "in {0}".format(data.chan))
+        fmt = lambda robj: '\x0303{0}\x0F ("{1}" {2}, {3})'.format(
+            robj.id, shorten(robj.message), dest(robj.data), robj.end_time)
+
+        rlist = ", ".join(fmt(robj) for robj in self.reminders[user])
+        self.reply(data, "Your reminders: {0}.".format(rlist))
 
     def _show_all_reminders(self, data):
         """Show all reminders to bot admins."""
@@ -243,14 +246,14 @@ class Remind(Command):
             self.reply(data, "There are no active reminders.")
             return
 
-        shorten = lambda s: (s[:37] + "..." if len(s) > 40 else s)
-        fmt = lambda robj, user: '\x0303{0}\x0F ("{1}" for {2}, {3})'.format(
-            robj.id, shorten(robj.message), user, robj.end_time)
+        dest = lambda data: (
+            "privately" if data.is_private else "in {0}".format(data.chan))
+        fmt = lambda robj, user: '\x0303{0}\x0F (for {1} {2}, {3})'.format(
+            robj.id, user, dest(robj.data), robj.end_time)
 
         rlist = (fmt(rem, user) for user, rems in self.reminders.iteritems()
                  for rem in rems)
-        msg = "All reminders: {0}.".format(", ".join(rlist))
-        self.reply(data, msg)
+        self.reply(data, "All reminders: {0}.".format(", ".join(rlist)))
 
     def _process_snooze_command(self, data, user):
         """Process the !snooze command."""
@@ -419,6 +422,11 @@ class _Reminder(object):
     def _delete(self):
         """Remove this reminder from the database."""
         self._cmdobj.unstore_reminder(self.id)
+
+    @property
+    def data(self):
+        """Return the IRC data object associated with this reminder."""
+        return self._data
 
     @property
     def end_time(self):
