@@ -143,9 +143,9 @@ class ConfigScript(object):
         self._print("""I can encrypt passwords stored in your config file in
                        addition to preventing other users on your system from
                        reading the file. Encryption is recommended if the bot
-                       is to run on a public computer like the Toolserver, but
-                       otherwise the need to enter a key everytime you start
-                       the bot may be annoying.""")
+                       is to run on a public server like Wikimedia Labs, but
+                       otherwise the need to enter a key every time you start
+                       the bot may be an inconvenience.""")
         self.data["metadata"]["encryptPasswords"] = False
         if self._ask_bool("Encrypt stored passwords?"):
             key = getpass(self.PROMPT + "Enter an encryption key: ")
