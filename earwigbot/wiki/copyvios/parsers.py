@@ -61,6 +61,7 @@ class ArticleTextParser(_BaseTextParser):
     """A parser that can strip and chunk wikicode article text."""
     TYPE = "Article"
     TEMPLATE_MERGE_THRESHOLD = 35
+    SPLIT_REGEX = re.compile("[!#$%&*+,./:;<=>?@^`|~{}]")
 
     def _merge_templates(self, code):
         """Merge template contents in to wikicode when the values are long."""
@@ -132,6 +133,12 @@ class ArticleTextParser(_BaseTextParser):
         directory (*nltk_dir*) is required to store nltk's punctuation
         database. This is typically located in the bot's working directory.
         """
+        def cut_string(fragment):
+            words = fragment.split()
+            while len(" ".join(words)) > max_query:
+                words.pop()
+            return " ".join(words)
+
         datafile = path.join(nltk_dir, "tokenizers", "punkt", "english.pickle")
         try:
             tokenizer = nltk.data.load("file:" + datafile)
@@ -141,16 +148,14 @@ class ArticleTextParser(_BaseTextParser):
 
         sentences = []
         for sentence in tokenizer.tokenize(self.clean):
-            if len(sentence) > max_query:
-                words = sentence.split()
-                while len(" ".join(words)) > max_query:
-                    words.pop()
-                sentence = " ".join(words)
-            if len(sentence) < min_query:
-                continue
-            sentences.append(sentence)
+            if len(sentence) <= max_query:
+                sentences.append(sentence)
+            else:
+                sentences.extend(cut_string(fragment) for fragment in
+                                 self.SPLIT_REGEX.split(sentence))
 
-        if max_chunks >= len(sentences):
+        sentences = [sen for sen in sentences if len(sen) >= min_query]
+        if len(sentences) <= max_chunks:
             return sentences
 
         chunks = []
