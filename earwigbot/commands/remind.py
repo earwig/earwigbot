@@ -37,7 +37,8 @@ CANCEL = ["cancel", "stop", "delete", "del", "stop", "unremind", "forget",
 SNOOZE = ["snooze", "delay", "reset", "adjust", "modify", "change"]
 
 class Remind(Command):
-    """Set a message to be repeated to you in a certain amount of time."""
+    """Set a message to be repeated to you in a certain amount of time. See
+    usage with !remind help."""
     name = "remind"
     commands = ["remind", "reminder", "reminders", "snooze", "cancel",
                 "unremind", "forget"]
