@@ -114,7 +114,10 @@ class CopyvioMixIn(object):
         log = u"Starting copyvio check for [[{0}]]"
         self._logger.info(log.format(self.title))
         searcher = self._get_search_engine()
-        parser = ArticleTextParser(self.get())
+        parser = ArticleTextParser(self.get(), {
+            "nltk_dir": self._search_config["nltk_dir"],
+            "lang": self._site.lang
+        })
         article = MarkovChain(parser.strip())
         parser_args = {}
 
@@ -139,7 +142,7 @@ class CopyvioMixIn(object):
             workspace.enqueue(parser.get_links(), exclude)
         num_queries = 0
         if not no_searches:
-            chunks = parser.chunk(self._search_config["nltk_dir"], max_queries)
+            chunks = parser.chunk(max_queries)
             for chunk in chunks:
                 if short_circuit and workspace.finished:
                     workspace.possible_miss = True

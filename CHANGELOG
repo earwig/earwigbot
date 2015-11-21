@@ -1,7 +1,9 @@
 v0.3 (unreleased):
 
-- Added !remind all.
-- Improved detection of maximum IRC message length.
+- Copyvio detector: improved sentence splitting algorithm.
+- IRC: Added !remind all.
+- IRC: Improved detection of maximum IRC message length.
+- IRC: Improved some help commands.
 
 v0.2 (released November 8, 2015):
 

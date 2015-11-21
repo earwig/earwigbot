@@ -61,7 +61,26 @@ class ArticleTextParser(_BaseTextParser):
     """A parser that can strip and chunk wikicode article text."""
     TYPE = "Article"
     TEMPLATE_MERGE_THRESHOLD = 35
-    SPLIT_REGEX = re.compile("[!#$%&*+,./:;<=>?@^`|~{}]")
+    NLTK_DEFAULT = "english"
+    NLTK_LANGS = {
+        "cs": "czech",
+        "da": "danish",
+        "de": "german",
+        "el": "greek",
+        "en": "english",
+        "es": "spanish",
+        "et": "estonian",
+        "fi": "finnish",
+        "fr": "french",
+        "it": "italian",
+        "nl": "dutch",
+        "no": "norwegian",
+        "pl": "polish",
+        "pt": "portuguese",
+        "sl": "slovene",
+        "sv": "swedish",
+        "tr": "turkish"
+    }
 
     def _merge_templates(self, code):
         """Merge template contents in to wikicode when the values are long."""
@@ -76,6 +95,18 @@ class ArticleTextParser(_BaseTextParser):
                 code.replace(template, u" " + subst + u" ")
             else:
                 code.remove(template)
+
+    def _get_tokenizer(self):
+        """Return a NLTK punctuation tokenizer for the article's language."""
+        datafile = lambda lang: "file:" + path.join(
+            self._args["nltk_dir"], "tokenizers", "punkt", lang + ".pickle")
+
+        lang = self.NLTK_LANGS.get(self._args.get("lang"), self.NLTK_DEFAULT)
+        try:
+            nltk.data.load(datafile(self.NLTK_DEFAULT))
+        except LookupError:
+            nltk.download("punkt", self._args["nltk_dir"])
+        return nltk.data.load(datafile(lang))
 
     def strip(self):
         """Clean the page's raw text by removing templates and formatting.
@@ -119,7 +150,7 @@ class ArticleTextParser(_BaseTextParser):
         self.clean = re.sub("\n\n+", "\n", clean).strip()
         return self.clean
 
-    def chunk(self, nltk_dir, max_chunks, min_query=8, max_query=128):
+    def chunk(self, max_chunks, min_query=8, max_query=128, split_thresh=32):
         """Convert the clean article text into a list of web-searchable chunks.
 
         No greater than *max_chunks* will be returned. Each chunk will only be
@@ -131,28 +162,31 @@ class ArticleTextParser(_BaseTextParser):
 
         This is implemented using :py:mod:`nltk` (http://nltk.org/). A base
         directory (*nltk_dir*) is required to store nltk's punctuation
-        database. This is typically located in the bot's working directory.
+        database, and should be passed as an argument to the constructor. It is
+        typically located in the bot's working directory.
         """
-        def cut_string(fragment):
-            words = fragment.split()
-            while len(" ".join(words)) > max_query:
-                words.pop()
-            return " ".join(words)
+        def cut_sentence(words):
+            div = len(words)
+            if div == 0:
+                return []
 
-        datafile = path.join(nltk_dir, "tokenizers", "punkt", "english.pickle")
-        try:
-            tokenizer = nltk.data.load("file:" + datafile)
-        except LookupError:
-            nltk.download("punkt", nltk_dir)
-            tokenizer = nltk.data.load("file:" + datafile)
+            length = len(" ".join(words))
+            while length > max_query:
+                div -= 1
+                length -= len(words[div]) + 1
 
+            result = []
+            if length >= split_thresh:
+                result.append(" ".join(words[:div]))
+            return result + cut_sentence(words[div + 1:])
+
+        tokenizer = self._get_tokenizer()
         sentences = []
         for sentence in tokenizer.tokenize(self.clean):
             if len(sentence) <= max_query:
                 sentences.append(sentence)
             else:
-                sentences.extend(cut_string(fragment) for fragment in
-                                 self.SPLIT_REGEX.split(sentence))
+                sentences.extend(cut_sentence(sentence.split()))
 
         sentences = [sen for sen in sentences if len(sen) >= min_query]
         if len(sentences) <= max_chunks:
