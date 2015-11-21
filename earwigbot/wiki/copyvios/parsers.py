@@ -108,6 +108,35 @@ class ArticleTextParser(_BaseTextParser):
             nltk.download("punkt", self._args["nltk_dir"])
         return nltk.data.load(datafile(lang))
 
+    def _get_sentences(self, min_query, max_query, split_thresh):
+        """Split the article text into sentences of a certain length."""
+        def cut_sentence(words):
+            div = len(words)
+            if div == 0:
+                return []
+
+            length = len(" ".join(words))
+            while length > max_query:
+                div -= 1
+                length -= len(words[div]) + 1
+
+            result = []
+            if length >= split_thresh:
+                result.append(" ".join(words[:div]))
+            return result + cut_sentence(words[div + 1:])
+
+        tokenizer = self._get_tokenizer()
+        sentences = []
+        if not hasattr(self, "clean"):
+            self.strip()
+
+        for sentence in tokenizer.tokenize(self.clean):
+            if len(sentence) <= max_query:
+                sentences.append(sentence)
+            else:
+                sentences.extend(cut_sentence(sentence.split()))
+        return [sen for sen in sentences if len(sen) >= min_query]
+
     def strip(self):
         """Clean the page's raw text by removing templates and formatting.
 
@@ -165,30 +194,7 @@ class ArticleTextParser(_BaseTextParser):
         database, and should be passed as an argument to the constructor. It is
         typically located in the bot's working directory.
         """
-        def cut_sentence(words):
-            div = len(words)
-            if div == 0:
-                return []
-
-            length = len(" ".join(words))
-            while length > max_query:
-                div -= 1
-                length -= len(words[div]) + 1
-
-            result = []
-            if length >= split_thresh:
-                result.append(" ".join(words[:div]))
-            return result + cut_sentence(words[div + 1:])
-
-        tokenizer = self._get_tokenizer()
-        sentences = []
-        for sentence in tokenizer.tokenize(self.clean):
-            if len(sentence) <= max_query:
-                sentences.append(sentence)
-            else:
-                sentences.extend(cut_sentence(sentence.split()))
-
-        sentences = [sen for sen in sentences if len(sen) >= min_query]
+        sentences = self._get_sentences(min_query, max_query, split_thresh)
         if len(sentences) <= max_chunks:
             return sentences
 
