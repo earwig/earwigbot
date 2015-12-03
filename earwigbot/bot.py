@@ -150,7 +150,8 @@ class Bot(object):
         component_names = self.config.components.keys()
         skips = component_names + ["MainThread", "reminder", "irc:quit"]
         for thread in enumerate_threads():
-            if thread.name not in skips and thread.is_alive():
+            if thread.is_alive() and not any(
+                    thread.name.startswith(skip) for skip in skips):
                 tasks.append(thread.name)
         if tasks:
             log = "The following commands or tasks will be killed: {0}"

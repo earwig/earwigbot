@@ -1,7 +1,8 @@
 v0.3 (unreleased):
 
 - Copyvio detector: improved sentence splitting algorithm.
-- IRC > !remind: Added !remind all. Improved time detection.
+- IRC > !remind: Added !remind all. Fixed multithreading efficiency issues.
+  Improved time detection.
 - IRC: Improved detection of maximum IRC message length.
 - IRC: Improved some help commands.
 
