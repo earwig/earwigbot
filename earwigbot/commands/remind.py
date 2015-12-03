@@ -78,13 +78,11 @@ class Remind(Command):
             else:
                 raise ValueError(node)
 
-        if arg and arg[-1] in time_units:
-            factor, arg = time_units[arg[-1]], arg[:-1]
-        else:
-            factor = 1
+        for unit, factor in time_units.iteritems():
+            arg = arg.replace(unit, "*" + str(factor))
 
         try:
-            parsed = int(_evaluate(ast.parse(arg, mode="eval").body) * factor)
+            parsed = int(_evaluate(ast.parse(arg, mode="eval").body))
         except (SyntaxError, KeyError):
             raise ValueError(arg)
         if parsed <= 0:
