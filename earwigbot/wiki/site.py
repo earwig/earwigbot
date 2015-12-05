@@ -232,6 +232,8 @@ class Site(object):
         url, data = self._build_api_query(params, ignore_maxlag, no_assert)
         if "lgpassword" in params:
             self._logger.debug("{0} -> <hidden>".format(url))
+        elif len(data) > 1000:
+            self._logger.debug("{0} -> {1}...".format(url, data[:997]))
         else:
             self._logger.debug("{0} -> {1}".format(url, data))
 
