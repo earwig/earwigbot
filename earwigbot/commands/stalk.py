@@ -21,13 +21,14 @@
 # SOFTWARE.
 
 from ast import literal_eval
+import re
 
 from earwigbot.commands import Command
 from earwigbot.irc import RC
 
 class Stalk(Command):
     """Stalk a particular user (!stalk/!unstalk) or page (!watch/!unwatch) for
-    edits. Applies to the current bot session only."""
+    edits. Prefix regular expressions with "re:" (uses re.match)."""
     name = "stalk"
     commands = ["stalk", "watch", "unstalk", "unwatch", "stalks", "watches",
                 "allstalks", "allwatches", "unstalkall", "unwatchall"]
@@ -79,9 +80,12 @@ class Stalk(Command):
         target = " ".join(data.args).replace("_", " ")
         if target.startswith("[[") and target.endswith("]]"):
             target = target[2:-2]
-        if target.startswith("User:") and "stalk" in data.command:
-            target = target[5:]
-        target = target[0].upper() + target[1:]
+        if target.startswith("re:"):
+            target = "re:" + target[3:].lstrip()
+        else:
+            if target.startswith("User:") and "stalk" in data.command:
+                target = target[5:]
+            target = target[0].upper() + target[1:]
 
         if data.command in ["stalk", "watch"]:
             if data.is_private:
@@ -119,12 +123,12 @@ class Stalk(Command):
                 else:
                     chans[item[0]] = None
 
-        def _wildcard_match(target, tag):
-            return target[-1] == "*" and tag.startswith(target[:-1])
+        def _regex_match(target, tag):
+            return target.startswith("re:") and re.match(target[3:], tag)
 
         def _process(table, tag):
             for target, stalks in table.iteritems():
-                if target == tag or _wildcard_match(target, tag):
+                if target == tag or _regex_match(target, tag):
                     _update_chans(stalks)
 
         chans = {}
