@@ -472,7 +472,7 @@ class _Reminder(object):
         """Activate the reminder for the user."""
         self._cmdobj.reply(self._data, self.message)
         self._cmdobj.unstore_reminder(self.id)
-        self.end = time.time() + 60
+        self.end = time.time() + (60 * 60 * 24)
         self._expired = True
 
     def _finalize(self):
