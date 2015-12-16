@@ -142,6 +142,9 @@ class Threads(Command):
             return
 
         data.kwargs["fromIRC"] = True
+        data.kwargs["_IRCCallback"] = lambda: self.reply(
+            data, "Task \x0302{0}\x0F finished.".format(task_name))
+
         self.bot.tasks.start(task_name, **data.kwargs)
         msg = "Task \x0302{0}\x0F started.".format(task_name)
         self.reply(data, msg)

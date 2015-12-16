@@ -247,6 +247,8 @@ class TaskManager(_ResourceManager):
         else:
             msg = "Task '{0}' finished successfully"
             self.logger.info(msg.format(task.name))
+        if kwargs.get("fromIRC"):
+            kwargs.get("_IRCCallback")()
 
     def start(self, task_name, **kwargs):
         """Start a given task in a new daemon thread, and return the thread.
