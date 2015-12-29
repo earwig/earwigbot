@@ -1,6 +1,7 @@
 v0.3 (unreleased):
 
 - Copyvio detector: improved sentence splitting algorithm.
+- IRC > !notes: Improved help and added aliases.
 - IRC > !remind: Added !remind all. Fixed multithreading efficiency issues.
   Improved time detection.
 - IRC > !stalk: Allow regular expressions as page titles or usernames.
