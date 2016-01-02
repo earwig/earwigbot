@@ -34,6 +34,16 @@ DISPLAY = ["display", "show", "list", "info", "details"]
 CANCEL = ["cancel", "stop", "delete", "del", "stop", "unremind", "forget",
           "disregard"]
 SNOOZE = ["snooze", "delay", "reset", "adjust", "modify", "change"]
+SNOOZE_ONLY = ["snooze", "delay", "reset"]
+
+def _format_time(epoch):
+    """Format a UNIX timestamp nicely."""
+    lctime = time.localtime(epoch)
+    if lctime.tm_year == time.localtime().tm_year:
+        return time.strftime("%b %d %H:%M:%S %Z", lctime)
+    else:
+        return time.strftime("%b %d, %Y %H:%M:%S %Z", lctime)
+
 
 class Remind(Command):
     """Set a message to be repeated to you in a certain amount of time. See
@@ -49,8 +59,10 @@ class Remind(Command):
             return "display"
         if command in CANCEL:
             return "cancel"
-        if command in SNOOZE:
+        if command in SNOOZE_ONLY:
             return "snooze"
+        if command in SNOOZE:  # "adjust" == snoozing active reminders
+            return "adjust"
 
     @staticmethod
     def _parse_time(arg):
@@ -88,7 +100,7 @@ class Remind(Command):
             raise ValueError(parsed)
         return parsed
 
-    def _really_get_reminder_by_id(self, user, rid):
+    def _get_reminder_by_id(self, user, rid):
         """Return the _Reminder object that corresponds to a particular ID.
 
         Raises IndexError on failure.
@@ -97,17 +109,6 @@ class Remind(Command):
         if user not in self.reminders:
             raise IndexError(rid)
         return [robj for robj in self.reminders[user] if robj.id == rid][0]
-
-    def _get_reminder_by_id(self, user, rid, data):
-        """Return the _Reminder object that corresponds to a particular ID.
-
-        Sends an error message to the user on failure.
-        """
-        try:
-            return self._really_get_reminder_by_id(user, rid)
-        except IndexError:
-            msg = "Couldn't find a reminder for \x0302{0}\x0F with ID \x0303{1}\x0F."
-            self.reply(data, msg.format(user, rid))
 
     def _get_new_id(self):
         """Get a free ID for a new reminder."""
@@ -123,7 +124,7 @@ class Remind(Command):
             self.reminders[user] = [reminder]
         self._thread.add(reminder)
 
-    def _create_reminder(self, data, user):
+    def _create_reminder(self, data):
         """Create a new reminder for the given user."""
         try:
             wait = self._parse_time(data.args[0])
@@ -143,8 +144,8 @@ class Remind(Command):
             msg = "Couldn't set a new reminder: no free IDs available."
             return self.reply(data, msg)
 
-        reminder = _Reminder(rid, user, wait, message, data, self)
-        self._start_reminder(reminder, user)
+        reminder = _Reminder(rid, data.host, wait, message, data, self)
+        self._start_reminder(reminder, data.host)
         msg = "Set reminder \x0303{0}\x0F ({1})."
         self.reply(data, msg.format(rid, reminder.end_time))
 
@@ -155,28 +156,26 @@ class Remind(Command):
                          reminder.message)
         self.reply(data, msg)
 
-    def _cancel_reminder(self, data, user, reminder):
+    def _cancel_reminder(self, data, reminder):
         """Cancel a pending reminder."""
         self._thread.remove(reminder)
         self.unstore_reminder(reminder.id)
-        self.reminders[user].remove(reminder)
-        if not self.reminders[user]:
-            del self.reminders[user]
+        self.reminders[data.host].remove(reminder)
+        if not self.reminders[data.host]:
+            del self.reminders[data.host]
         msg = "Reminder \x0303{0}\x0F canceled."
         self.reply(data, msg.format(reminder.id))
 
     def _snooze_reminder(self, data, reminder, arg=None):
         """Snooze a reminder to be re-triggered after a period of time."""
         verb = "snoozed" if reminder.expired else "adjusted"
-        duration = None
-        if arg:
-            try:
-                duration = self._parse_time(data.args[arg])
-            except (IndexError, ValueError):
-                pass
+        try:
+            duration = self._parse_time(arg) if arg else None
+        except ValueError:
+            duration = None
 
         reminder.reset(duration)
-        end = time.strftime("%b %d %H:%M:%S %Z", time.localtime(reminder.end))
+        end = _format_time(reminder.end)
         msg = "Reminder \x0303{0}\x0F {1} until {2}."
         self.reply(data, msg.format(reminder.id, verb, end))
 
@@ -197,21 +196,9 @@ class Remind(Command):
             reminder = _Reminder(rid, user, wait, message, data, self, end)
             self._start_reminder(reminder, user)
 
-    def _handle_command(self, command, data, user, reminder, arg=None):
-        """Handle a reminder-processing subcommand."""
-        if command in DISPLAY:
-            self._display_reminder(data, reminder)
-        elif command in CANCEL:
-            self._cancel_reminder(data, user, reminder)
-        elif command in SNOOZE:
-            self._snooze_reminder(data, reminder, arg)
-        else:
-            msg = "Unknown action \x02{0}\x0F for reminder \x0303{1}\x0F."
-            self.reply(data, msg.format(command, reminder.id))
-
-    def _show_reminders(self, data, user):
+    def _show_reminders(self, data):
         """Show all of a user's current reminders."""
-        if user not in self.reminders:
+        if data.host not in self.reminders:
             self.reply(data, "You have no reminders. Set one with "
                              "\x0306!remind [time] [message]\x0F. See also: "
                              "\x0306!remind help\x0F.")
@@ -223,7 +210,7 @@ class Remind(Command):
         fmt = lambda robj: '\x0303{0}\x0F ("{1}" {2}, {3})'.format(
             robj.id, shorten(robj.message), dest(robj.data), robj.end_time)
 
-        rlist = ", ".join(fmt(robj) for robj in self.reminders[user])
+        rlist = ", ".join(fmt(robj) for robj in self.reminders[data.host])
         self.reply(data, "Your reminders: {0}.".format(rlist))
 
     def _show_all_reminders(self, data):
@@ -246,36 +233,6 @@ class Remind(Command):
                  for rem in rems)
         self.reply(data, "All reminders: {0}.".format(", ".join(rlist)))
 
-    def _process_snooze_command(self, data, user):
-        """Process the !snooze command."""
-        if not data.args:
-            if user not in self.reminders:
-                self.reply(data, "You have no reminders to snooze.")
-            elif len(self.reminders[user]) == 1:
-                self._snooze_reminder(data, self.reminders[user][0])
-            else:
-                msg = "You have {0} reminders. Snooze which one?"
-                self.reply(data, msg.format(len(self.reminders[user])))
-            return
-        reminder = self._get_reminder_by_id(user, data.args[0], data)
-        if reminder:
-            self._snooze_reminder(data, reminder, 1)
-
-    def _process_cancel_command(self, data, user):
-        """Process the !cancel, !unremind, and !forget commands."""
-        if not data.args:
-            if user not in self.reminders:
-                self.reply(data, "You have no reminders to cancel.")
-            elif len(self.reminders[user]) == 1:
-                self._cancel_reminder(data, user, self.reminders[user][0])
-            else:
-                msg = "You have {0} reminders. Cancel which one?"
-                self.reply(data, msg.format(len(self.reminders[user])))
-            return
-        reminder = self._get_reminder_by_id(user, data.args[0], data)
-        if reminder:
-            self._cancel_reminder(data, user, reminder)
-
     def _show_help(self, data):
         """Reply to the user with help for all major subcommands."""
         parts = [
@@ -284,59 +241,79 @@ class Remind(Command):
             ("Get info", "!remind [id]"),
             ("Cancel", "!remind cancel [id]"),
             ("Adjust", "!remind adjust [id] [time]"),
-            ("Restart", "!snooze [id]"),
+            ("Restart", "!snooze [id] [time]"),
             ("Admin", "!remind all")
         ]
-        extra = "In most cases, \x0306[id]\x0F can be omitted if you have only one reminder."
+        extra = "The \x0306[id]\x0F can be omitted if you have only one reminder."
         joined = " ".join("{0}: \x0306{1}\x0F.".format(k, v) for k, v in parts)
         self.reply(data, joined + " " + extra)
 
+    def _dispatch_command(self, data, command, args):
+        """Handle a reminder-processing subcommand."""
+        user = data.host
+        reminder = None
+        if args and args[0].startswith("R"):
+            try:
+                reminder = self._get_reminder_by_id(user, args[0])
+            except IndexError:
+                msg = "Couldn't find a reminder for \x0302{0}\x0F with ID \x0303{1}\x0F."
+                self.reply(data, msg.format(user, args[0]))
+                return
+            args.pop(0)
+        elif user not in self.reminders:
+            msg = "You have no reminders to {0}."
+            self.reply(data, msg.format(self._normalize(command)))
+            return
+        elif len(self.reminders[user]) == 1:
+            reminder = self.reminders[user][0]
+        elif command in SNOOZE_ONLY:  # Select most recent expired reminder
+            rmds = [rmd for rmd in self.reminders[user] if rmd.expired]
+            rmds.sort(key=lambda rmd: rmd.end)
+            if len(rmds) > 0:
+                reminder = rmds[-1]
+        elif command in SNOOZE or command in CANCEL:  # Select only active one
+            rmds = [rmd for rmd in self.reminders[user] if not rmd.expired]
+            if len(rmds) == 1:
+                reminder = rmds[0]
+        if not reminder:
+            msg = "You have {0} reminders. {1} which one?"
+            num = len(self.reminders[user])
+            command = self._normalize(command).capitalize()
+            self.reply(data, msg.format(num, command))
+            return
+
+        if command in DISPLAY:
+            self._display_reminder(data, reminder)
+        elif command in CANCEL:
+            self._cancel_reminder(data, reminder)
+        elif command in SNOOZE:
+            self._snooze_reminder(data, reminder, args[0] if args else None)
+        else:
+            msg = "Unknown action \x02{0}\x0F for reminder \x0303{1}\x0F."
+            self.reply(data, msg.format(command, reminder.id))
+
     def _process(self, data):
         """Main entry point."""
-        if data.command == "snooze":
-            return self._process_snooze_command(data, data.host)
-        if data.command in ["cancel", "unremind", "forget"]:
-            return self._process_cancel_command(data, data.host)
+        if data.command in SNOOZE + CANCEL:
+            return self._dispatch_command(data, data.command, data.args)
         if not data.args:
-            return self._show_reminders(data, data.host)
+            return self._show_reminders(data)
 
-        user = data.host
-        if len(data.args) == 1:
-            command = data.args[0]
-            if command == "help":
-                return self._show_help(data)
-            if command == "all":
-                return self._show_all_reminders(data)
-            if command in DISPLAY + CANCEL + SNOOZE:
-                if user not in self.reminders:
-                    msg = "You have no reminders to {0}."
-                    self.reply(data, msg.format(self._normalize(command)))
-                elif len(self.reminders[user]) == 1:
-                    reminder = self.reminders[user][0]
-                    self._handle_command(command, data, user, reminder)
-                else:
-                    msg = "You have {0} reminders. {1} which one?"
-                    num = len(self.reminders[user])
-                    command = self._normalize(command).capitalize()
-                    self.reply(data, msg.format(num, command))
-                return
-            reminder = self._get_reminder_by_id(user, data.args[0], data)
-            if reminder:
-                self._display_reminder(data, reminder)
-            return
-
+        if data.args[0] == "help":
+            return self._show_help(data)
+        if data.args[0] == "all":
+            return self._show_all_reminders(data)
         if data.args[0] in DISPLAY + CANCEL + SNOOZE:
-            reminder = self._get_reminder_by_id(user, data.args[1], data)
-            if reminder:
-                self._handle_command(data.args[0], data, user, reminder, 2)
-            return
+            return self._dispatch_command(data, data.args[0], data.args[1:])
 
         try:
-            reminder = self._really_get_reminder_by_id(user, data.args[0])
+            self._get_reminder_by_id(data.host, data.args[0])
         except IndexError:
-            return self._create_reminder(data, user)
-
-        self._handle_command(data.args[1], data, user, reminder, 2)
+            return self._create_reminder(data)
+        if len(data.args) == 1:
+            return self._dispatch_command(data, "display", data.args)
+        self._dispatch_command(
+            data, data.args[1], [data.args[0]] + data.args[2:])
 
     @property
     def lock(self):
@@ -494,12 +471,7 @@ class _Reminder(object):
         """Return a string representing the end time of a reminder."""
         if self._expired or self.end < time.time():
             return "expired"
-        lctime = time.localtime(self.end)
-        if lctime.tm_year == time.localtime().tm_year:
-            ends = time.strftime("%b %d %H:%M:%S %Z", lctime)
-        else:
-            ends = time.strftime("%b %d, %Y %H:%M:%S %Z", lctime)
-        return "ends {0}".format(ends)
+        return "ends {0}".format(_format_time(self.end))
 
     @property
     def expired(self):
