@@ -30,7 +30,7 @@ details. This documentation is also available `online
 """
 
 __author__ = "Ben Kurtovic"
-__copyright__ = "Copyright (C) 2009-2015 Ben Kurtovic"
+__copyright__ = "Copyright (C) 2009-2016 Ben Kurtovic"
 __license__ = "MIT License"
 __version__ = "0.3.dev0"
 __email__ = "ben.kurtovic@gmail.com"
