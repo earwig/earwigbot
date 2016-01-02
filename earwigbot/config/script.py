@@ -442,6 +442,10 @@ class ConfigScript(object):
         """Make a new config file based on the user's input."""
         try:
             makedirs(path.dirname(self.config.path))
+        except OSError as exc:
+            if exc.errno != 17:
+                raise
+        try:
             open(self.config.path, "w").close()
             chmod(self.config.path, stat.S_IRUSR|stat.S_IWUSR)
         except IOError:
