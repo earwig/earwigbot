@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -188,10 +188,13 @@ class Remind(Command):
             return
         permdb.set_attr("command:remind", "data", "[]")
 
+        connect_wait = 30
         for item in ast.literal_eval(database):
             rid, user, wait, end, message, data = item
-            if end < time.time():
-                continue
+            if end < time.time() + connect_wait:
+                # Make reminders that have expired while the bot was offline
+                # trigger shortly after startup
+                end = time.time() + connect_wait
             data = Data.unserialize(data)
             reminder = _Reminder(rid, user, wait, message, data, self, end)
             self._start_reminder(reminder, user)
