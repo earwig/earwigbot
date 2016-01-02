@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -270,7 +270,7 @@ class ConfigScript(object):
         password = self._ask_pass("Bot password:", encrypt=False)
         self.data["wiki"]["password"] = password
         self.data["wiki"]["userAgent"] = "EarwigBot/$1 (Python/$2; https://github.com/earwig/earwigbot)"
-        self.data["wiki"]["summary"] = "([[WP:BOT|Bot]]): $2"
+        self.data["wiki"]["summary"] = "([[WP:BOT|Bot]]) $2"
         self.data["wiki"]["useHTTPS"] = True
         self.data["wiki"]["assert"] = "user"
         self.data["wiki"]["maxlag"] = 10
