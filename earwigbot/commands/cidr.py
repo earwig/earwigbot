@@ -111,9 +111,11 @@ class CIDR(Command):
                 break
 
         mask = bin_ips[0][:size].ljust(len(bin_ips[0]), "0")
+        packed = "".join(
+            chr(int(mask[i:i + 8], 2)) for i in xrange(0, len(mask), 8))
         return _Range(
             family,
-            socket.inet_ntop(family, int(mask, 2)) + "/" + str(size),
+            socket.inet_ntop(family, packed) + "/" + str(size),
             size,
             self._format_count(2 ** (len(bin_ips[0]) - size)))
 
