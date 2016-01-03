@@ -27,7 +27,8 @@ from socket import AF_INET, AF_INET6
 
 from earwigbot.commands import Command
 
-_Range = namedtuple("_Range", ["family", "range", "size", "addresses"])
+_Range = namedtuple("_Range", [
+    "family", "range", "low", "high", "size", "addresses"])
 
 class CIDR(Command):
     """Calculates the smallest CIDR range that encompasses a list of IP
@@ -62,9 +63,10 @@ class CIDR(Command):
 
         cidr = self._calculate_range(ips[0][0], [ip[1] for ip in ips])
         descr = self._describe(cidr.family, cidr.size)
-        msg = "Smallest CIDR range is \x02{0}\x0F ({1}){2}"
+        msg = "Smallest CIDR range is \x02{0}\x0F ({1}: {2} – {3}){4}."
         self.reply(data, msg.format(
-            cidr.range, cidr.addresses, " – " + descr if descr else ""))
+            cidr.range, cidr.addresses, cidr.low, cidr.high,
+            "; " + descr if descr else ""))
 
     def _parse_arg(self, arg):
         """Converts an argument into an IP address."""
@@ -110,23 +112,30 @@ class CIDR(Command):
                 size = i
                 break
 
-        mask = bin_ips[0][:size].ljust(len(bin_ips[0]), "0")
-        packed = "".join(
-            chr(int(mask[i:i + 8], 2)) for i in xrange(0, len(mask), 8))
+        bin_low = bin_ips[0][:size].ljust(len(bin_ips[0]), "0")
+        bin_high = bin_ips[0][:size].ljust(len(bin_ips[0]), "1")
+        low = self._format_bin(family, bin_low)
+        high = self._format_bin(family, bin_high)
+
         return _Range(
-            family,
-            socket.inet_ntop(family, packed) + "/" + str(size),
-            size,
+            family, low + "/" + str(size), low, high, size,
             self._format_count(2 ** (len(bin_ips[0]) - size)))
 
-    def _format_count(self, count):
+    @staticmethod
+    def _format_bin(family, binary):
+        """Convert an IP's binary representation to presentation format."""
+        return socket.inet_ntop(family, "".join(
+            chr(int(binary[i:i + 8], 2)) for i in xrange(0, len(binary), 8)))
+
+    @staticmethod
+    def _format_count(count):
         """Nicely format a number of addresses affected by a range block."""
         if count > 2 ** 32:
             base = "{0:.2E} addresses".format(count)
             if count > 2 ** 96:
                 return base + ", {0:.2E} /64 subnets".format(count >> 64)
             if count > 2 ** 63:
-                return base + ", {0} /64 subnets".format(count >> 64)
+                return base + ", {0:,} /64 subnets".format(count >> 64)
             return base
         if count == 1:
             return "1 address"
