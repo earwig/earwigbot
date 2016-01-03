@@ -45,7 +45,8 @@ class CIDR(Command):
         if not data.args:
             msg = ("Specify a list of IP addresses to calculate a CIDR range "
                    "for. For example, \x0306!{0} 192.168.0.3 192.168.0.15 "
-                   "192.168.1.4\x0F.")
+                   "192.168.1.4\x0F or \x0306!{0} 2500:1:2:3:: "
+                   "2500:1:2:3:dead:beef::\x0F.")
             self.reply(data, msg.format(data.command))
             return
 
@@ -63,10 +64,12 @@ class CIDR(Command):
 
         cidr = self._calculate_range(ips[0][0], [ip[1] for ip in ips])
         descr = self._describe(cidr.family, cidr.size)
-        msg = "Smallest CIDR range is \x02{0}\x0F ({1}: {2} – {3}){4}."
+
+        msg = ("Smallest CIDR range is \x02{0}\x0F, covering {1} from "
+               "\x03\x05{2}\x0F to \x03\x05{3}\x0F{4}.")
         self.reply(data, msg.format(
             cidr.range, cidr.addresses, cidr.low, cidr.high,
-            "; " + descr if descr else ""))
+            " (\x03\x04{0}\x0F)".format(descr) if descr else ""))
 
     def _parse_arg(self, arg):
         """Converts an argument into an IP address."""
@@ -130,15 +133,17 @@ class CIDR(Command):
     @staticmethod
     def _format_count(count):
         """Nicely format a number of addresses affected by a range block."""
-        if count > 2 ** 32:
-            base = "{0:.2E} addresses".format(count)
-            if count > 2 ** 96:
-                return base + ", {0:.2E} /64 subnets".format(count >> 64)
-            if count > 2 ** 63:
-                return base + ", {0:,} /64 subnets".format(count >> 64)
-            return base
         if count == 1:
             return "1 address"
+        if count > 2 ** 32:
+            base = "{0:.2E} addresses".format(count)
+            if count == 2 ** 64:
+                return base + " (1 /64 subnet)"
+            if count > 2 ** 96:
+                return base + " ({0:.2E} /64 subnets)".format(count >> 64)
+            if count > 2 ** 63:
+                return base + " ({0:,} /64 subnets)".format(count >> 64)
+            return base
         return "{0:,} addresses".format(count)
 
     def _describe(self, family, size):
