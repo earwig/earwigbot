@@ -66,10 +66,10 @@ class CIDR(Command):
         descr = self._describe(cidr.family, cidr.size)
 
         msg = ("Smallest CIDR range is \x02{0}\x0F, covering {1} from "
-               "\x03\x05{2}\x0F to \x03\x05{3}\x0F{4}.")
+               "\x0305{2}\x0F to \x0305{3}\x0F{4}.")
         self.reply(data, msg.format(
             cidr.range, cidr.addresses, cidr.low, cidr.high,
-            " (\x03\x04{0}\x0F)".format(descr) if descr else ""))
+            " (\x0304{0}\x0F)".format(descr) if descr else ""))
 
     def _parse_arg(self, arg):
         """Converts an argument into an IP address."""
