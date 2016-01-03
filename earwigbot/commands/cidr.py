@@ -129,7 +129,7 @@ class CIDR(Command):
         bin_ips = ["".join(
             bin(ord(octet))[2:].zfill(8) for octet in ip.ip) for ip in ips]
         for i, ip in enumerate(ips):
-            if ip.size:
+            if ip.size is not None:
                 suffix = "X" * (len(bin_ips[i]) - ip.size)
                 bin_ips[i] = bin_ips[i][:ip.size] + suffix
 
