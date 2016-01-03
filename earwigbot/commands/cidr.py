@@ -27,7 +27,7 @@ from socket import AF_INET, AF_INET6
 
 from earwigbot.commands import Command
 
-_IP = namedtuple("_IP", ["family", "ip"])
+_IP = namedtuple("_IP", ["family", "ip", "size"])
 _Range = namedtuple("_Range", [
     "family", "range", "low", "high", "size", "addresses"])
 
