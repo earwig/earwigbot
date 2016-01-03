@@ -27,6 +27,7 @@ from socket import AF_INET, AF_INET6
 
 from earwigbot.commands import Command
 
+_IP = namedtuple("_IP", ["family", "ip"])
 _Range = namedtuple("_Range", [
     "family", "range", "low", "high", "size", "addresses"])
 
@@ -51,18 +52,19 @@ class CIDR(Command):
             return
 
         try:
-            ips = [self._parse_arg(arg) for arg in data.args]
+            ips = [self._parse_ip(arg) for arg in data.args]
         except ValueError as exc:
             msg = "Can't parse IP address \x0302{0}\x0F."
             self.reply(data, msg.format(exc.message))
             return
 
-        if any(ip[0] == AF_INET for ip in ips) and any(ip[0] == AF_INET6 for ip in ips):
+        if any(ip.family == AF_INET for ip in ips) and any(
+                ip.family == AF_INET6 for ip in ips):
             msg = "Can't calculate a range for both IPv4 and IPv6 addresses."
             self.reply(data, msg)
             return
 
-        cidr = self._calculate_range(ips[0][0], [ip[1] for ip in ips])
+        cidr = self._calculate_range(ips[0].family, ips)
         descr = self._describe(cidr.family, cidr.size)
 
         msg = ("Smallest CIDR range is \x02{0}\x0F, covering {1} from "
@@ -71,8 +73,33 @@ class CIDR(Command):
             cidr.range, cidr.addresses, cidr.low, cidr.high,
             " (\x0304{0}\x0F)".format(descr) if descr else ""))
 
+    def _parse_ip(self, arg):
+        """Converts an argument into an IP address object."""
+        arg = self._parse_arg(arg)
+        oldarg = arg
+        size = None
+        if "/" in arg:
+            arg, size = arg.split("/", 1)
+            try:
+                size = int(size, 10)
+            except ValueError:
+                raise ValueError(oldarg)
+            if size < 0 or size > 128:
+                raise ValueError(oldarg)
+
+        try:
+            ip = _IP(AF_INET, socket.inet_pton(AF_INET, arg), size)
+        except socket.error:
+            try:
+                return _IP(AF_INET6, socket.inet_pton(AF_INET6, arg), size)
+            except socket.error:
+                raise ValueError(oldarg)
+        if size > 32:
+            raise ValueError(oldarg)
+        return ip
+
     def _parse_arg(self, arg):
-        """Converts an argument into an IP address."""
+        """Converts an argument into an IP address string."""
         if "[[" in arg and "]]" in arg:
             regex = r"\[\[\s*(?:User(?:\stalk)?:)?(.*?)(?:\|.*?)?\s*\]\]"
             match = re.search(regex, arg, re.I)
@@ -95,23 +122,22 @@ class CIDR(Command):
             if not match:
                 raise ValueError(arg)
             arg = match.group(1)
-
-        try:
-            return (AF_INET, socket.inet_pton(AF_INET, arg))
-        except socket.error:
-            try:
-                return (AF_INET6, socket.inet_pton(AF_INET6, arg))
-            except socket.error:
-                raise ValueError(arg)
+        return arg
 
     def _calculate_range(self, family, ips):
         """Calculate the smallest CIDR range encompassing a list of IPs."""
         bin_ips = ["".join(
-            bin(ord(octet))[2:].zfill(8) for octet in ip) for ip in ips]
+            bin(ord(octet))[2:].zfill(8) for octet in ip.ip) for ip in ips]
+        for i, ip in enumerate(ips):
+            if ip.size:
+                suffix = "X" * (len(bin_ips[i]) - ip.size)
+                bin_ips[i] = bin_ips[i][:ip.size] + suffix
+
         size = len(bin_ips[0])
         for i in xrange(len(bin_ips[0])):
-            if any(ip[i] == "0" for ip in bin_ips) and any(
-                    ip[i] == "1" for ip in bin_ips):
+            if any(ip[i] == "X" for ip in bin_ips) or (
+                    any(ip[i] == "0" for ip in bin_ips) and
+                    any(ip[i] == "1" for ip in bin_ips)):
                 size = i
                 break
 
