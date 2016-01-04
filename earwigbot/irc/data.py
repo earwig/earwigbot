@@ -50,10 +50,15 @@ class Data(object):
 
     def _parse(self):
         """Parse a line from IRC into its components as instance attributes."""
-        sender = re.findall(r":(.*?)!(.*?)@(.*?)\Z", self.line[0])[0]
+        self._chan = self.line[2]
+        try:
+            sender = re.findall(r":(.*?)!(.*?)@(.*?)\Z", self.line[0])[0]
+        except IndexError:
+            self._host = self.line[0][1:]
+            self._nick = self._ident = self._reply_nick = "*"
+            return
         self._nick, self._ident, self._host = sender
         self._reply_nick = self._nick
-        self._chan = self.line[2]
 
         if self._msgtype in ["PRIVMSG", "NOTICE"]:
             if self.chan.lower() == self.my_nick:
