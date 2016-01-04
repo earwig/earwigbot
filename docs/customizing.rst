@@ -174,6 +174,13 @@ The bot has a wide selection of built-in commands and plugins to act as sample
 code and/or to give ideas. Start with test_, and then check out chanops_ and
 afc_status_ for some more complicated scripts.
 
+By default, the bot loads every built-in and custom command available. You can
+disable *all* built-in commands with the config entry
+:py:attr:`config.commands["disable"]` set to ``True``, or a subset of commands
+by setting it to a list of command class names or module names. If using the
+former method, you can specifically enable certain built-in commands with
+:py:attr:`config.commands["enable"]` set to a list of command module names.
+
 Custom bot tasks
 ----------------
 

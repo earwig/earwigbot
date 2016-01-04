@@ -72,14 +72,21 @@ class _ResourceManager(object):
             for resource in self._resources.itervalues():
                 yield resource
 
+    def _is_disabled(self, name):
+        """Check whether a resource should be disabled."""
+        conf = getattr(self.bot.config, self._resource_name)
+        disabled = conf.get("disable", [])
+        enabled = conf.get("enable", [])
+        return name not in enabled and (disabled is True or name in disabled)
+
     def _load_resource(self, name, path, klass):
         """Instantiate a resource class and add it to the dictionary."""
         res_type = self._resource_name[:-1]  # e.g. "command" or "task"
         if hasattr(klass, "name"):
-            res_config = getattr(self.bot.config, self._resource_name)
-            if getattr(klass, "name") in res_config.get("disable", []):
+            classname = getattr(klass, "name")
+            if self._is_disabled(name) and self._is_disabled(classname):
                 log = "Skipping disabled {0} {1}"
-                self.logger.debug(log.format(res_type, getattr(klass, "name")))
+                self.logger.debug(log.format(res_type, classname))
                 return
         try:
             resource = klass(self.bot)  # Create instance of resource
@@ -119,8 +126,6 @@ class _ResourceManager(object):
     def _load_directory(self, dir):
         """Load all valid resources in a given directory."""
         self.logger.debug("Loading directory {0}".format(dir))
-        res_config = getattr(self.bot.config, self._resource_name)
-        disabled = res_config.get("disable", [])
         processed = []
         for name in listdir(dir):
             if not name.endswith(".py") and not name.endswith(".pyc"):
@@ -128,7 +133,7 @@ class _ResourceManager(object):
             if name.startswith("_") or name.startswith("."):
                 continue
             modname = sub("\.pyc?$", "", name)  # Remove extension
-            if modname in disabled:
+            if self._is_disabled(modname):
                 log = "Skipping disabled module {0}".format(modname)
                 self.logger.debug(log)
                 processed.append(modname)
@@ -162,7 +167,8 @@ class _ResourceManager(object):
             self._unload_resources()
             builtin_dir = path.join(path.dirname(__file__), name)
             plugins_dir = path.join(self.bot.config.root_dir, name)
-            if getattr(self.bot.config, name).get("disable") is True:
+            conf = getattr(self.bot.config, name)
+            if conf.get("disable") is True and not conf.get("enable"):
                 log = "Skipping disabled builtins directory: {0}"
                 self.logger.debug(log.format(builtin_dir))
             else:

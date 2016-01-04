@@ -1,6 +1,7 @@
 v0.3 (unreleased):
 
 - Copyvio detector: improved sentence splitting algorithm.
+- Improved config file command/task exclusion logic.
 - IRC > !cidr: Added; new command for calculating range blocks.
 - IRC > !notes: Improved help and added aliases.
 - IRC > !remind: Added !remind all. Fixed multithreading efficiency issues.
