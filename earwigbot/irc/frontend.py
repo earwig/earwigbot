@@ -87,6 +87,8 @@ class Frontend(IRCConnection):
         elif line[1] == "NOTICE":
             data = Data(self.nick, line, msgtype="NOTICE")
             if self._auth_wait and data.nick == self.NICK_SERVICES:
+                if data.msg.startswith("This nickname is registered."):
+                    continue
                 self._auth_wait = False
                 sleep(2)  # Wait for hostname change to propagate
                 self._join_channels()
@@ -99,6 +101,7 @@ class Frontend(IRCConnection):
             except KeyError:
                 self._join_channels()
             else:
+                self.logger.debug("Identifying with services")
                 msg = "IDENTIFY {0} {1}".format(username, password)
                 self.say(self.NICK_SERVICES, msg, hidelog=True)
                 self._auth_wait = True
