@@ -55,15 +55,16 @@ class Data(object):
         self._reply_nick = self._nick
         self._chan = self.line[2]
 
-        if self._msgtype == "PRIVMSG":
+        if self._msgtype in ["PRIVMSG", "NOTICE"]:
             if self.chan.lower() == self.my_nick:
                 # This is a privmsg to us, so set 'chan' as the nick of the
                 # sender instead of the 'channel', which is ourselves:
                 self._chan = self._nick
                 self._is_private = True
             self._msg = " ".join(self.line[3:])[1:]
-            self._parse_args()
-            self._parse_kwargs()
+            if self._msgtype == "PRIVMSG":
+                self._parse_args()
+                self._parse_kwargs()
 
     def _parse_args(self):
         """Parse command arguments from the message.

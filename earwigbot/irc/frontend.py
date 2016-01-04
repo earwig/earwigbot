@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from time import sleep
+
 from earwigbot.irc import IRCConnection, Data
 
 __all__ = ["Frontend"]
@@ -36,6 +38,7 @@ class Frontend(IRCConnection):
     :py:mod:`earwigbot.commands` or the bot's custom command directory
     (explained in the :doc:`documentation </customizing>`).
     """
+    NICK_SERVICES = "NickServ"
 
     def __init__(self, bot):
         self.bot = bot
@@ -43,6 +46,8 @@ class Frontend(IRCConnection):
         base = super(Frontend, self)
         base.__init__(cf["host"], cf["port"], cf["nick"], cf["ident"],
                       cf["realname"], bot.logger.getChild("frontend"))
+
+        self._auth_wait = False
         self._connect()
 
     def __repr__(self):
@@ -55,6 +60,11 @@ class Frontend(IRCConnection):
         """Return a nice string representation of the Frontend."""
         res = "<Frontend {0}!{1} at {2}:{3}>"
         return res.format(self.nick, self.ident, self.host, self.port)
+
+    def _join_channels(self):
+        """Join all startup channels as specified by the config file."""
+        for chan in self.bot.config.irc["frontend"]["channels"]:
+            self.join(chan)
 
     def _process_message(self, line):
         """Process a single message from IRC."""
@@ -74,17 +84,27 @@ class Frontend(IRCConnection):
                 self.bot.commands.call("msg_public", data)
             self.bot.commands.call("msg", data)
 
+        elif line[1] == "NOTICE":
+            data = Data(self.nick, line, msgtype="NOTICE")
+            if self._auth_wait and data.nick == self.NICK_SERVICES:
+                self._auth_wait = False
+                sleep(2)  # Wait for hostname change to propagate
+                self._join_channels()
+
         elif line[1] == "376":  # On successful connection to the server
             # If we're supposed to auth to NickServ, do that:
             try:
                 username = self.bot.config.irc["frontend"]["nickservUsername"]
                 password = self.bot.config.irc["frontend"]["nickservPassword"]
             except KeyError:
-                pass
+                self._join_channels()
             else:
                 msg = "IDENTIFY {0} {1}".format(username, password)
-                self.say("NickServ", msg, hidelog=True)
+                self.say(self.NICK_SERVICES, msg, hidelog=True)
+                self._auth_wait = True
 
-            # Join all of our startup channels:
-            for chan in self.bot.config.irc["frontend"]["channels"]:
-                self.join(chan)
+        elif line[1] == "401":  # No such nickname
+            if self._auth_wait and line[3] == self.NICK_SERVICES:
+                # Services is down, or something...?
+                self._auth_wait = False
+                self._join_channels()
