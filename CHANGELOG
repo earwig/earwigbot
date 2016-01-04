@@ -8,6 +8,7 @@ v0.3 (unreleased):
   Improved time detection and argument parsing. Newly expired reminders are now
   triggered on bot startup.
 - IRC > !stalk: Allow regular expressions as page titles or usernames.
+- IRC: Try not to join channels before NickServ auth has completed.
 - IRC: Improved detection of maximum IRC message length.
 - IRC: Improved some help commands.
 
