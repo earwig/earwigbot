@@ -133,14 +133,14 @@ class _ResourceManager(object):
             if name.startswith("_") or name.startswith("."):
                 continue
             modname = sub("\.pyc?$", "", name)  # Remove extension
+            if modname in processed:
+                continue
+            processed.append(modname)
             if self._is_disabled(modname):
                 log = "Skipping disabled module {0}".format(modname)
                 self.logger.debug(log)
-                processed.append(modname)
                 continue
-            if modname not in processed:
-                self._load_module(modname, dir)
-                processed.append(modname)
+            self._load_module(modname, dir)
 
     def _unload_resources(self):
         """Unload all resources, calling their unload hooks in the process."""
