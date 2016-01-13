@@ -128,7 +128,7 @@ class _CopyvioWorker(object):
         url = source.url.encode("utf8")
         try:
             response = self._opener.open(url, timeout=source.timeout)
-        except (URLError, HTTPException, socket_error):
+        except (URLError, HTTPException, socket_error, ValueError):
             return None
 
         try:
