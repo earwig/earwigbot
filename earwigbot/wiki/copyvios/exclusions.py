@@ -122,7 +122,7 @@ class ExclusionsDB(object):
             site = self._sitesdb.get_site("enwiki")
         else:
             site = self._sitesdb.get_site(sitename)
-        with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
+        with self._db_access_lock, sqlite.connect(self._dbfile) as conn:
             urls = set()
             for (source,) in conn.execute(query1, (sitename,)):
                 urls |= self._load_source(site, source)
@@ -140,7 +140,7 @@ class ExclusionsDB(object):
     def _get_last_update(self, sitename):
         """Return the UNIX timestamp of the last time the db was updated."""
         query = "SELECT update_time FROM updates WHERE update_sitename = ?"
-        with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
+        with self._db_access_lock, sqlite.connect(self._dbfile) as conn:
             try:
                 result = conn.execute(query, (sitename,)).fetchone()
             except sqlite.OperationalError:
@@ -176,7 +176,7 @@ class ExclusionsDB(object):
         normalized = re.sub(r"^https?://(www\.)?", "", url.lower())
         query = """SELECT exclusion_url FROM exclusions
                    WHERE exclusion_sitename = ? OR exclusion_sitename = ?"""
-        with sqlite.connect(self._dbfile) as conn, self._db_access_lock:
+        with self._db_access_lock, sqlite.connect(self._dbfile) as conn:
             for (excl,) in conn.execute(query, (sitename, "all")):
                 if excl.startswith("*."):
                     parsed = urlparse(url.lower())
@@ -200,21 +200,23 @@ class ExclusionsDB(object):
         self._logger.debug(log)
         return False
 
-    def get_mirror_hints(self, sitename, try_mobile=True):
+    def get_mirror_hints(self, page, try_mobile=True):
         """Return a list of strings that indicate the existence of a mirror.
 
         The source parser checks for the presence of these strings inside of
         certain HTML tag attributes (``"href"`` and ``"src"``).
         """
-        site = self._sitesdb.get_site(sitename)
-        base = site.domain + site._script_path
-        roots = [base]
+        site = page.site
+        path = urlparse(page.url).path
+        roots = [site.domain]
         scripts = ["index.php", "load.php", "api.php"]
 
         if try_mobile:
             fragments = re.search(r"^([\w]+)\.([\w]+).([\w]+)$", site.domain)
             if fragments:
-                mobile = "{0}.m.{1}.{2}".format(*fragments.groups())
-                roots.append(mobile + site._script_path)
+                roots.append("{0}.m.{1}.{2}".format(*fragments.groups()))
 
-        return [root + "/" + script for root in roots for script in scripts]
+        general = [root + site._script_path + "/" + script
+                   for root in roots for script in scripts]
+        specific = [root + path for root in roots]
+        return general + specific

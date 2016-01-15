@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -124,8 +124,8 @@ class CopyvioMixIn(object):
         if self._exclusions_db:
             self._exclusions_db.sync(self.site.name)
             exclude = lambda u: self._exclusions_db.check(self.site.name, u)
-            parser_args["mirror_hints"] = self._exclusions_db.get_mirror_hints(
-                self.site.name)
+            parser_args["mirror_hints"] = \
+                self._exclusions_db.get_mirror_hints(self)
         else:
             exclude = None
 
