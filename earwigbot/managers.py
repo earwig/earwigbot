@@ -225,8 +225,12 @@ class CommandManager(_ResourceManager):
         .. note::
            The special ``rc`` hook actually passes a :class:`~.RC` object.
         """
-        if data.chan in self.bot.config.irc["frontend"].get("quiet", []):
-            return
+        try:
+            if data.chan in self.bot.config.irc["frontend"]["quiet"]:
+                return
+        except KeyError:
+            pass
+
         for command in self:
             if hook in command.hooks and self._wrap_check(command, data):
                 thread = Thread(target=self._wrap_process,
