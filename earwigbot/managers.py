@@ -226,7 +226,8 @@ class CommandManager(_ResourceManager):
            The special ``rc`` hook actually passes a :class:`~.RC` object.
         """
         try:
-            if data.chan in self.bot.config.irc["frontend"]["quiet"]:
+            quiet = self.bot.config.irc["frontend"]["quiet"][data.chan]
+            if quiet is True or hook in quiet:
                 return
         except KeyError:
             pass
