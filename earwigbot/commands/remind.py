@@ -255,7 +255,7 @@ class Remind(Command):
         """Handle a reminder-processing subcommand."""
         user = data.host
         reminder = None
-        if args and args[0].startswith("R"):
+        if args and args[0].upper().startswith("R"):
             try:
                 reminder = self._get_reminder_by_id(user, args[0])
             except IndexError:
