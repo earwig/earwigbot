@@ -24,7 +24,7 @@ from gzip import GzipFile
 from json import loads
 from socket import error
 from StringIO import StringIO
-from urllib import quote
+from urllib import quote, urlencode
 from urllib2 import URLError
 
 from earwigbot import importer
@@ -32,7 +32,7 @@ from earwigbot.exceptions import SearchQueryError
 
 oauth = importer.new("oauth2")
 
-__all__ = ["BaseSearchEngine", "YahooBOSSSearchEngine"]
+__all__ = ["BaseSearchEngine", "BingSearchEngine", "YahooBOSSSearchEngine"]
 
 class BaseSearchEngine(object):
     """Base class for a simple search engine interface."""
@@ -51,12 +51,75 @@ class BaseSearchEngine(object):
         """Return a nice string representation of the search engine."""
         return "<{0}>".format(self.__class__.__name__)
 
+    @staticmethod
+    def requirements():
+        """Return a list of packages required by this search engine."""
+        return []
+
     def search(self, query):
         """Use this engine to search for *query*.
 
         Not implemented in this base class; overridden in subclasses.
         """
         raise NotImplementedError()
+
+
+class BingSearchEngine(BaseSearchEngine):
+    """A search engine interface with Bing Search (via Azure Marketplace)."""
+    name = "Bing"
+
+    def __init__(self, cred, opener):
+        super(BingSearchEngine, self).__init__(cred, opener)
+
+        key = self.cred["key"]
+        auth = (key + ":" + key).encode("base64").replace("\n", "")
+        self.opener.addheaders.append(("Authorization", "Basic " + auth))
+
+    def search(self, query):
+        """Do a Bing web search for *query*.
+
+        Returns a list of URLs, no more than five, ranked by relevance
+        (as determined by Bing).
+        Raises :py:exc:`~earwigbot.exceptions.SearchQueryError` on errors.
+        """
+        service = "SearchWeb" if self.cred["type"] == "searchweb" else "Search"
+        url = "https://api.datamarket.azure.com/Bing/{0}/Web?".format(service)
+        params = {
+            "$format": "json",
+            "$top": "5",
+            "Query": "'\"" + query.replace('"', "").encode("utf8") + "\"'",
+            "Market": "'en-US'",
+            "Adult": "'Off'",
+            "Options": "'DisableLocationDetection'",
+            "WebFileType": "'HTM+HTML+PDF+TEXT+TXT'",
+            "WebSearchOptions": "'DisableHostCollapsing+DisableQueryAlterations'"
+        }
+
+        try:
+            response = self.opener.open(url + urlencode(params))
+            result = response.read()
+        except (URLError, error) as exc:
+            raise SearchQueryError("Bing Error: " + str(exc))
+
+        if response.headers.get("Content-Encoding") == "gzip":
+            stream = StringIO(result)
+            gzipper = GzipFile(fileobj=stream)
+            result = gzipper.read()
+
+        if response.getcode() != 200:
+            err = "Bing Error: got response code '{0}':\n{1}'"
+            raise SearchQueryError(err.format(response.getcode(), result))
+        try:
+            res = loads(result)
+        except ValueError:
+            err = "Bing Error: JSON could not be decoded"
+            raise SearchQueryError(err)
+
+        try:
+            results = res["d"]["results"]
+        except KeyError:
+            return []
+        return [result["Url"] for result in results]
 
 
 class YahooBOSSSearchEngine(BaseSearchEngine):
@@ -69,6 +132,10 @@ class YahooBOSSSearchEngine(BaseSearchEngine):
         enc = lambda s: quote(s.encode("utf8"), safe="")
         args = ["=".join((enc(k), enc(v))) for k, v in params.iteritems()]
         return base + "?" + "&".join(args)
+
+    @staticmethod
+    def requirements():
+        return ["oauth2"]
 
     def search(self, query):
         """Do a Yahoo! BOSS web search for *query*.
@@ -104,13 +171,13 @@ class YahooBOSSSearchEngine(BaseSearchEngine):
             result = gzipper.read()
 
         if response.getcode() != 200:
-            e = "Yahoo! BOSS Error: got response code '{0}':\n{1}'"
-            raise SearchQueryError(e.format(response.getcode(), result))
+            err = "Yahoo! BOSS Error: got response code '{0}':\n{1}'"
+            raise SearchQueryError(err.format(response.getcode(), result))
         try:
             res = loads(result)
         except ValueError:
-            e = "Yahoo! BOSS Error: JSON could not be decoded"
-            raise SearchQueryError(e)
+            err = "Yahoo! BOSS Error: JSON could not be decoded"
+            raise SearchQueryError(err)
 
         try:
             results = res["bossresponse"]["web"]["results"]

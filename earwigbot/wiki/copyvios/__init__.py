@@ -23,14 +23,13 @@
 from time import sleep, time
 from urllib2 import build_opener
 
-from earwigbot import exceptions, importer
+from earwigbot import exceptions
 from earwigbot.wiki.copyvios.markov import MarkovChain
 from earwigbot.wiki.copyvios.parsers import ArticleTextParser
-from earwigbot.wiki.copyvios.search import YahooBOSSSearchEngine
+from earwigbot.wiki.copyvios.search import (
+    BingSearchEngine, YahooBOSSSearchEngine)
 from earwigbot.wiki.copyvios.workers import (
     globalize, localize, CopyvioWorkspace)
-
-oauth = importer.new("oauth2")
 
 __all__ = ["CopyvioMixIn", "globalize", "localize"]
 
@@ -62,20 +61,29 @@ class CopyvioMixIn(object):
         unknown to us, and UnsupportedSearchEngineError if we are missing a
         required package or module, like oauth2 for "Yahoo! BOSS".
         """
+        engines = {
+            "Bing": BingSearchEngine,
+            "Yahoo! BOSS": YahooBOSSSearchEngine
+        }
+
         engine = self._search_config["engine"]
+        if engine not in engines:
+            raise exceptions.UnknownSearchEngineError(engine)
+
+        klass = engines[engine]
         credentials = self._search_config["credentials"]
+        opener = build_opener()
+        opener.addheaders = self._addheaders
 
-        if engine == "Yahoo! BOSS":
+        for dep in klass.requirements():
             try:
-                oauth.__version__  # Force-load the lazy module
+                __import__(dep).__package__
             except ImportError:
-                e = "Yahoo! BOSS requires the 'oauth2' package: https://github.com/simplegeo/python-oauth2"
+                e = "Missing a required dependency ({}) for the {} engine"
+                e = e.format(dep, engine)
                 raise exceptions.UnsupportedSearchEngineError(e)
-            opener = build_opener()
-            opener.addheaders = self._addheaders
-            return YahooBOSSSearchEngine(credentials, opener)
 
-        raise exceptions.UnknownSearchEngineError(engine)
+        return klass(credentials, opener)
 
     def copyvio_check(self, min_confidence=0.75, max_queries=15, max_time=-1,
                       no_searches=False, no_links=False, short_circuit=True):
