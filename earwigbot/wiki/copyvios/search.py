@@ -91,7 +91,6 @@ class BingSearchEngine(BaseSearchEngine):
             "Market": "'en-US'",
             "Adult": "'Off'",
             "Options": "'DisableLocationDetection'",
-            "WebFileType": "'HTM+HTML+PDF+TEXT+TXT'",
             "WebSearchOptions": "'DisableHostCollapsing+DisableQueryAlterations'"
         }
 
