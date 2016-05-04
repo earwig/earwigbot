@@ -32,9 +32,9 @@ from earwigbot.exceptions import SearchQueryError
 
 oauth = importer.new("oauth2")
 
-__all__ = ["BaseSearchEngine", "BingSearchEngine", "YahooBOSSSearchEngine"]
+__all__ = ["BingSearchEngine", "YahooBOSSSearchEngine", "SEARCH_ENGINES"]
 
-class BaseSearchEngine(object):
+class _BaseSearchEngine(object):
     """Base class for a simple search engine interface."""
     name = "Base"
 
@@ -64,7 +64,7 @@ class BaseSearchEngine(object):
         raise NotImplementedError()
 
 
-class BingSearchEngine(BaseSearchEngine):
+class BingSearchEngine(_BaseSearchEngine):
     """A search engine interface with Bing Search (via Azure Marketplace)."""
     name = "Bing"
 
@@ -78,8 +78,7 @@ class BingSearchEngine(BaseSearchEngine):
     def search(self, query):
         """Do a Bing web search for *query*.
 
-        Returns a list of URLs, no more than five, ranked by relevance
-        (as determined by Bing).
+        Returns a list of URLs ranked by relevance (as determined by Bing).
         Raises :py:exc:`~earwigbot.exceptions.SearchQueryError` on errors.
         """
         service = "SearchWeb" if self.cred["type"] == "searchweb" else "Search"
@@ -121,7 +120,7 @@ class BingSearchEngine(BaseSearchEngine):
         return [result["Url"] for result in results]
 
 
-class YahooBOSSSearchEngine(BaseSearchEngine):
+class YahooBOSSSearchEngine(_BaseSearchEngine):
     """A search engine interface with Yahoo! BOSS."""
     name = "Yahoo! BOSS"
 
@@ -139,8 +138,7 @@ class YahooBOSSSearchEngine(BaseSearchEngine):
     def search(self, query):
         """Do a Yahoo! BOSS web search for *query*.
 
-        Returns a list of URLs, no more than five, ranked by relevance
-        (as determined by Yahoo).
+        Returns a list of URLs ranked by relevance (as determined by Yahoo).
         Raises :py:exc:`~earwigbot.exceptions.SearchQueryError` on errors.
         """
         key, secret = self.cred["key"], self.cred["secret"]
@@ -183,3 +181,9 @@ class YahooBOSSSearchEngine(BaseSearchEngine):
         except KeyError:
             return []
         return [result["url"] for result in results]
+
+
+SEARCH_ENGINES = {
+    "Bing": BingSearchEngine,
+    "Yahoo! BOSS": YahooBOSSSearchEngine
+}

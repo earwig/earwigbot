@@ -26,8 +26,7 @@ from urllib2 import build_opener
 from earwigbot import exceptions
 from earwigbot.wiki.copyvios.markov import MarkovChain
 from earwigbot.wiki.copyvios.parsers import ArticleTextParser
-from earwigbot.wiki.copyvios.search import (
-    BingSearchEngine, YahooBOSSSearchEngine)
+from earwigbot.wiki.copyvios.search import SEARCH_ENGINES
 from earwigbot.wiki.copyvios.workers import (
     globalize, localize, CopyvioWorkspace)
 
@@ -61,16 +60,11 @@ class CopyvioMixIn(object):
         unknown to us, and UnsupportedSearchEngineError if we are missing a
         required package or module, like oauth2 for "Yahoo! BOSS".
         """
-        engines = {
-            "Bing": BingSearchEngine,
-            "Yahoo! BOSS": YahooBOSSSearchEngine
-        }
-
         engine = self._search_config["engine"]
-        if engine not in engines:
+        if engine not in SEARCH_ENGINES:
             raise exceptions.UnknownSearchEngineError(engine)
 
-        klass = engines[engine]
+        klass = SEARCH_ENGINES[engine]
         credentials = self._search_config["credentials"]
         opener = build_opener()
         opener.addheaders = self._addheaders
