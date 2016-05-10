@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,7 @@
 
 from gzip import GzipFile
 from json import loads
+from re import sub as re_sub
 from socket import error
 from StringIO import StringIO
 from urllib import quote, urlencode
@@ -30,9 +31,11 @@ from urllib2 import URLError
 from earwigbot import importer
 from earwigbot.exceptions import SearchQueryError
 
+etree = importer.new("lxml.etree")
 oauth = importer.new("oauth2")
 
-__all__ = ["BingSearchEngine", "YahooBOSSSearchEngine", "SEARCH_ENGINES"]
+__all__ = ["BingSearchEngine", "YahooBOSSSearchEngine", "YandexSearchEngine",
+           "SEARCH_ENGINES"]
 
 class _BaseSearchEngine(object):
     """Base class for a simple search engine interface."""
@@ -42,6 +45,7 @@ class _BaseSearchEngine(object):
         """Store credentials (*cred*) and *opener* for searching later on."""
         self.cred = cred
         self.opener = opener
+        self.count = 5
 
     def __repr__(self):
         """Return the canonical string representation of the search engine."""
@@ -85,7 +89,7 @@ class BingSearchEngine(_BaseSearchEngine):
         url = "https://api.datamarket.azure.com/Bing/{0}/Web?".format(service)
         params = {
             "$format": "json",
-            "$top": "5",
+            "$top": str(self.count),
             "Query": "'\"" + query.replace('"', "").encode("utf8") + "\"'",
             "Market": "'en-US'",
             "Adult": "'Off'",
@@ -150,8 +154,10 @@ class YahooBOSSSearchEngine(_BaseSearchEngine):
             "oauth_nonce": oauth.generate_nonce(),
             "oauth_timestamp": oauth.Request.make_timestamp(),
             "oauth_consumer_key": consumer.key,
-            "q": '"' + query.encode("utf8") + '"', "count": "5",
-            "type": "html,text,pdf", "format": "json",
+            "q": '"' + query.encode("utf8") + '"',
+            "count": str(self.count),
+            "type": "html,text,pdf",
+            "format": "json",
         }
 
         req = oauth.Request(method="GET", url=url, parameters=params)
@@ -183,7 +189,47 @@ class YahooBOSSSearchEngine(_BaseSearchEngine):
         return [result["url"] for result in results]
 
 
+class YandexSearchEngine(_BaseSearchEngine):
+    """A search engine interface with Yandex Search."""
+    name = "Yandex"
+
+    @staticmethod
+    def requirements():
+        return ["lxml"]
+
+    def search(self, query):
+        """Do a Yandex web search for *query*.
+
+        Returns a list of URLs ranked by relevance (as determined by Yandex).
+        Raises :py:exc:`~earwigbot.exceptions.SearchQueryError` on errors.
+        """
+        url = "https://yandex.com/search/xml"
+        query = re_sub(r"[^a-zA-Z0-9]", "", query).encode("utf8")
+        params = {
+            "user": self.cred["user"],
+            "key": self.cred["key"],
+            "query": '"' + query + '"',
+            "l10n": "en",
+            "filter": "none",
+            "maxpassages": "1",
+            "groupby": "mode=flat.groups-on-page={0}".format(self.count)
+        }
+
+        try:
+            response = self.opener.open(url, urlencode(params))
+            result = response.read()
+        except (URLError, error) as exc:
+            raise SearchQueryError("Yandex Error: " + str(exc))
+
+        try:
+            data = etree.fromstring(result)
+            return [elem.text for elem in data.xpath(".//url")]
+        except etree.Error as exc:
+            raise SearchQueryError("Yandex XML parse error: " + str(exc))
+
+
 SEARCH_ENGINES = {
     "Bing": BingSearchEngine,
-    "Yahoo! BOSS": YahooBOSSSearchEngine
+    "Yahoo! BOSS": YahooBOSSSearchEngine,
+    "Yandex": YandexSearchEngine
 }
