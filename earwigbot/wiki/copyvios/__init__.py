@@ -71,8 +71,8 @@ class CopyvioMixIn(object):
 
         for dep in klass.requirements():
             try:
-                __import__(dep).__package__
-            except ImportError:
+                __import__(dep).__name__
+            except (ImportError, AttributeError):
                 e = "Missing a required dependency ({}) for the {} engine"
                 e = e.format(dep, engine)
                 raise exceptions.UnsupportedSearchEngineError(e)
