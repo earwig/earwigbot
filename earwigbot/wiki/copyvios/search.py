@@ -55,6 +55,26 @@ class _BaseSearchEngine(object):
         """Return a nice string representation of the search engine."""
         return "<{0}>".format(self.__class__.__name__)
 
+    def _open(self, *args):
+        """Open a URL (like urlopen) and try to return its contents."""
+        try:
+            response = self.opener.open(*args)
+            result = response.read()
+        except (URLError, error) as exc:
+            raise SearchQueryError("{0} Error: {1}".format(self.name, exc))
+
+        if response.headers.get("Content-Encoding") == "gzip":
+            stream = StringIO(result)
+            gzipper = GzipFile(fileobj=stream)
+            result = gzipper.read()
+
+        code = response.getcode()
+        if code != 200:
+            err = "{0} Error: got response code '{1}':\n{2}'"
+            raise SearchQueryError(err.format(self.name, code, result))
+
+        return result
+
     @staticmethod
     def requirements():
         """Return a list of packages required by this search engine."""
@@ -97,20 +117,8 @@ class BingSearchEngine(_BaseSearchEngine):
             "WebSearchOptions": "'DisableHostCollapsing+DisableQueryAlterations'"
         }
 
-        try:
-            response = self.opener.open(url + urlencode(params))
-            result = response.read()
-        except (URLError, error) as exc:
-            raise SearchQueryError("Bing Error: " + str(exc))
+        result = self._open(url + urlencode(params))
 
-        if response.headers.get("Content-Encoding") == "gzip":
-            stream = StringIO(result)
-            gzipper = GzipFile(fileobj=stream)
-            result = gzipper.read()
-
-        if response.getcode() != 200:
-            err = "Bing Error: got response code '{0}':\n{1}'"
-            raise SearchQueryError(err.format(response.getcode(), result))
         try:
             res = loads(result)
         except ValueError:
@@ -162,20 +170,9 @@ class YahooBOSSSearchEngine(_BaseSearchEngine):
 
         req = oauth.Request(method="GET", url=url, parameters=params)
         req.sign_request(oauth.SignatureMethod_HMAC_SHA1(), consumer, None)
-        try:
-            response = self.opener.open(self._build_url(url, req))
-            result = response.read()
-        except (URLError, error) as exc:
-            raise SearchQueryError("Yahoo! BOSS Error: " + str(exc))
 
-        if response.headers.get("Content-Encoding") == "gzip":
-            stream = StringIO(result)
-            gzipper = GzipFile(fileobj=stream)
-            result = gzipper.read()
+        result = self._open(self._build_url(url, req))
 
-        if response.getcode() != 200:
-            err = "Yahoo! BOSS Error: got response code '{0}':\n{1}'"
-            raise SearchQueryError(err.format(response.getcode(), result))
         try:
             res = loads(result)
         except ValueError:
@@ -204,8 +201,8 @@ class YandexSearchEngine(_BaseSearchEngine):
         Raises :py:exc:`~earwigbot.exceptions.SearchQueryError` on errors.
         """
         domain = self.cred.get("proxy", "yandex.com")
-        url = "https://{0}/search/xml".format(domain)
-        query = re_sub(r"[^a-zA-Z0-9]", "", query).encode("utf8")
+        url = "https://{0}/search/xml?".format(domain)
+        query = re_sub(r"[^a-zA-Z0-9 ]", "", query).encode("utf8")
         params = {
             "user": self.cred["user"],
             "key": self.cred["key"],
@@ -216,11 +213,7 @@ class YandexSearchEngine(_BaseSearchEngine):
             "groupby": "mode=flat.groups-on-page={0}".format(self.count)
         }
 
-        try:
-            response = self.opener.open(url, urlencode(params))
-            result = response.read()
-        except (URLError, error) as exc:
-            raise SearchQueryError("Yandex Error: " + str(exc))
+        result = self._open(url + urlencode(params))
 
         try:
             data = etree.fromstring(result)
