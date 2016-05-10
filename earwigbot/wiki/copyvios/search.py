@@ -203,7 +203,8 @@ class YandexSearchEngine(_BaseSearchEngine):
         Returns a list of URLs ranked by relevance (as determined by Yandex).
         Raises :py:exc:`~earwigbot.exceptions.SearchQueryError` on errors.
         """
-        url = "https://yandex.com/search/xml"
+        domain = self.cred.get("proxy", "yandex.com")
+        url = "https://{0}/search/xml".format(domain)
         query = re_sub(r"[^a-zA-Z0-9]", "", query).encode("utf8")
         params = {
             "user": self.cred["user"],
