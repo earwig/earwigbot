@@ -161,7 +161,11 @@ class GoogleSearchEngine(_BaseSearchEngine):
         except ValueError:
             err = "Google Error: JSON could not be decoded"
             raise SearchQueryError(err)
-        return [item["link"] for item in res["items"]]
+
+        try:
+            return [item["link"] for item in res["items"]]
+        except KeyError:
+            return []
 
 
 class YahooBOSSSearchEngine(_BaseSearchEngine):
