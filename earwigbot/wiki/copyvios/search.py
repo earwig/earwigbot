@@ -150,7 +150,7 @@ class GoogleSearchEngine(_BaseSearchEngine):
             "q": '"' + query.replace('"', "").encode("utf8") + '"',
             "alt": "json",
             "num": str(self.count),
-            "safe": "off"
+            "safe": "off",
             "fields": "items(link)"
         }
 
