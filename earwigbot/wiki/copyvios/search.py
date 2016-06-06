@@ -34,8 +34,8 @@ from earwigbot.exceptions import SearchQueryError
 etree = importer.new("lxml.etree")
 oauth = importer.new("oauth2")
 
-__all__ = ["BingSearchEngine", "YahooBOSSSearchEngine", "YandexSearchEngine",
-           "SEARCH_ENGINES"]
+__all__ = ["BingSearchEngine", "GoogleSearchEngine", "YahooBOSSSearchEngine",
+           "YandexSearchEngine", "SEARCH_ENGINES"]
 
 class _BaseSearchEngine(object):
     """Base class for a simple search engine interface."""
@@ -132,6 +132,38 @@ class BingSearchEngine(_BaseSearchEngine):
         return [result["Url"] for result in results]
 
 
+class GoogleSearchEngine(_BaseSearchEngine):
+    """A search engine interface with Google Search."""
+    name = "Google"
+
+    def search(self, query):
+        """Do a Google web search for *query*.
+
+        Returns a list of URLs ranked by relevance (as determined by Google).
+        Raises :py:exc:`~earwigbot.exceptions.SearchQueryError` on errors.
+        """
+        domain = self.cred.get("proxy", "www.googleapis.com")
+        url = "https://{0}/customsearch/v1?".format(domain)
+        params = {
+            "cx": self.cred["id"],
+            "key": self.cred["key"],
+            "q": '"' + query.replace('"', "").encode("utf8") + '"',
+            "alt": "json",
+            "num": str(self.count),
+            "safe": "off"
+            "fields": "items(link)"
+        }
+
+        result = self._open(url + urlencode(params))
+
+        try:
+            res = loads(result)
+        except ValueError:
+            err = "Google Error: JSON could not be decoded"
+            raise SearchQueryError(err)
+        return [item["link"] for item in res["items"]]
+
+
 class YahooBOSSSearchEngine(_BaseSearchEngine):
     """A search engine interface with Yahoo! BOSS."""
     name = "Yahoo! BOSS"
@@ -224,6 +256,7 @@ class YandexSearchEngine(_BaseSearchEngine):
 
 SEARCH_ENGINES = {
     "Bing": BingSearchEngine,
+    "Google": GoogleSearchEngine,
     "Yahoo! BOSS": YahooBOSSSearchEngine,
     "Yandex": YandexSearchEngine
 }
