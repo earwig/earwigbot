@@ -36,19 +36,19 @@ extra_deps = {
         "pycrypto >= 2.6.1",  # Storing bot passwords + keys in the config file
     ],
     "sql": [
-        "oursql >= 0.9.3.1",  # Interfacing with MediaWiki databases
+        "oursql >= 0.9.3.2",  # Interfacing with MediaWiki databases
     ],
     "copyvios": [
         "beautifulsoup4 >= 4.4.1",  # Parsing/scraping HTML
         "cchardet >= 1.0.0",  # Encoding detection for BeautifulSoup
-        "lxml >= 3.4.4",  # Faster parser for BeautifulSoup
-        "nltk >= 3.1",  # Parsing sentences to split article content
+        "lxml >= 3.6.0",  # Faster parser for BeautifulSoup
+        "nltk >= 3.2.1",  # Parsing sentences to split article content
         "oauth2 >= 1.9.0",  # Interfacing with Yahoo! BOSS Search
         "pdfminer >= 20140328",  # Extracting text from PDF files
-        "tldextract >= 1.7.1",  # Getting domains for the multithreaded workers
+        "tldextract >= 2.0.1",  # Getting domains for the multithreaded workers
     ],
     "time": [
-        "pytz >= 2015.7",  # Handling timezones for the !time IRC command
+        "pytz >= 2016.4",  # Handling timezones for the !time IRC command
     ],
 }
 
