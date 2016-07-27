@@ -232,6 +232,20 @@ class _HTMLParser(_BaseTextParser):
         "script", "style"
     ]
 
+    def _fail_if_mirror(self, soup):
+        """Look for obvious signs that the given soup is a wiki mirror.
+
+        If so, raise ParserExclusionError, which is caught in the workers and
+        causes this source to excluded.
+        """
+        if "mirror_hints" not in self._args:
+            return
+
+        func = lambda attr: attr and any(
+            hint in attr for hint in self._args["mirror_hints"])
+        if soup.find_all(href=func) or soup.find_all(src=func):
+            raise ParserExclusionError()
+
     def parse(self):
         """Return the actual text contained within an HTML document.
 
@@ -248,12 +262,7 @@ class _HTMLParser(_BaseTextParser):
             # no scrapable content (possibly JS or <frame> magic):
             return ""
 
-        if "mirror_hints" in self._args:
-            # Look for obvious signs that this is a mirror:
-            func = lambda attr: attr and any(
-                hint in attr for hint in self._args["mirror_hints"])
-            if soup.find_all(href=func) or soup.find_all(src=func):
-                raise ParserExclusionError()
+        self._fail_if_mirror(soup)
 
         soup = soup.body
         is_comment = lambda text: isinstance(text, bs4.element.Comment)
