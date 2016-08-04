@@ -31,7 +31,7 @@ from urllib2 import URLError
 from earwigbot import importer
 from earwigbot.exceptions import SearchQueryError
 
-etree = importer.new("lxml.etree")
+lxml = importer.new("lxml")
 oauth = importer.new("oauth2")
 
 __all__ = ["BingSearchEngine", "GoogleSearchEngine", "YahooBOSSSearchEngine",
@@ -228,7 +228,7 @@ class YandexSearchEngine(_BaseSearchEngine):
 
     @staticmethod
     def requirements():
-        return ["lxml"]
+        return ["lxml.etree"]
 
     def search(self, query):
         """Do a Yandex web search for *query*.
@@ -252,9 +252,9 @@ class YandexSearchEngine(_BaseSearchEngine):
         result = self._open(url + urlencode(params))
 
         try:
-            data = etree.fromstring(result)
+            data = lxml.etree.fromstring(result)
             return [elem.text for elem in data.xpath(".//url")]
-        except etree.Error as exc:
+        except lxml.etree.Error as exc:
             raise SearchQueryError("Yandex XML parse error: " + str(exc))
 
 
