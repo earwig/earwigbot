@@ -30,7 +30,7 @@ import time
 from earwigbot.commands import Command
 from earwigbot.irc import Data
 
-DISPLAY = ["display", "show", "list", "info", "details"]
+DISPLAY = ["display", "show", "info", "details"]
 CANCEL = ["cancel", "stop", "delete", "del", "stop", "unremind", "forget",
           "disregard"]
 SNOOZE = ["snooze", "delay", "reset", "adjust", "modify", "change"]
@@ -304,6 +304,8 @@ class Remind(Command):
 
         if data.args[0] == "help":
             return self._show_help(data)
+        if data.args[0] == "list":
+            return self._show_reminders(data)
         if data.args[0] == "all":
             return self._show_all_reminders(data)
         if data.args[0] in DISPLAY + CANCEL + SNOOZE:
