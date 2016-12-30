@@ -239,7 +239,7 @@ class SitesDB(object):
                 if site:
                     return site[0]
                 else:
-                    url = "%{0}.{1}%".format(lang, project)
+                    url = "//{0}.{1}.%".format(lang, project)
                     site = conn.execute(query2, (url,)).fetchone()
                     return site[0] if site else None
             except sqlite.OperationalError:
