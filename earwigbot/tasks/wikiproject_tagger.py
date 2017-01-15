@@ -304,7 +304,7 @@ class WikiProjectTagger(Task):
             self.logger.debug(u"[DRY RUN] Banner: %s", banner)
         else:
             summary = job.summary.replace("$3", banner)
-            page.edit(text, self.make_summary(summary))
+            page.edit(text, self.make_summary(summary), minor=True)
 
     def make_banner(self, job, code=None):
         """Return banner text to add based on a *job* and a page's *code*."""
