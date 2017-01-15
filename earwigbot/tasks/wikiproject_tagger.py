@@ -270,6 +270,7 @@ class WikiProjectTagger(Task):
                 self.logger.info(log, page.title)
                 return
             self.logger.info(u"Updating banner on page: [[%s]]", page.title)
+            banner = banner.encode("utf8")
         else:
             self.logger.info(u"Tagging page: [[%s]]", page.title)
             banner = self.make_banner(job, code)
@@ -285,11 +286,7 @@ class WikiProjectTagger(Task):
         if job.genfixes:
             self.apply_genfixes(code)
 
-        if job.dry_run:
-            self.logger.debug(u"DRY RUN: Banner: %s", banner)
-        else:
-            summary = job.summary.replace("$3", banner)
-            page.edit(unicode(code), self.make_summary(summary))
+        self.save_page(page, job, unicode(code), banner)
 
     def process_new_page(self, page, job):
         """Try to tag a *page* that doesn't exist yet using the *job*."""
@@ -299,11 +296,15 @@ class WikiProjectTagger(Task):
         else:
             self.logger.info(u"Tagging new page: [[%s]]", page.title)
             banner = self.make_banner(job)
-            if job.dry_run:
-                self.logger.debug(u"DRY RUN: Banner: %s", banner)
-            else:
-                summary = job.summary.replace("$3", banner)
-                page.edit(banner, self.make_summary(summary))
+            self.save_page(page, job, banner, banner)
+
+    def save_page(self, page, job, text, banner):
+        """Save a page with an updated banner."""
+        if job.dry_run:
+            self.logger.debug(u"[DRY RUN] Banner: %s", banner)
+        else:
+            summary = job.summary.replace("$3", banner)
+            page.edit(text, self.make_summary(summary))
 
     def make_banner(self, job, code=None):
         """Return banner text to add based on a *job* and a page's *code*."""
