@@ -350,8 +350,8 @@ class WikiProjectTagger(Task):
                     classes[value] += 1
 
         values = tuple(classes.values())
-        if values:
-            best = max(values)
+        best = max(values)
+        if best:
             confidence = float(best) / sum(values)
             if confidence > 0.75:
                 rank = tuple(classes.keys())[values.index(best)]
