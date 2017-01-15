@@ -319,15 +319,18 @@ class WikiProjectTagger(Task):
 
     def update_banner(self, banner, job, code):
         """Update an existing *banner* based on a *job* and a page's *code*."""
+        has = lambda key: (banner.has(key) and
+                           banner.get(key).value.strip() not in ("", "?"))
+
         if job.autoassess is not False:
-            if not banner.has("class") or not banner.get("class").value:
+            if not has("class"):
                 assessment = self.get_autoassessment(code, job.autoassess)
                 if assessment:
                     banner.add("class", assessment)
         if job.append:
             for param in job.append.split(","):
                 key, value = param.split("=", 1)
-                if not banner.has(key) or not banner.get(key).value:
+                if not has(key):
                     banner.add(key, value)
 
     def get_autoassessment(self, code, only_classes=None):
