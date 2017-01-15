@@ -54,6 +54,10 @@ class Task(object):
         self.bot = bot
         self.config = bot.config
         self.logger = bot.tasks.logger.getChild(self.name)
+
+        number = self.config.tasks.get(self.name, {}).get("number")
+        if number is not None:
+            self.number = number
         self.setup()
 
     def __repr__(self):
