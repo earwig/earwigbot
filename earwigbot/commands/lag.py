@@ -23,6 +23,8 @@
 from earwigbot import exceptions
 from earwigbot.commands import Command
 
+old = 99999999999999999999999
+
 class Lag(Command):
     """Return replag or maxlag information on specific databases."""
     name = "lag"
@@ -32,17 +34,22 @@ class Lag(Command):
         site = self.get_site(data)
         if not site:
             return
+        replag = self.get_replag(site)
         if data.command == "replag":
             base = "\x0302{0}\x0F: {1}."
-            msg = base.format(site.name, self.get_replag(site))
+            msg = base.format(site.name, replag)
         elif data.command == "maxlag":
             base = "\x0302{0}\x0F: {1}."
             msg = base.format(site.name, self.get_maxlag(site))
         else:
             base = "\x0302{0}\x0F: {1}; {2}."
-            msg = base.format(site.name, self.get_replag(site),
+            msg = base.format(site.name, replag,
                               self.get_maxlag(site))
         self.reply(data, msg)
+        global old
+        if replag > old:
+            self.reply(data, 'EWW WHY')
+        old = replag
 
     def get_replag(self, site):
         return "SQL replag is {0}".format(self.time(site.get_replag()))
