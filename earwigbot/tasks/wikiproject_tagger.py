@@ -32,7 +32,7 @@ class WikiProjectTagger(Task):
     Usage: :command:`earwigbot -t wikiproject_tagger PATH
     --banner BANNER (--category CAT | --file FILE) [--summary SUM] [--update]
     [--append PARAMS] [--autoassess [CLASSES]] [--only-with BANNER]
-    [--nocreate] [--recursive [NUM]] [--genfixes] [--site SITE] [--dry-run]`
+    [--nocreate] [--recursive [NUM]] [--site SITE] [--dry-run]`
 
     .. glossary::
 
@@ -70,8 +70,6 @@ class WikiProjectTagger(Task):
     ``--tag-categories``
         also tag category pages; will autoassess with ``|class=category`` if
         ``--autoassess`` is given
-    ``--genfixes``
-        apply general fixes to the page if already making other changes
     ``--site SITE``
         the ID of the site to tag pages on, defaulting to the default site
     ``--dry-run``
@@ -138,7 +136,6 @@ class WikiProjectTagger(Task):
         nocreate = kwargs.get("nocreate", False)
         recursive = kwargs.get("recursive", 0)
         tag_categories = kwargs.get("tag-categories", False)
-        genfixes = kwargs.get("genfixes", False)
         dry_run = kwargs.get("dry-run", False)
         banner, names = self.get_names(site, banner)
         if not names:
@@ -153,7 +150,7 @@ class WikiProjectTagger(Task):
         job = _Job(banner=banner, names=names, summary=summary, update=update,
                    append=append, autoassess=autoassess, only_with=only_with,
                    nocreate=nocreate, tag_categories=tag_categories,
-                   genfixes=genfixes, dry_run=dry_run)
+                   dry_run=dry_run)
 
         try:
             self.run_job(kwargs, site, job, recursive)
@@ -292,9 +289,6 @@ class WikiProjectTagger(Task):
             else:
                 self.add_banner(code, banner)
 
-        if job.genfixes:
-            self.apply_genfixes(code)
-
         self.save_page(page, job, unicode(code), banner)
 
     def process_new_page(self, page, job):
@@ -407,14 +401,6 @@ class WikiProjectTagger(Task):
         self.logger.debug(u"Inserting banner at index %s", index)
         code.insert(index, banner)
 
-    def apply_genfixes(self, code):
-        """Apply general fixes to *code*, such as template substitution."""
-        regex = (r"^\{\{\s*((un|no)?s(i((gn|ng)(ed3?)?|g))?|usu|tilde|"
-                 r"forgot to sign|without signature)")
-        for template in code.ifilter_templates(matches=regex):
-            self.logger.debug("Applying genfix: substitute {{unsigned}}")
-            template.name = "subst:unsigned"
-
 
 class _Job(object):
     """Represents a single wikiproject-tagging task.
@@ -433,7 +419,6 @@ class _Job(object):
         self.only_with = kwargs["only_with"]
         self.nocreate = kwargs["nocreate"]
         self.tag_categories = kwargs["tag_categories"]
-        self.genfixes = kwargs["genfixes"]
         self.dry_run = kwargs["dry_run"]
         self.counter = 0
 
