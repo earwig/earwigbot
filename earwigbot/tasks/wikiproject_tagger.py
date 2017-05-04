@@ -282,10 +282,7 @@ class WikiProjectTagger(Task):
             banner = self.make_banner(job, code, is_category=is_category)
             shell = self.get_banner_shell(code)
             if shell:
-                if shell.has_param(1):
-                    shell.get(1).value.insert(0, banner + "\n")
-                else:
-                    shell.add(1, banner)
+                self.add_banner_to_shell(shell, banner)
             else:
                 self.add_banner(code, banner)
 
@@ -388,6 +385,17 @@ class WikiProjectTagger(Task):
             self.logger.debug(log, shells[0].name)
             return shells[0]
 
+    def add_banner_to_shell(self, shell, banner):
+        """Add *banner* to *shell*."""
+        if shell.has_param(1):
+            if unicode(shell.get(1).value).endswith("\n"):
+                banner += "\n"
+            else:
+                banner = "\n" + banner
+            shell.get(1).value.append(banner)
+        else:
+            shell.add(1, banner)
+
     def add_banner(self, code, banner):
         """Add *banner* to *code*, following template order conventions."""
         index = 0
@@ -395,11 +403,16 @@ class WikiProjectTagger(Task):
             name = template.name.lower().replace("_", " ")
             for regex in self.TOP_TEMPS:
                 if re.match(regex, name):
-                    self.logger.debug(u"Skipping top template: %s", name)
+                    self.logger.debug(u"Adding after top template: %s", name)
                     index = i + 1
+            if "wikiproject" in name or name.startswith("wp"):
+                self.logger.debug(u"Adding after banner template: %s", name)
+                index = i + 1
 
         self.logger.debug(u"Inserting banner at index %s", index)
-        code.insert(index, banner)
+        if index > 0 and not unicode(code.get(index - 1)).endswith("\n"):
+            banner = "\n" + banner
+        code.insert(index, banner + "\n")
 
 
 class _Job(object):
