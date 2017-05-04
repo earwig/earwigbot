@@ -39,7 +39,7 @@ class WikiProjectTagger(Task):
     ``--banner BANNER``
         the page name of the banner to add, without a namespace (unless the
         namespace is something other than ``Template``) so
-        ``--banner WikiProject Biography`` for ``{{WikiProject Biography}}``
+        ``--banner "WikiProject Biography"`` for ``{{WikiProject Biography}}``
     ``--category CAT`` or ``--file FILE``
         determines which pages to tag; either all pages in a category (to
         include subcategories as well, see ``--recursive``) or all
@@ -67,6 +67,9 @@ class WikiProjectTagger(Task):
     ``--recursive NUM``
         recursively go through subcategories up to a maximum depth of ``NUM``,
         or if ``NUM`` isn't provided, go infinitely (this can be dangerous)
+    ``--tag-categories``
+        also tag category pages; will autoassess with ``|class=category`` if
+        ``--autoassess`` is given
     ``--genfixes``
         apply general fixes to the page if already making other changes
     ``--site SITE``
@@ -134,6 +137,7 @@ class WikiProjectTagger(Task):
         ow_banner = kwargs.get("only-with")
         nocreate = kwargs.get("nocreate", False)
         recursive = kwargs.get("recursive", 0)
+        tag_categories = kwargs.get("tag-categories", False)
         genfixes = kwargs.get("genfixes", False)
         dry_run = kwargs.get("dry-run", False)
         banner, names = self.get_names(site, banner)
@@ -148,7 +152,8 @@ class WikiProjectTagger(Task):
 
         job = _Job(banner=banner, names=names, summary=summary, update=update,
                    append=append, autoassess=autoassess, only_with=only_with,
-                   nocreate=nocreate, genfixes=genfixes, dry_run=dry_run)
+                   nocreate=nocreate, tag_categories=tag_categories,
+                   genfixes=genfixes, dry_run=dry_run)
 
         try:
             self.run_job(kwargs, site, job, recursive)
@@ -218,6 +223,8 @@ class WikiProjectTagger(Task):
         self.logger.info(u"Processing category: [[%s]]", page.title)
         for member in page.get_members():
             if member.namespace == constants.NS_CATEGORY:
+                if job.tag_categories:
+                    self.process_page(member, job, is_category=True)
                 if recursive is True:
                     self.process_category(member, job, True)
                 elif recursive > 0:
@@ -225,7 +232,7 @@ class WikiProjectTagger(Task):
             else:
                 self.process_page(member, job)
 
-    def process_page(self, page, job):
+    def process_page(self, page, job, is_category=False):
         """Try to tag a specific *page* using the *job* description."""
         if job.counter % 10 == 0:  # Do a shutoff check every ten pages
             if self.shutoff_enabled(page.site):
@@ -264,7 +271,7 @@ class WikiProjectTagger(Task):
 
         if is_update:
             old_banner = unicode(banner)
-            self.update_banner(banner, job, code)
+            self.update_banner(banner, job, code, is_category=is_category)
             if banner == old_banner:
                 log = u"Skipping page: [[%s]]; already tagged and no updates"
                 self.logger.info(log, page.title)
@@ -273,7 +280,7 @@ class WikiProjectTagger(Task):
             banner = banner.encode("utf8")
         else:
             self.logger.info(u"Tagging page: [[%s]]", page.title)
-            banner = self.make_banner(job, code)
+            banner = self.make_banner(job, code, is_category=is_category)
             shell = self.get_banner_shell(code)
             if shell:
                 if shell.has_param(1):
@@ -306,34 +313,44 @@ class WikiProjectTagger(Task):
             summary = job.summary.replace("$3", banner)
             page.edit(text, self.make_summary(summary), minor=True)
 
-    def make_banner(self, job, code=None):
+    def make_banner(self, job, code=None, is_category=False):
         """Return banner text to add based on a *job* and a page's *code*."""
         banner = job.banner
         if code is not None and job.autoassess is not False:
-            assessment = self.get_autoassessment(code, job.autoassess)
-            if assessment:
-                banner += "|class=" + assessment
+            assess, reason = self.get_autoassessment(
+                code, job.autoassess, is_category=is_category)
+            if assess:
+                banner += "|class=" + assess
+                if reason:
+                    banner += "|auto=" + reason
         if job.append:
             banner += "|" + "|".join(job.append.split(","))
         return "{{" + banner + "}}"
 
-    def update_banner(self, banner, job, code):
+    def update_banner(self, banner, job, code, is_category=False):
         """Update an existing *banner* based on a *job* and a page's *code*."""
         has = lambda key: (banner.has(key) and
                            banner.get(key).value.strip() not in ("", "?"))
 
         if job.autoassess is not False:
             if not has("class"):
-                assessment = self.get_autoassessment(code, job.autoassess)
-                if assessment:
-                    banner.add("class", assessment)
+                assess, reason = self.get_autoassessment(
+                    code, job.autoassess, is_category=is_category)
+                if assess:
+                    banner.add("class", assess)
+                    if reason:
+                        banner.add("auto", reason)
         if job.append:
             for param in job.append.split(","):
                 key, value = param.split("=", 1)
                 if not has(key):
                     banner.add(key, value)
 
-    def get_autoassessment(self, code, only_classes=None):
+    def get_autoassessment(self, code, only_classes=None, is_category=False):
+        """Get an autoassessment for a page.
+
+        Return (assessed class as a string or None, assessment reason or None).
+        """
         if only_classes is None:
             classnames = ["a", "b", "book", "c", "category", "dab", "fa",
                           "fl", "ga", "list", "redirect", "start", "stub",
@@ -341,6 +358,9 @@ class WikiProjectTagger(Task):
         else:
             classnames = [klass.strip().lower()
                           for klass in only_classes.split(",")]
+
+        if is_category:
+            return ("category" if "category" in classnames else None), None
 
         classes = {klass: 0 for klass in classnames}
         for template in code.ifilter_templates(recursive=True):
@@ -356,10 +376,10 @@ class WikiProjectTagger(Task):
             if confidence > 0.75:
                 rank = tuple(classes.keys())[values.index(best)]
                 if rank in ("fa", "fl", "ga"):
-                    return rank.upper()
+                    return rank.upper(), "inherit"
                 else:
-                    return self._upperfirst(rank)
-        return None
+                    return self._upperfirst(rank), "inherit"
+        return None, None
 
     def get_banner_shell(self, code):
         """Return the banner shell template within *code*, else ``None``."""
@@ -410,6 +430,7 @@ class _Job(object):
         self.autoassess = kwargs["autoassess"]
         self.only_with = kwargs["only_with"]
         self.nocreate = kwargs["nocreate"]
+        self.tag_categories = kwargs["tag_categories"]
         self.genfixes = kwargs["genfixes"]
         self.dry_run = kwargs["dry_run"]
         self.counter = 0
