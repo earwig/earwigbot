@@ -103,8 +103,6 @@ class WikiProjectTagger(Task):
         r"failed ?ga$",
         r"old ?prod( ?full)?$",
         r"(old|previous) ?afd$",
-
-        r"((wikiproject|wp) ?)?bio(graph(y|ies))?$",
     ]
 
     @staticmethod
@@ -398,22 +396,26 @@ class WikiProjectTagger(Task):
 
     def add_banner(self, code, banner):
         """Add *banner* to *code*, following template order conventions."""
-        index = 0
-        for i, template in enumerate(code.ifilter_templates()):
+        predecessor = None
+        for template in code.ifilter_templates():
             name = template.name.lower().replace("_", " ")
             for regex in self.TOP_TEMPS:
                 if re.match(regex, name):
-                    self.logger.debug(u"Adding after top template: %s", name)
-                    index = i + 1
+                    self.logger.debug(u"Skipping past top template: %s", name)
+                    predecessor = template
+                    break
             if "wikiproject" in name or name.startswith("wp"):
-                self.logger.debug(u"Adding after banner template: %s", name)
-                index = i + 1
+                self.logger.debug(u"Skipping past banner template: %s", name)
+                predecessor = template
 
-        self.logger.debug(u"Inserting banner at index %s", index)
-        if index > 0 and not unicode(code.get(index - 1)).endswith("\n"):
-            banner = "\n" + banner
-        code.insert(index, banner + "\n")
-
+        if predecessor:
+            self.logger.debug("Inserting banner after template")
+            if not unicode(predecessor).endswith("\n"):
+                banner = "\n" + banner
+            code.insert_after(predecessor, banner + "\n")
+        else:
+            self.logger.debug("Inserting banner at beginning")
+            code.insert(0, banner + "\n")
 
 class _Job(object):
     """Represents a single wikiproject-tagging task.
