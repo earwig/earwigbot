@@ -222,7 +222,7 @@ class WikiProjectTagger(Task):
         """Try to tag all pages in the given category."""
         self.logger.info(u"Processing category: [[%s]]", page.title)
         if job.tag_categories:
-            self.process_page(member, job, is_category=True)
+            self.process_page(page, job, is_category=True)
         for member in page.get_members():
             if member.namespace == constants.NS_CATEGORY:
                 if recursive is True:
