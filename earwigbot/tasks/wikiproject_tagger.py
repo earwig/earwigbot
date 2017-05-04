@@ -221,14 +221,16 @@ class WikiProjectTagger(Task):
     def process_category(self, page, job, recursive):
         """Try to tag all pages in the given category."""
         self.logger.info(u"Processing category: [[%s]]", page.title)
+        if job.tag_categories:
+            self.process_page(member, job, is_category=True)
         for member in page.get_members():
             if member.namespace == constants.NS_CATEGORY:
-                if job.tag_categories:
-                    self.process_page(member, job, is_category=True)
                 if recursive is True:
                     self.process_category(member, job, True)
                 elif recursive > 0:
                     self.process_category(member, job, recursive - 1)
+                elif job.tag_categories:
+                    self.process_page(member, job, is_category=True)
             else:
                 self.process_page(member, job)
 
