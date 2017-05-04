@@ -397,7 +397,7 @@ class WikiProjectTagger(Task):
     def add_banner(self, code, banner):
         """Add *banner* to *code*, following template order conventions."""
         predecessor = None
-        for template in code.ifilter_templates():
+        for template in code.ifilter_templates(recursive=False):
             name = template.name.lower().replace("_", " ")
             for regex in self.TOP_TEMPS:
                 if re.match(regex, name):
@@ -412,7 +412,10 @@ class WikiProjectTagger(Task):
             self.logger.debug("Inserting banner after template")
             if not unicode(predecessor).endswith("\n"):
                 banner = "\n" + banner
-            code.insert_after(predecessor, banner + "\n")
+            post = code.index(predecessor) + 1
+            if len(code.nodes) > post and not code.get(post).startswith("\n"):
+                banner += "\n"
+            code.insert_after(predecessor, banner)
         else:
             self.logger.debug("Inserting banner at beginning")
             code.insert(0, banner + "\n")
