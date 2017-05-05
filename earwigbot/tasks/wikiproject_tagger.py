@@ -215,7 +215,13 @@ class WikiProjectTagger(Task):
 
     def process_category(self, page, job, recursive):
         """Try to tag all pages in the given category."""
+        if page.title in job.processed_cats:
+            self.logger.debug(u"Skipping category, already processed: [[%s]]",
+                              page.title)
+            return
         self.logger.info(u"Processing category: [[%s]]", page.title)
+        job.processed_cats.add(page.title)
+
         if job.tag_categories:
             self.process_page(page, job, is_category=True)
         for member in page.get_members():
@@ -231,13 +237,20 @@ class WikiProjectTagger(Task):
 
     def process_page(self, page, job, is_category=False):
         """Try to tag a specific *page* using the *job* description."""
+        if not page.is_talkpage:
+            page = page.toggle_talk()
+
+        if page.title in job.processed_pages:
+            self.logger.debug(u"Skipping page, already processed: [[%s]]",
+                              page.title)
+            return
+        job.processed_pages.add(page.title)
+
         if job.counter % 10 == 0:  # Do a shutoff check every ten pages
             if self.shutoff_enabled(page.site):
                 raise _ShutoffEnabled()
         job.counter += 1
 
-        if not page.is_talkpage:
-            page = page.toggle_talk()
         try:
             code = page.parse()
         except exceptions.PageNotFoundError:
@@ -438,7 +451,10 @@ class _Job(object):
         self.nocreate = kwargs["nocreate"]
         self.tag_categories = kwargs["tag_categories"]
         self.dry_run = kwargs["dry_run"]
+
         self.counter = 0
+        self.processed_cats = set()
+        self.processed_pages = set()
 
 
 class _ShutoffEnabled(Exception):
