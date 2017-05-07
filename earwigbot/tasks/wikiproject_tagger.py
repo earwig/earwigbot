@@ -224,13 +224,16 @@ class WikiProjectTagger(Task):
         if job.tag_categories:
             self.process_page(page, job)
         for member in page.get_members():
-            if member.namespace == constants.NS_CATEGORY:
+            nspace = member.namespace
+            if nspace == constants.NS_CATEGORY:
                 if recursive is True:
                     self.process_category(member, job, True)
                 elif recursive > 0:
                     self.process_category(member, job, recursive - 1)
                 elif job.tag_categories:
                     self.process_page(member, job)
+            elif nspace in (constants.NS_USER, constants.NS_USER_TALK):
+                continue
             else:
                 self.process_page(member, job)
 
