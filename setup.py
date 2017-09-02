@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2017 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,8 +26,8 @@ from setuptools import setup, find_packages
 from earwigbot import __version__
 
 required_deps = [
-    "PyYAML >= 3.11",  # Parsing config files
-    "mwparserfromhell >= 0.4.3",  # Parsing wikicode for manipulation
+    "PyYAML >= 3.12",  # Parsing config files
+    "mwparserfromhell >= 0.5",  # Parsing wikicode for manipulation
 ]
 
 extra_deps = {
@@ -39,16 +39,16 @@ extra_deps = {
         "oursql >= 0.9.3.2",  # Interfacing with MediaWiki databases
     ],
     "copyvios": [
-        "beautifulsoup4 >= 4.4.1",  # Parsing/scraping HTML
-        "cchardet >= 1.0.0",  # Encoding detection for BeautifulSoup
-        "lxml >= 3.6.0",  # Faster parser for BeautifulSoup
-        "nltk >= 3.2.1",  # Parsing sentences to split article content
+        "beautifulsoup4 >= 4.6.0",  # Parsing/scraping HTML
+        "cchardet >= 2.1.1",  # Encoding detection for BeautifulSoup
+        "lxml >= 3.8.0",  # Faster parser for BeautifulSoup
+        "nltk >= 3.2.4",  # Parsing sentences to split article content
         "oauth2 >= 1.9.0",  # Interfacing with Yahoo! BOSS Search
         "pdfminer >= 20140328",  # Extracting text from PDF files
-        "tldextract >= 2.0.1",  # Getting domains for the multithreaded workers
+        "tldextract >= 2.1.0",  # Getting domains for the multithreaded workers
     ],
     "time": [
-        "pytz >= 2016.4",  # Handling timezones for the !time IRC command
+        "pytz >= 2017.2",  # Handling timezones for the !time IRC command
     ],
 }
 
