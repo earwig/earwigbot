@@ -355,7 +355,7 @@ class WikiProjectTagger(Task):
 
         Return (assessed class as a string or None, assessment reason or None).
         """
-        if only_classes is None:
+        if only_classes is None or only_classes is True:
             classnames = ["a", "b", "book", "c", "dab", "fa", "fl", "ga",
                           "list", "redirect", "start", "stub"]
         else:
