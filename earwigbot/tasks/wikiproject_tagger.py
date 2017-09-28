@@ -383,7 +383,7 @@ class WikiProjectTagger(Task):
 
     def get_banner_shell(self, code):
         """Return the banner shell template within *code*, else ``None``."""
-        regex = r"^\{\{\s*((WikiProject|WP)[ _]?Banner[ _]?S(hell)?|W(BPS|PBS|PB)|Shell)"
+        regex = r"^\{\{\s*((WikiProject|WP)[ _]?Banner[ _]?S(hell)?|W(BPS|PBS|PB)|Shell)\s*(\||\}\})"
         shells = code.filter_templates(matches=regex)
         if not shells:
             shells = code.filter_templates(matches=regex, recursive=True)
