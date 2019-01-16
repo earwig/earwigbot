@@ -13,6 +13,7 @@ v0.3 (unreleased):
 - IRC: Try not to join channels before NickServ auth has completed.
 - IRC: Improved detection of maximum IRC message length.
 - IRC: Improved some help commands.
+- Wiki: Fixed Page.toggle_talk() behavior on mainspace titles with colons.
 
 v0.2 (released November 8, 2015):
 

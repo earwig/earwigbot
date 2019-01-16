@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2019 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -552,9 +552,9 @@ class Page(CopyvioMixIn):
         else:
             new_ns = self._namespace + 1
 
-        try:
+        if self._namespace != 0:
             body = self._title.split(":", 1)[1]
-        except IndexError:
+        else:
             body = self._title
 
         new_prefix = self.site.namespace_id_to_name(new_ns)
