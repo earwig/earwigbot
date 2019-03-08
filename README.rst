@@ -10,7 +10,7 @@ History
 -------
 
 Development began, based on the `Pywikipedia framework`_, in early 2009.
-Approval for its fist task, a `copyright violation detector`_, was carried out
+Approval for its first task, a `copyright violation detector`_, was carried out
 in May, and the bot has been running consistently ever since (with the
 exception of Jan/Feb 2011). It currently handles `several ongoing tasks`_
 ranging from statistics generation to category cleanup, and on-demand tasks
