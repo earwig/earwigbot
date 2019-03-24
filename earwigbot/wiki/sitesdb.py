@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2019 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -187,6 +187,7 @@ class SitesDB(object):
 
         config = self.config
         login = (config.wiki.get("username"), config.wiki.get("password"))
+        oauth = config.wiki.get("oauth")
         user_agent = config.wiki.get("userAgent")
         use_https = config.wiki.get("useHTTPS", True)
         assert_edit = config.wiki.get("assert")
@@ -212,7 +213,7 @@ class SitesDB(object):
 
         return Site(name=name, project=project, lang=lang, base_url=base_url,
                     article_path=article_path, script_path=script_path,
-                    sql=sql, namespaces=namespaces, login=login,
+                    sql=sql, namespaces=namespaces, login=login, oauth=oauth,
                     cookiejar=cookiejar, user_agent=user_agent,
                     use_https=use_https, assert_edit=assert_edit,
                     maxlag=maxlag, wait_between_queries=wait_between_queries,
@@ -239,7 +240,7 @@ class SitesDB(object):
                 if site:
                     return site[0]
                 else:
-                    url = "%{0}.{1}%".format(lang, project)
+                    url = "//{0}.{1}.%".format(lang, project)
                     site = conn.execute(query2, (url,)).fetchone()
                     return site[0] if site else None
             except sqlite.OperationalError:
@@ -386,6 +387,7 @@ class SitesDB(object):
 
         config = self.config
         login = (config.wiki.get("username"), config.wiki.get("password"))
+        oauth = config.wiki.get("oauth")
         user_agent = config.wiki.get("userAgent")
         use_https = config.wiki.get("useHTTPS", True)
         assert_edit = config.wiki.get("assert")
@@ -398,9 +400,10 @@ class SitesDB(object):
 
         # Create a Site object to log in and load the other attributes:
         site = Site(base_url=base_url, script_path=script_path, sql=sql,
-                    login=login, cookiejar=cookiejar, user_agent=user_agent,
-                    use_https=use_https, assert_edit=assert_edit,
-                    maxlag=maxlag, wait_between_queries=wait_between_queries)
+                    login=login, oauth=oauth, cookiejar=cookiejar,
+                    user_agent=user_agent, use_https=use_https,
+                    assert_edit=assert_edit, maxlag=maxlag,
+                    wait_between_queries=wait_between_queries)
 
         self._logger.info("Added site '{0}'".format(site.name))
         self._add_site_to_sitesdb(site)

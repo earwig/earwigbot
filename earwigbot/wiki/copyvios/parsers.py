@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2019 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -34,8 +34,6 @@ nltk = importer.new("nltk")
 converter = importer.new("pdfminer.converter")
 pdfinterp = importer.new("pdfminer.pdfinterp")
 pdfpage = importer.new("pdfminer.pdfpage")
-pdftypes = importer.new("pdfminer.pdftypes")
-psparser = importer.new("pdfminer.psparser")
 
 __all__ = ["ArticleTextParser", "get_parser"]
 
@@ -61,6 +59,26 @@ class ArticleTextParser(_BaseTextParser):
     """A parser that can strip and chunk wikicode article text."""
     TYPE = "Article"
     TEMPLATE_MERGE_THRESHOLD = 35
+    NLTK_DEFAULT = "english"
+    NLTK_LANGS = {
+        "cs": "czech",
+        "da": "danish",
+        "de": "german",
+        "el": "greek",
+        "en": "english",
+        "es": "spanish",
+        "et": "estonian",
+        "fi": "finnish",
+        "fr": "french",
+        "it": "italian",
+        "nl": "dutch",
+        "no": "norwegian",
+        "pl": "polish",
+        "pt": "portuguese",
+        "sl": "slovene",
+        "sv": "swedish",
+        "tr": "turkish"
+    }
 
     def _merge_templates(self, code):
         """Merge template contents in to wikicode when the values are long."""
@@ -75,6 +93,47 @@ class ArticleTextParser(_BaseTextParser):
                 code.replace(template, u" " + subst + u" ")
             else:
                 code.remove(template)
+
+    def _get_tokenizer(self):
+        """Return a NLTK punctuation tokenizer for the article's language."""
+        datafile = lambda lang: "file:" + path.join(
+            self._args["nltk_dir"], "tokenizers", "punkt", lang + ".pickle")
+
+        lang = self.NLTK_LANGS.get(self._args.get("lang"), self.NLTK_DEFAULT)
+        try:
+            nltk.data.load(datafile(self.NLTK_DEFAULT))
+        except LookupError:
+            nltk.download("punkt", self._args["nltk_dir"])
+        return nltk.data.load(datafile(lang))
+
+    def _get_sentences(self, min_query, max_query, split_thresh):
+        """Split the article text into sentences of a certain length."""
+        def cut_sentence(words):
+            div = len(words)
+            if div == 0:
+                return []
+
+            length = len(" ".join(words))
+            while length > max_query:
+                div -= 1
+                length -= len(words[div]) + 1
+
+            result = []
+            if length >= split_thresh:
+                result.append(" ".join(words[:div]))
+            return result + cut_sentence(words[div + 1:])
+
+        tokenizer = self._get_tokenizer()
+        sentences = []
+        if not hasattr(self, "clean"):
+            self.strip()
+
+        for sentence in tokenizer.tokenize(self.clean):
+            if len(sentence) <= max_query:
+                sentences.append(sentence)
+            else:
+                sentences.extend(cut_sentence(sentence.split()))
+        return [sen for sen in sentences if len(sen) >= min_query]
 
     def strip(self):
         """Clean the page's raw text by removing templates and formatting.
@@ -118,7 +177,7 @@ class ArticleTextParser(_BaseTextParser):
         self.clean = re.sub("\n\n+", "\n", clean).strip()
         return self.clean
 
-    def chunk(self, nltk_dir, max_chunks, min_query=8, max_query=128):
+    def chunk(self, max_chunks, min_query=8, max_query=128, split_thresh=32):
         """Convert the clean article text into a list of web-searchable chunks.
 
         No greater than *max_chunks* will be returned. Each chunk will only be
@@ -130,27 +189,11 @@ class ArticleTextParser(_BaseTextParser):
 
         This is implemented using :py:mod:`nltk` (http://nltk.org/). A base
         directory (*nltk_dir*) is required to store nltk's punctuation
-        database. This is typically located in the bot's working directory.
+        database, and should be passed as an argument to the constructor. It is
+        typically located in the bot's working directory.
         """
-        datafile = path.join(nltk_dir, "tokenizers", "punkt", "english.pickle")
-        try:
-            tokenizer = nltk.data.load("file:" + datafile)
-        except LookupError:
-            nltk.download("punkt", nltk_dir)
-            tokenizer = nltk.data.load("file:" + datafile)
-
-        sentences = []
-        for sentence in tokenizer.tokenize(self.clean):
-            if len(sentence) > max_query:
-                words = sentence.split()
-                while len(" ".join(words)) > max_query:
-                    words.pop()
-                sentence = " ".join(words)
-            if len(sentence) < min_query:
-                continue
-            sentences.append(sentence)
-
-        if max_chunks >= len(sentences):
+        sentences = self._get_sentences(min_query, max_query, split_thresh)
+        if len(sentences) <= max_chunks:
             return sentences
 
         chunks = []
@@ -187,6 +230,20 @@ class _HTMLParser(_BaseTextParser):
         "script", "style"
     ]
 
+    def _fail_if_mirror(self, soup):
+        """Look for obvious signs that the given soup is a wiki mirror.
+
+        If so, raise ParserExclusionError, which is caught in the workers and
+        causes this source to excluded.
+        """
+        if "mirror_hints" not in self._args:
+            return
+
+        func = lambda attr: attr and any(
+            hint in attr for hint in self._args["mirror_hints"])
+        if soup.find_all(href=func) or soup.find_all(src=func):
+            raise ParserExclusionError()
+
     def parse(self):
         """Return the actual text contained within an HTML document.
 
@@ -203,12 +260,7 @@ class _HTMLParser(_BaseTextParser):
             # no scrapable content (possibly JS or <frame> magic):
             return ""
 
-        if "mirror_hints" in self._args:
-            # Look for obvious signs that this is a mirror:
-            func = lambda attr: attr and any(
-                hint in attr for hint in self._args["mirror_hints"])
-            if soup.find_all(href=func) or soup.find_all(src=func):
-                raise ParserExclusionError()
+        self._fail_if_mirror(soup)
 
         soup = soup.body
         is_comment = lambda text: isinstance(text, bs4.element.Comment)
@@ -240,7 +292,7 @@ class _PDFParser(_BaseTextParser):
             pages = pdfpage.PDFPage.get_pages(StringIO(self.text))
             for page in pages:
                 interp.process_page(page)
-        except (pdftypes.PDFException, psparser.PSException, AssertionError):
+        except Exception:  # pylint: disable=broad-except
             return output.getvalue().decode("utf8")
         finally:
             conv.close()

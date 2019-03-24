@@ -1,3 +1,25 @@
+v0.3 (released March 24, 2019):
+
+- Added various new features to the WikiProjectTagger task.
+- Copyvio detector: improved sentence splitting algorithm; many performance
+  improvements.
+- Improved config file command/task exclusion logic.
+- Wiki: Added logging for warnings.
+- Wiki: Added OAuth support.
+- Wiki: Switched to requests from urllib2.
+- Wiki: Updated some deprecated API calls.
+- Wiki: Fixed Page.toggle_talk() behavior on mainspace titles with colons.
+- IRC > !cidr: Added; new command for calculating range blocks.
+- IRC > !notes: Improved help and added aliases.
+- IRC > !remind: Added !remind all. Fixed multithreading efficiency issues.
+  Improved time detection and argument parsing. Newly expired reminders are now
+  triggered on bot startup.
+- IRC > !stalk: Allow regular expressions as page titles or usernames.
+- IRC: Added a per-channel quiet config setting.
+- IRC: Try not to join channels before NickServ auth has completed.
+- IRC: Improved detection of maximum IRC message length.
+- IRC: Improved some help commands.
+
 v0.2 (released November 8, 2015):
 
 - Added a new command syntax allowing the caller to redirect replies to another

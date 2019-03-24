@@ -71,14 +71,11 @@ class Threads(Command):
             tname = thread.name
             ident = thread.ident % 10000
             if tname == "MainThread":
-                t = "\x0302MainThread\x0F (id {0})"
+                t = "\x0302main\x0F (id {0})"
                 normal_threads.append(t.format(ident))
             elif tname in self.config.components:
                 t = "\x0302{0}\x0F (id {1})"
                 normal_threads.append(t.format(tname, ident))
-            elif tname.startswith("remind-"):
-                t = "\x0302reminder\x0F (id {0})"
-                daemon_threads.append(t.format(tname[len("remind-"):]))
             elif tname.startswith("cvworker-"):
                 t = "\x0302copyvio worker\x0F (site {0})"
                 daemon_threads.append(t.format(tname[len("cvworker-"):]))
@@ -145,6 +142,9 @@ class Threads(Command):
             return
 
         data.kwargs["fromIRC"] = True
+        data.kwargs["_IRCCallback"] = lambda: self.reply(
+            data, "Task \x0302{0}\x0F finished.".format(task_name))
+
         self.bot.tasks.start(task_name, **data.kwargs)
         msg = "Task \x0302{0}\x0F started.".format(task_name)
         self.reply(data, msg)

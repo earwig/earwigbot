@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -143,9 +143,9 @@ class ConfigScript(object):
         self._print("""I can encrypt passwords stored in your config file in
                        addition to preventing other users on your system from
                        reading the file. Encryption is recommended if the bot
-                       is to run on a public computer like the Toolserver, but
-                       otherwise the need to enter a key everytime you start
-                       the bot may be annoying.""")
+                       is to run on a public server like Wikimedia Labs, but
+                       otherwise the need to enter a key every time you start
+                       the bot may be an inconvenience.""")
         self.data["metadata"]["encryptPasswords"] = False
         if self._ask_bool("Encrypt stored passwords?"):
             key = getpass(self.PROMPT + "Enter an encryption key: ")
@@ -270,7 +270,7 @@ class ConfigScript(object):
         password = self._ask_pass("Bot password:", encrypt=False)
         self.data["wiki"]["password"] = password
         self.data["wiki"]["userAgent"] = "EarwigBot/$1 (Python/$2; https://github.com/earwig/earwigbot)"
-        self.data["wiki"]["summary"] = "([[WP:BOT|Bot]]): $2"
+        self.data["wiki"]["summary"] = "([[WP:BOT|Bot]]) $2"
         self.data["wiki"]["useHTTPS"] = True
         self.data["wiki"]["assert"] = "user"
         self.data["wiki"]["maxlag"] = 10
@@ -442,6 +442,10 @@ class ConfigScript(object):
         """Make a new config file based on the user's input."""
         try:
             makedirs(path.dirname(self.config.path))
+        except OSError as exc:
+            if exc.errno != 17:
+                raise
+        try:
             open(self.config.path, "w").close()
             chmod(self.config.path, stat.S_IRUSR|stat.S_IWUSR)
         except IOError:

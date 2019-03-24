@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,14 +23,12 @@
 from time import sleep, time
 from urllib2 import build_opener
 
-from earwigbot import exceptions, importer
+from earwigbot import exceptions
 from earwigbot.wiki.copyvios.markov import MarkovChain
 from earwigbot.wiki.copyvios.parsers import ArticleTextParser
-from earwigbot.wiki.copyvios.search import YahooBOSSSearchEngine
+from earwigbot.wiki.copyvios.search import SEARCH_ENGINES
 from earwigbot.wiki.copyvios.workers import (
     globalize, localize, CopyvioWorkspace)
-
-oauth = importer.new("oauth2")
 
 __all__ = ["CopyvioMixIn", "globalize", "localize"]
 
@@ -48,7 +46,8 @@ class CopyvioMixIn(object):
     def __init__(self, site):
         self._search_config = site._search_config
         self._exclusions_db = self._search_config.get("exclusions_db")
-        self._addheaders = site._opener.addheaders
+        self._addheaders = [("User-Agent", site.user_agent),
+                            ("Accept-Encoding", "gzip")]
 
     def _get_search_engine(self):
         """Return a function that can be called to do web searches.
@@ -63,19 +62,23 @@ class CopyvioMixIn(object):
         required package or module, like oauth2 for "Yahoo! BOSS".
         """
         engine = self._search_config["engine"]
+        if engine not in SEARCH_ENGINES:
+            raise exceptions.UnknownSearchEngineError(engine)
+
+        klass = SEARCH_ENGINES[engine]
         credentials = self._search_config["credentials"]
+        opener = build_opener()
+        opener.addheaders = self._addheaders
 
-        if engine == "Yahoo! BOSS":
+        for dep in klass.requirements():
             try:
-                oauth.__version__  # Force-load the lazy module
-            except ImportError:
-                e = "Yahoo! BOSS requires the 'oauth2' package: https://github.com/simplegeo/python-oauth2"
+                __import__(dep).__name__
+            except (ImportError, AttributeError):
+                e = "Missing a required dependency ({}) for the {} engine"
+                e = e.format(dep, engine)
                 raise exceptions.UnsupportedSearchEngineError(e)
-            opener = build_opener()
-            opener.addheaders = self._addheaders
-            return YahooBOSSSearchEngine(credentials, opener)
 
-        raise exceptions.UnknownSearchEngineError(engine)
+        return klass(credentials, opener)
 
     def copyvio_check(self, min_confidence=0.75, max_queries=15, max_time=-1,
                       no_searches=False, no_links=False, short_circuit=True):
@@ -114,15 +117,18 @@ class CopyvioMixIn(object):
         log = u"Starting copyvio check for [[{0}]]"
         self._logger.info(log.format(self.title))
         searcher = self._get_search_engine()
-        parser = ArticleTextParser(self.get())
+        parser = ArticleTextParser(self.get(), {
+            "nltk_dir": self._search_config["nltk_dir"],
+            "lang": self._site.lang
+        })
         article = MarkovChain(parser.strip())
         parser_args = {}
 
         if self._exclusions_db:
             self._exclusions_db.sync(self.site.name)
             exclude = lambda u: self._exclusions_db.check(self.site.name, u)
-            parser_args["mirror_hints"] = self._exclusions_db.get_mirror_hints(
-                self.site.name)
+            parser_args["mirror_hints"] = \
+                self._exclusions_db.get_mirror_hints(self)
         else:
             exclude = None
 
@@ -139,7 +145,7 @@ class CopyvioMixIn(object):
             workspace.enqueue(parser.get_links(), exclude)
         num_queries = 0
         if not no_searches:
-            chunks = parser.chunk(self._search_config["nltk_dir"], max_queries)
+            chunks = parser.chunk(max_queries)
             for chunk in chunks:
                 if short_circuit and workspace.finished:
                     workspace.possible_miss = True

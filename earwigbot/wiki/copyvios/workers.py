@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2019 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -128,7 +128,7 @@ class _CopyvioWorker(object):
         url = source.url.encode("utf8")
         try:
             response = self._opener.open(url, timeout=source.timeout)
-        except (URLError, HTTPException, socket_error):
+        except (URLError, HTTPException, socket_error, ValueError):
             return None
 
         try:
@@ -203,6 +203,28 @@ class _CopyvioWorker(object):
         self._queues.lock.release()
         return source
 
+    def _handle_once(self):
+        """Handle a single source from one of the queues."""
+        try:
+            source = self._dequeue()
+        except Empty:
+            self._logger.debug("Exiting: queue timed out")
+            return False
+        except StopIteration:
+            self._logger.debug("Exiting: got stop signal")
+            return False
+
+        try:
+            text = self._open_url(source)
+        except ParserExclusionError:
+            self._logger.debug("Source excluded by content parser")
+            source.skipped = source.excluded = True
+            source.finish_work()
+        else:
+            chain = MarkovChain(text) if text else None
+            source.workspace.compare(source, chain)
+        return True
+
     def _run(self):
         """Main entry point for the worker thread.
 
@@ -211,24 +233,8 @@ class _CopyvioWorker(object):
         now empty.
         """
         while True:
-            try:
-                source = self._dequeue()
-            except Empty:
-                self._logger.debug("Exiting: queue timed out")
-                return
-            except StopIteration:
-                self._logger.debug("Exiting: got stop signal")
-                return
-
-            try:
-                text = self._open_url(source)
-            except ParserExclusionError:
-                self._logger.debug("Source excluded by content parser")
-                source.skipped = source.excluded = True
-                source.finish_work()
-            else:
-                chain = MarkovChain(text) if text else None
-                source.workspace.compare(source, chain)
+            if not self._handle_once():
+                break
 
     def start(self):
         """Start the copyvio worker in a new thread."""

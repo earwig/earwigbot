@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2019 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -21,16 +21,15 @@
 # SOFTWARE.
 
 from cookielib import CookieJar
-from gzip import GzipFile
-from json import loads
 from logging import getLogger, NullHandler
 from os.path import expanduser
-from StringIO import StringIO
 from threading import RLock
 from time import sleep, time
 from urllib import quote_plus, unquote_plus
-from urllib2 import build_opener, HTTPCookieProcessor, URLError
 from urlparse import urlparse
+
+import requests
+from requests_oauthlib import OAuth1
 
 from earwigbot import exceptions, importer
 from earwigbot.wiki import constants
@@ -83,15 +82,16 @@ class Site(object):
     """
     SERVICE_API = 1
     SERVICE_SQL = 2
-    SPECIAL_TOKENS = ["deleteglobalaccount", "patrol", "rollback",
-                      "setglobalaccountstatus", "userrights", "watch"]
+    SPECIAL_TOKENS = ["createaccount", "deleteglobalaccount", "login",
+                      "patrol", "rollback", "setglobalaccountstatus",
+                      "userrights", "watch"]
 
     def __init__(self, name=None, project=None, lang=None, base_url=None,
                  article_path=None, script_path=None, sql=None,
-                 namespaces=None, login=(None, None), cookiejar=None,
-                 user_agent=None, use_https=True, assert_edit=None,
-                 maxlag=None, wait_between_queries=2, logger=None,
-                 search_config=None):
+                 namespaces=None, login=(None, None), oauth=None,
+                 cookiejar=None, user_agent=None, use_https=True,
+                 assert_edit=None, maxlag=None, wait_between_queries=2,
+                 logger=None, search_config=None):
         """Constructor for new Site instances.
 
         This probably isn't necessary to call yourself unless you're building a
@@ -100,14 +100,15 @@ class Site(object):
         based on your config file and the sites database. We accept a bunch of
         kwargs, but the only ones you really "need" are *base_url* and
         *script_path*; this is enough to figure out an API url. *login*, a
-        tuple of (username, password), is highly recommended. *cookiejar* will
-        be used to store cookies, and we'll use a normal CookieJar if none is
-        given.
+        tuple of (username, password), can be used to log in using the legacy
+        BotPasswords system; otherwise, a dict of OAuth info should be provided
+        to *oauth*. *cookiejar* will be used to store cookies, and we'll use a
+        normal CookieJar if none is given.
 
         First, we'll store the given arguments as attributes, then set up our
-        URL opener. We'll load any of the attributes that weren't given from
-        the API, and then log in if a username/pass was given and we aren't
-        already logged in.
+        requests session. We'll load any of the attributes that weren't given
+        from the API, and then log in if a username/pass was given and we
+        aren't already logged in.
         """
         # Attributes referring to site information, filled in by an API query
         # if they are missing (and an API url can be determined):
@@ -145,16 +146,22 @@ class Site(object):
         else:
             self._search_config = {}
 
-        # Set up cookiejar and URL opener for making API queries:
+        # Set up cookiejar and requests session for making API queries:
         if cookiejar is not None:
             self._cookiejar = cookiejar
         else:
             self._cookiejar = CookieJar()
+        self._last_cookiejar_save = None
         if not user_agent:
             user_agent = constants.USER_AGENT  # Set default UA
-        self._opener = build_opener(HTTPCookieProcessor(self._cookiejar))
-        self._opener.addheaders = [("User-Agent", user_agent),
-                                   ("Accept-Encoding", "gzip")]
+        self._oauth = oauth
+        self._session = requests.Session()
+        self._session.cookies = self._cookiejar
+        self._session.headers["User-Agent"] = user_agent
+        if oauth:
+            self._session.auth = OAuth1(
+                oauth["consumer_token"], oauth["consumer_secret"],
+                oauth["access_token"], oauth["access_secret"])
 
         # Set up our internal logger:
         if logger:
@@ -168,7 +175,7 @@ class Site(object):
 
         # If we have a name/pass and the API says we're not logged in, log in:
         self._login_info = name, password = login
-        if name and password:
+        if not self._oauth and name and password:
             logged_in_as = self._get_username_from_cookies()
             if not logged_in_as or name.replace("_", " ") != logged_in_as:
                 self._login(login)
@@ -180,17 +187,18 @@ class Site(object):
             "base_url={_base_url!r}", "article_path={_article_path!r}",
             "script_path={_script_path!r}", "use_https={_use_https!r}",
             "assert_edit={_assert_edit!r}", "maxlag={_maxlag!r}",
-            "sql={_sql_data!r}", "login={0}", "user_agent={2!r}",
-            "cookiejar={1})"))
+            "sql={_sql_data!r}", "login={0}", "oauth={1}", "user_agent={3!r}",
+            "cookiejar={2})"))
         name, password = self._login_info
         login = "({0}, {1})".format(repr(name), "hidden" if password else None)
+        oauth = "hidden" if self._oauth else None
         cookies = self._cookiejar.__class__.__name__
         if hasattr(self._cookiejar, "filename"):
             cookies += "({0!r})".format(getattr(self._cookiejar, "filename"))
         else:
             cookies += "()"
-        agent = self._opener.addheaders[0][1]
-        return res.format(login, cookies, agent, **self.__dict__)
+        agent = self.user_agent
+        return res.format(login, oauth, cookies, agent, **self.__dict__)
 
     def __str__(self):
         """Return a nice string representation of the Site."""
@@ -232,28 +240,18 @@ class Site(object):
         url, data = self._build_api_query(params, ignore_maxlag, no_assert)
         if "lgpassword" in params:
             self._logger.debug("{0} -> <hidden>".format(url))
+        elif len(data) > 1000:
+            self._logger.debug("{0} -> {1}...".format(url, data[:997]))
         else:
             self._logger.debug("{0} -> {1}".format(url, data))
 
         try:
-            response = self._opener.open(url, data)
-        except URLError as error:
-            if hasattr(error, "reason"):
-                e = "API query failed: {0}.".format(error.reason)
-            elif hasattr(error, "code"):
-                e = "API query failed: got an error code of {0}."
-                e = e.format(error.code)
-            else:
-                e = "API query failed."
-            raise exceptions.APIError(e)
+            response = self._session.post(url, data=data)
+            response.raise_for_status()
+        except requests.RequestException as exc:
+            raise exceptions.APIError("API query failed: {0}".format(exc))
 
-        result = response.read()
-        if response.headers.get("Content-Encoding") == "gzip":
-            stream = StringIO(result)
-            gzipper = GzipFile(fileobj=stream)
-            result = gzipper.read()
-
-        return self._handle_api_result(result, params, tries, wait, ae_retry)
+        return self._handle_api_result(response, params, tries, wait, ae_retry)
 
     def _request_csrf_token(self, params):
         """If possible, add a request for a CSRF token to an API query."""
@@ -288,13 +286,27 @@ class Site(object):
         data = self._urlencode_utf8(params)
         return url, data
 
-    def _handle_api_result(self, result, params, tries, wait, ae_retry):
-        """Given the result of an API query, attempt to return useful data."""
+    def _handle_api_result(self, response, params, tries, wait, ae_retry):
+        """Given an API query response, attempt to return useful data."""
         try:
-            res = loads(result)  # Try to parse as a JSON object
+            res = response.json()
         except ValueError:
             e = "API query failed: JSON could not be decoded."
             raise exceptions.APIError(e)
+
+        if "warnings" in res:
+            for name, value in res["warnings"].items():
+                try:
+                    warning = value["warnings"]
+                except KeyError:
+                    try:
+                        warning = value["*"]
+                    except KeyError:
+                        warning = value
+                self._logger.warning("API warning: %s: %s", name, warning)
+
+        if self._should_save_cookiejar():
+            self._save_cookiejar()
 
         try:
             code = res["error"]["code"]
@@ -315,18 +327,18 @@ class Site(object):
             sleep(wait)
             return self._api_query(params, tries, wait * 2, ae_retry=ae_retry)
         elif code in ["assertuserfailed", "assertbotfailed"]:  # AssertEdit
-            if ae_retry and all(self._login_info):
+            if ae_retry and all(self._login_info) and not self._oauth:
                 # Try to log in if we got logged out:
                 self._login(self._login_info)
                 if "token" in params:  # Fetch a new one; this is invalid now
                     params["token"] = self.get_token(params["action"])
                 return self._api_query(params, tries, wait, ae_retry=False)
-            if not all(self._login_info):
+            if not all(self._login_info) and not self._oauth:
                 e = "Assertion failed, and no login info was provided."
             elif code == "assertbotfailed":
                 e = "Bot assertion failed: we don't have a bot flag!"
             else:
-                e = "User assertion failed due to an unknown issue. Cookie problem?"
+                e = "User assertion failed due to an unknown issue. Cookie or OAuth problem?"
             raise exceptions.PermissionsError("AssertEdit: " + e)
         else:  # Some unknown error occurred
             e = 'API query failed: got error "{0}"; server says: "{1}".'
@@ -463,14 +475,29 @@ class Site(object):
         unnecessary API query. For the cookie-detection method, see
         _get_username_from_cookies()'s docs.
 
-        If our username isn't in cookies, then we're probably not logged in, or
-        something fishy is going on (like forced logout). In this case, do a
-        single API query for our username (or IP address) and return that.
+        If our username isn't in cookies, then we're either using OAuth or
+        we're probably not logged in, or something fishy is going on (like
+        forced logout). If we're using OAuth and a username was configured,
+        assume it is accurate and use it. Otherwise, do a single API query for
+        our username (or IP address) and return that.
         """
         name = self._get_username_from_cookies()
         if name:
             return name
+        if self._oauth and self._login_info[0]:
+            return self._login_info[0]
         return self._get_username_from_api()
+
+    def _should_save_cookiejar(self):
+        """Return a bool indicating whether we should save the cookiejar.
+
+        This is True if we haven't saved the cookiejar yet this session, or if
+        our last save was over a day ago.
+        """
+        max_staleness = 60 * 60 * 24  # 1 day
+        if not self._last_cookiejar_save:
+            return True
+        return time() - self._last_cookiejar_save > max_staleness
 
     def _save_cookiejar(self):
         """Try to save our cookiejar after doing a (normal) login or logout.
@@ -485,8 +512,9 @@ class Site(object):
                 getattr(self._cookiejar, "save")()
             except (NotImplementedError, ValueError):
                 pass
+        self._last_cookiejar_save = time()
 
-    def _login(self, login, token=None, attempt=0):
+    def _login(self, login):
         """Safely login through the API.
 
         Normally, this is called by __init__() if a username and password have
@@ -494,45 +522,43 @@ class Site(object):
         time it needs to be called is when those cookies expire, which is done
         automatically by api_query() if a query fails.
 
-        Recent versions of MediaWiki's API have fixed a CSRF vulnerability,
-        requiring login to be done in two separate requests. If the response
-        from from our initial request is "NeedToken", we'll do another one with
-        the token. If login is successful, we'll try to save our cookiejar.
+        *login* is a (username, password) tuple.
 
         Raises LoginError on login errors (duh), like bad passwords and
         nonexistent usernames.
-
-        *login* is a (username, password) tuple. *token* is the token returned
-        from our first request, and *attempt* is to prevent getting stuck in a
-        loop if MediaWiki isn't acting right.
         """
         self._tokens.clear()
         name, password = login
 
-        params = {"action": "login", "lgname": name, "lgpassword": password}
-        if token:
-            params["lgtoken"] = token
+        params = {"action": "query", "meta": "tokens", "type": "login"}
+        with self._api_lock:
+            result = self._api_query(params, no_assert=True)
+        try:
+            token = result["query"]["tokens"]["logintoken"]
+        except KeyError:
+            raise exceptions.LoginError("Couldn't get login token")
+
+        params = {"action": "login", "lgname": name, "lgpassword": password,
+                  "lgtoken": token}
         with self._api_lock:
             result = self._api_query(params, no_assert=True)
 
         res = result["login"]["result"]
         if res == "Success":
+            self._tokens.clear()
             self._save_cookiejar()
-        elif res == "NeedToken" and attempt == 0:
-            token = result["login"]["token"]
-            return self._login(login, token, attempt=1)
+            return
+        if res == "Illegal":
+            e = "The provided username is illegal."
+        elif res == "NotExists":
+            e = "The provided username does not exist."
+        elif res == "EmptyPass":
+            e = "No password was given."
+        elif res == "WrongPass" or res == "WrongPluginPass":
+            e = "The given password is incorrect."
         else:
-            if res == "Illegal":
-                e = "The provided username is illegal."
-            elif res == "NotExists":
-                e = "The provided username does not exist."
-            elif res == "EmptyPass":
-                e = "No password was given."
-            elif res == "WrongPass" or res == "WrongPluginPass":
-                e = "The given password is incorrect."
-            else:
-                e = "Couldn't login; server says '{0}'.".format(res)
-            raise exceptions.LoginError(e)
+            e = "Couldn't login; server says '{0}'.".format(res)
+        raise exceptions.LoginError(e)
 
     def _logout(self):
         """Safely logout through the API.
@@ -650,6 +676,11 @@ class Site(object):
                 url = "http:" + url
         return url
 
+    @property
+    def user_agent(self):
+        """The User-Agent header sent to the API by the requests session."""
+        return self._session.headers["User-Agent"]
+
     def api_query(self, **kwargs):
         """Do an API query with `kwargs` as the parameters.
 
@@ -666,10 +697,9 @@ class Site(object):
         :py:attr:`self._assert_edit` and :py:attr:`_maxlag` respectively.
         Additionally, we'll sleep a bit if the last query was made fewer than
         :py:attr:`self._wait_between_queries` seconds ago. The request is made
-        through :py:attr:`self._opener`, which has cookie support
-        (:py:attr:`self._cookiejar`), a ``User-Agent``
-        (:py:const:`earwigbot.wiki.constants.USER_AGENT`), and
-        ``Accept-Encoding`` set to ``"gzip"``.
+        through :py:attr:`self._session`, which has cookie support
+        (:py:attr:`self._cookiejar`) and a ``User-Agent``
+        (:py:const:`earwigbot.wiki.constants.USER_AGENT`).
 
         Assuming everything went well, we'll gunzip the data (if compressed),
         load it as a JSON object, and return it.

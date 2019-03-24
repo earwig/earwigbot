@@ -37,7 +37,7 @@ class Lag(Command):
             msg = base.format(site.name, self.get_replag(site))
         elif data.command == "maxlag":
             base = "\x0302{0}\x0F: {1}."
-            msg = base.format(site.name, self.get_maxlag(site).capitalize())
+            msg = base.format(site.name, self.get_maxlag(site))
         else:
             base = "\x0302{0}\x0F: {1}; {2}."
             msg = base.format(site.name, self.get_replag(site),
@@ -45,10 +45,10 @@ class Lag(Command):
         self.reply(data, msg)
 
     def get_replag(self, site):
-        return "replag is {0}".format(self.time(site.get_replag()))
+        return "SQL replag is {0}".format(self.time(site.get_replag()))
 
     def get_maxlag(self, site):
-        return "database maxlag is {0}".format(self.time(site.get_maxlag()))
+        return "API maxlag is {0}".format(self.time(site.get_maxlag()))
 
     def get_site(self, data):
         if data.kwargs and "project" in data.kwargs and "lang" in data.kwargs:

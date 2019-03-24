@@ -10,7 +10,7 @@ History
 -------
 
 Development began, based on the `Pywikipedia framework`_, in early 2009.
-Approval for its fist task, a `copyright violation detector`_, was carried out
+Approval for its first task, a `copyright violation detector`_, was carried out
 in May, and the bot has been running consistently ever since (with the
 exception of Jan/Feb 2011). It currently handles `several ongoing tasks`_
 ranging from statistics generation to category cleanup, and on-demand tasks
@@ -36,7 +36,7 @@ setup.py test`` from the project's root directory. Note that some
 tests require an internet connection, and others may take a while to run.
 Coverage is currently rather incomplete.
 
-Latest release (v0.2)
+Latest release (v0.3)
 ~~~~~~~~~~~~~~~~~~~~~
 
 EarwigBot is available from the `Python Package Index`_, so you can install the
@@ -47,7 +47,7 @@ some header files. For example, on Ubuntu, see `this StackOverflow post`_.
 
 You can also install it from source [1]_ directly::
 
-    curl -Lo earwigbot.tgz https://github.com/earwig/earwigbot/tarball/v0.2
+    curl -Lo earwigbot.tgz https://github.com/earwig/earwigbot/tarball/v0.3
     tar -xf earwigbot.tgz
     cd earwig-earwigbot-*
     python setup.py install
