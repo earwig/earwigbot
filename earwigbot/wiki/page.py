@@ -264,13 +264,15 @@ class Page(CopyvioMixIn):
         if not result:
             query = self.site.api_query
             result = query(action="query", prop="revisions", rvlimit=1,
-                           rvprop="content|timestamp", titles=self._title)
+                           rvprop="content|timestamp", rvslots="main",
+                           titles=self._title)
 
         res = result["query"]["pages"].values()[0]
         try:
-            self._content = res["revisions"][0]["*"]
-            self._basetimestamp = res["revisions"][0]["timestamp"]
-        except KeyError:
+            revision = res["revisions"][0]
+            self._content = revision["slots"]["main"]["*"]
+            self._basetimestamp = revision["timestamp"]
+        except (KeyError, IndexError):
             # This can only happen if the page was deleted since we last called
             # self._load_attributes(). In that case, some of our attributes are
             # outdated, so force another self._load_attributes():
@@ -582,7 +584,7 @@ class Page(CopyvioMixIn):
             query = self.site.api_query
             result = query(action="query", rvlimit=1, titles=self._title,
                            prop="info|revisions", inprop="protection|url",
-                           rvprop="content|timestamp")
+                           rvprop="content|timestamp", rvslots="main")
             self._load_attributes(result=result)
             self._assert_existence()
             self._load_content(result=result)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2017 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2019 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -297,6 +297,17 @@ class Site(object):
         except ValueError:
             e = "API query failed: JSON could not be decoded."
             raise exceptions.APIError(e)
+
+        if "warnings" in res:
+            for name, value in res["warnings"].items():
+                try:
+                    warning = value["warnings"]
+                except KeyError:
+                    try:
+                        warning = value["*"]
+                    except KeyError:
+                        warning = value
+                self._logger.warning("API warning: %s: %s", name, warning)
 
         try:
             code = res["error"]["code"]
