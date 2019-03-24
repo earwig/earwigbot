@@ -1,4 +1,4 @@
-v0.3 (unreleased):
+v0.3 (released March 24, 2019):
 
 - Added various new features to the WikiProjectTagger task.
 - Copyvio detector: improved sentence splitting algorithm; many performance
