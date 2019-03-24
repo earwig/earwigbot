@@ -46,7 +46,8 @@ class CopyvioMixIn(object):
     def __init__(self, site):
         self._search_config = site._search_config
         self._exclusions_db = self._search_config.get("exclusions_db")
-        self._addheaders = site._opener.addheaders
+        self._addheaders = [("User-Agent", site.user_agent),
+                            ("Accept-Encoding", "gzip")]
 
     def _get_search_engine(self):
         """Return a function that can be called to do web searches.

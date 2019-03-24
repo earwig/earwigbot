@@ -4,6 +4,11 @@ v0.3 (unreleased):
 - Copyvio detector: improved sentence splitting algorithm; many performance
   improvements.
 - Improved config file command/task exclusion logic.
+- Wiki: Added logging for warnings.
+- Wiki: Added OAuth support.
+- Wiki: Switched to requests from urllib2.
+- Wiki: Updated some deprecated API calls.
+- Wiki: Fixed Page.toggle_talk() behavior on mainspace titles with colons.
 - IRC > !cidr: Added; new command for calculating range blocks.
 - IRC > !notes: Improved help and added aliases.
 - IRC > !remind: Added !remind all. Fixed multithreading efficiency issues.
@@ -14,9 +19,6 @@ v0.3 (unreleased):
 - IRC: Try not to join channels before NickServ auth has completed.
 - IRC: Improved detection of maximum IRC message length.
 - IRC: Improved some help commands.
-- Wiki: Added logging for warnings.
-- Wiki: Updated some deprecated API calls.
-- Wiki: Fixed Page.toggle_talk() behavior on mainspace titles with colons.
 
 v0.2 (released November 8, 2015):
 

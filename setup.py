@@ -28,6 +28,8 @@ from earwigbot import __version__
 required_deps = [
     "PyYAML >= 3.12",  # Parsing config files
     "mwparserfromhell >= 0.5",  # Parsing wikicode for manipulation
+    "requests >= 2.21.0",  # Wiki API requests
+    "requests_oauthlib >= 1.2.0",  # API authentication via OAuth
 ]
 
 extra_deps = {
