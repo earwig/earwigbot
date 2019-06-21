@@ -95,7 +95,7 @@ class ExclusionsDB(object):
 
         if source == "User:EarwigBot/Copyvios/Exclusions":
             for line in data.splitlines():
-                match = re.match(r"^\s*url\s*=\s*(?:\<nowiki\>\s*)?(.+?)\s*(?:\</nowiki\>\s*)?$", line)
+                match = re.match(r"^\s*url\s*=\s*(?:\<nowiki\>\s*)?(.+?)\s*(?:\</nowiki\>\s*)?(?:#.*?)?$", line)
                 if match:
                     url = re.sub(_RE_STRIP_PREFIX, "", match.group(1))
                     if url:
