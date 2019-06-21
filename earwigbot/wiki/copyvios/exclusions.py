@@ -36,12 +36,14 @@ DEFAULT_SOURCES = {
         "User:EranBot/Copyright/Blacklist"
     ],
     "enwiki": [
-        "Wikipedia:Mirrors and forks/Abc", "Wikipedia:Mirrors and forks/Def",
-        "Wikipedia:Mirrors and forks/Ghi", "Wikipedia:Mirrors and forks/Jkl",
-        "Wikipedia:Mirrors and forks/Mno", "Wikipedia:Mirrors and forks/Pqr",
-        "Wikipedia:Mirrors and forks/Stu", "Wikipedia:Mirrors and forks/Vwxyz"
+        "Wikipedia:Mirrors and forks/ABC", "Wikipedia:Mirrors and forks/DEF",
+        "Wikipedia:Mirrors and forks/GHI", "Wikipedia:Mirrors and forks/JKL",
+        "Wikipedia:Mirrors and forks/MNO", "Wikipedia:Mirrors and forks/PQR",
+        "Wikipedia:Mirrors and forks/STU", "Wikipedia:Mirrors and forks/VWXYZ"
     ]
 }
+
+_RE_STRIP_PREFIX = r"^https?://(www\.)?"
 
 class ExclusionsDB(object):
     """
@@ -87,8 +89,17 @@ class ExclusionsDB(object):
         """Load from a specific source and return a set of URLs."""
         urls = set()
         try:
-            data = site.get_page(source).get()
+            data = site.get_page(source, follow_redirects=True).get()
         except exceptions.PageNotFoundError:
+            return urls
+
+        if source == "User:EarwigBot/Copyvios/Exclusions":
+            for line in data.splitlines():
+                match = re.match(r"^\s*url\s*=\s*(?:\<nowiki\>\s*)?(.+?)\s*(?:\</nowiki\>\s*)?$", line)
+                if match:
+                    url = re.sub(_RE_STRIP_PREFIX, "", match.group(1))
+                    if url:
+                        urls.add(url)
             return urls
 
         if source == "User:EranBot/Copyright/Blacklist":
@@ -98,14 +109,12 @@ class ExclusionsDB(object):
                     urls.add("re:" + line)
             return urls
 
-        regexes = [
-            r"url\s*=\s*(?:\<nowiki\>)?(?:https?:)?(?://)?(.*?)(?:\</nowiki\>.*?)?\s*$",
-            r"\*\s*Site:\s*(?:\[|\<nowiki\>)?(?:https?:)?(?://)?(.*?)(?:\].*?|\</nowiki\>.*?)?\s*$"
-        ]
-        for regex in regexes:
-            for url in re.findall(regex, data, re.I|re.M):
-                if url.strip():
-                    urls.add(url.lower().strip())
+        for line in data.splitlines():
+            if re.match(r"^(\s*\|?\s*url\s*=)|(\*?\s*Site:)", line):
+                for url in re.findall(r"(https?://.+?)(?:[ [\]<>{}()]|$)", line):
+                    url = re.sub(_RE_STRIP_PREFIX, "", url)
+                    if url:
+                        urls.add(url)
         return urls
 
     def _update(self, sitename):
@@ -173,7 +182,7 @@ class ExclusionsDB(object):
 
         Return ``True`` if the URL is in the database, or ``False`` otherwise.
         """
-        normalized = re.sub(r"^https?://(www\.)?", "", url.lower())
+        normalized = re.sub(_RE_STRIP_PREFIX, "", url.lower())
         query = """SELECT exclusion_url FROM exclusions
                    WHERE exclusion_sitename = ? OR exclusion_sitename = ?"""
         with self._db_access_lock, sqlite.connect(self._dbfile) as conn:
