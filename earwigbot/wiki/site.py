@@ -21,11 +21,12 @@
 # SOFTWARE.
 
 from cookielib import CookieJar
+from json import dumps
 from logging import getLogger, NullHandler
 from os.path import expanduser
 from threading import RLock
 from time import sleep, time
-from urllib import quote_plus, unquote_plus
+from urllib import unquote_plus
 from urlparse import urlparse
 
 import requests
@@ -211,16 +212,6 @@ class Site(object):
             return value
         return unicode(value, encoding)
 
-    def _urlencode_utf8(self, params):
-        """Implement urllib.urlencode() with support for unicode input."""
-        enc = lambda s: s.encode("utf8") if isinstance(s, unicode) else str(s)
-        args = []
-        for key, val in params.iteritems():
-            key = quote_plus(enc(key))
-            val = quote_plus(enc(val))
-            args.append(key + "=" + val)
-        return "&".join(args)
-
     def _api_query(self, params, tries=0, wait=5, ignore_maxlag=False,
                    no_assert=False, ae_retry=True):
         """Do an API query with *params* as a dict of parameters.
@@ -237,16 +228,18 @@ class Site(object):
             sleep(wait_time)
         self._last_query_time = time()
 
-        url, data = self._build_api_query(params, ignore_maxlag, no_assert)
+        url, params = self._build_api_query(params, ignore_maxlag, no_assert)
         if "lgpassword" in params:
             self._logger.debug("{0} -> <hidden>".format(url))
-        elif len(data) > 1000:
-            self._logger.debug("{0} -> {1}...".format(url, data[:997]))
         else:
-            self._logger.debug("{0} -> {1}".format(url, data))
+            data = dumps(params)
+            if len(data) > 1000:
+                self._logger.debug("{0} -> {1}...".format(url, data[:997]))
+            else:
+                self._logger.debug("{0} -> {1}".format(url, data))
 
         try:
-            response = self._session.post(url, data=data)
+            response = self._session.post(url, data=params)
             response.raise_for_status()
         except requests.RequestException as exc:
             raise exceptions.APIError("API query failed: {0}".format(exc))
@@ -282,9 +275,7 @@ class Site(object):
         if "csrf" not in self._tokens:
             # If we don't have a CSRF token, try to fetch one:
             self._request_csrf_token(params)
-
-        data = self._urlencode_utf8(params)
-        return url, data
+        return url, params
 
     def _handle_api_result(self, response, params, tries, wait, ae_retry):
         """Given an API query response, attempt to return useful data."""
