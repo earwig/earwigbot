@@ -187,6 +187,7 @@ class ExclusionsDB(object):
                    WHERE exclusion_sitename = ? OR exclusion_sitename = ?"""
         with self._db_access_lock, sqlite.connect(self._dbfile) as conn:
             for (excl,) in conn.execute(query, (sitename, "all")):
+                excl = excl.lower()
                 if excl.startswith("*."):
                     parsed = urlparse(url.lower())
                     matches = excl[2:] in parsed.netloc
