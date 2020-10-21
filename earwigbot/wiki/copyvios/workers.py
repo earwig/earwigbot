@@ -164,7 +164,8 @@ class _CopyvioWorker(object):
         except ParserRedirectError as exc:
             if redirects >= _MAX_REDIRECTS:
                 return None
-            return self._open_url(exc.url, redirects=redirects + 1)
+            source.url = exc.url.decode("utf8")
+            return self._open_url(source, redirects=redirects + 1)
 
     def _acquire_new_site(self):
         """Block for a new unassigned site queue."""
@@ -241,8 +242,12 @@ class _CopyvioWorker(object):
         now empty.
         """
         while True:
-            if not self._handle_once():
-                break
+            try:
+                if not self._handle_once():
+                    break
+            except Exception:
+                self._logger.exception("Uncaught exception in worker")
+                time.sleep(5)  # Delay if we get stuck in a busy loop
 
     def start(self):
         """Start the copyvio worker in a new thread."""
