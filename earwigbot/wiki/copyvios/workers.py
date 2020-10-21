@@ -158,7 +158,7 @@ class _CopyvioWorker(object):
             except (IOError, struct_error):
                 return None
 
-        parser = parser_class(content, source.parser_args)
+        parser = parser_class(content, url=url, args=source.parser_args)
         try:
             return parser.parse()
         except ParserRedirectError as exc:

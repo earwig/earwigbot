@@ -42,9 +42,9 @@ class _BaseTextParser(object):
     """Base class for a parser that handles text."""
     TYPE = None
 
-    def __init__(self, url, text, args=None):
-        self.url = url
+    def __init__(self, text, url=None, args=None):
         self.text = text
+        self.url = url
         self._args = args or {}
 
     def __repr__(self):
@@ -265,11 +265,12 @@ class _HTMLParser(_BaseTextParser):
         self._fail_if_mirror(soup)
         soup = soup.body
 
-        url = urlparse.urlparse(self.url)
-        if url.netloc == "web.archive.org" and url.path.endswith(".pdf"):
-            playback = soup.find(id="playback")
-            if playback and "src" in playback.attrs:
-                raise ParserRedirectError(playback.attrs["src"])
+        if self.url:
+            url = urlparse.urlparse(self.url)
+            if url.netloc == "web.archive.org" and url.path.endswith(".pdf"):
+                playback = soup.find(id="playback")
+                if playback and "src" in playback.attrs:
+                    raise ParserRedirectError(playback.attrs["src"])
 
         is_comment = lambda text: isinstance(text, bs4.element.Comment)
         for comment in soup.find_all(text=is_comment):

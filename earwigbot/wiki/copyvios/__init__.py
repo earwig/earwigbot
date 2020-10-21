@@ -117,7 +117,7 @@ class CopyvioMixIn(object):
         log = u"Starting copyvio check for [[{0}]]"
         self._logger.info(log.format(self.title))
         searcher = self._get_search_engine()
-        parser = ArticleTextParser(self.get(), {
+        parser = ArticleTextParser(self.get(), args={
             "nltk_dir": self._search_config["nltk_dir"],
             "lang": self._site.lang
         })
