@@ -34,7 +34,7 @@ from time import time
 from urllib2 import build_opener, URLError
 
 from earwigbot import importer
-from earwigbot.exceptions import ParserExclusionError
+from earwigbot.exceptions import ParserExclusionError, ParserRedirectError
 from earwigbot.wiki.copyvios.markov import MarkovChain, MarkovChainIntersection
 from earwigbot.wiki.copyvios.parsers import get_parser
 from earwigbot.wiki.copyvios.result import CopyvioCheckResult, CopyvioSource
@@ -42,6 +42,8 @@ from earwigbot.wiki.copyvios.result import CopyvioCheckResult, CopyvioSource
 tldextract = importer.new("tldextract")
 
 __all__ = ["globalize", "localize", "CopyvioWorkspace"]
+
+_MAX_REDIRECTS = 3
 
 _is_globalized = False
 _global_queues = None
@@ -111,7 +113,7 @@ class _CopyvioWorker(object):
         self._opener = build_opener()
         self._logger = getLogger("earwigbot.wiki.cvworker." + name)
 
-    def _open_url(self, source):
+    def _open_url(self, source, redirects=0):
         """Open a URL and return its parsed content, or None.
 
         First, we will decompress the content if the headers contain "gzip" as
@@ -137,10 +139,10 @@ class _CopyvioWorker(object):
             return None
 
         content_type = response.headers.get("Content-Type", "text/plain")
-        handler = get_parser(content_type)
-        if not handler:
+        parser_class = get_parser(content_type)
+        if not parser_class:
             return None
-        if size > (15 if handler.TYPE == "PDF" else 2) * 1024 ** 2:
+        if size > (15 if parser_class.TYPE == "PDF" else 2) * 1024 ** 2:
             return None
 
         try:
@@ -156,7 +158,13 @@ class _CopyvioWorker(object):
             except (IOError, struct_error):
                 return None
 
-        return handler(content, source.parser_args).parse()
+        parser = parser_class(content, source.parser_args)
+        try:
+            return parser.parse()
+        except ParserRedirectError as exc:
+            if redirects >= _MAX_REDIRECTS:
+                return None
+            return self._open_url(exc.url, redirects=redirects + 1)
 
     def _acquire_new_site(self):
         """Block for a new unassigned site queue."""
@@ -248,7 +256,7 @@ class CopyvioWorkspace(object):
 
     def __init__(self, article, min_confidence, max_time, logger, headers,
                  url_timeout=5, num_workers=8, short_circuit=True,
-                 parser_args=None):
+                 parser_args=None, exclude_check=None):
         self.sources = []
         self.finished = False
         self.possible_miss = False
@@ -264,6 +272,7 @@ class CopyvioWorkspace(object):
         self._source_args = {
             "workspace": self, "headers": headers, "timeout": url_timeout,
             "parser_args": parser_args}
+        self._exclude_check = exclude_check
 
         if _is_globalized:
             self._queues = _global_queues
@@ -316,12 +325,8 @@ class CopyvioWorkspace(object):
                 source.skip()
             self.finished = True
 
-    def enqueue(self, urls, exclude_check=None):
-        """Put a list of URLs into the various worker queues.
-
-        *exclude_check* is an optional exclusion function that takes a URL and
-        returns ``True`` if we should skip it and ``False`` otherwise.
-        """
+    def enqueue(self, urls):
+        """Put a list of URLs into the various worker queues."""
         for url in urls:
             with self._queues.lock:
                 if url in self._handled_urls:
@@ -331,7 +336,7 @@ class CopyvioWorkspace(object):
                 source = CopyvioSource(url=url, **self._source_args)
                 self.sources.append(source)
 
-                if exclude_check and exclude_check(url):
+                if self._exclude_check and self._exclude_check(url):
                     self._logger.debug(u"enqueue(): exclude {0}".format(url))
                     source.excluded = True
                     source.skip()

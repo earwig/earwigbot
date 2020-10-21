@@ -23,11 +23,12 @@
 from os import path
 import re
 from StringIO import StringIO
+import urlparse
 
 import mwparserfromhell
 
 from earwigbot import importer
-from earwigbot.exceptions import ParserExclusionError
+from earwigbot.exceptions import ParserExclusionError, ParserRedirectError
 
 bs4 = importer.new("bs4")
 nltk = importer.new("nltk")
@@ -41,7 +42,8 @@ class _BaseTextParser(object):
     """Base class for a parser that handles text."""
     TYPE = None
 
-    def __init__(self, text, args=None):
+    def __init__(self, url, text, args=None):
+        self.url = url
         self.text = text
         self._args = args or {}
 
@@ -257,12 +259,18 @@ class _HTMLParser(_BaseTextParser):
 
         if not soup.body:
             # No <body> tag present in HTML ->
-            # no scrapable content (possibly JS or <frame> magic):
+            # no scrapable content (possibly JS or <iframe> magic):
             return ""
 
         self._fail_if_mirror(soup)
-
         soup = soup.body
+
+        url = urlparse.urlparse(self.url)
+        if url.netloc == "web.archive.org" and url.path.endswith(".pdf"):
+            playback = soup.find(id="playback")
+            if playback and "src" in playback.attrs:
+                raise ParserRedirectError(playback.attrs["src"])
+
         is_comment = lambda text: isinstance(text, bs4.element.Comment)
         for comment in soup.find_all(text=is_comment):
             comment.extract()

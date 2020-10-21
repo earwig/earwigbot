@@ -259,3 +259,14 @@ class ParserExclusionError(CopyvioCheckError):
     <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>`; should not be
     exposed in client code.
     """
+
+class ParserRedirectError(CopyvioCheckError):
+    """A content parser detected that a redirect should be followed.
+
+    Raised internally by :py:meth:`Page.copyvio_check
+    <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>`; should not be
+    exposed in client code.
+    """
+    def __init__(self, url):
+        super(ParserRedirectError, self).__init__()
+        self.url = url

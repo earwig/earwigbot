@@ -134,7 +134,7 @@ class CopyvioMixIn(object):
 
         workspace = CopyvioWorkspace(
             article, min_confidence, max_time, self._logger, self._addheaders,
-            short_circuit=short_circuit, parser_args=parser_args)
+            short_circuit=short_circuit, parser_args=parser_args, exclude_check=exclude)
 
         if article.size < 20:  # Auto-fail very small articles
             result = workspace.get_result()
@@ -142,7 +142,7 @@ class CopyvioMixIn(object):
             return result
 
         if not no_links:
-            workspace.enqueue(parser.get_links(), exclude)
+            workspace.enqueue(parser.get_links())
         num_queries = 0
         if not no_searches:
             chunks = parser.chunk(max_queries)
@@ -152,7 +152,7 @@ class CopyvioMixIn(object):
                     break
                 log = u"[[{0}]] -> querying {1} for {2!r}"
                 self._logger.debug(log.format(self.title, searcher.name, chunk))
-                workspace.enqueue(searcher.search(chunk), exclude)
+                workspace.enqueue(searcher.search(chunk))
                 num_queries += 1
                 sleep(1)
 
