@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2019 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2021 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -91,7 +91,7 @@ class Site(object):
                  article_path=None, script_path=None, sql=None,
                  namespaces=None, login=(None, None), oauth=None,
                  cookiejar=None, user_agent=None, use_https=True,
-                 assert_edit=None, maxlag=None, wait_between_queries=2,
+                 assert_edit=None, maxlag=None, wait_between_queries=1,
                  logger=None, search_config=None):
         """Constructor for new Site instances.
 
