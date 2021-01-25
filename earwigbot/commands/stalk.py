@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2021 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -33,7 +33,7 @@ class Stalk(Command):
     commands = ["stalk", "watch", "unstalk", "unwatch", "stalks", "watches",
                 "allstalks", "allwatches", "unstalkall", "unwatchall"]
     hooks = ["msg", "rc"]
-    MAX_STALKS_PER_USER = 10
+    MAX_STALKS_PER_USER = 5
 
     def setup(self):
         self._users = {}
@@ -49,7 +49,8 @@ class Stalk(Command):
 
     def process(self, data):
         if isinstance(data, RC):
-            return self._process_rc(data)
+            self._process_rc(data)
+            return
 
         data.is_admin = self.config.irc["permissions"].is_admin(data)
 
@@ -77,6 +78,12 @@ class Stalk(Command):
             self.reply(data, self._current_stalks(data.nick))
             return
 
+        modifiers = {}
+        for modifier in ["noping", "nobots", "nominor", "nocolor"]:
+            if "!" + modifier in data.args:
+                modifiers[modifier] = True
+                data.args.remove("!" + modifier)
+
         target = " ".join(data.args).replace("_", " ")
         if target.startswith("[[") and target.endswith("]]"):
             target = target[2:-2]
@@ -89,14 +96,14 @@ class Stalk(Command):
 
         if data.command in ["stalk", "watch"]:
             if data.is_private:
-                stalkinfo = (data.nick, None)
+                stalkinfo = (data.nick, None, modifiers)
             elif not data.is_admin:
                 self.reply(data, "You must be a bot admin to stalk users or "
                                  "watch pages publicly. Retry this command in "
                                  "a private message.")
                 return
             else:
-                stalkinfo = (data.nick, data.chan)
+                stalkinfo = (data.nick, data.chan, modifiers)
 
         if data.command == "stalk":
             self._add_stalk("user", data, target, stalkinfo)
@@ -113,38 +120,53 @@ class Stalk(Command):
 
     def _process_rc(self, rc):
         """Process a watcher event."""
-        def _update_chans(items):
+        def _update_chans(items, flags):
             for item in items:
+                modifiers = item[2] if len(item) > 2 else {}
+                if modifiers.get("nobots") and "B" in flags:
+                    continue
+                if modifiers.get("nominor") and "M" in flags:
+                    continue
                 if item[1]:
-                    if item[1] in chans:
+                    if modifiers.get("noping"):
+                        if item[1] not in chans:
+                            chans[item[1]] = set()
+                    elif item[1] in chans:
                         chans[item[1]].add(item[0])
                     else:
                         chans[item[1]] = {item[0]}
+                    if modifiers.get("nocolor"):
+                        nocolor.add(item[1])
                 else:
                     chans[item[0]] = None
+                    if modifiers.get("nocolor"):
+                        nocolor.add(item[0])
 
         def _regex_match(target, tag):
             return target.startswith("re:") and re.match(target[3:], tag)
 
-        def _process(table, tag):
+        def _process(table, tag, flags):
             for target, stalks in table.iteritems():
                 if target == tag or _regex_match(target, tag):
-                    _update_chans(stalks)
+                    _update_chans(stalks, flags)
 
         chans = {}
-        _process(self._users, rc.user)
+        nocolor = set()
+        _process(self._users, rc.user, rc.flags)
         if rc.is_edit:
-            _process(self._pages, rc.page)
+            _process(self._pages, rc.page, rc.flags)
         if not chans:
             return
 
         with self.bot.component_lock:
             frontend = self.bot.frontend
             if frontend and not frontend.is_stopped():
-                pretty = rc.prettify()
-                for chan in chans:
-                    if chans[chan]:
-                        nicks = ", ".join(sorted(chans[chan]))
+                for chan, users in chans.iteritems():
+                    if chan.startswith("#") and chan not in frontend.channels:
+                        continue
+                    pretty = rc.prettify(color=chan not in nocolor)
+                    if users:
+                        nicks = ", ".join(sorted(users))
                         msg = "\x02{0}\x0F: {1}".format(nicks, pretty)
                     else:
                         msg = pretty
@@ -180,6 +202,10 @@ class Stalk(Command):
                 msg = ("Already {0}ing {1} {2}s for you, which is the limit "
                        "for non-bot admins.")
                 self.reply(data, msg.format(verb, nstalks, stalktype))
+                return
+            if stalkinfo[1] and not stalkinfo[1].startswith("##"):
+                msg = "You must be a bot admin to {0} {1}s in public channels."
+                self.reply(data, msg.format(verb, stalktype))
                 return
 
         if target in table:
@@ -285,8 +311,13 @@ class Stalk(Command):
         """Return all existing stalks, for bot admins."""
         def _format_info(info):
             if info[1]:
-                return "for {0} in {1}".format(info[0], info[1])
-            return "for {0} privately".format(info[0])
+                result = "for {0} in {1}".format(info[0], info[1])
+            else:
+                result = "for {0} privately".format(info[0])
+            modifiers = ", ".join(info[2]) if len(info) > 2 else ""
+            if modifiers:
+                result += " ({0})".format(modifiers)
+            return result
 
         def _format_data(data):
             return ", ".join(_format_info(info) for info in data)

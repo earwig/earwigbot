@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2021 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,12 +26,13 @@ class ChanOps(Command):
     """Voice, devoice, op, or deop users in the channel, or join or part from
     other channels."""
     name = "chanops"
-    commands = ["chanops", "voice", "devoice", "op", "deop", "join", "part"]
+    commands = ["chanops", "voice", "devoice", "op", "deop", "join", "part", "listchans"]
 
     def process(self, data):
         if data.command == "chanops":
-            msg = "Available commands are !voice, !devoice, !op, !deop, !join, and !part."
-            self.reply(data, msg)
+            msg = "Available commands are {0}."
+            self.reply(data, msg.format(", ".join(
+                "!" + cmd for cmd in self.commands if cmd != data.command)))
             return
         de_escalate = data.command in ["devoice", "deop"]
         if de_escalate and (not data.args or data.args[0] == data.nick):
@@ -44,6 +45,8 @@ class ChanOps(Command):
             self.do_join(data)
         elif data.command == "part":
             self.do_part(data)
+        elif data.command == "listchans":
+            self.do_list(data)
         else:
             # If it is just !op/!devoice/whatever without arguments, assume
             # they want to do this to themselves:
@@ -89,3 +92,11 @@ class ChanOps(Command):
             log += ' ("{0}")'.format(reason)
         self.part(channel, msg)
         self.logger.info(log)
+
+    def do_list(self, data):
+        chans = self.bot.frontend.channels
+        if not chans:
+            self.reply(data, "I am currently in no channels.")
+            return
+        self.reply(data, "I am currently in \x02{0}\x0F channel{1}: {2}.".format(
+            len(chans), "" if len(chans) == 1 else "s", ", ".join(chans)))

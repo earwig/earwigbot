@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2021 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -48,6 +48,7 @@ class Frontend(IRCConnection):
                       cf["realname"], bot.logger.getChild("frontend"))
 
         self._auth_wait = False
+        self._channels = set()
         self._connect()
 
     def __repr__(self):
@@ -62,18 +63,45 @@ class Frontend(IRCConnection):
         return res.format(self.nick, self.ident, self.host, self.port)
 
     def _join_channels(self):
-        """Join all startup channels as specified by the config file."""
-        for chan in self.bot.config.irc["frontend"]["channels"]:
+        """Join all startup channels."""
+        permdb = self.bot.config.irc["permissions"]
+        try:
+            # Try channels previously joined:
+            chans = permdb.get_attr("meta:frontend", "channels").split(",")
+        except KeyError:
+            # Channels specified in the config file:
+            chans = self.bot.config.irc["frontend"]["channels"]
+
+        for chan in chans:
             self.join(chan)
+
+    def _save_channels(self):
+        """Save the channel list persistently."""
+        permdb = self.bot.config.irc["permissions"]
+        permdb.set_attr("meta:frontend", "channels", ",".join(sorted(self._channels)))
+
+    def _add_channel(self, chan):
+        """Add a channel to the list of our channels."""
+        self._channels.add(chan)
+        self._save_channels()
+
+    def _remove_channel(self, chan):
+        """Remove a channel from the list of our channels."""
+        self._channels.discard(chan)
+        self._save_channels()
 
     def _process_message(self, line):
         """Process a single message from IRC."""
         if line[1] == "JOIN":
             data = Data(self.nick, line, msgtype="JOIN")
+            if data.nick == self.nick:
+                self._add_channel(data.chan)
             self.bot.commands.call("join", data)
 
         elif line[1] == "PART":
             data = Data(self.nick, line, msgtype="PART")
+            if data.nick == self.nick:
+                self._remove_channel(data.chan)
             self.bot.commands.call("part", data)
 
         elif line[1] == "PRIVMSG":
@@ -93,6 +121,10 @@ class Frontend(IRCConnection):
                 sleep(2)  # Wait for hostname change to propagate
                 self._join_channels()
 
+        elif line[1] == "KICK":
+            if line[3] == self.nick:
+                self._remove_channel(line[2])
+
         elif line[1] == "376":  # On successful connection to the server
             # If we're supposed to auth to NickServ, do that:
             try:
@@ -111,3 +143,8 @@ class Frontend(IRCConnection):
                 # Services is down, or something...?
                 self._auth_wait = False
                 self._join_channels()
+
+    @property
+    def channels(self):
+        """A set containing all channels the bot is in."""
+        return self._channels

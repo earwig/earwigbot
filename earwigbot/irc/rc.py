@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2021 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -32,6 +32,8 @@ class RC(object):
 
     pretty_edit = "\x02New {0}\x0F: \x0314[[\x0307{1}\x0314]]\x0306 * \x0303{2}\x0306 * \x0302{3}\x0306 * \x0310{4}"
     pretty_log = "\x02New {0}\x0F: \x0303{1}\x0306 * \x0302{2}\x0306 * \x0310{3}"
+    plain_edit = "New {0}: [[{1}]] * {2} * {3} * {4}"
+    plain_log = "New {0}: {1} * {2} * {3}"
 
     def __init__(self, chan, msg):
         self.chan = chan
@@ -57,7 +59,7 @@ class RC(object):
         try:
             page, self.flags, url, user, comment = self.re_edit.findall(msg)[0]
         except IndexError:
-            # We're probably missing the http:// part, because it's a log
+            # We're probably missing the https:// part, because it's a log
             # entry, which lacks a URL:
             page, flags, user, comment = self.re_log.findall(msg)[0]
             url = "https://{0}.org/wiki/{1}".format(self.chan[1:], page)
@@ -70,7 +72,7 @@ class RC(object):
 
         self.page, self.url, self.user, self.comment = page, url, user, comment
 
-    def prettify(self):
+    def prettify(self, color=True):
         """Make a nice, colorful message to send back to the IRC front-end."""
         flags = self.flags
         if self.is_edit:
@@ -82,8 +84,8 @@ class RC(object):
                     event = "bot edit"  # "New bot edit:"
                 if "M" in flags:
                     event = "minor " + event  # "New minor (bot)? edit:"
-            return self.pretty_edit.format(event, self.page, self.user,
-                                           self.url, self.comment)
+            tmpl = self.pretty_edit if color else self.plain_edit
+            return tmpl.format(event, self.page, self.user, self.url, self.comment)
 
         if flags == "delete":
             event = "deletion"  # "New deletion:"
@@ -93,4 +95,5 @@ class RC(object):
             event = "user"  # "New user:"
         else:
             event = flags  # Works for "move", "block", etc
-        return self.pretty_log.format(event, self.user, self.url, self.comment)
+        tmpl = self.pretty_log if color else self.plain_log
+        return tmpl.format(event, self.user, self.url, self.comment)
