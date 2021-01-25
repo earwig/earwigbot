@@ -116,9 +116,9 @@ class PermissionsDB(object):
             try:
                 for nick, ident, host, rank in conn.execute(qry1):
                     try:
-                        self._users[rank].append(_User(nick, ident, host))
+                        self._users[rank].append(User(nick, ident, host))
                     except KeyError:
-                        self._users[rank] = [_User(nick, ident, host)]
+                        self._users[rank] = [User(nick, ident, host)]
                 for user, key, value in conn.execute(qry2):
                     try:
                         self._attributes[user][key] = value
@@ -140,29 +140,29 @@ class PermissionsDB(object):
 
     def is_admin(self, data):
         """Return ``True`` if the given user is a bot admin, else ``False``."""
-        user = _User(data.nick, data.ident, data.host)
+        user = User(data.nick, data.ident, data.host)
         return self._is_rank(user, rank=self.ADMIN)
 
     def is_owner(self, data):
         """Return ``True`` if the given user is a bot owner, else ``False``."""
-        user = _User(data.nick, data.ident, data.host)
+        user = User(data.nick, data.ident, data.host)
         return self._is_rank(user, rank=self.OWNER)
 
     def add_admin(self, nick="*", ident="*", host="*"):
         """Add a nick/ident/host combo to the bot admins list."""
-        return self._set_rank(_User(nick, ident, host), rank=self.ADMIN)
+        return self._set_rank(User(nick, ident, host), rank=self.ADMIN)
 
     def add_owner(self, nick="*", ident="*", host="*"):
         """Add a nick/ident/host combo to the bot owners list."""
-        return self._set_rank(_User(nick, ident, host), rank=self.OWNER)
+        return self._set_rank(User(nick, ident, host), rank=self.OWNER)
 
     def remove_admin(self, nick="*", ident="*", host="*"):
         """Remove a nick/ident/host combo to the bot admins list."""
-        return self._del_rank(_User(nick, ident, host), rank=self.ADMIN)
+        return self._del_rank(User(nick, ident, host), rank=self.ADMIN)
 
     def remove_owner(self, nick="*", ident="*", host="*"):
         """Remove a nick/ident/host combo to the bot owners list."""
-        return self._del_rank(_User(nick, ident, host), rank=self.OWNER)
+        return self._del_rank(User(nick, ident, host), rank=self.OWNER)
 
     def has_attr(self, user, key):
         """Return ``True`` if a given user has a certain attribute, *key*."""
@@ -198,7 +198,7 @@ class PermissionsDB(object):
         with self._db_access_lock, sqlite.connect(self._dbfile) as conn:
             conn.execute(query, (user, key))
 
-class _User(object):
+class User(object):
     """A class that represents an IRC user for the purpose of testing rules."""
     def __init__(self, nick, ident, host):
         self.nick = nick
@@ -207,7 +207,7 @@ class _User(object):
 
     def __repr__(self):
         """Return the canonical string representation of the User."""
-        res = "_User(nick={0!r}, ident={1!r}, host={2!r})"
+        res = "User(nick={0!r}, ident={1!r}, host={2!r})"
         return res.format(self.nick, self.ident, self.host)
 
     def __str__(self):

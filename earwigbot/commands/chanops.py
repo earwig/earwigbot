@@ -99,4 +99,4 @@ class ChanOps(Command):
             self.reply(data, "I am currently in no channels.")
             return
         self.reply(data, "I am currently in \x02{0}\x0F channel{1}: {2}.".format(
-            len(chans), "" if len(chans) == 1 else "s", ", ".join(chans)))
+            len(chans), "" if len(chans) == 1 else "s", ", ".join(sorted(chans))))
