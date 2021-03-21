@@ -128,6 +128,7 @@ class _CopyvioWorker(object):
         try:
             response = self._opener.open(url, timeout=timeout)
         except (URLError, HTTPException, socket_error, ValueError):
+            self._logger.exception("Failed to fetch URL: %s", url)
             return None
 
         try:
@@ -136,9 +137,13 @@ class _CopyvioWorker(object):
             return None
 
         content_type = response.headers.get("Content-Type", "text/plain")
+        content_type = content_type.split(";", 1)[0]
         parser_class = get_parser(content_type)
-        if not parser_class:
+        if not parser_class and (
+                not allow_content_types or content_type not in allow_content_types):
             return None
+        if not parser_class:
+            parser_class = get_parser("text/plain")
         if size > (15 if parser_class.TYPE == "PDF" else 2) * 1024 ** 2:
             return None
 
@@ -182,7 +187,7 @@ class _CopyvioWorker(object):
         if result is None:
             return None
 
-        args = source.parser_args.copy()
+        args = source.parser_args.copy() if source.parser_args else {}
         args["open_url"] = functools.partial(self._open_url_raw, timeout=source.timeout)
         parser = result.parser_class(result.content, url=source.url, args=args)
         try:
@@ -254,6 +259,10 @@ class _CopyvioWorker(object):
         except ParserExclusionError:
             self._logger.debug("Source excluded by content parser")
             source.skipped = source.excluded = True
+            source.finish_work()
+        except Exception:
+            self._logger.exception("Uncaught exception in worker")
+            source.skip()
             source.finish_work()
         else:
             chain = MarkovChain(text) if text else None

@@ -267,12 +267,12 @@ class _HTMLParser(_BaseTextParser):
 
         return "\n".join(soup.stripped_strings)
 
-    def _open(self, url):
+    def _open(self, url, **kwargs):
         """Try to read a URL. Return None if it couldn't be read."""
         opener = self._args.get("open_url")
         if not opener:
             return None
-        result = opener(url)
+        result = opener(url, **kwargs)
         return result.content if result else None
 
     def _load_from_blogspot(self, url):
@@ -280,15 +280,16 @@ class _HTMLParser(_BaseTextParser):
         match = re.search(r"'postId': '(\d+)'", self.text)
         if not match:
             return ""
-        post_id = match.groups(1)
-        url = "https://%s/feeds/posts/default/%s" % (url.netloc, post_id)
+        post_id = match.group(1)
+        url = "https://%s/feeds/posts/default/%s?" % (url.netloc, post_id)
         params = {
             "alt": "json",
             "v": "2",
             "dynamicviews": "1",
             "rewriteforssl": "true",
         }
-        raw = self._open(url + urllib.urlencode(params))
+        raw = self._open(url + urllib.urlencode(params),
+                         allow_content_types=["application/json"])
         if raw is None:
             return ""
         try:
@@ -381,4 +382,4 @@ _CONTENT_TYPES = {
 
 def get_parser(content_type):
     """Return the parser most able to handle a given content type, or None."""
-    return _CONTENT_TYPES.get(content_type.split(";", 1)[0])
+    return _CONTENT_TYPES.get(content_type)
