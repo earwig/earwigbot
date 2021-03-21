@@ -20,9 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import json
 from os import path
 import re
 from StringIO import StringIO
+import urllib
 import urlparse
 
 import mwparserfromhell
@@ -246,32 +248,16 @@ class _HTMLParser(_BaseTextParser):
         if soup.find_all(href=func) or soup.find_all(src=func):
             raise ParserExclusionError()
 
-    def parse(self):
-        """Return the actual text contained within an HTML document.
-
-        Implemented using :py:mod:`BeautifulSoup <bs4>`
-        (http://www.crummy.com/software/BeautifulSoup/).
-        """
+    @staticmethod
+    def _get_soup(text):
+        """Parse some text using BeautifulSoup."""
         try:
-            soup = bs4.BeautifulSoup(self.text, "lxml")
+            return bs4.BeautifulSoup(text, "lxml")
         except ValueError:
-            soup = bs4.BeautifulSoup(self.text)
+            return bs4.BeautifulSoup(text)
 
-        if not soup.body:
-            # No <body> tag present in HTML ->
-            # no scrapable content (possibly JS or <iframe> magic):
-            return ""
-
-        self._fail_if_mirror(soup)
-        soup = soup.body
-
-        if self.url:
-            url = urlparse.urlparse(self.url)
-            if url.netloc == "web.archive.org" and url.path.endswith(".pdf"):
-                playback = soup.find(id="playback")
-                if playback and "src" in playback.attrs:
-                    raise ParserRedirectError(playback.attrs["src"])
-
+    def _clean_soup(self, soup):
+        """Clean a BeautifulSoup tree of invisible tags."""
         is_comment = lambda text: isinstance(text, bs4.element.Comment)
         for comment in soup.find_all(text=is_comment):
             comment.extract()
@@ -280,6 +266,69 @@ class _HTMLParser(_BaseTextParser):
                 element.extract()
 
         return "\n".join(soup.stripped_strings)
+
+    def _open(self, url):
+        """Try to read a URL. Return None if it couldn't be read."""
+        opener = self._args.get("open_url")
+        if not opener:
+            return None
+        result = opener(url)
+        return result.content if result else None
+
+    def _load_from_blogspot(self, url):
+        """Load dynamic content from Blogger Dynamic Views."""
+        match = re.search(r"'postId': '(\d+)'", self.text)
+        if not match:
+            return ""
+        post_id = match.groups(1)
+        url = "https://%s/feeds/posts/default/%s" % (url.netloc, post_id)
+        params = {
+            "alt": "json",
+            "v": "2",
+            "dynamicviews": "1",
+            "rewriteforssl": "true",
+        }
+        raw = self._open(url + urllib.urlencode(params))
+        if raw is None:
+            return ""
+        try:
+            parsed = json.loads(raw)
+        except ValueError:
+            return ""
+        try:
+            text = parsed["entry"]["content"]["$t"]
+        except KeyError:
+            return ""
+        soup = self._get_soup(text)
+        return self._clean_soup(soup.body)
+
+    def parse(self):
+        """Return the actual text contained within an HTML document.
+
+        Implemented using :py:mod:`BeautifulSoup <bs4>`
+        (http://www.crummy.com/software/BeautifulSoup/).
+        """
+        url = urlparse.urlparse(self.url) if self.url else None
+        soup = self._get_soup(self.text)
+        if not soup.body:
+            # No <body> tag present in HTML ->
+            # no scrapable content (possibly JS or <iframe> magic):
+            return ""
+
+        self._fail_if_mirror(soup)
+        body = soup.body
+
+        if url and url.netloc == "web.archive.org" and url.path.endswith(".pdf"):
+            playback = body.find(id="playback")
+            if playback and "src" in playback.attrs:
+                raise ParserRedirectError(playback.attrs["src"])
+
+        content = self._clean_soup(body)
+
+        if url and url.netloc.endswith(".blogspot.com") and not content:
+            content = self._load_from_blogspot(url)
+
+        return content
 
 
 class _PDFParser(_BaseTextParser):

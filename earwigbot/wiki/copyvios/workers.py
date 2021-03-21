@@ -20,7 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import collections
 from collections import deque
+import functools
 from gzip import GzipFile
 from httplib import HTTPException
 from logging import getLogger
@@ -30,7 +32,7 @@ from socket import error as socket_error
 from StringIO import StringIO
 from struct import error as struct_error
 from threading import Lock, Thread
-from time import time
+import time
 from urllib2 import build_opener, URLError
 
 from earwigbot import importer
@@ -44,10 +46,13 @@ tldextract = importer.new("tldextract")
 __all__ = ["globalize", "localize", "CopyvioWorkspace"]
 
 _MAX_REDIRECTS = 3
+_MAX_RAW_SIZE = 20 * 1024 ** 2
 
 _is_globalized = False
 _global_queues = None
 _global_workers = []
+
+_OpenedURL = collections.namedtuple('_OpenedURL', ['content', 'parser_class'])
 
 def globalize(num_workers=8):
     """Cause all copyvio checks to be done by one global set of workers.
@@ -113,23 +118,15 @@ class _CopyvioWorker(object):
         self._opener = build_opener()
         self._logger = getLogger("earwigbot.wiki.cvworker." + name)
 
-    def _open_url(self, source, redirects=0):
-        """Open a URL and return its parsed content, or None.
+    def _open_url_raw(self, url, timeout=5, allow_content_types=None):
+        """Open a URL, without parsing it.
 
-        First, we will decompress the content if the headers contain "gzip" as
-        its content encoding. Then, we will return the content stripped using
-        an HTML parser if the headers indicate it is HTML, or return the
-        content directly if it is plain text. If we don't understand the
-        content type, we'll return None.
-
-        If a URLError was raised while opening the URL or an IOError was raised
-        while decompressing, None will be returned.
+        None will be returned for URLs that cannot be read for whatever reason.
         """
-        if source.headers:
-            self._opener.addheaders = source.headers
-        url = source.url.encode("utf8")
+        if not isinstance(url, unicode):
+            url = url.encode("utf8")
         try:
-            response = self._opener.open(url, timeout=source.timeout)
+            response = self._opener.open(url, timeout=timeout)
         except (URLError, HTTPException, socket_error, ValueError):
             return None
 
@@ -146,8 +143,12 @@ class _CopyvioWorker(object):
             return None
 
         try:
-            content = response.read()
+            # Additional safety check for pages using Transfer-Encoding: chunked
+            # where we can't read the Content-Length
+            content = response.read(_MAX_RAW_SIZE + 1)
         except (URLError, socket_error):
+            return None
+        if len(content) > _MAX_RAW_SIZE:
             return None
 
         if response.headers.get("Content-Encoding") == "gzip":
@@ -158,7 +159,32 @@ class _CopyvioWorker(object):
             except (IOError, struct_error):
                 return None
 
-        parser = parser_class(content, url=url, args=source.parser_args)
+        if len(content) > _MAX_RAW_SIZE:
+            return None
+        return _OpenedURL(content, parser_class)
+
+    def _open_url(self, source, redirects=0):
+        """Open a URL and return its parsed content, or None.
+
+        First, we will decompress the content if the headers contain "gzip" as
+        its content encoding. Then, we will return the content stripped using
+        an HTML parser if the headers indicate it is HTML, or return the
+        content directly if it is plain text. If we don't understand the
+        content type, we'll return None.
+
+        If a URLError was raised while opening the URL or an IOError was raised
+        while decompressing, None will be returned.
+        """
+        if source.headers:
+            self._opener.addheaders = source.headers
+
+        result = self._open_url_raw(source.url, timeout=source.timeout)
+        if result is None:
+            return None
+
+        args = source.parser_args.copy()
+        args["open_url"] = functools.partial(self._open_url_raw, timeout=source.timeout)
+        parser = result.parser_class(result.content, url=source.url, args=args)
         try:
             return parser.parse()
         except ParserRedirectError as exc:
@@ -170,7 +196,7 @@ class _CopyvioWorker(object):
     def _acquire_new_site(self):
         """Block for a new unassigned site queue."""
         if self._until:
-            timeout = self._until - time()
+            timeout = self._until - time.time()
             if timeout <= 0:
                 raise Empty
         else:
@@ -269,7 +295,7 @@ class CopyvioWorkspace(object):
         self._article = article
         self._logger = logger.getChild("copyvios")
         self._min_confidence = min_confidence
-        self._start_time = time()
+        self._start_time = time.time()
         self._until = (self._start_time + max_time) if max_time > 0 else None
         self._handled_urls = set()
         self._finish_lock = Lock()
@@ -407,5 +433,5 @@ class CopyvioWorkspace(object):
 
         self.sources.sort(cmpfunc)
         return CopyvioCheckResult(self.finished, self.sources, num_queries,
-                                  time() - self._start_time, self._article,
+                                  time.time() - self._start_time, self._article,
                                   self.possible_miss)
