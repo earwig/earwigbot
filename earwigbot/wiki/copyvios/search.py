@@ -61,7 +61,9 @@ class _BaseSearchEngine(object):
             response = self.opener.open(*args)
             result = response.read()
         except (URLError, error) as exc:
-            raise SearchQueryError("{0} Error: {1}".format(self.name, exc))
+            err = SearchQueryError("{0} Error: {1}".format(self.name, exc))
+            err.cause = exc
+            raise err
 
         if response.headers.get("Content-Encoding") == "gzip":
             stream = StringIO(result)

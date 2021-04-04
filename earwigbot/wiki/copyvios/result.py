@@ -44,12 +44,13 @@ class CopyvioSource(object):
     """
 
     def __init__(self, workspace, url, headers=None, timeout=5,
-                 parser_args=None):
+                 parser_args=None, search_config=None):
         self.workspace = workspace
         self.url = url
         self.headers = headers
         self.timeout = timeout
         self.parser_args = parser_args
+        self.search_config = search_config
 
         self.confidence = 0.0
         self.chains = (EMPTY, EMPTY_INTERSECTION)

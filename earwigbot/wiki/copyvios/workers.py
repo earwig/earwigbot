@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import base64
 import collections
 from collections import deque
 import functools
@@ -33,7 +34,8 @@ from StringIO import StringIO
 from struct import error as struct_error
 from threading import Lock, Thread
 import time
-from urllib2 import build_opener, URLError
+from urllib2 import build_opener, Request, URLError
+import urlparse
 
 from earwigbot import importer
 from earwigbot.exceptions import ParserExclusionError, ParserRedirectError
@@ -115,6 +117,7 @@ class _CopyvioWorker(object):
 
         self._site = None
         self._queue = None
+        self._search_config = None
         self._opener = build_opener()
         self._logger = getLogger("earwigbot.wiki.cvworker." + name)
 
@@ -123,10 +126,28 @@ class _CopyvioWorker(object):
 
         None will be returned for URLs that cannot be read for whatever reason.
         """
+        parsed = urlparse.urlparse(url)
+        extra_headers = {}
+
+        if self._search_config and self._search_config.get("proxies"):
+            for proxy_info in self._search_config["proxies"]:
+                if parsed.netloc != proxy_info["netloc"]:
+                    continue
+                path = parsed.path
+                if "path" in proxy_info:
+                    if not parsed.path.startswith(proxy_info["path"]):
+                        continue
+                    path = path[len(proxy_info["path"]):]
+                url = proxy_info["target"] + path
+                if "auth" in proxy_info:
+                    extra_headers["Authorization"] = "Basic %s" % (
+                        base64.b64encode(proxy_info["auth"]))
+
         if not isinstance(url, unicode):
             url = url.encode("utf8")
+        request = Request(url, headers=extra_headers)
         try:
-            response = self._opener.open(url, timeout=timeout)
+            response = self._opener.open(request, timeout=timeout)
         except (URLError, HTTPException, socket_error, ValueError):
             self._logger.exception("Failed to fetch URL: %s", url)
             return None
@@ -180,6 +201,7 @@ class _CopyvioWorker(object):
         If a URLError was raised while opening the URL or an IOError was raised
         while decompressing, None will be returned.
         """
+        self._search_config = source.search_config
         if source.headers:
             self._opener.addheaders = source.headers
 
@@ -296,7 +318,7 @@ class CopyvioWorkspace(object):
 
     def __init__(self, article, min_confidence, max_time, logger, headers,
                  url_timeout=5, num_workers=8, short_circuit=True,
-                 parser_args=None, exclude_check=None):
+                 parser_args=None, exclude_check=None, config=None):
         self.sources = []
         self.finished = False
         self.possible_miss = False
@@ -311,7 +333,7 @@ class CopyvioWorkspace(object):
         self._short_circuit = short_circuit
         self._source_args = {
             "workspace": self, "headers": headers, "timeout": url_timeout,
-            "parser_args": parser_args}
+            "parser_args": parser_args, "search_config": config}
         self._exclude_check = exclude_check
 
         if _is_globalized:
