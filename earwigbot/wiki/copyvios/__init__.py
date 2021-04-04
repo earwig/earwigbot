@@ -134,7 +134,8 @@ class CopyvioMixIn(object):
 
         workspace = CopyvioWorkspace(
             article, min_confidence, max_time, self._logger, self._addheaders,
-            short_circuit=short_circuit, parser_args=parser_args, exclude_check=exclude)
+            short_circuit=short_circuit, parser_args=parser_args, exclude_check=exclude,
+            config=self._search_config)
 
         if article.size < 20:  # Auto-fail very small articles
             result = workspace.get_result()
@@ -187,7 +188,7 @@ class CopyvioMixIn(object):
         article = MarkovChain(ArticleTextParser(self.get()).strip())
         workspace = CopyvioWorkspace(
             article, min_confidence, max_time, self._logger, self._addheaders,
-            max_time, num_workers=1)
+            max_time, num_workers=1, config=self._search_config)
         workspace.enqueue([url])
         workspace.wait()
         result = workspace.get_result()
