@@ -121,36 +121,54 @@ class _CopyvioWorker(object):
         self._opener = build_opener()
         self._logger = getLogger("earwigbot.wiki.cvworker." + name)
 
+    def _try_map_proxy_url(self, url, parsed, extra_headers, is_error=False):
+        if not self._search_config or "proxies" not in self._search_config:
+            return url, False
+        for proxy_info in self._search_config["proxies"]:
+            if parsed.netloc != proxy_info["netloc"]:
+                continue
+            if "onerr" in proxy_info:
+                if proxy_info["onerr"] and not is_error:
+                    continue
+                if not proxy_info["onerr"] and is_error:
+                    continue
+            path = parsed.path
+            if "path" in proxy_info:
+                if not parsed.path.startswith(proxy_info["path"]):
+                    continue
+                path = path[len(proxy_info["path"]):]
+            url = proxy_info["target"] + path
+            if "auth" in proxy_info:
+                extra_headers["Authorization"] = "Basic %s" % (
+                    base64.b64encode(proxy_info["auth"]))
+            return url, True
+        return url, False
+
     def _open_url_raw(self, url, timeout=5, allow_content_types=None):
         """Open a URL, without parsing it.
 
         None will be returned for URLs that cannot be read for whatever reason.
         """
         parsed = urlparse.urlparse(url)
-        extra_headers = {}
-
-        if self._search_config and self._search_config.get("proxies"):
-            for proxy_info in self._search_config["proxies"]:
-                if parsed.netloc != proxy_info["netloc"]:
-                    continue
-                path = parsed.path
-                if "path" in proxy_info:
-                    if not parsed.path.startswith(proxy_info["path"]):
-                        continue
-                    path = path[len(proxy_info["path"]):]
-                url = proxy_info["target"] + path
-                if "auth" in proxy_info:
-                    extra_headers["Authorization"] = "Basic %s" % (
-                        base64.b64encode(proxy_info["auth"]))
-
         if not isinstance(url, unicode):
             url = url.encode("utf8")
+        extra_headers = {}
+        url, _ = self._try_map_proxy_url(url, parsed, extra_headers)
         request = Request(url, headers=extra_headers)
         try:
             response = self._opener.open(request, timeout=timeout)
         except (URLError, HTTPException, socket_error, ValueError):
-            self._logger.exception("Failed to fetch URL: %s", url)
-            return None
+            url, remapped = self._try_map_proxy_url(url, parsed, extra_headers, is_error=True)
+            if not remapped:
+                self._logger.exception("Failed to fetch URL: %s", url)
+                return None
+            self._logger.info("Failed to fetch URL, trying proxy remap: %s", url)
+            request = Request(url, headers=extra_headers)
+            try:
+                response = self._opener.open(request, timeout=timeout)
+            except (URLError, HTTPException, socket_error, ValueError):
+                self._logger.exception("Failed to fetch URL after proxy remap: %s", url)
+                return None
 
         try:
             size = int(response.headers.get("Content-Length", 0))
