@@ -22,12 +22,13 @@
 
 """
 Implements a hierarchy of importing classes as defined in `PEP 302
-<http://www.python.org/dev/peps/pep-0302/>`_ to load modules in a safe yet lazy
+<https://www.python.org/dev/peps/pep-0302/>`_ to load modules in a safe yet lazy
 manner, so that they can be referred to by name but are not actually loaded
 until they are used (i.e. their attributes are read or modified).
 """
 
 from imp import acquire_lock, release_lock
+import importlib
 import sys
 from threading import RLock
 from types import ModuleType
@@ -46,7 +47,7 @@ def _mock_get(self, attr):
         if _real_get(self, "_unloaded"):
             type(self)._unloaded = False
             try:
-                reload(self)
+                importlib.reload(self)
             except ImportError as exc:
                 type(self).__getattribute__ = _create_failing_get(exc)
                 del type(self)._lock
@@ -77,7 +78,7 @@ class _LazyModule(type):
             release_lock()
 
 
-class LazyImporter(object):
+class LazyImporter:
     """An importer for modules that are loaded lazily.
 
     This inserts itself into :py:data:`sys.meta_path`, storing a dictionary of

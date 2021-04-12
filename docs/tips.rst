@@ -40,7 +40,7 @@ Tips
        <earwigbot.managers._ResourceManager.load>` and
        :py:meth:`bot.tasks.load() <earwigbot.managers._ResourceManager.load>`!
 
-.. _logging:         http://docs.python.org/library/logging.html
+.. _logging:         https://docs.python.org/library/logging.html
 .. _!git plugin:     https://github.com/earwig/earwigbot-plugins/blob/develop/commands/git.py
 .. _Let me know:     ben.kurtovic@gmail.com
 .. _create an issue: https://github.com/earwig/earwigbot/issues

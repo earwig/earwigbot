@@ -35,7 +35,7 @@ class Watchers(Command):
         site = self.bot.wiki.get_site()
         query = site.api_query(action="query", prop="info", inprop="watchers",
                                titles=" ".join(data.args))
-        page = query["query"]["pages"].values()[0]
+        page = list(query["query"]["pages"].values())[0]
         title = page["title"].encode("utf8")
 
         if "invalid" in page:

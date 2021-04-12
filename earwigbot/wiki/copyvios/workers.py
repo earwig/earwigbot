@@ -25,17 +25,18 @@ import collections
 from collections import deque
 import functools
 from gzip import GzipFile
-from httplib import HTTPException
+from http.client import HTTPException
 from logging import getLogger
 from math import log
-from Queue import Empty, Queue
+from queue import Empty, Queue
 from socket import error as socket_error
-from StringIO import StringIO
+from io import StringIO
 from struct import error as struct_error
 from threading import Lock, Thread
 import time
-from urllib2 import build_opener, Request, URLError
-import urlparse
+from urllib.error import URLError
+import urllib.parse
+from urllib.request import build_opener, Request
 
 from earwigbot import importer
 from earwigbot.exceptions import ParserExclusionError, ParserRedirectError
@@ -72,7 +73,7 @@ def globalize(num_workers=8):
         return
 
     _global_queues = _CopyvioQueues()
-    for i in xrange(num_workers):
+    for i in range(num_workers):
         worker = _CopyvioWorker("global-{0}".format(i), _global_queues)
         worker.start()
         _global_workers.append(worker)
@@ -91,14 +92,14 @@ def localize():
     if not _is_globalized:
         return
 
-    for i in xrange(len(_global_workers)):
+    for i in range(len(_global_workers)):
         _global_queues.unassigned.put((StopIteration, None))
     _global_queues = None
     _global_workers = []
     _is_globalized = False
 
 
-class _CopyvioQueues(object):
+class _CopyvioQueues:
     """Stores data necessary to maintain the various queues during a check."""
 
     def __init__(self):
@@ -107,7 +108,7 @@ class _CopyvioQueues(object):
         self.unassigned = Queue()
 
 
-class _CopyvioWorker(object):
+class _CopyvioWorker:
     """A multithreaded URL opener/parser instance."""
 
     def __init__(self, name, queues, until=None):
@@ -149,8 +150,8 @@ class _CopyvioWorker(object):
 
         None will be returned for URLs that cannot be read for whatever reason.
         """
-        parsed = urlparse.urlparse(url)
-        if not isinstance(url, unicode):
+        parsed = urllib.parse.urlparse(url)
+        if not isinstance(url, str):
             url = url.encode("utf8")
         extra_headers = {}
         url, _ = self._try_map_proxy_url(url, parsed, extra_headers)
@@ -251,7 +252,7 @@ class _CopyvioWorker(object):
         site, queue = self._queues.unassigned.get(timeout=timeout)
         if site is StopIteration:
             raise StopIteration
-        self._logger.debug(u"Acquired new site queue: {0}".format(site))
+        self._logger.debug("Acquired new site queue: {0}".format(site))
         self._site = site
         self._queue = queue
 
@@ -260,7 +261,7 @@ class _CopyvioWorker(object):
         if not self._site:
             self._acquire_new_site()
 
-        logmsg = u"Fetching source URL from queue {0}"
+        logmsg = "Fetching source URL from queue {0}"
         self._logger.debug(logmsg.format(self._site))
         self._queues.lock.acquire()
         try:
@@ -273,7 +274,7 @@ class _CopyvioWorker(object):
             self._queues.lock.release()
             return self._dequeue()
 
-        self._logger.debug(u"Got source URL: {0}".format(source.url))
+        self._logger.debug("Got source URL: {0}".format(source.url))
         if source.skipped:
             self._logger.debug("Source has been skipped")
             self._queues.lock.release()
@@ -331,7 +332,7 @@ class _CopyvioWorker(object):
         thread.start()
 
 
-class CopyvioWorkspace(object):
+class CopyvioWorkspace:
     """Manages a single copyvio check distributed across threads."""
 
     def __init__(self, article, min_confidence, max_time, logger, headers,
@@ -359,7 +360,7 @@ class CopyvioWorkspace(object):
         else:
             self._queues = _CopyvioQueues()
             self._num_workers = num_workers
-            for i in xrange(num_workers):
+            for i in range(num_workers):
                 name = "local-{0:04}.{1}".format(id(self) % 10000, i)
                 _CopyvioWorker(name, self._queues, self._until).start()
 
@@ -371,7 +372,7 @@ class CopyvioWorkspace(object):
             # reaches the default "suspect" confidence threshold, at which
             # point it transitions to polynomial growth with a limit of 1 as
             # (delta / article) approaches 1.
-            # A graph can be viewed here: http://goo.gl/mKPhvr
+            # A graph can be viewed here: https://goo.gl/mKPhvr
             ratio = delta / article
             if ratio <= 0.52763:
                 return -log(1 - ratio)
@@ -383,7 +384,7 @@ class CopyvioWorkspace(object):
             # This piecewise function was derived from experimental data using
             # reference points at (0, 0), (100, 0.5), (250, 0.75), (500, 0.9),
             # and (1000, 0.95), with a limit of 1 as delta approaches infinity.
-            # A graph can be viewed here: http://goo.gl/lVl7or
+            # A graph can be viewed here: https://goo.gl/lVl7or
             if delta <= 100:
                 return delta / (delta + 100)
             elif delta <= 250:
@@ -417,22 +418,22 @@ class CopyvioWorkspace(object):
                 self.sources.append(source)
 
                 if self._exclude_check and self._exclude_check(url):
-                    self._logger.debug(u"enqueue(): exclude {0}".format(url))
+                    self._logger.debug("enqueue(): exclude {0}".format(url))
                     source.excluded = True
                     source.skip()
                     continue
                 if self._short_circuit and self.finished:
-                    self._logger.debug(u"enqueue(): auto-skip {0}".format(url))
+                    self._logger.debug("enqueue(): auto-skip {0}".format(url))
                     source.skip()
                     continue
 
                 try:
                     key = tldextract.extract(url).registered_domain
                 except ImportError:  # Fall back on very naive method
-                    from urlparse import urlparse
-                    key = u".".join(urlparse(url).netloc.split(".")[-2:])
+                    from urllib.parse import urlparse
+                    key = ".".join(urlparse(url).netloc.split(".")[-2:])
 
-                logmsg = u"enqueue(): {0} {1} -> {2}"
+                logmsg = "enqueue(): {0} {1} -> {2}"
                 if key in self._queues.sites:
                     self._logger.debug(logmsg.format("append", key, url))
                     self._queues.sites[key].append(source)
@@ -449,7 +450,7 @@ class CopyvioWorkspace(object):
             conf = self._calculate_confidence(delta)
         else:
             conf = 0.0
-        self._logger.debug(u"compare(): {0} -> {1}".format(source.url, conf))
+        self._logger.debug("compare(): {0} -> {1}".format(source.url, conf))
         with self._finish_lock:
             if source_chain:
                 source.update(conf, source_chain, delta)
@@ -468,7 +469,7 @@ class CopyvioWorkspace(object):
         with self._finish_lock:
             pass  # Wait for any remaining comparisons to be finished
         if not _is_globalized:
-            for i in xrange(self._num_workers):
+            for i in range(self._num_workers):
                 self._queues.unassigned.put((StopIteration, None))
 
     def get_result(self, num_queries=0):

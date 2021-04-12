@@ -25,8 +25,8 @@
 
 This is a collection of classes and functions to read from and write to
 Wikipedia and other wiki sites. No connection whatsoever to `python-wikitools
-<http://code.google.com/p/python-wikitools/>`_ written by `Mr.Z-man
-<http://en.wikipedia.org/wiki/User:Mr.Z-man>`_, other than a similar purpose.
+<https://github.com/alexz-enwp/wikitools>`_ written by `Mr.Z-man
+<https://en.wikipedia.org/wiki/User:Mr.Z-man>`_, other than a similar purpose.
 We share no code.
 
 Import the toolset directly with ``from earwigbot import wiki``. If using the

@@ -32,7 +32,7 @@ from earwigbot.wiki import SitesDB
 
 __all__ = ["Bot"]
 
-class Bot(object):
+class Bot:
     """
     **EarwigBot: Main Bot Class**
 
@@ -147,7 +147,7 @@ class Bot(object):
         advance warning of their forced shutdown.
         """
         tasks = []
-        component_names = self.config.components.keys()
+        component_names = list(self.config.components.keys())
         skips = component_names + ["MainThread", "reminder", "irc:quit"]
         for thread in enumerate_threads():
             if thread.is_alive() and not any(

@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from urllib import quote_plus
+from urllib.parse import quote_plus
 
 from earwigbot import exceptions
 from earwigbot.commands import Command
@@ -47,7 +47,7 @@ class Editcount(Command):
             return
 
         safe = quote_plus(user.name.encode("utf8"))
-        url = "http://tools.wmflabs.org/xtools-ec/index.php?user={0}&lang={1}&wiki={2}"
-        fullurl = url.format(safe, site.lang, site.project)
+        url = "https://xtools.wmflabs.org/ec/{}/{}".format(site.domain, safe)
+        fullurl = url.format(safe, site.domain)
         msg = "\x0302{0}\x0F has {1} edits ({2})."
         self.reply(data, msg.format(name, count, fullurl))

@@ -64,7 +64,7 @@ class Help(Command):
             if command.name == target or target in command.commands:
                 if command.__doc__:
                     doc = command.__doc__.replace("\n", "")
-                    doc = re.sub("\s\s+", " ", doc)
+                    doc = re.sub(r"\s\s+", " ", doc)
                     msg = 'Help for command \x0303{0}\x0F: "{1}"'
                     self.reply(data, msg.format(target, doc))
                     return

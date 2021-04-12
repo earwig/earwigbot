@@ -22,7 +22,7 @@
 
 __all__ = ["Command"]
 
-class Command(object):
+class Command:
     """
     **EarwigBot: Base IRC Command**
 
@@ -54,9 +54,8 @@ class Command(object):
         This is called once when the command is loaded (from
         :py:meth:`commands.load() <earwigbot.managers._ResourceManager.load>`).
         *bot* is out base :py:class:`~earwigbot.bot.Bot` object. Don't override
-        this directly; if you do, remember to place
-        ``super(Command, self).__init()`` first. Use :py:meth:`setup` for
-        typical command-init/setup needs.
+        this directly; if you do, remember to place ``super().__init()`` first.
+        Use :py:meth:`setup` for typical command-init/setup needs.
         """
         self.bot = bot
         self.config = bot.config

@@ -20,9 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import base64
 from collections import OrderedDict
 from getpass import getpass
-from hashlib import sha256
 import logging
 import logging.handlers
 from os import mkdir, path
@@ -38,12 +38,13 @@ from earwigbot.config.permissions import PermissionsDB
 from earwigbot.config.script import ConfigScript
 from earwigbot.exceptions import NoConfigError
 
-Blowfish = importer.new("Crypto.Cipher.Blowfish")
-bcrypt = importer.new("bcrypt")
+fernet = importer.new("cryptography.fernet")
+hashes = importer.new("cryptography.hazmat.primitives.hashes")
+pbkdf2 = importer.new("cryptography.hazmat.primitives.kdf.pbkdf2")
 
 __all__ = ["BotConfig"]
 
-class BotConfig(object):
+class BotConfig:
     """
     **EarwigBot: YAML Config File Manager**
 
@@ -109,9 +110,9 @@ class BotConfig(object):
         return "<BotConfig at {0}>".format(self.root_dir)
 
     def _handle_missing_config(self):
-        print "Config file missing or empty:", self._config_path
+        print("Config file missing or empty:", self._config_path)
         msg = "Would you like to create a config file now? [Y/n] "
-        choice = raw_input(msg)
+        choice = input(msg)
         if choice.lower().startswith("n"):
             raise NoConfigError()
         else:
@@ -127,7 +128,7 @@ class BotConfig(object):
             try:
                 self._data = yaml.load(fp, OrderedLoader)
             except yaml.YAMLError:
-                print "Error parsing config file {0}:".format(filename)
+                print("Error parsing config file {0}:".format(filename))
                 raise
 
     def _setup_logging(self):
@@ -148,7 +149,7 @@ class BotConfig(object):
                     mkdir(log_dir, stat.S_IWUSR|stat.S_IRUSR|stat.S_IXUSR)
                 else:
                     msg = "log_dir ({0}) exists but is not a directory!"
-                    print msg.format(log_dir)
+                    print(msg.format(log_dir))
                     return
 
             main_handler = hand(logfile("bot.log"), "midnight", 1, 7)
@@ -173,7 +174,7 @@ class BotConfig(object):
         try:
             node._decrypt(self._decryption_cipher, nodes[:-1], nodes[-1])
         except ValueError:
-            print "Error decrypting passwords:"
+            print("Error decrypting passwords:")
             raise
 
     @property
@@ -257,7 +258,7 @@ class BotConfig(object):
         exit.
 
         Data from the config file is stored in six
-        :py:class:`~earwigbot.config.ConfigNode`\ s (:py:attr:`components`,
+        :py:class:`~earwigbot.config.ConfigNode`\\ s (:py:attr:`components`,
         :py:attr:`wiki`, :py:attr:`irc`, :py:attr:`commands`, :py:attr:`tasks`,
         :py:attr:`metadata`) for easy access (as well as the lower-level
         :py:attr:`data` attribute). If passwords are encrypted, we'll use
@@ -283,18 +284,19 @@ class BotConfig(object):
         if self.is_encrypted():
             if not self._decryption_cipher:
                 try:
-                    blowfish_new = Blowfish.new
-                    hashpw = bcrypt.hashpw
+                    salt = self.metadata["salt"]
+                    kdf = pbkdf2.PBKDF2HMAC(
+                        algorithm=hashes.SHA256(),
+                        length=32,
+                        salt=salt,
+                        iterations=ConfigScript.PBKDF_ROUNDS,
+                    )
                 except ImportError:
-                    url1 = "http://www.mindrot.org/projects/py-bcrypt"
-                    url2 = "https://www.dlitz.net/software/pycrypto/"
-                    e = "Encryption requires the 'py-bcrypt' and 'pycrypto' packages: {0}, {1}"
-                    raise NoConfigError(e.format(url1, url2))
+                    e = "Encryption requires the 'cryptography' package: https://cryptography.io/"
+                    raise NoConfigError(e)
                 key = getpass("Enter key to decrypt bot passwords: ")
-                self._decryption_cipher = blowfish_new(sha256(key).digest())
-                signature = self.metadata["signature"]
-                if hashpw(key, signature) != signature:
-                    raise RuntimeError("Incorrect password.")
+                self._decryption_cipher = fernet.Fernet(
+                    base64.urlsafe_b64encode(kdf.derive(key.encode())))
             for node, nodes in self._decryptable_nodes:
                 self._decrypt(node, nodes)
 

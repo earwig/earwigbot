@@ -20,18 +20,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import base64
 from collections import OrderedDict
 
 __all__ = ["ConfigNode"]
 
-class ConfigNode(object):
+class ConfigNode:
     def __init__(self):
         self._data = OrderedDict()
 
     def __repr__(self):
         return self._data
 
-    def __nonzero__(self):
+    def __bool__(self):
         return bool(self._data)
 
     def __len__(self):
@@ -45,12 +46,12 @@ class ConfigNode(object):
 
     def __getattr__(self, key):
         if key == "_data":
-            return super(ConfigNode, self).__getattr__(key)
+            return super().__getattribute__(key)
         return self._data[key]
 
     def __setattr__(self, key, item):
         if key == "_data":
-            super(ConfigNode, self).__setattr__(key, item)
+            super().__setattr__(key, item)
         else:
             self._data[key] = item
 
@@ -63,7 +64,7 @@ class ConfigNode(object):
 
     def _dump(self):
         data = self._data.copy()
-        for key, val in data.iteritems():
+        for key, val in data.items():
             if isinstance(val, ConfigNode):
                 data[key] = val._dump()
         return data
@@ -79,26 +80,26 @@ class ConfigNode(object):
             except KeyError:
                 return
         if item in base:
-            ciphertext = base[item].decode("hex")
-            base[item] = cipher.decrypt(ciphertext).rstrip("\x00")
+            ciphertext = base64.b64decode(base[item])
+            base[item] = cipher.decrypt(ciphertext).decode()
 
     def get(self, *args, **kwargs):
         return self._data.get(*args, **kwargs)
 
     def keys(self):
-        return self._data.keys()
+        return list(self._data.keys())
 
     def values(self):
-        return self._data.values()
+        return list(self._data.values())
 
     def items(self):
-        return self._data.items()
+        return list(self._data.items())
 
     def iterkeys(self):
-        return self._data.iterkeys()
+        return iter(self._data.keys())
 
     def itervalues(self):
-        return self._data.itervalues()
+        return iter(self._data.values())
 
     def iteritems(self):
-        return self._data.iteritems()
+        return iter(self._data.items())

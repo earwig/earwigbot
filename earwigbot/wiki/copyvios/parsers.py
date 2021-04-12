@@ -23,9 +23,9 @@
 import json
 from os import path
 import re
-from StringIO import StringIO
-import urllib
-import urlparse
+from io import StringIO
+import urllib.parse
+import urllib.request
 
 import mwparserfromhell
 
@@ -40,7 +40,7 @@ pdfpage = importer.new("pdfminer.pdfpage")
 
 __all__ = ["ArticleTextParser", "get_parser"]
 
-class _BaseTextParser(object):
+class _BaseTextParser:
     """Base class for a parser that handles text."""
     TYPE = None
 
@@ -93,8 +93,8 @@ class ArticleTextParser(_BaseTextParser):
                     self._merge_templates(param.value)
                     chunks.append(param.value)
             if chunks:
-                subst = u" ".join(map(unicode, chunks))
-                code.replace(template, u" " + subst + u" ")
+                subst = " ".join(map(str, chunks))
+                code.replace(template, " " + subst + " ")
             else:
                 code.remove(template)
 
@@ -178,7 +178,7 @@ class ArticleTextParser(_BaseTextParser):
         self._merge_templates(wikicode)
 
         clean = wikicode.strip_code(normalize=True, collapse=True)
-        self.clean = re.sub("\n\n+", "\n", clean).strip()
+        self.clean = re.sub(r"\n\n+", "\n", clean).strip()
         return self.clean
 
     def chunk(self, max_chunks, min_query=8, max_query=128, split_thresh=32):
@@ -191,7 +191,7 @@ class ArticleTextParser(_BaseTextParser):
         and *max_chunks* is low, so we don't end up just searching for just the
         first paragraph.
 
-        This is implemented using :py:mod:`nltk` (http://nltk.org/). A base
+        This is implemented using :py:mod:`nltk` (https://nltk.org/). A base
         directory (*nltk_dir*) is required to store nltk's punctuation
         database, and should be passed as an argument to the constructor. It is
         typically located in the bot's working directory.
@@ -223,7 +223,7 @@ class ArticleTextParser(_BaseTextParser):
         """
         schemes = ("http://", "https://")
         links = mwparserfromhell.parse(self.text).ifilter_external_links()
-        return [unicode(link.url) for link in links
+        return [str(link.url) for link in links
                 if link.url.startswith(schemes)]
 
 
@@ -288,7 +288,7 @@ class _HTMLParser(_BaseTextParser):
             "dynamicviews": "1",
             "rewriteforssl": "true",
         }
-        raw = self._open(url + urllib.urlencode(params),
+        raw = self._open(url + urllib.parse.urlencode(params),
                          allow_content_types=["application/json"])
         if raw is None:
             return ""
@@ -307,9 +307,9 @@ class _HTMLParser(_BaseTextParser):
         """Return the actual text contained within an HTML document.
 
         Implemented using :py:mod:`BeautifulSoup <bs4>`
-        (http://www.crummy.com/software/BeautifulSoup/).
+        (https://www.crummy.com/software/BeautifulSoup/).
         """
-        url = urlparse.urlparse(self.url) if self.url else None
+        url = urllib.parse.urlparse(self.url) if self.url else None
         soup = self._get_soup(self.text)
         if not soup.body:
             # No <body> tag present in HTML ->
@@ -336,8 +336,8 @@ class _PDFParser(_BaseTextParser):
     """A parser that can extract text from a PDF file."""
     TYPE = "PDF"
     substitutions = [
-        (u"\x0c", u"\n"),
-        (u"\u2022", u" "),
+        ("\x0c", "\n"),
+        ("\u2022", " "),
     ]
 
     def parse(self):
@@ -359,7 +359,7 @@ class _PDFParser(_BaseTextParser):
         value = output.getvalue().decode("utf8")
         for orig, new in self.substitutions:
             value = value.replace(orig, new)
-        return re.sub("\n\n+", "\n", value).strip()
+        return re.sub(r"\n\n+", "\n", value).strip()
 
 
 class _PlainTextParser(_BaseTextParser):

@@ -24,7 +24,7 @@ import re
 
 __all__ = ["Data"]
 
-class Data(object):
+class Data:
     """Store data from an individual line received on IRC."""
 
     def __init__(self, my_nick, line, msgtype):
@@ -160,7 +160,7 @@ class Data(object):
 
     @property
     def ident(self):
-        """`Ident <http://en.wikipedia.org/wiki/Ident>`_ of the sender."""
+        """`Ident <https://en.wikipedia.org/wiki/Ident_protocol>`_ of the sender."""
         return self._ident
 
     @property

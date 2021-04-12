@@ -26,7 +26,7 @@ Wikipedia and interacts with people over IRC.
 
 See :file:`README.rst` for an overview, or the :file:`docs/` directory for
 details. This documentation is also available `online
-<http://packages.python.org/earwigbot>`_.
+<https://packages.python.org/earwigbot>`_.
 """
 
 __author__ = "Ben Kurtovic"

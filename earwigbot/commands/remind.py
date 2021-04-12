@@ -80,7 +80,7 @@ class Remind(Command):
         def _evaluate(node):
             """Convert an AST node into a real number or raise an exception."""
             if isinstance(node, ast.Num):
-                if not isinstance(node.n, (int, long, float)):
+                if not isinstance(node.n, (int, float)):
                     raise ValueError(node.n)
                 return node.n
             elif isinstance(node, ast.BinOp):
@@ -89,7 +89,7 @@ class Remind(Command):
             else:
                 raise ValueError(node)
 
-        for unit, factor in time_units.iteritems():
+        for unit, factor in time_units.items():
             arg = arg.replace(unit, "*" + str(factor))
 
         try:
@@ -112,7 +112,7 @@ class Remind(Command):
 
     def _get_new_id(self):
         """Get a free ID for a new reminder."""
-        taken = set(robj.id for robj in chain(*self.reminders.values()))
+        taken = set(robj.id for robj in chain(*list(self.reminders.values())))
         num = random.choice(list(set(range(4096)) - taken))
         return "R{0:03X}".format(num)
 
@@ -232,7 +232,7 @@ class Remind(Command):
         fmt = lambda robj, user: '\x0303{0}\x0F (for {1} {2}, {3})'.format(
             robj.id, user, dest(robj.data), robj.end_time)
 
-        rlist = (fmt(rem, user) for user, rems in self.reminders.iteritems()
+        rlist = (fmt(rem, user) for user, rems in self.reminders.items()
                  for rem in rems)
         self.reply(data, "All reminders: {0}.".format(", ".join(rlist)))
 
@@ -363,7 +363,7 @@ class Remind(Command):
         permdb.set_attr("command:remind", "data", str(database))
 
 
-class _ReminderThread(object):
+class _ReminderThread:
     """A single thread that handles reminders."""
 
     def __init__(self, lock):
@@ -429,7 +429,7 @@ class _ReminderThread(object):
         self._thread = None
 
 
-class _Reminder(object):
+class _Reminder:
     """Represents a single reminder."""
     def __init__(self, rid, user, wait, message, data, cmdobj, end=None):
         self.id = rid

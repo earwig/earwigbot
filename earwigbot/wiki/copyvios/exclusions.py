@@ -24,7 +24,7 @@ import re
 import sqlite3 as sqlite
 from threading import Lock
 from time import time
-from urlparse import urlparse
+from urllib.parse import urlparse
 
 from earwigbot import exceptions
 
@@ -45,7 +45,7 @@ DEFAULT_SOURCES = {
 
 _RE_STRIP_PREFIX = r"^https?://(www\.)?"
 
-class ExclusionsDB(object):
+class ExclusionsDB:
     """
     **EarwigBot: Wiki Toolset: Exclusions Database Manager**
 
@@ -77,7 +77,7 @@ class ExclusionsDB(object):
         """
         query = "INSERT INTO sources VALUES (?, ?);"
         sources = []
-        for sitename, pages in DEFAULT_SOURCES.iteritems():
+        for sitename, pages in DEFAULT_SOURCES.items():
             for page in pages:
                 sources.append((sitename, page))
 
@@ -168,11 +168,11 @@ class ExclusionsDB(object):
         max_staleness = 60 * 60 * (12 if sitename == "all" else 48)
         time_since_update = int(time() - self._get_last_update(sitename))
         if force or time_since_update > max_staleness:
-            log = u"Updating stale database: {0} (last updated {1} seconds ago)"
+            log = "Updating stale database: {0} (last updated {1} seconds ago)"
             self._logger.info(log.format(sitename, time_since_update))
             self._update(sitename)
         else:
-            log = u"Database for {0} is still fresh (last updated {1} seconds ago)"
+            log = "Database for {0} is still fresh (last updated {1} seconds ago)"
             self._logger.debug(log.format(sitename, time_since_update))
         if sitename != "all":
             self.sync("all", force=force)
@@ -202,11 +202,11 @@ class ExclusionsDB(object):
                 else:
                     matches = normalized.startswith(excl)
                 if matches:
-                    log = u"Exclusion detected in {0} for {1}"
+                    log = "Exclusion detected in {0} for {1}"
                     self._logger.debug(log.format(sitename, url))
                     return True
 
-        log = u"No exclusions in {0} for {1}".format(sitename, url)
+        log = "No exclusions in {0} for {1}".format(sitename, url)
         self._logger.debug(log)
         return False
 

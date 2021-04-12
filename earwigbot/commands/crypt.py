@@ -20,16 +20,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import base64
 import hashlib
+import os
 
 from earwigbot import importer
 from earwigbot.commands import Command
 
-Blowfish = importer.new("Crypto.Cipher.Blowfish")
+fernet = importer.new("cryptography.fernet")
+hashes = importer.new("cryptography.hazmat.primitives.hashes")
+pbkdf2 = importer.new("cryptography.hazmat.primitives.kdf.pbkdf2")
 
 class Crypt(Command):
     """Provides hash functions with !hash (!hash list for supported algorithms)
-    and Blowfish encryption with !encrypt and !decrypt."""
+    and basic encryption with !encrypt and !decrypt."""
     name = "crypt"
     commands = ["crypt", "hash", "encrypt", "decrypt"]
 
@@ -47,12 +51,12 @@ class Crypt(Command):
         if data.command == "hash":
             algo = data.args[0]
             if algo == "list":
-                algos = ', '.join(hashlib.algorithms)
+                algos = ', '.join(hashlib.algorithms_available)
                 msg = algos.join(("Supported algorithms: ", "."))
                 self.reply(data, msg)
-            elif algo in hashlib.algorithms:
+            elif algo in hashlib.algorithms_available:
                 string = ' '.join(data.args[1:])
-                result = getattr(hashlib, algo)(string).hexdigest()
+                result = getattr(hashlib, algo)(string.encode()).hexdigest()
                 self.reply(data, result)
             else:
                 msg = "Unknown algorithm: '{0}'.".format(algo)
@@ -61,6 +65,7 @@ class Crypt(Command):
         else:
             key = data.args[0]
             text = " ".join(data.args[1:])
+            saltlen = 16
 
             if not text:
                 msg = "A key was provided, but text to {0} was not."
@@ -68,19 +73,31 @@ class Crypt(Command):
                 return
 
             try:
-                cipher = Blowfish.new(hashlib.sha256(key).digest())
-            except ImportError:
-                msg = "This command requires the 'pycrypto' package: https://www.dlitz.net/software/pycrypto/"
-                self.reply(data, msg)
-                return
-
-            try:
                 if data.command == "encrypt":
-                    if len(text) % 8:
-                        pad = 8 - len(text) % 8
-                        text = text.ljust(len(text) + pad, "\x00")
-                    self.reply(data, cipher.encrypt(text).encode("hex"))
+                    salt = os.urandom(saltlen)
+                    kdf = pbkdf2.PBKDF2HMAC(
+                        algorithm=hashes.SHA256(),
+                        length=32,
+                        salt=salt,
+                        iterations=100000,
+                    )
+                    f = fernet.Fernet(base64.urlsafe_b64encode(kdf.derive(key.encode())))
+                    ciphertext = f.encrypt(text.encode())
+                    self.reply(data, base64.b64encode(salt + ciphertext).decode())
                 else:
-                    self.reply(data, cipher.decrypt(text.decode("hex")))
-            except (ValueError, TypeError) as error:
-                self.reply(data, error.message)
+                    if len(text) < saltlen:
+                        raise ValueError("Ciphertext is too short")
+                    raw = base64.b64decode(text)
+                    salt, ciphertext = raw[:saltlen], raw[saltlen:]
+                    kdf = pbkdf2.PBKDF2HMAC(
+                        algorithm=hashes.SHA256(),
+                        length=32,
+                        salt=salt,
+                        iterations=100000,
+                    )
+                    f = fernet.Fernet(base64.urlsafe_b64encode(kdf.derive(key.encode())))
+                    self.reply(data, f.decrypt(ciphertext).decode())
+            except ImportError:
+                self.reply(data, "This command requires the 'cryptography' package: https://cryptography.io/")
+            except Exception as error:
+                self.reply(data, "{}: {}".format(type(error).__name__, str(error)))

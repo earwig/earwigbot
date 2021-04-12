@@ -25,7 +25,7 @@ from re import sub, UNICODE
 __all__ = ["EMPTY", "EMPTY_INTERSECTION", "MarkovChain",
            "MarkovChainIntersection"]
 
-class MarkovChain(object):
+class MarkovChain:
     """Implements a basic ngram Markov chain of words."""
     START = -1
     END = -2
@@ -43,7 +43,7 @@ class MarkovChain(object):
         words = ([self.START] * padding) + words + ([self.END] * padding)
         chain = {}
 
-        for i in xrange(len(words) - self.degree + 1):
+        for i in range(len(words) - self.degree + 1):
             phrase = tuple(words[i:i+self.degree])
             if phrase in chain:
                 chain[phrase] += 1
@@ -53,7 +53,7 @@ class MarkovChain(object):
 
     def _get_size(self):
         """Return the size of the Markov chain: the total number of nodes."""
-        return sum(self.chain.itervalues())
+        return sum(self.chain.values())
 
     def __repr__(self):
         """Return the canonical string representation of the MarkovChain."""

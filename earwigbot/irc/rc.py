@@ -24,7 +24,7 @@ import re
 
 __all__ = ["RC"]
 
-class RC(object):
+class RC:
     """Store data from an event received from our IRC watcher."""
     re_color = re.compile("\x03([0-9]{1,2}(,[0-9]{1,2})?)?")
     re_edit = re.compile("\A\[\[(.*?)\]\]\s(.*?)\s(https?://.*?)\s\*\s(.*?)\s\*\s(.*?)\Z")

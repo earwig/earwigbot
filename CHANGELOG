@@ -1,12 +1,20 @@
 v0.4 (unreleased):
 
-- Copyvio detector: improved parsing of excluded URL lists.
-- Wiki: fixed not sending Content-Type header in POST requests.
+- Migrated to Python 3.
+- Copyvios: Configurable proxy support for specific domains.
+- Copyvios: Parser-directed URL redirection.
+- Copyvios: General parsing improvements.
+- Copyvios: URL exclusion improvements.
+- Copyvios: Removed long-deprecated Yahoo! BOSS search engine.
+- Wiki: Fixed not sending Content-Type header in POST requests.
+- IRC: Remember joined channels across restarts.
+- IRC: Added !listchans.
+- IRC > !stalk: Added modifiers to change message format or filter messages.
 
 v0.3 (released March 24, 2019):
 
 - Added various new features to the WikiProjectTagger task.
-- Copyvio detector: improved sentence splitting algorithm; many performance
+- Copyvio detector: Improved sentence splitting algorithm; many performance
   improvements.
 - Improved config file command/task exclusion logic.
 - Wiki: Added logging for warnings.

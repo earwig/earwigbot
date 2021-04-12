@@ -20,14 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from cookielib import CookieJar
+from http.cookiejar import CookieJar
 from json import dumps
 from logging import getLogger, NullHandler
 from os.path import expanduser
 from threading import RLock
 from time import sleep, time
-from urllib import unquote_plus
-from urlparse import urlparse
+from urllib.parse import unquote_plus, urlparse
 
 import requests
 from requests_oauthlib import OAuth1
@@ -42,7 +41,7 @@ oursql = importer.new("oursql")
 
 __all__ = ["Site"]
 
-class Site(object):
+class Site:
     """
     **EarwigBot: Wiki Toolset: Site**
 
@@ -208,9 +207,9 @@ class Site(object):
 
     def _unicodeify(self, value, encoding="utf8"):
         """Return input as unicode if it's not unicode to begin with."""
-        if isinstance(value, unicode):
+        if isinstance(value, str):
             return value
-        return unicode(value, encoding)
+        return str(value, encoding)
 
     def _api_query(self, params, tries=0, wait=5, ignore_maxlag=False,
                    no_assert=False, ae_retry=True):
@@ -304,7 +303,7 @@ class Site(object):
             info = res["error"]["info"]
         except (TypeError, KeyError):  # If there's no error code/info, return
             if "query" in res and "tokens" in res["query"]:
-                for name, token in res["query"]["tokens"].iteritems():
+                for name, token in res["query"]["tokens"].items():
                     self._tokens[name.split("token")[0]] = token
             return res
 
@@ -574,7 +573,7 @@ class Site(object):
         establish a connection.
         """
         args = self._sql_data
-        for key, value in kwargs.iteritems():
+        for key, value in kwargs.items():
             args[key] = value
         if "read_default_file" not in args and "user" not in args and "passwd" not in args:
             args["read_default_file"] = expanduser("~/.my.cnf")
@@ -588,7 +587,7 @@ class Site(object):
         try:
             self._sql_conn = oursql.connect(**args)
         except ImportError:
-            e = "SQL querying requires the 'oursql' package: http://packages.python.org/oursql/"
+            e = "SQL querying requires the 'oursql' package: https://pythonhosted.org/oursql/"
             raise exceptions.SQLError(e)
 
     def _get_service_order(self):
@@ -743,7 +742,7 @@ class Site(object):
 
         See :py:meth:`_sql_connect` for information on how a connection is
         acquired. Also relevant is `oursql's documentation
-        <http://packages.python.org/oursql>`_ for details on that package.
+        <https://pythonhosted.org/oursql/>`_ for details on that package.
         """
         if not cursor_class:
             if dict_cursor:
@@ -865,7 +864,7 @@ class Site(object):
             if lname in lnames:
                 return ns_id
 
-        e = u"There is no namespace with name '{0}'.".format(name)
+        e = "There is no namespace with name '{0}'.".format(name)
         raise exceptions.NamespaceNotFoundError(e)
 
     def get_page(self, title, follow_redirects=False, pageid=None):
@@ -900,7 +899,7 @@ class Site(object):
         """
         catname = self._unicodeify(catname)
         prefix = self.namespace_id_to_name(constants.NS_CATEGORY)
-        pagename = u':'.join((prefix, catname))
+        pagename = ':'.join((prefix, catname))
         return Category(self, pagename, follow_redirects, pageid, self._logger)
 
     def get_user(self, username=None):

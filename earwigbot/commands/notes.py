@@ -96,7 +96,7 @@ class Notes(Command):
         except IndexError:
             msg = ("\x0302The Earwig Mini-Wiki\x0F: running v{0}. Subcommands "
                    "are: {1}. You can get help on any with '!{2} help subcommand'.")
-            cmnds = ", ".join((info.keys()))
+            cmnds = ", ".join(info.keys())
             self.reply(data, msg.format(self.version, cmnds, data.command))
             return
         if command in self.aliases:

@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 from time import sleep, time
-from urllib2 import build_opener
+from urllib.request import build_opener
 
 from earwigbot import exceptions
 from earwigbot.wiki.copyvios.markov import MarkovChain
@@ -32,7 +32,7 @@ from earwigbot.wiki.copyvios.workers import (
 
 __all__ = ["CopyvioMixIn", "globalize", "localize"]
 
-class CopyvioMixIn(object):
+class CopyvioMixIn:
     """
     **EarwigBot: Wiki Toolset: Copyright Violation MixIn**
 
@@ -114,7 +114,7 @@ class CopyvioMixIn(object):
         (:exc:`.UnknownSearchEngineError`, :exc:`.SearchQueryError`, ...) on
         errors.
         """
-        log = u"Starting copyvio check for [[{0}]]"
+        log = "Starting copyvio check for [[{0}]]"
         self._logger.info(log.format(self.title))
         searcher = self._get_search_engine()
         parser = ArticleTextParser(self.get(), args={
@@ -151,7 +151,7 @@ class CopyvioMixIn(object):
                 if short_circuit and workspace.finished:
                     workspace.possible_miss = True
                     break
-                log = u"[[{0}]] -> querying {1} for {2!r}"
+                log = "[[{0}]] -> querying {1} for {2!r}"
                 self._logger.debug(log.format(self.title, searcher.name, chunk))
                 workspace.enqueue(searcher.search(chunk))
                 num_queries += 1
@@ -183,7 +183,7 @@ class CopyvioMixIn(object):
         Since no searching is done, neither :exc:`.UnknownSearchEngineError`
         nor :exc:`.SearchQueryError` will be raised.
         """
-        log = u"Starting copyvio compare for [[{0}]] against {1}"
+        log = "Starting copyvio compare for [[{0}]] against {1}"
         self._logger.info(log.format(self.title, url))
         article = MarkovChain(ArticleTextParser(self.get()).strip())
         workspace = CopyvioWorkspace(

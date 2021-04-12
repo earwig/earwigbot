@@ -39,7 +39,7 @@ class Langcode(Command):
         del matrix["count"]
         del matrix["specials"]
 
-        for site in matrix.itervalues():
+        for site in matrix.values():
             if not site["name"]:
                 continue
             name = site["name"].encode("utf8")

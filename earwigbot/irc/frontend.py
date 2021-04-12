@@ -43,9 +43,8 @@ class Frontend(IRCConnection):
     def __init__(self, bot):
         self.bot = bot
         cf = bot.config.irc["frontend"]
-        base = super(Frontend, self)
-        base.__init__(cf["host"], cf["port"], cf["nick"], cf["ident"],
-                      cf["realname"], bot.logger.getChild("frontend"))
+        super().__init__(cf["host"], cf["port"], cf["nick"], cf["ident"],
+                         cf["realname"], bot.logger.getChild("frontend"))
 
         self._auth_wait = False
         self._channels = set()

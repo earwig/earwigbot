@@ -99,7 +99,7 @@ class Category(Page):
             base = row[0].replace("_", " ").decode("utf8")
             namespace = self.site.namespace_id_to_name(row[1])
             if namespace:
-                title = u":".join((namespace, base))
+                title = ":".join((namespace, base))
             else:  # Avoid doing a silly (albeit valid) ":Pagename" thing
                 title = base
             yield self.site.get_page(title, follow_redirects=follow,
@@ -109,7 +109,7 @@ class Category(Page):
         """Return the size of the category using the API."""
         result = self.site.api_query(action="query", prop="categoryinfo",
                                      titles=self.title)
-        info = result["query"]["pages"].values()[0]["categoryinfo"]
+        info = list(result["query"]["pages"].values())[0]["categoryinfo"]
         return info[member_type]
 
     def _get_size_via_sql(self, member_type):

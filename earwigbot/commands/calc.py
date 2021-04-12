@@ -21,12 +21,13 @@
 # SOFTWARE.
 
 import re
-import urllib
+import urllib.request
+import urllib.parse
 
 from earwigbot.commands import Command
 
 class Calc(Command):
-    """A somewhat advanced calculator: see http://futureboy.us/fsp/frink.fsp
+    """A somewhat advanced calculator: see https://futureboy.us/fsp/frink.fsp
     for details."""
     name = "calc"
 
@@ -38,9 +39,9 @@ class Calc(Command):
         query = ' '.join(data.args)
         query = self.cleanup(query)
 
-        url = "http://futureboy.us/fsp/frink.fsp?fromVal={0}"
-        url = url.format(urllib.quote(query))
-        result = urllib.urlopen(url).read()
+        url = "https://futureboy.us/fsp/frink.fsp?fromVal={0}"
+        url = url.format(urllib.parse.quote(query))
+        result = urllib.request.urlopen(url).read().decode()
 
         r_result = re.compile(r'(?i)<A NAME=results>(.*?)</A>')
         r_tag = re.compile(r'<\S+.*?>')
@@ -64,13 +65,14 @@ class Calc(Command):
         res = "%s = %s" % (query, result)
         self.reply(data, res)
 
-    def cleanup(self, query):
+    @staticmethod
+    def cleanup(query):
         fixes = [
             (' in ', ' -> '),
             (' over ', ' / '),
-            (u'¬£', 'GBP '),
-            (u'‚Ç¨', 'EUR '),
-            ('\$', 'USD '),
+            ('¬£', 'GBP '),
+            ('‚Ç¨', 'EUR '),
+            (r'\$', 'USD '),
             (r'\bKB\b', 'kilobytes'),
             (r'\bMB\b', 'megabytes'),
             (r'\bGB\b', 'gigabytes'),

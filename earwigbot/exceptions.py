@@ -268,5 +268,5 @@ class ParserRedirectError(CopyvioCheckError):
     exposed in client code.
     """
     def __init__(self, url):
-        super(ParserRedirectError, self).__init__()
+        super().__init__()
         self.url = url

@@ -1,7 +1,7 @@
 The Wiki Toolset
 ================
 
-EarwigBot's answer to the `Pywikipedia framework`_ is the Wiki Toolset
+EarwigBot's answer to `Pywikibot`_ is the Wiki Toolset
 (:py:mod:`earwigbot.wiki`), which you will mainly access through
 :py:attr:`bot.wiki <earwigbot.bot.Bot.wiki>`.
 
@@ -43,7 +43,7 @@ wikis, you can usually use code like this::
     try:
         site = bot.wiki.get_site(project=project, lang=lang)
     except earwigbot.SiteNotFoundError:
-        # Load site info from http://es.wikipedia.org/w/api.php:
+        # Load site info from https://es.wikipedia.org/w/api.php:
         site = bot.wiki.add_site(project=project, lang=lang)
 
 This works because EarwigBot assumes that the URL for the site is
@@ -56,8 +56,8 @@ like::
     try:
         site = bot.wiki.get_site(project=project, lang=lang)
     except earwigbot.SiteNotFoundError:
-        # Load site info from http://mysite.net/mywiki/it/s/api.php:
-        base_url = "http://mysite.net/" + project + "/" + lang
+        # Load site info from https://mysite.net/mywiki/it/s/api.php:
+        base_url = "https://mysite.net/" + project + "/" + lang
         db_name = lang + project + "_p"
         sql = {host: "sql.mysite.net", db: db_name}
         site = bot.wiki.add_site(base_url=base_url, script_path="/s", sql=sql)
@@ -242,6 +242,6 @@ docstrings`_ to learn how to use it in a more hands-on fashion. For reference,
 :py:class:`earwigbot.wiki.SitesDB <earwigbot.wiki.sitesdb.SitesDB>` tied to the
 :file:`sites.db` file in the bot's working directory.
 
-.. _Pywikipedia framework:   http://pywikipediabot.sourceforge.net/
-.. _CentralAuth:             http://www.mediawiki.org/wiki/Extension:CentralAuth
+.. _Pywikibot:               https://www.mediawiki.org/wiki/Manual:Pywikibot
+.. _CentralAuth:             https://www.mediawiki.org/wiki/Extension:CentralAuth
 .. _its code and docstrings: https://github.com/earwig/earwigbot/tree/develop/earwigbot/wiki

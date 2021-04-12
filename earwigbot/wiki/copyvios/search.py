@@ -24,20 +24,18 @@ from gzip import GzipFile
 from json import loads
 from re import sub as re_sub
 from socket import error
-from StringIO import StringIO
-from urllib import quote, urlencode
-from urllib2 import URLError
+from io import StringIO
+from urllib.parse import quote, urlencode
+from urllib.error import URLError
 
 from earwigbot import importer
 from earwigbot.exceptions import SearchQueryError
 
 lxml = importer.new("lxml")
-oauth = importer.new("oauth2")
 
-__all__ = ["BingSearchEngine", "GoogleSearchEngine", "YahooBOSSSearchEngine",
-           "YandexSearchEngine", "SEARCH_ENGINES"]
+__all__ = ["BingSearchEngine", "GoogleSearchEngine", "YandexSearchEngine", "SEARCH_ENGINES"]
 
-class _BaseSearchEngine(object):
+class _BaseSearchEngine:
     """Base class for a simple search engine interface."""
     name = "Base"
 
@@ -95,7 +93,7 @@ class BingSearchEngine(_BaseSearchEngine):
     name = "Bing"
 
     def __init__(self, cred, opener):
-        super(BingSearchEngine, self).__init__(cred, opener)
+        super().__init__(cred, opener)
 
         key = self.cred["key"]
         auth = (key + ":" + key).encode("base64").replace("\n", "")
@@ -170,60 +168,6 @@ class GoogleSearchEngine(_BaseSearchEngine):
             return []
 
 
-class YahooBOSSSearchEngine(_BaseSearchEngine):
-    """A search engine interface with Yahoo! BOSS."""
-    name = "Yahoo! BOSS"
-
-    @staticmethod
-    def _build_url(base, params):
-        """Works like urllib.urlencode(), but uses %20 for spaces over +."""
-        enc = lambda s: quote(s.encode("utf8"), safe="")
-        args = ["=".join((enc(k), enc(v))) for k, v in params.iteritems()]
-        return base + "?" + "&".join(args)
-
-    @staticmethod
-    def requirements():
-        return ["oauth2"]
-
-    def search(self, query):
-        """Do a Yahoo! BOSS web search for *query*.
-
-        Returns a list of URLs ranked by relevance (as determined by Yahoo).
-        Raises :py:exc:`~earwigbot.exceptions.SearchQueryError` on errors.
-        """
-        key, secret = self.cred["key"], self.cred["secret"]
-        consumer = oauth.Consumer(key=key, secret=secret)
-
-        url = "http://yboss.yahooapis.com/ysearch/web"
-        params = {
-            "oauth_version": oauth.OAUTH_VERSION,
-            "oauth_nonce": oauth.generate_nonce(),
-            "oauth_timestamp": oauth.Request.make_timestamp(),
-            "oauth_consumer_key": consumer.key,
-            "q": '"' + query.encode("utf8") + '"',
-            "count": str(self.count),
-            "type": "html,text,pdf",
-            "format": "json",
-        }
-
-        req = oauth.Request(method="GET", url=url, parameters=params)
-        req.sign_request(oauth.SignatureMethod_HMAC_SHA1(), consumer, None)
-
-        result = self._open(self._build_url(url, req))
-
-        try:
-            res = loads(result)
-        except ValueError:
-            err = "Yahoo! BOSS Error: JSON could not be decoded"
-            raise SearchQueryError(err)
-
-        try:
-            results = res["bossresponse"]["web"]["results"]
-        except KeyError:
-            return []
-        return [result["url"] for result in results]
-
-
 class YandexSearchEngine(_BaseSearchEngine):
     """A search engine interface with Yandex Search."""
     name = "Yandex"
@@ -263,6 +207,5 @@ class YandexSearchEngine(_BaseSearchEngine):
 SEARCH_ENGINES = {
     "Bing": BingSearchEngine,
     "Google": GoogleSearchEngine,
-    "Yahoo! BOSS": YahooBOSSSearchEngine,
     "Yandex": YandexSearchEngine
 }

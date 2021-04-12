@@ -128,8 +128,8 @@ def main():
         level = logging.DEBUG
     elif args.quiet:
         level = logging.WARNING
-    print version
-    print
+    print(version)
+    print()
 
     bot = Bot(path.abspath(args.path), level=level)
     if args.task:

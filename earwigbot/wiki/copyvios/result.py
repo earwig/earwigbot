@@ -27,7 +27,7 @@ from earwigbot.wiki.copyvios.markov import EMPTY, EMPTY_INTERSECTION
 
 __all__ = ["CopyvioSource", "CopyvioCheckResult"]
 
-class CopyvioSource(object):
+class CopyvioSource:
     """
     **EarwigBot: Wiki Toolset: Copyvio Source**
 
@@ -110,7 +110,7 @@ class CopyvioSource(object):
                 event.wait()
 
 
-class CopyvioCheckResult(object):
+class CopyvioCheckResult:
     """
     **EarwigBot: Wiki Toolset: Copyvio Check Result**
 
@@ -167,9 +167,9 @@ class CopyvioCheckResult(object):
     def get_log_message(self, title):
         """Build a relevant log message for this copyvio check result."""
         if not self.sources:
-            log = u"No violation for [[{0}]] (no sources; {1} queries; {2} seconds)"
+            log = "No violation for [[{0}]] (no sources; {1} queries; {2} seconds)"
             return log.format(title, self.queries, self.time)
-        log = u"{0} for [[{1}]] (best: {2} ({3} confidence); {4} sources; {5} queries; {6} seconds)"
+        log = "{0} for [[{1}]] (best: {2} ({3} confidence); {4} sources; {5} queries; {6} seconds)"
         is_vio = "Violation detected" if self.violation else "No violation"
         return log.format(is_vio, title, self.url, self.confidence,
                           len(self.sources), self.queries, self.time)

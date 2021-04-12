@@ -50,9 +50,9 @@ features (``feature/*`` branches)::
        or use the :command:`--user` switch to install for the current user
        only.
 
-.. _my instance of EarwigBot: http://en.wikipedia.org/wiki/User:EarwigBot
+.. _my instance of EarwigBot: https://en.wikipedia.org/wiki/User:EarwigBot
 .. _earwigbot-plugins:        https://github.com/earwig/earwigbot-plugins
-.. _Python Package Index:     http://pypi.python.org
-.. _get pip:                  http://pypi.python.org/pypi/pip
-.. _this StackOverflow post:  http://stackoverflow.com/questions/6504810/how-to-install-lxml-on-ubuntu/6504860#6504860
-.. _git flow:                 http://nvie.com/posts/a-successful-git-branching-model/
+.. _Python Package Index:     https://pypi.python.org/pypi/earwigbot
+.. _get pip:                  https://pypi.python.org/pypi/pip
+.. _this StackOverflow post:  https://stackoverflow.com/questions/6504810/how-to-install-lxml-on-ubuntu/6504860#6504860
+.. _git flow:                 https://nvie.com/posts/a-successful-git-branching-model/

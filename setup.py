@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2019 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2021 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,31 +26,29 @@ from setuptools import setup, find_packages
 from earwigbot import __version__
 
 required_deps = [
-    "PyYAML >= 3.12",  # Parsing config files
-    "mwparserfromhell >= 0.5",  # Parsing wikicode for manipulation
-    "requests >= 2.21.0",  # Wiki API requests
-    "requests_oauthlib >= 1.2.0",  # API authentication via OAuth
+    "PyYAML >= 5.4.1",  # Parsing config files
+    "mwparserfromhell >= 0.6",  # Parsing wikicode for manipulation
+    "requests >= 2.25.1",  # Wiki API requests
+    "requests_oauthlib >= 1.3.0",  # API authentication via OAuth
 ]
 
 extra_deps = {
     "crypto": [
-        "py-bcrypt >= 0.4",  # Hashing the bot key in the config file
-        "pycrypto >= 2.6.1",  # Storing bot passwords + keys in the config file
+        "cryptography >= 3.4.7",  # Storing bot passwords + keys in the config file
     ],
     "sql": [
-        "oursql >= 0.9.3.2",  # Interfacing with MediaWiki databases
+        "oursql3 >= 0.9.4",  # Interfacing with MediaWiki databases
     ],
     "copyvios": [
-        "beautifulsoup4 >= 4.6.0",  # Parsing/scraping HTML
-        "cchardet >= 2.1.1",  # Encoding detection for BeautifulSoup
-        "lxml >= 3.8.0",  # Faster parser for BeautifulSoup
-        "nltk >= 3.2.4",  # Parsing sentences to split article content
-        "oauth2 >= 1.9.0",  # Interfacing with Yahoo! BOSS Search
-        "pdfminer >= 20140328",  # Extracting text from PDF files
-        "tldextract >= 2.1.0",  # Getting domains for the multithreaded workers
+        "beautifulsoup4 >= 4.9.3",  # Parsing/scraping HTML
+        "cchardet >= 2.1.7",  # Encoding detection for BeautifulSoup
+        "lxml >= 4.6.3",  # Faster parser for BeautifulSoup
+        "nltk >= 3.6.1",  # Parsing sentences to split article content
+        "pdfminer >= 20191125",  # Extracting text from PDF files
+        "tldextract >= 3.1.0",  # Getting domains for the multithreaded workers
     ],
     "time": [
-        "pytz >= 2017.2",  # Handling timezones for the !time IRC command
+        "pytz >= 2021.1",  # Handling timezones for the !time IRC command
     ],
 }
 
@@ -81,7 +79,7 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Natural Language :: English",
         "Operating System :: OS Independent",
-        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
         "Topic :: Communications :: Chat :: Internet Relay Chat",
         "Topic :: Internet :: WWW/HTTP"
     ],

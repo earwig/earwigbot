@@ -80,7 +80,7 @@ class Threads(Command):
                 t = "\x0302copyvio worker\x0F (site {0})"
                 daemon_threads.append(t.format(tname[len("cvworker-"):]))
             else:
-                match = re.findall("^(.*?) \((.*?)\)$", tname)
+                match = re.findall(r"^(.*?) \((.*?)\)$", tname)
                 if match:
                     t = "\x0302{0}\x0F (id {1}, since {2})"
                     thread_info = t.format(match[0][0], ident, match[0][1])

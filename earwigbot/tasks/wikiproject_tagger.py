@@ -183,11 +183,11 @@ class WikiProjectTagger(Task):
         """
         prefix = title.split(":", 1)[0]
         if prefix == title:
-            return u":".join((site.namespace_id_to_name(assumed), title))
+            return ":".join((site.namespace_id_to_name(assumed), title))
         try:
             site.namespace_name_to_id(prefix)
         except exceptions.NamespaceNotFoundError:
-            return u":".join((site.namespace_id_to_name(assumed), title))
+            return ":".join((site.namespace_id_to_name(assumed), title))
         return title
 
     def get_names(self, site, banner):
@@ -197,7 +197,7 @@ class WikiProjectTagger(Task):
             banner = banner.split(":", 1)[1]
         page = site.get_page(title)
         if page.exists != page.PAGE_EXISTS:
-            self.logger.error(u"Banner [[%s]] does not exist", title)
+            self.logger.error("Banner [[%s]] does not exist", title)
             return banner, None
 
         names = {banner, title}
@@ -208,17 +208,17 @@ class WikiProjectTagger(Task):
             if backlink["ns"] == constants.NS_TEMPLATE:
                 names.add(backlink["title"].split(":", 1)[1])
 
-        log = u"Found %s aliases for banner [[%s]]"
+        log = "Found %s aliases for banner [[%s]]"
         self.logger.debug(log, len(names), title)
         return banner, names
 
     def process_category(self, page, job, recursive):
         """Try to tag all pages in the given category."""
         if page.title in job.processed_cats:
-            self.logger.debug(u"Skipping category, already processed: [[%s]]",
+            self.logger.debug("Skipping category, already processed: [[%s]]",
                               page.title)
             return
-        self.logger.info(u"Processing category: [[%s]]", page.title)
+        self.logger.info("Processing category: [[%s]]", page.title)
         job.processed_cats.add(page.title)
 
         if job.tag_categories:
@@ -243,7 +243,7 @@ class WikiProjectTagger(Task):
             page = page.toggle_talk()
 
         if page.title in job.processed_pages:
-            self.logger.debug(u"Skipping page, already processed: [[%s]]",
+            self.logger.debug("Skipping page, already processed: [[%s]]",
                               page.title)
             return
         job.processed_pages.add(page.title)
@@ -259,7 +259,7 @@ class WikiProjectTagger(Task):
             self.process_new_page(page, job)
             return
         except exceptions.InvalidPageError:
-            self.logger.error(u"Skipping invalid page: [[%s]]", page.title)
+            self.logger.error("Skipping invalid page: [[%s]]", page.title)
             return
 
         is_update = False
@@ -270,28 +270,28 @@ class WikiProjectTagger(Task):
                     is_update = True
                     break
                 else:
-                    log = u"Skipping page: [[%s]]; already tagged with '%s'"
+                    log = "Skipping page: [[%s]]; already tagged with '%s'"
                     self.logger.info(log, page.title, template.name)
                     return
 
         if job.only_with:
             if not any(template.name.matches(job.only_with)
                        for template in code.ifilter_templates(recursive=True)):
-                log = u"Skipping page: [[%s]]; fails only-with condition"
+                log = "Skipping page: [[%s]]; fails only-with condition"
                 self.logger.info(log, page.title)
                 return
 
         if is_update:
-            old_banner = unicode(banner)
+            old_banner = str(banner)
             self.update_banner(banner, job, code)
             if banner == old_banner:
-                log = u"Skipping page: [[%s]]; already tagged and no updates"
+                log = "Skipping page: [[%s]]; already tagged and no updates"
                 self.logger.info(log, page.title)
                 return
-            self.logger.info(u"Updating banner on page: [[%s]]", page.title)
+            self.logger.info("Updating banner on page: [[%s]]", page.title)
             banner = banner.encode("utf8")
         else:
-            self.logger.info(u"Tagging page: [[%s]]", page.title)
+            self.logger.info("Tagging page: [[%s]]", page.title)
             banner = self.make_banner(job, code)
             shell = self.get_banner_shell(code)
             if shell:
@@ -299,22 +299,22 @@ class WikiProjectTagger(Task):
             else:
                 self.add_banner(code, banner)
 
-        self.save_page(page, job, unicode(code), banner)
+        self.save_page(page, job, str(code), banner)
 
     def process_new_page(self, page, job):
         """Try to tag a *page* that doesn't exist yet using the *job*."""
         if job.nocreate or job.only_with:
-            log = u"Skipping nonexistent page: [[%s]]"
+            log = "Skipping nonexistent page: [[%s]]"
             self.logger.info(log, page.title)
         else:
-            self.logger.info(u"Tagging new page: [[%s]]", page.title)
+            self.logger.info("Tagging new page: [[%s]]", page.title)
             banner = self.make_banner(job)
             self.save_page(page, job, banner, banner)
 
     def save_page(self, page, job, text, banner):
         """Save a page with an updated banner."""
         if job.dry_run:
-            self.logger.debug(u"[DRY RUN] Banner: %s", banner)
+            self.logger.debug("[DRY RUN] Banner: %s", banner)
         else:
             summary = job.summary.replace("$3", banner)
             page.edit(text, self.make_summary(summary), minor=True)
@@ -365,7 +365,7 @@ class WikiProjectTagger(Task):
         classes = {klass: 0 for klass in classnames}
         for template in code.ifilter_templates(recursive=True):
             if template.has("class"):
-                value = unicode(template.get("class").value).lower()
+                value = str(template.get("class").value).lower()
                 if value in classes:
                     classes[value] += 1
 
@@ -388,14 +388,14 @@ class WikiProjectTagger(Task):
         if not shells:
             shells = code.filter_templates(matches=regex, recursive=True)
         if shells:
-            log = u"Inserting banner into shell: %s"
+            log = "Inserting banner into shell: %s"
             self.logger.debug(log, shells[0].name)
             return shells[0]
 
     def add_banner_to_shell(self, shell, banner):
         """Add *banner* to *shell*."""
         if shell.has_param(1):
-            if unicode(shell.get(1).value).endswith("\n"):
+            if str(shell.get(1).value).endswith("\n"):
                 banner += "\n"
             else:
                 banner = "\n" + banner
@@ -410,16 +410,16 @@ class WikiProjectTagger(Task):
             name = template.name.lower().replace("_", " ")
             for regex in self.TOP_TEMPS:
                 if re.match(regex, name):
-                    self.logger.debug(u"Skipping past top template: %s", name)
+                    self.logger.debug("Skipping past top template: %s", name)
                     predecessor = template
                     break
             if "wikiproject" in name or name.startswith("wp"):
-                self.logger.debug(u"Skipping past banner template: %s", name)
+                self.logger.debug("Skipping past banner template: %s", name)
                 predecessor = template
 
         if predecessor:
             self.logger.debug("Inserting banner after template")
-            if not unicode(predecessor).endswith("\n"):
+            if not str(predecessor).endswith("\n"):
                 banner = "\n" + banner
             post = code.index(predecessor) + 1
             if len(code.nodes) > post and not code.get(post).startswith("\n"):
@@ -429,7 +429,7 @@ class WikiProjectTagger(Task):
             self.logger.debug("Inserting banner at beginning")
             code.insert(0, banner + "\n")
 
-class _Job(object):
+class _Job:
     """Represents a single wikiproject-tagging task.
 
     Stores information on the banner to add, the edit summary to use, whether

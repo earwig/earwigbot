@@ -26,7 +26,7 @@ from threading import Lock
 
 __all__ = ["PermissionsDB"]
 
-class PermissionsDB(object):
+class PermissionsDB:
     """
     **EarwigBot: Permissions Database Manager**
 
@@ -198,7 +198,7 @@ class PermissionsDB(object):
         with self._db_access_lock, sqlite.connect(self._dbfile) as conn:
             conn.execute(query, (user, key))
 
-class User(object):
+class User:
     """A class that represents an IRC user for the purpose of testing rules."""
     def __init__(self, nick, ident, host):
         self.nick = nick

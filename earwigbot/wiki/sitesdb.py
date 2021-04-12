@@ -21,8 +21,8 @@
 # SOFTWARE.
 
 from collections import OrderedDict
-from cookielib import LWPCookieJar, LoadError
 import errno
+from http.cookiejar import LWPCookieJar, LoadError
 from os import chmod, path
 from platform import python_version
 import stat
@@ -35,7 +35,7 @@ from earwigbot.wiki.site import Site
 
 __all__ = ["SitesDB"]
 
-class SitesDB(object):
+class SitesDB:
     """
     **EarwigBot: Wiki Toolset: Sites Database Manager**
 
@@ -207,8 +207,8 @@ class SitesDB(object):
 
         if not sql:
             sql = config.wiki.get("sql", OrderedDict()).copy()
-            for key, value in sql.iteritems():
-                if isinstance(value, basestring) and "$1" in value:
+            for key, value in sql.items():
+                if isinstance(value, str) and "$1" in value:
                     sql[key] = value.replace("$1", name)
 
         return Site(name=name, project=project, lang=lang, base_url=base_url,
@@ -257,9 +257,9 @@ class SitesDB(object):
         name = site.name
         sites_data = (name, site.project, site.lang, site._base_url,
                       site._article_path, site._script_path)
-        sql_data = [(name, key, val) for key, val in site._sql_data.iteritems()]
+        sql_data = [(name, key, val) for key, val in site._sql_data.items()]
         ns_data = []
-        for ns_id, ns_names in site._namespaces.iteritems():
+        for ns_id, ns_names in site._namespaces.items():
             ns_data.append((name, ns_id, ns_names.pop(0), True))
             for ns_name in ns_names:
                 ns_data.append((name, ns_id, ns_name, False))

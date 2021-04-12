@@ -25,7 +25,7 @@ from earwigbot import wiki
 
 __all__ = ["Task"]
 
-class Task(object):
+class Task:
     """
     **EarwigBot: Base Bot Task**
 
@@ -48,8 +48,8 @@ class Task(object):
         This is called once immediately after the task class is loaded by
         the task manager (in :py:meth:`tasks.load()
         <earwigbot.managers._ResourceManager.load>`). Don't override this
-        directly; if you do, remember to place ``super(Task, self).__init()``
-        first. Use :py:meth:`setup` for typical task-init/setup needs.
+        directly; if you do, remember to place ``super().__init()`` first.
+        Use :py:meth:`setup` for typical task-init/setup needs.
         """
         self.bot = bot
         self.config = bot.config

@@ -146,7 +146,7 @@ class Stalk(Command):
             return target.startswith("re:") and re.match(target[3:], tag)
 
         def _process(table, tag, flags):
-            for target, stalks in table.iteritems():
+            for target, stalks in table.items():
                 if target == tag or _regex_match(target, tag):
                     _update_chans(stalks, flags)
 
@@ -161,7 +161,7 @@ class Stalk(Command):
         with self.bot.component_lock:
             frontend = self.bot.frontend
             if frontend and not frontend.is_stopped():
-                for chan, users in chans.iteritems():
+                for chan, users in chans.items():
                     if chan.startswith("#") and chan not in frontend.channels:
                         continue
                     pretty = rc.prettify(color=chan not in nocolor)
@@ -178,7 +178,7 @@ class Stalk(Command):
     def _get_stalks_by_nick(nick, table):
         """Return a dictionary of stalklist entries by the given nick."""
         entries = {}
-        for target, stalks in table.iteritems():
+        for target, stalks in table.items():
             for info in stalks:
                 if info[0] == nick:
                     if target in entries:
@@ -293,7 +293,7 @@ class Stalk(Command):
         def _format_stalks(stalks):
             return ", ".join(
                 "\x0302{0}\x0F ({1})".format(target, _format_chans(chans))
-                for target, chans in stalks.iteritems())
+                for target, chans in stalks.items())
 
         users = self._get_stalks_by_nick(nick, self._users)
         pages = self._get_stalks_by_nick(nick, self._pages)
@@ -325,7 +325,7 @@ class Stalk(Command):
         def _format_stalks(stalks):
             return ", ".join(
                 "\x0302{0}\x0F ({1})".format(target, _format_data(data))
-                for target, data in stalks.iteritems())
+                for target, data in stalks.items())
 
         users, pages = self._users, self._pages
         if users:

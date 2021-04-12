@@ -32,21 +32,21 @@ class Link(Command):
         self.last = {}
 
     def check(self, data):
-        if re.search("(\[\[(.*?)\]\])|(\{\{(.*?)\}\})", data.msg):
+        if re.search(r"(\[\[(.*?)\]\])|(\{\{(.*?)\}\})", data.msg):
             self.last[data.chan] = data.msg  # Store most recent link
         return data.is_command and data.command == self.name
 
     def process(self, data):
         self.site = self.bot.wiki.get_site()
 
-        if re.search("(\[\[(.*?)\]\])|(\{\{(.*?)\}\})", data.msg):
-            links = u" , ".join(self.parse_line(data.msg))
+        if re.search(r"(\[\[(.*?)\]\])|(\{\{(.*?)\}\})", data.msg):
+            links = " , ".join(self.parse_line(data.msg))
             self.reply(data, links.encode("utf8"))
 
         elif data.command == "link":
             if not data.args:
                 if data.chan in self.last:
-                    links = u" , ".join(self.parse_line(self.last[data.chan]))
+                    links = " , ".join(self.parse_line(self.last[data.chan]))
                     self.reply(data, links.encode("utf8"))
                 else:
                     self.reply(data, "What do you want me to link to?")
@@ -60,17 +60,17 @@ class Link(Command):
         results = []
 
         # Destroy {{{template parameters}}}:
-        line = re.sub("\{\{\{(.*?)\}\}\}", "", line)
+        line = re.sub(r"\{\{\{(.*?)\}\}\}", "", line)
 
         # Find all [[links]]:
-        links = re.findall("(\[\[(.*?)(\||\]\]))", line)
+        links = re.findall(r"(\[\[(.*?)(\||\]\]))", line)
         if links:
             # re.findall() returns a list of tuples, but we only want the 2nd
             # item in each tuple:
             results = [self.site.get_page(name[1]).url for name in links]
 
         # Find all {{templates}}
-        templates = re.findall("(\{\{(.*?)(\||\}\}))", line)
+        templates = re.findall(r"(\{\{(.*?)(\||\}\}))", line)
         if templates:
             p_tmpl = lambda name: self.site.get_page("Template:" + name).url
             templates = [p_tmpl(i[1]) for i in templates]

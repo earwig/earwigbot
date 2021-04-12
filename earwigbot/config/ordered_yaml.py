@@ -24,7 +24,7 @@
 Based on:
 
  * https://gist.github.com/844388
- * http://pyyaml.org/attachment/ticket/161/use_ordered_dict.py
+ * https://pyyaml.org/attachment/ticket/161/use_ordered_dict.py
 
 with modifications.
 """
@@ -39,10 +39,10 @@ class OrderedLoader(yaml.Loader):
     """A YAML loader that loads mappings into ordered dictionaries."""
 
     def __init__(self, *args, **kwargs):
-        super(OrderedLoader, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         constructor = type(self).construct_yaml_map
-        self.add_constructor(u"tag:yaml.org,2002:map", constructor)
-        self.add_constructor(u"tag:yaml.org,2002:omap", constructor)
+        self.add_constructor("tag:yaml.org,2002:map", constructor)
+        self.add_constructor("tag:yaml.org,2002:omap", constructor)
 
     def construct_yaml_map(self, node):
         data = OrderedDict()
@@ -63,7 +63,7 @@ class OrderedLoader(yaml.Loader):
             key = self.construct_object(key_node, deep=deep)
             try:
                 hash(key)
-            except TypeError, exc:
+            except TypeError as exc:
                 raise yaml.constructor.ConstructorError(
                     "while constructing a mapping", node.start_mark,
                     "found unacceptable key ({0})".format(exc),
@@ -77,7 +77,7 @@ class OrderedDumper(yaml.SafeDumper):
     """A YAML dumper that dumps ordered dictionaries into mappings."""
 
     def __init__(self, *args, **kwargs):
-        super(OrderedDumper, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.add_representer(OrderedDict, type(self).represent_dict)
 
     def represent_mapping(self, tag, mapping, flow_style=None):

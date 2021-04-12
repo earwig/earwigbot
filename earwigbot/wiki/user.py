@@ -30,7 +30,7 @@ from earwigbot.wiki.page import Page
 
 __all__ = ["User"]
 
-class User(object):
+class User:
     """
     **EarwigBot: Wiki Toolset: User**
 
@@ -106,7 +106,7 @@ class User(object):
         if not hasattr(self, attr):
             self._load_attributes()
         if not self._exists:
-            e = u"User '{0}' does not exist.".format(self._name)
+            e = "User '{0}' does not exist.".format(self._name)
             raise UserNotFoundError(e)
         return getattr(self, attr)
 
@@ -143,7 +143,7 @@ class User(object):
 
         self._groups = res["groups"]
         try:
-            self._rights = res["rights"].values()
+            self._rights = list(res["rights"].values())
         except AttributeError:
             self._rights = res["rights"]
         self._editcount = res["editcount"]

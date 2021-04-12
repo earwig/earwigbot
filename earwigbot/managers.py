@@ -32,7 +32,7 @@ from earwigbot.tasks import Task
 
 __all__ = ["CommandManager", "TaskManager"]
 
-class _ResourceManager(object):
+class _ResourceManager:
     """
     **EarwigBot: Resource Manager**
 
@@ -69,7 +69,7 @@ class _ResourceManager(object):
 
     def __iter__(self):
         with self.lock:
-            for resource in self._resources.itervalues():
+            for resource in self._resources.values():
                 yield resource
 
     def _is_disabled(self, name):
@@ -201,7 +201,7 @@ class CommandManager(_ResourceManager):
     Manages (i.e., loads, reloads, and calls) IRC commands.
     """
     def __init__(self, bot):
-        super(CommandManager, self).__init__(bot, "commands", Command)
+        super().__init__(bot, "commands", Command)
 
     def _wrap_check(self, command, data):
         """Check whether a command should be called, catching errors."""
@@ -248,7 +248,7 @@ class TaskManager(_ResourceManager):
     Manages (i.e., loads, reloads, schedules, and runs) wiki bot tasks.
     """
     def __init__(self, bot):
-        super(TaskManager, self).__init__(bot, "tasks", Task)
+        super().__init__(bot, "tasks", Task)
 
     def _wrapper(self, task, **kwargs):
         """Wrapper for task classes: run the task and catch any errors."""

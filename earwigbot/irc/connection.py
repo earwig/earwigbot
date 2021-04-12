@@ -28,7 +28,7 @@ from earwigbot.exceptions import BrokenSocketError
 
 __all__ = ["IRCConnection"]
 
-class IRCConnection(object):
+class IRCConnection:
     """Interface with an IRC server."""
 
     def __init__(self, host, port, nick, ident, realname, logger):
@@ -84,7 +84,7 @@ class IRCConnection(object):
         if not data:
             # Socket isn't giving us any data, so it is dead or broken:
             raise BrokenSocketError()
-        return data
+        return data.decode(errors="ignore")
 
     def _send(self, msg, hidelog=False):
         """Send data to the server."""
@@ -93,7 +93,7 @@ class IRCConnection(object):
             if time_since_last < 0.75:
                 sleep(0.75 - time_since_last)
             try:
-                self._sock.sendall(msg + "\r\n")
+                self._sock.sendall(msg.encode() + b"\r\n")
             except socket.error:
                 self._is_running = False
             else:
@@ -177,7 +177,7 @@ class IRCConnection(object):
     def ident(self):
         """Our ident on the server, like ``"earwig"``.
 
-        See http://en.wikipedia.org/wiki/Ident.
+        See https://en.wikipedia.org/wiki/Ident_protocol.
         """
         return self._ident
 

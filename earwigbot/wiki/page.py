@@ -24,7 +24,7 @@ from hashlib import md5
 from logging import getLogger, NullHandler
 import re
 from time import gmtime, strftime
-from urllib import quote
+from urllib.parse import quote
 
 import mwparserfromhell
 
@@ -94,7 +94,7 @@ class Page(CopyvioMixIn):
         __init__() will not do any API queries, but it will use basic namespace
         logic to determine our namespace ID and if we are a talkpage.
         """
-        super(Page, self).__init__(site)
+        super().__init__(site)
         self._site = site
         self._title = title.strip()
         self._follow_redirects = self._keep_following = follow_redirects
@@ -157,7 +157,7 @@ class Page(CopyvioMixIn):
         contains "[") it will always be invalid, and cannot be edited.
         """
         if self._exists == self.PAGE_INVALID:
-            e = u"Page '{0}' is invalid.".format(self._title)
+            e = "Page '{0}' is invalid.".format(self._title)
             raise exceptions.InvalidPageError(e)
 
     def _assert_existence(self):
@@ -169,7 +169,7 @@ class Page(CopyvioMixIn):
         """
         self._assert_validity()
         if self._exists == self.PAGE_MISSING:
-            e = u"Page '{0}' does not exist.".format(self._title)
+            e = "Page '{0}' does not exist.".format(self._title)
             raise exceptions.PageNotFoundError(e)
 
     def _load(self):
@@ -217,11 +217,11 @@ class Page(CopyvioMixIn):
             self._exists = self.PAGE_INVALID
             return
 
-        res = result["query"]["pages"].values()[0]
+        res = list(result["query"]["pages"].values())[0]
         self._title = res["title"]  # Normalize our pagename/title
         self._is_redirect = "redirect" in res
 
-        self._pageid = int(result["query"]["pages"].keys()[0])
+        self._pageid = int(list(result["query"]["pages"].keys())[0])
         if self._pageid < 0:
             if "missing" in res:
                 # If it has a negative ID and it's missing; we can still get
@@ -267,7 +267,7 @@ class Page(CopyvioMixIn):
                            rvprop="content|timestamp", rvslots="main",
                            titles=self._title)
 
-        res = result["query"]["pages"].values()[0]
+        res = list(result["query"]["pages"].values())[0]
         try:
             revision = res["revisions"][0]
             self._content = revision["slots"]["main"]["*"]
@@ -322,7 +322,7 @@ class Page(CopyvioMixIn):
     def _build_edit_params(self, text, summary, minor, bot, force, section,
                            captcha_id, captcha_word):
         """Given some keyword arguments, build an API edit query string."""
-        unitxt = text.encode("utf8") if isinstance(text, unicode) else text
+        unitxt = text.encode("utf8") if isinstance(text, str) else text
         hashed = md5(unitxt).hexdigest()  # Checksum to ensure text is correct
         params = {
             "action": "edit", "title": self._title, "text": text,
@@ -455,7 +455,7 @@ class Page(CopyvioMixIn):
             encoded = self._title.encode("utf8").replace(" ", "_")
             slug = quote(encoded, safe="/:").decode("utf8")
             path = self.site._article_path.replace("$1", slug)
-            return u"".join((self.site.url, path))
+            return "".join((self.site.url, path))
 
     @property
     def namespace(self):
@@ -546,7 +546,7 @@ class Page(CopyvioMixIn):
         """
         if self._namespace < 0:
             ns = self.site.namespace_id_to_name(self._namespace)
-            e = u"Pages in the {0} namespace can't have talk pages.".format(ns)
+            e = "Pages in the {0} namespace can't have talk pages.".format(ns)
             raise exceptions.InvalidPageError(e)
 
         if self._is_talkpage:
@@ -564,7 +564,7 @@ class Page(CopyvioMixIn):
         # If the new page is in namespace 0, don't do ":Title" (it's correct,
         # but unnecessary), just do "Title":
         if new_prefix:
-            new_title = u":".join((new_prefix, body))
+            new_title = ":".join((new_prefix, body))
         else:
             new_title = body
 

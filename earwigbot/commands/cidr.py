@@ -134,7 +134,7 @@ class CIDR(Command):
                 bin_ips[i] = bin_ips[i][:ip.size] + suffix
 
         size = len(bin_ips[0])
-        for i in xrange(len(bin_ips[0])):
+        for i in range(len(bin_ips[0])):
             if any(ip[i] == "X" for ip in bin_ips) or (
                     any(ip[i] == "0" for ip in bin_ips) and
                     any(ip[i] == "1" for ip in bin_ips)):
@@ -154,7 +154,7 @@ class CIDR(Command):
     def _format_bin(family, binary):
         """Convert an IP's binary representation to presentation format."""
         return socket.inet_ntop(family, "".join(
-            chr(int(binary[i:i + 8], 2)) for i in xrange(0, len(binary), 8)))
+            chr(int(binary[i:i + 8], 2)) for i in range(0, len(binary), 8)))
 
     @staticmethod
     def _format_count(count):

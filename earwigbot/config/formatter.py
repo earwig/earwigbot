@@ -26,7 +26,7 @@ __all__ = ["BotFormatter"]
 
 class BotFormatter(logging.Formatter):
     def __init__(self, color=False):
-        self._format = super(BotFormatter, self).format
+        self._format = super().format
         if color:
             fmt = "[%(asctime)s %(lvl)s] %(name)s: %(message)s"
             self.format = lambda rec: self._format(self.format_color(rec))
@@ -34,7 +34,7 @@ class BotFormatter(logging.Formatter):
             fmt = "[%(asctime)s %(levelname)-8s] %(name)s: %(message)s"
             self.format = self._format
         datefmt = "%Y-%m-%d %H:%M:%S"
-        super(BotFormatter, self).__init__(fmt=fmt, datefmt=datefmt)
+        super().__init__(fmt=fmt, datefmt=datefmt)
 
     def format_color(self, record):
         l = record.levelname.ljust(8)
