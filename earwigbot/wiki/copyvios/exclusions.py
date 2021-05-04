@@ -183,16 +183,21 @@ class ExclusionsDB(object):
         Return ``True`` if the URL is in the database, or ``False`` otherwise.
         """
         normalized = re.sub(_RE_STRIP_PREFIX, "", url.lower())
+        parsed = urlparse(url.lower())
         query = """SELECT exclusion_url FROM exclusions
                    WHERE exclusion_sitename = ? OR exclusion_sitename = ?"""
         with self._db_access_lock, sqlite.connect(self._dbfile) as conn:
             for (excl,) in conn.execute(query, (sitename, "all")):
                 excl = excl.lower()
                 if excl.startswith("*."):
-                    parsed = urlparse(url.lower())
-                    matches = excl[2:] in parsed.netloc
-                    if matches and "/" in excl:
-                        excl_path = excl[excl.index("/") + 1]
+                    excl = excl[2:]
+                    if "/" in excl:
+                        excl_netloc, excl_path = excl.split("/", 1)
+                    else:
+                        excl_netloc, excl_path = excl, ""
+                    matches = parsed.netloc == excl_netloc or (
+                        parsed.netloc.endswith("." + excl_netloc))
+                    if matches and excl_path:
                         matches = excl_path.startswith(parsed.path)
                 elif excl.startswith("re:"):
                     try:
