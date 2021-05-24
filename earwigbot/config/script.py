@@ -184,7 +184,7 @@ class ConfigScript:
         self._print("""The bot contains three separate components that can run
                        independently of each other.""")
         self._print("""- The IRC front-end runs on a normal IRC server, like
-                       freenode, and expects users to interact with it through
+                       Libera, and expects users to interact with it through
                        commands.""")
         self._print("""- The IRC watcher runs on a wiki recent-changes server,
                        like irc.wikimedia.org, and listens for edits. Users
@@ -313,12 +313,12 @@ class ConfigScript:
         if self.data["components"]["irc_frontend"]:
             print()
             frontend = self.data["irc"]["frontend"] = OrderedDict()
-            msg = "Hostname of the frontend's IRC server, without 'irc://':"
-            frontend["host"] = self._ask(msg, "irc.freenode.net")
+            frontend["host"] = self._ask(
+                "Hostname of the frontend's IRC server:", "irc.libera.chat")
             frontend["port"] = self._ask("Frontend port:", 6667)
             frontend["nick"] = self._ask("Frontend bot's nickname:")
-            frontend["ident"] = self._ask("Frontend bot's ident:",
-                                          frontend["nick"].lower())
+            frontend["ident"] = self._ask(
+                "Frontend bot's ident:", frontend["nick"].lower())
             question = "Frontend bot's real name (gecos):"
             frontend["realname"] = self._ask(question, "EarwigBot")
             if self._ask_bool("Should the bot identify to NickServ?"):
@@ -336,7 +336,7 @@ class ConfigScript:
                            Hostname is the most secure option since it cannot
                            be easily spoofed. If you have a cloak, this will
                            probably look like 'wikipedia/Username' or
-                           'unaffiliated/nickname'.""")
+                           'user/nickname'.""")
             host = self._ask("Your hostname on the frontend:", require=False)
             if host:
                 permdb = self.config._permissions

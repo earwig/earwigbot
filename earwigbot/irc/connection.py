@@ -160,7 +160,7 @@ class IRCConnection:
 
     @property
     def host(self):
-        """The hostname of the IRC server, like ``"irc.freenode.net"``."""
+        """The hostname of the IRC server, like ``"irc.libera.chat"``."""
         return self._host
 
     @property
