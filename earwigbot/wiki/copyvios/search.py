@@ -27,13 +27,14 @@ from socket import error
 from io import StringIO
 from urllib.parse import quote, urlencode
 from urllib.error import URLError
+from duckduckgo_search import ddg
 
 from earwigbot import importer
 from earwigbot.exceptions import SearchQueryError
 
 lxml = importer.new("lxml")
 
-__all__ = ["BingSearchEngine", "GoogleSearchEngine", "YandexSearchEngine", "SEARCH_ENGINES"]
+__all__ = ["BingSearchEngine", "GoogleSearchEngine", "YandexSearchEngine", "DDGSearchEngine", "SEARCH_ENGINES"]
 
 class _BaseSearchEngine:
     """Base class for a simple search engine interface."""
@@ -203,9 +204,26 @@ class YandexSearchEngine(_BaseSearchEngine):
         except lxml.etree.Error as exc:
             raise SearchQueryError("Yandex XML parse error: " + str(exc))
 
+class DDGSearchEngine(_BaseSearchEngine):
+    """A search engine interface with DuckDuckGo"""
+    name = "DDG"
+
+    def search(self, query):
+        """Do a DuckDuckGo web search for *query*.
+
+        Returns a list of URLs ranked by relevance (as determined by DuckDuckGo).
+        """
+        result = ddg(query, safesearch='Off', time='y', max_results=200)
+
+        try:
+            return [item["href"] for item in result]
+        except KeyError:
+            return []
+
 
 SEARCH_ENGINES = {
     "Bing": BingSearchEngine,
     "Google": GoogleSearchEngine,
-    "Yandex": YandexSearchEngine
+    "Yandex": YandexSearchEngine,
+    "DDG": DDGSearchEngine
 }
