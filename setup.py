@@ -46,6 +46,7 @@ extra_deps = {
         "nltk >= 3.6.1",  # Parsing sentences to split article content
         "pdfminer >= 20191125",  # Extracting text from PDF files
         "tldextract >= 3.1.0",  # Getting domains for the multithreaded workers
+        "duckduckgo-search == 2.8.5", # DuckDuckGo search engine
     ],
     "time": [
         "pytz >= 2021.1",  # Handling timezones for the !time IRC command
