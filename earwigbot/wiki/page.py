@@ -280,7 +280,7 @@ class Page(CopyvioMixIn):
             self._assert_existence()
 
     def _edit(self, params=None, text=None, summary=None, minor=None, bot=None,
-              force=None, section=None, captcha_id=None, captcha_word=None):
+              force=None, section=None, captcha_id=None, captcha_word=None, **kwargs):
         """Edit the page!
 
         If *params* is given, we'll use it as our API query parameters.
@@ -297,7 +297,7 @@ class Page(CopyvioMixIn):
         # Build our API query string:
         if not params:
             params = self._build_edit_params(text, summary, minor, bot, force,
-                                             section, captcha_id, captcha_word)
+                                             section, captcha_id, captcha_word, kwargs)
         else: # Make sure we have the right token:
             params["token"] = self.site.get_token()
 
@@ -320,7 +320,7 @@ class Page(CopyvioMixIn):
         raise exceptions.EditError(result["edit"])
 
     def _build_edit_params(self, text, summary, minor, bot, force, section,
-                           captcha_id, captcha_word):
+                           captcha_id, captcha_word, kwargs):
         """Given some keyword arguments, build an API edit query string."""
         unitxt = text.encode("utf8") if isinstance(text, str) else text
         hashed = md5(unitxt).hexdigest()  # Checksum to ensure text is correct
@@ -351,6 +351,11 @@ class Page(CopyvioMixIn):
         else:
             params["recreate"] = "true"
 
+        for key, val in kwargs.items():
+            if val is None:
+                params.pop(key, None)
+            else:
+                params[key] = val
         return params
 
     def _handle_edit_errors(self, error, params, retry=True):
@@ -657,7 +662,7 @@ class Page(CopyvioMixIn):
         """
         return mwparserfromhell.parse(self.get())
 
-    def edit(self, text, summary, minor=False, bot=True, force=False):
+    def edit(self, text, summary, minor=False, bot=True, force=False, **kwargs):
         """Replace the page's content or creates a new page.
 
         *text* is the new page content, with *summary* as the edit summary.
@@ -670,9 +675,9 @@ class Page(CopyvioMixIn):
         editing our page. Be careful with this!
         """
         self._edit(text=text, summary=summary, minor=minor, bot=bot,
-                   force=force)
+                   force=force, **kwargs)
 
-    def add_section(self, text, title, minor=False, bot=True, force=False):
+    def add_section(self, text, title, minor=False, bot=True, force=False, **kwargs):
         """Add a new section to the bottom of the page.
 
         The arguments for this are the same as those for :py:meth:`edit`, but
@@ -683,7 +688,7 @@ class Page(CopyvioMixIn):
         new section as content.
         """
         self._edit(text=text, summary=title, minor=minor, bot=bot, force=force,
-                   section="new")
+                   section="new", **kwargs)
 
     def check_exclusion(self, username=None, optouts=None):
         """Check whether or not we are allowed to edit the page.

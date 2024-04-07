@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2017 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@ import re
 from earwigbot import exceptions
 from earwigbot.tasks import Task
 from earwigbot.wiki import constants
+
 
 class WikiProjectTagger(Task):
     """A task to tag talk pages with WikiProject banners.
@@ -76,28 +77,24 @@ class WikiProjectTagger(Task):
         edited
 
     """
+
     name = "wikiproject_tagger"
 
     # Regexes for template names that should always go above the banner, based
     # on [[Wikipedia:Talk page layout]]:
     TOP_TEMPS = [
         r"skip ?to ?(toc|talk|toctalk)$",
-
         r"ga ?nominee$",
-
         r"(user ?)?talk ?(header|page|page ?header)$",
-
         r"community ?article ?probation$",
         r"censor(-nudity)?$",
         r"blp(o| ?others?)?$",
         r"controvers(ial2?|y)$",
-
         r"(not ?(a ?)?)?forum$",
         r"tv(episode|series)talk$",
         r"recurring ?themes$",
         r"faq$",
         r"(round ?in ?)?circ(les|ular)$",
-
         r"ar(ti|it)cle ?(history|milestones)$",
         r"failed ?ga$",
         r"old ?prod( ?full)?$",
@@ -144,10 +141,18 @@ class WikiProjectTagger(Task):
         else:
             only_with = None
 
-        job = _Job(banner=banner, names=names, summary=summary, update=update,
-                   append=append, autoassess=autoassess, only_with=only_with,
-                   nocreate=nocreate, tag_categories=tag_categories,
-                   dry_run=dry_run)
+        job = _Job(
+            banner=banner,
+            names=names,
+            summary=summary,
+            update=update,
+            append=append,
+            autoassess=autoassess,
+            only_with=only_with,
+            nocreate=nocreate,
+            tag_categories=tag_categories,
+            dry_run=dry_run,
+        )
 
         try:
             self.run_job(kwargs, site, job, recursive)
@@ -165,7 +170,6 @@ class WikiProjectTagger(Task):
             with open(kwargs["file"], "r") as fileobj:
                 for line in fileobj:
                     if line.strip():
-                        line = line.decode("utf8")
                         if line.startswith("[[") and line.endswith("]]"):
                             line = line[2:-2]
                         page = site.get_page(line)
@@ -201,8 +205,13 @@ class WikiProjectTagger(Task):
             return banner, None
 
         names = {banner, title}
-        result = site.api_query(action="query", list="backlinks", bllimit=500,
-                                blfilterredir="redirects", bltitle=title)
+        result = site.api_query(
+            action="query",
+            list="backlinks",
+            bllimit=500,
+            blfilterredir="redirects",
+            bltitle=title,
+        )
         for backlink in result["query"]["backlinks"]:
             names.add(backlink["title"])
             if backlink["ns"] == constants.NS_TEMPLATE:
@@ -215,8 +224,9 @@ class WikiProjectTagger(Task):
     def process_category(self, page, job, recursive):
         """Try to tag all pages in the given category."""
         if page.title in job.processed_cats:
-            self.logger.debug("Skipping category, already processed: [[%s]]",
-                              page.title)
+            self.logger.debug(
+                "Skipping category, already processed: [[%s]]", page.title
+            )
             return
         self.logger.info("Processing category: [[%s]]", page.title)
         job.processed_cats.add(page.title)
@@ -243,8 +253,7 @@ class WikiProjectTagger(Task):
             page = page.toggle_talk()
 
         if page.title in job.processed_pages:
-            self.logger.debug("Skipping page, already processed: [[%s]]",
-                              page.title)
+            self.logger.debug("Skipping page, already processed: [[%s]]", page.title)
             return
         job.processed_pages.add(page.title)
 
@@ -275,21 +284,22 @@ class WikiProjectTagger(Task):
                     return
 
         if job.only_with:
-            if not any(template.name.matches(job.only_with)
-                       for template in code.ifilter_templates(recursive=True)):
+            if not any(
+                template.name.matches(job.only_with)
+                for template in code.ifilter_templates(recursive=True)
+            ):
                 log = "Skipping page: [[%s]]; fails only-with condition"
                 self.logger.info(log, page.title)
                 return
 
         if is_update:
-            old_banner = str(banner)
-            self.update_banner(banner, job, code)
-            if banner == old_banner:
+            updated = self.update_banner(banner, job, code)
+            if not updated:
                 log = "Skipping page: [[%s]]; already tagged and no updates"
                 self.logger.info(log, page.title)
                 return
             self.logger.info("Updating banner on page: [[%s]]", page.title)
-            banner = banner.encode("utf8")
+            banner = str(banner)
         else:
             self.logger.info("Tagging page: [[%s]]", page.title)
             banner = self.make_banner(job, code)
@@ -334,9 +344,11 @@ class WikiProjectTagger(Task):
 
     def update_banner(self, banner, job, code):
         """Update an existing *banner* based on a *job* and a page's *code*."""
-        has = lambda key: (banner.has(key) and
-                           banner.get(key).value.strip() not in ("", "?"))
+        has = lambda key: (
+            banner.has(key) and banner.get(key).value.strip() not in ("", "?")
+        )
 
+        updated = False
         if job.autoassess is not False:
             if not has("class"):
                 assess, reason = self.get_autoassessment(code, job.autoassess)
@@ -349,6 +361,8 @@ class WikiProjectTagger(Task):
                 key, value = param.split("=", 1)
                 if not has(key):
                     banner.add(key, value)
+                    updated = True
+        return updated
 
     def get_autoassessment(self, code, only_classes=None):
         """Get an autoassessment for a page.
@@ -356,16 +370,27 @@ class WikiProjectTagger(Task):
         Return (assessed class as a string or None, assessment reason or None).
         """
         if only_classes is None or only_classes is True:
-            classnames = ["a", "b", "book", "c", "dab", "fa", "fl", "ga",
-                          "list", "redirect", "start", "stub"]
+            classnames = [
+                "a",
+                "b",
+                "book",
+                "c",
+                "dab",
+                "fa",
+                "fl",
+                "ga",
+                "list",
+                "redirect",
+                "start",
+                "stub",
+            ]
         else:
-            classnames = [klass.strip().lower()
-                          for klass in only_classes.split(",")]
+            classnames = [klass.strip().lower() for klass in only_classes.split(",")]
 
         classes = {klass: 0 for klass in classnames}
         for template in code.ifilter_templates(recursive=True):
             if template.has("class"):
-                value = str(template.get("class").value).lower()
+                value = str(template.get("class").value).strip().lower()
                 if value in classes:
                     classes[value] += 1
 
@@ -429,6 +454,7 @@ class WikiProjectTagger(Task):
             self.logger.debug("Inserting banner at beginning")
             code.insert(0, banner + "\n")
 
+
 class _Job:
     """Represents a single wikiproject-tagging task.
 
@@ -436,6 +462,7 @@ class _Job:
     or not to autoassess and create new pages from scratch, and a counter of
     the number of pages edited.
     """
+
     def __init__(self, **kwargs):
         self.banner = kwargs["banner"]
         self.names = kwargs["names"]
@@ -456,4 +483,5 @@ class _Job:
 class _ShutoffEnabled(Exception):
     """Raised by process_page() if shutoff is enabled. Caught by run(), which
     will then stop the task."""
+
     pass

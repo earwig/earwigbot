@@ -146,7 +146,7 @@ class Task:
         try:
             content = page.get()
         except exceptions.PageNotFoundError:
-            return False
+            return True
         if content == cfg.get("disabled", "run"):
             return False
 

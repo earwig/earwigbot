@@ -1,12 +1,14 @@
 v0.4 (unreleased):
 
-- Migrated to Python 3.
+- Migrated to Python 3 (3.11+).
+- Migrated from oursql to pymysql.
 - Copyvios: Configurable proxy support for specific domains.
 - Copyvios: Parser-directed URL redirection.
 - Copyvios: General parsing improvements.
 - Copyvios: URL exclusion improvements.
 - Copyvios: Removed long-deprecated Yahoo! BOSS search engine.
 - Wiki: Fixed not sending Content-Type header in POST requests.
+- IRC: Moved default server from Freenode to Libera.
 - IRC: Remember joined channels across restarts.
 - IRC: Added !listchans.
 - IRC > !stalk: Added modifiers to change message format or filter messages.

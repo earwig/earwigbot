@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,11 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import imp
+import importlib.machinery
+import importlib.util
 
 from earwigbot.irc import IRCConnection, RC
 
 __all__ = ["Watcher"]
+
 
 class Watcher(IRCConnection):
     """
@@ -40,16 +42,23 @@ class Watcher(IRCConnection):
     def __init__(self, bot):
         self.bot = bot
         cf = bot.config.irc["watcher"]
-        super().__init__(cf["host"], cf["port"], cf["nick"], cf["ident"],
-                         cf["realname"], bot.logger.getChild("watcher"))
+        super().__init__(
+            cf["host"],
+            cf["port"],
+            cf["nick"],
+            cf["ident"],
+            cf["realname"],
+            bot.logger.getChild("watcher"),
+        )
         self._prepare_process_hook()
         self._connect()
 
     def __repr__(self):
         """Return the canonical string representation of the Watcher."""
         res = "Watcher(host={0!r}, port={1!r}, nick={2!r}, ident={3!r}, realname={4!r}, bot={5!r})"
-        return res.format(self.host, self.port, self.nick, self.ident,
-                          self.realname, self.bot)
+        return res.format(
+            self.host, self.port, self.nick, self.ident, self.realname, self.bot
+        )
 
     def __str__(self):
         """Return a nice string representation of the Watcher."""
@@ -88,17 +97,11 @@ class Watcher(IRCConnection):
         self._process_hook = lambda bot, rc: ()
 
         path = self.bot.config.root_dir
-        try:
-            f, path, desc = imp.find_module("rules", [path])
-        except ImportError:
+        spec = importlib.machinery.PathFinder.find_spec("rules", [path])
+        if spec is None or spec.loader is None:
             return
-        try:
-            module = imp.load_module("rules", f, path, desc)
-        except Exception:
-            return
-        finally:
-            f.close()
-
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
         self._process_hook_module = module
         try:
             self._process_hook = module.process

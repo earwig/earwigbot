@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2021 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -37,9 +37,10 @@ from earwigbot.wiki.category import Category
 from earwigbot.wiki.page import Page
 from earwigbot.wiki.user import User
 
-oursql = importer.new("oursql")
+pymysql = importer.new("pymysql")
 
 __all__ = ["Site"]
+
 
 class Site:
     """
@@ -80,18 +81,41 @@ class Site:
     - :py:meth:`get_user`:             returns a User object for the given name
     - :py:meth:`delegate`:             controls when the API or SQL is used
     """
+
     SERVICE_API = 1
     SERVICE_SQL = 2
-    SPECIAL_TOKENS = ["createaccount", "deleteglobalaccount", "login",
-                      "patrol", "rollback", "setglobalaccountstatus",
-                      "userrights", "watch"]
+    SPECIAL_TOKENS = [
+        "createaccount",
+        "deleteglobalaccount",
+        "login",
+        "patrol",
+        "rollback",
+        "setglobalaccountstatus",
+        "userrights",
+        "watch",
+    ]
 
-    def __init__(self, name=None, project=None, lang=None, base_url=None,
-                 article_path=None, script_path=None, sql=None,
-                 namespaces=None, login=(None, None), oauth=None,
-                 cookiejar=None, user_agent=None, use_https=True,
-                 assert_edit=None, maxlag=None, wait_between_queries=1,
-                 logger=None, search_config=None):
+    def __init__(
+        self,
+        name=None,
+        project=None,
+        lang=None,
+        base_url=None,
+        article_path=None,
+        script_path=None,
+        sql=None,
+        namespaces=None,
+        login=(None, None),
+        oauth=None,
+        cookiejar=None,
+        user_agent=None,
+        use_https=True,
+        assert_edit=None,
+        maxlag=None,
+        wait_between_queries=1,
+        logger=None,
+        search_config=None,
+    ):
         """Constructor for new Site instances.
 
         This probably isn't necessary to call yourself unless you're building a
@@ -160,8 +184,11 @@ class Site:
         self._session.headers["User-Agent"] = user_agent
         if oauth:
             self._session.auth = OAuth1(
-                oauth["consumer_token"], oauth["consumer_secret"],
-                oauth["access_token"], oauth["access_secret"])
+                oauth["consumer_token"],
+                oauth["consumer_secret"],
+                oauth["access_token"],
+                oauth["access_secret"],
+            )
 
         # Set up our internal logger:
         if logger:
@@ -182,13 +209,24 @@ class Site:
 
     def __repr__(self):
         """Return the canonical string representation of the Site."""
-        res = ", ".join((
-            "Site(name={_name!r}", "project={_project!r}", "lang={_lang!r}",
-            "base_url={_base_url!r}", "article_path={_article_path!r}",
-            "script_path={_script_path!r}", "use_https={_use_https!r}",
-            "assert_edit={_assert_edit!r}", "maxlag={_maxlag!r}",
-            "sql={_sql_data!r}", "login={0}", "oauth={1}", "user_agent={3!r}",
-            "cookiejar={2})"))
+        res = ", ".join(
+            (
+                "Site(name={_name!r}",
+                "project={_project!r}",
+                "lang={_lang!r}",
+                "base_url={_base_url!r}",
+                "article_path={_article_path!r}",
+                "script_path={_script_path!r}",
+                "use_https={_use_https!r}",
+                "assert_edit={_assert_edit!r}",
+                "maxlag={_maxlag!r}",
+                "sql={_sql_data!r}",
+                "login={0}",
+                "oauth={1}",
+                "user_agent={3!r}",
+                "cookiejar={2})",
+            )
+        )
         name, password = self._login_info
         login = "({0}, {1})".format(repr(name), "hidden" if password else None)
         oauth = "hidden" if self._oauth else None
@@ -211,8 +249,15 @@ class Site:
             return value
         return str(value, encoding)
 
-    def _api_query(self, params, tries=0, wait=5, ignore_maxlag=False,
-                   no_assert=False, ae_retry=True):
+    def _api_query(
+        self,
+        params,
+        tries=0,
+        wait=5,
+        ignore_maxlag=False,
+        no_assert=False,
+        ae_retry=True,
+    ):
         """Do an API query with *params* as a dict of parameters.
 
         See the documentation for :py:meth:`api_query` for full implementation
@@ -348,8 +393,14 @@ class Site:
         """
         # All attributes to be loaded, except _namespaces, which is a special
         # case because it requires additional params in the API query:
-        attrs = [self._name, self._project, self._lang, self._base_url,
-                 self._article_path, self._script_path]
+        attrs = [
+            self._name,
+            self._project,
+            self._lang,
+            self._base_url,
+            self._article_path,
+            self._script_path,
+        ]
 
         params = {"action": "query", "meta": "siteinfo", "siprop": "general"}
 
@@ -359,7 +410,7 @@ class Site:
                 result = self._api_query(params, no_assert=True)
             self._load_namespaces(result)
         elif all(attrs):  # Everything is already specified and we're not told
-            return        # to force a reload, so do nothing
+            return  # to force a reload, so do nothing
         else:  # We're only loading attributes other than _namespaces
             with self._api_lock:
                 result = self._api_query(params, no_assert=True)
@@ -424,11 +475,11 @@ class Site:
         (for that, we'd do self._login_info[0]), but rather to get our current
         username without an unnecessary ?action=query&meta=userinfo API query.
         """
-        name = ''.join((self._name, "Token"))
+        name = "".join((self._name, "Token"))
         cookie = self._get_cookie(name, self.domain)
 
         if cookie:
-            name = ''.join((self._name, "UserName"))
+            name = "".join((self._name, "UserName"))
             user_name = self._get_cookie(name, self.domain)
             if user_name:
                 return unquote_plus(user_name.value)
@@ -528,8 +579,12 @@ class Site:
         except KeyError:
             raise exceptions.LoginError("Couldn't get login token")
 
-        params = {"action": "login", "lgname": name, "lgpassword": password,
-                  "lgtoken": token}
+        params = {
+            "action": "login",
+            "lgname": name,
+            "lgpassword": password,
+            "lgtoken": token,
+        }
         with self._api_lock:
             result = self._api_query(params, no_assert=True)
 
@@ -564,18 +619,22 @@ class Site:
     def _sql_connect(self, **kwargs):
         """Attempt to establish a connection with this site's SQL database.
 
-        oursql.connect() will be called with self._sql_data as its kwargs.
+        pymysql.connect() will be called with self._sql_data as its kwargs.
         Any kwargs given to this function will be passed to connect() and will
         have precedence over the config file.
 
-        Will raise SQLError() if the module "oursql" is not available. oursql
-        may raise its own exceptions (e.g. oursql.InterfaceError) if it cannot
+        Will raise SQLError() if the module "pymysql" is not available. pymysql
+        may raise its own exceptions (e.g. pymysql.InterfaceError) if it cannot
         establish a connection.
         """
         args = self._sql_data
         for key, value in kwargs.items():
             args[key] = value
-        if "read_default_file" not in args and "user" not in args and "passwd" not in args:
+        if (
+            "read_default_file" not in args
+            and "user" not in args
+            and "passwd" not in args
+        ):
             args["read_default_file"] = expanduser("~/.my.cnf")
         elif "read_default_file" in args:
             args["read_default_file"] = expanduser(args["read_default_file"])
@@ -585,9 +644,9 @@ class Site:
             args["autoreconnect"] = True
 
         try:
-            self._sql_conn = oursql.connect(**args)
+            self._sql_conn = pymysql.connect(**args)
         except ImportError:
-            e = "SQL querying requires the 'oursql' package: https://pythonhosted.org/oursql/"
+            e = "SQL querying requires the 'pymysql' package: https://pymysql.readthedocs.io/"
             raise exceptions.SQLError(e)
 
     def _get_service_order(self):
@@ -608,8 +667,11 @@ class Site:
         if now - self._sql_info_cache["lastcheck"] > 120:
             self._sql_info_cache["lastcheck"] = now
             try:
-                self._sql_info_cache["replag"] = sqllag = self.get_replag()
-            except (exceptions.SQLError, oursql.Error):
+                try:
+                    self._sql_info_cache["replag"] = sqllag = self.get_replag()
+                except pymysql.Error as exc:
+                    raise exceptions.SQLError(str(exc))
+            except (exceptions.SQLError, ImportError):
                 self._sql_info_cache["usable"] = False
                 return [self.SERVICE_API]
             self._sql_info_cache["usable"] = True
@@ -705,24 +767,31 @@ class Site:
         with self._api_lock:
             return self._api_query(kwargs)
 
-    def sql_query(self, query, params=(), plain_query=False, dict_cursor=False,
-                  cursor_class=None, show_table=False, buffsize=1024):
+    def sql_query(
+        self,
+        query,
+        params=(),
+        plain_query=False,
+        dict_cursor=False,
+        cursor_class=None,
+        buffsize=1024,
+    ):
         """Do an SQL query and yield its results.
 
         If *plain_query* is ``True``, we will force an unparameterized query.
         Specifying both *params* and *plain_query* will cause an error. If
-        *dict_cursor* is ``True``, we will use :py:class:`oursql.DictCursor` as
-        our cursor, otherwise the default :py:class:`oursql.Cursor`. If
-        *cursor_class* is given, it will override this option. If *show_table*
-        is True, the name of the table will be prepended to the name of the
-        column. This will mainly affect an :py:class:`~oursql.DictCursor`.
+        *dict_cursor* is ``True``, we will use
+        :py:class:`pymysql.cursors.DictCursor` as our cursor, otherwise the
+        default :py:class:`pymysql.cursors.Cursor`. If *cursor_class* is given,
+        it will override this option.
 
         *buffsize* is the size of each memory-buffered group of results, to
         reduce the number of conversations with the database; it is passed to
-        :py:meth:`cursor.fetchmany() <oursql.Cursor.fetchmany>`. If set to
-        ``0```, all results will be buffered in memory at once (this uses
-        :py:meth:`fetchall() <oursql.Cursor.fetchall>`). If set to ``1``, it is
-        equivalent to using :py:meth:`fetchone() <oursql.Cursor.fetchone>`.
+        :py:meth:`cursor.fetchmany() <pymysql.cursors.Cursor.fetchmany>`. If
+        set to ``0```, all results will be buffered in memory at once (this
+        uses :py:meth:`fetchall() <pymysql.cursors.Cursor.fetchall>`). If set
+        to ``1``, it is equivalent to using
+        :py:meth:`fetchone() <pymysql.cursors.Cursor.fetchone>`.
 
         Example usage::
 
@@ -736,25 +805,25 @@ class Site:
             {'user_id': 7418060L, 'user_registration': '20080703215134'}
 
         This may raise :py:exc:`~earwigbot.exceptions.SQLError` or one of
-        oursql's exceptions (:py:exc:`oursql.ProgrammingError`,
-        :py:exc:`oursql.InterfaceError`, ...) if there were problems with the
+        pymysql's exceptions (:py:exc:`pymysql.ProgrammingError`,
+        :py:exc:`pymysql.InterfaceError`, ...) if there were problems with the
         query.
 
         See :py:meth:`_sql_connect` for information on how a connection is
-        acquired. Also relevant is `oursql's documentation
-        <https://pythonhosted.org/oursql/>`_ for details on that package.
+        acquired. Also relevant is `pymysql's documentation
+        <https://pymysql.readthedocs.io/>`_ for details on that package.
         """
         if not cursor_class:
             if dict_cursor:
-                cursor_class = oursql.DictCursor
+                cursor_class = pymysql.cursors.DictCursor
             else:
-                cursor_class = oursql.Cursor
+                cursor_class = pymysql.cursors.Cursor
         klass = cursor_class
 
         with self._sql_lock:
             if not self._sql_conn:
                 self._sql_connect()
-            with self._sql_conn.cursor(klass, show_table=show_table) as cur:
+            with self._sql_conn.cursor(klass) as cur:
                 cur.execute(query, params, plain_query)
                 if buffsize:
                     while True:
@@ -798,8 +867,8 @@ class Site:
         time from the timestamp of the latest recent changes event.
 
         This may raise :py:exc:`~earwigbot.exceptions.SQLError` or one of
-        oursql's exceptions (:py:exc:`oursql.ProgrammingError`,
-        :py:exc:`oursql.InterfaceError`, ...) if there were problems.
+        pymysql's exceptions (:py:exc:`pymysql.ProgrammingError`,
+        :py:exc:`pymysql.InterfaceError`, ...) if there were problems.
         """
         query = """SELECT UNIX_TIMESTAMP() - UNIX_TIMESTAMP(rc_timestamp) FROM
                    recentchanges ORDER BY rc_timestamp DESC LIMIT 1"""
@@ -886,8 +955,7 @@ class Site:
         prefix = title.split(":", 1)[0]
         if prefix != title:  # Avoid a page that is simply "Category"
             if prefix in prefixes:
-                return Category(self, title, follow_redirects, pageid,
-                                self._logger)
+                return Category(self, title, follow_redirects, pageid, self._logger)
         return Page(self, title, follow_redirects, pageid, self._logger)
 
     def get_category(self, catname, follow_redirects=False, pageid=None):
@@ -899,7 +967,7 @@ class Site:
         """
         catname = self._unicodeify(catname)
         prefix = self.namespace_id_to_name(constants.NS_CATEGORY)
-        pagename = ':'.join((prefix, catname))
+        pagename = ":".join((prefix, catname))
         return Category(self, pagename, follow_redirects, pageid, self._logger)
 
     def get_user(self, username=None):

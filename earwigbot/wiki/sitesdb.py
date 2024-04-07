@@ -1,6 +1,6 @@
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2021 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -34,6 +34,7 @@ from earwigbot.wiki.copyvios.exclusions import ExclusionsDB
 from earwigbot.wiki.site import Site
 
 __all__ = ["SitesDB"]
+
 
 class SitesDB:
     """
@@ -106,7 +107,7 @@ class SitesDB:
                 # Create the file and restrict reading/writing only to the
                 # owner, so others can't peak at our cookies:
                 open(self._cookie_file, "w").close()
-                chmod(self._cookie_file, stat.S_IRUSR|stat.S_IWUSR)
+                chmod(self._cookie_file, stat.S_IRUSR | stat.S_IWUSR)
             else:
                 raise
 
@@ -172,8 +173,16 @@ class SitesDB:
             except KeyError:
                 namespaces[ns_id] = [ns_name]
 
-        return (name, project, lang, base_url, article_path, script_path, sql,
-                namespaces)
+        return (
+            name,
+            project,
+            lang,
+            base_url,
+            article_path,
+            script_path,
+            sql,
+            namespaces,
+        )
 
     def _make_site_object(self, name):
         """Return a Site object associated with the site *name* in our sitesdb.
@@ -182,8 +191,9 @@ class SitesDB:
         raised if the site is not in our sitesdb.
         """
         cookiejar = self._get_cookiejar()
-        (name, project, lang, base_url, article_path, script_path, sql,
-         namespaces) = self._load_site_from_sitesdb(name)
+        (name, project, lang, base_url, article_path, script_path, sql, namespaces) = (
+            self._load_site_from_sitesdb(name)
+        )
 
         config = self.config
         login = (config.wiki.get("username"), config.wiki.get("password"))
@@ -211,13 +221,26 @@ class SitesDB:
                 if isinstance(value, str) and "$1" in value:
                     sql[key] = value.replace("$1", name)
 
-        return Site(name=name, project=project, lang=lang, base_url=base_url,
-                    article_path=article_path, script_path=script_path,
-                    sql=sql, namespaces=namespaces, login=login, oauth=oauth,
-                    cookiejar=cookiejar, user_agent=user_agent,
-                    use_https=use_https, assert_edit=assert_edit,
-                    maxlag=maxlag, wait_between_queries=wait_between_queries,
-                    logger=logger, search_config=search_config)
+        return Site(
+            name=name,
+            project=project,
+            lang=lang,
+            base_url=base_url,
+            article_path=article_path,
+            script_path=script_path,
+            sql=sql,
+            namespaces=namespaces,
+            login=login,
+            oauth=oauth,
+            cookiejar=cookiejar,
+            user_agent=user_agent,
+            use_https=use_https,
+            assert_edit=assert_edit,
+            maxlag=maxlag,
+            wait_between_queries=wait_between_queries,
+            logger=logger,
+            search_config=search_config,
+        )
 
     def _get_site_name_from_sitesdb(self, project, lang):
         """Return the name of the first site with the given project and lang.
@@ -255,8 +278,14 @@ class SitesDB:
         database. If the sitesdb doesn't exist, we'll create it first.
         """
         name = site.name
-        sites_data = (name, site.project, site.lang, site._base_url,
-                      site._article_path, site._script_path)
+        sites_data = (
+            name,
+            site.project,
+            site.lang,
+            site._base_url,
+            site._article_path,
+            site._script_path,
+        )
         sql_data = [(name, key, val) for key, val in site._sql_data.items()]
         ns_data = []
         for ns_id, ns_names in site._namespaces.items():
@@ -353,8 +382,9 @@ class SitesDB:
         e = "Site '{0}:{1}' not found in the sitesdb.".format(project, lang)
         raise SiteNotFoundError(e)
 
-    def add_site(self, project=None, lang=None, base_url=None,
-                 script_path="/w", sql=None):
+    def add_site(
+        self, project=None, lang=None, base_url=None, script_path="/w", sql=None
+    ):
         """Add a site to the sitesdb so it can be retrieved with get_site().
 
         If only a project and a lang are given, we'll guess the *base_url* as
@@ -368,8 +398,8 @@ class SitesDB:
         your wiki is different, provide the script_path as an argument. SQL
         connection settings are guessed automatically using config's template
         value. If this is wrong or not specified, provide a dict of kwargs as
-        *sql* and Site will pass it to :py:func:`oursql.connect(**sql)
-        <oursql.connect>`, allowing you to make queries with
+        *sql* and Site will pass it to :py:func:`pymysql.connect(**sql)
+        <pymysql.connect>`, allowing you to make queries with
         :py:meth:`site.sql_query <earwigbot.wiki.site.Site.sql_query>`.
 
         Returns ``True`` if the site was added successfully or ``False`` if the
@@ -399,11 +429,19 @@ class SitesDB:
             user_agent = user_agent.replace("$2", python_version())
 
         # Create a Site object to log in and load the other attributes:
-        site = Site(base_url=base_url, script_path=script_path, sql=sql,
-                    login=login, oauth=oauth, cookiejar=cookiejar,
-                    user_agent=user_agent, use_https=use_https,
-                    assert_edit=assert_edit, maxlag=maxlag,
-                    wait_between_queries=wait_between_queries)
+        site = Site(
+            base_url=base_url,
+            script_path=script_path,
+            sql=sql,
+            login=login,
+            oauth=oauth,
+            cookiejar=cookiejar,
+            user_agent=user_agent,
+            use_https=use_https,
+            assert_edit=assert_edit,
+            maxlag=maxlag,
+            wait_between_queries=wait_between_queries,
+        )
 
         self._logger.info("Added site '{0}'".format(site.name))
         self._add_site_to_sitesdb(site)

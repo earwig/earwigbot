@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import imp
+import importlib.machinery
+import importlib.util
 from os import listdir, path
 from re import sub
 from threading import RLock, Thread
@@ -31,6 +32,7 @@ from earwigbot.commands import Command
 from earwigbot.tasks import Task
 
 __all__ = ["CommandManager", "TaskManager"]
+
 
 class _ResourceManager:
     """
@@ -48,6 +50,7 @@ class _ResourceManager:
     :py:meth:`load`, retrieving specific resources via :py:meth:`get`, and
     iterating over all resources via :py:meth:`__iter__`.
     """
+
     def __init__(self, bot, name, base):
         self.bot = bot
         self.logger = bot.logger.getChild(name)
@@ -60,8 +63,9 @@ class _ResourceManager:
     def __repr__(self):
         """Return the canonical string representation of the manager."""
         res = "{0}(bot={1!r}, name={2!r}, base={3!r})"
-        return res.format(self.__class__.__name__, self.bot,
-                          self._resource_name, self._resource_base)
+        return res.format(
+            self.__class__.__name__, self.bot, self._resource_name, self._resource_base
+        )
 
     def __str__(self):
         """Return a nice string representation of the manager."""
@@ -100,22 +104,22 @@ class _ResourceManager:
     def _load_module(self, name, path):
         """Load a specific resource from a module, identified by name and path.
 
-        We'll first try to import it using imp magic, and if that works, make
-        instances of any classes inside that are subclasses of the base
+        We'll first try to import it using importlib magic, and if that works,
+        make instances of any classes inside that are subclasses of the base
         (:py:attr:`self._resource_base <_resource_base>`), add them to the
         resources dictionary with :py:meth:`self._load_resource()
         <_load_resource>`, and finally log the addition. Any problems along
         the way will either be ignored or logged.
         """
-        f, path, desc = imp.find_module(name, [path])
+        spec = importlib.machinery.PathFinder.find_spec(name, [path])
         try:
-            module = imp.load_module(name, f, path, desc)
+            assert spec is not None, "Spec must not be None"
+            assert spec.loader is not None, "Loader must not be None"
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
         except Exception:
-            e = "Couldn't load module '{0}' (from {1})"
-            self.logger.exception(e.format(name, path))
+            self.logger.exception(f"Couldn't load module {name!r} (from {path})")
             return
-        finally:
-            f.close()
 
         for obj in vars(module).values():
             if type(obj) is type:
@@ -132,7 +136,7 @@ class _ResourceManager:
                 continue
             if name.startswith("_") or name.startswith("."):
                 continue
-            modname = sub("\.pyc?$", "", name)  # Remove extension
+            modname = sub(r"\.pyc?$", "", name)  # Remove extension
             if modname in processed:
                 continue
             processed.append(modname)
@@ -200,6 +204,7 @@ class CommandManager(_ResourceManager):
     """
     Manages (i.e., loads, reloads, and calls) IRC commands.
     """
+
     def __init__(self, bot):
         super().__init__(bot, "commands", Command)
 
@@ -234,8 +239,7 @@ class CommandManager(_ResourceManager):
 
         for command in self:
             if hook in command.hooks and self._wrap_check(command, data):
-                thread = Thread(target=self._wrap_process,
-                                args=(command, data))
+                thread = Thread(target=self._wrap_process, args=(command, data))
                 start_time = strftime("%b %d %H:%M:%S")
                 thread.name = "irc:{0} ({1})".format(command.name, start_time)
                 thread.daemon = True
@@ -247,6 +251,7 @@ class TaskManager(_ResourceManager):
     """
     Manages (i.e., loads, reloads, schedules, and runs) wiki bot tasks.
     """
+
     def __init__(self, bot):
         super().__init__(bot, "tasks", Task)
 
@@ -292,11 +297,12 @@ class TaskManager(_ResourceManager):
         if not now:
             now = gmtime()
         # Get list of tasks to run this turn:
-        tasks = self.bot.config.schedule(now.tm_min, now.tm_hour, now.tm_mday,
-                                         now.tm_mon, now.tm_wday)
+        tasks = self.bot.config.schedule(
+            now.tm_min, now.tm_hour, now.tm_mday, now.tm_mon, now.tm_wday
+        )
 
         for task in tasks:
-            if isinstance(task, list):          # They've specified kwargs,
+            if isinstance(task, list):  # They've specified kwargs,
                 self.start(task[0], **task[1])  # so pass those to start
             else:  # Otherwise, just pass task_name
                 self.start(task)

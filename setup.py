@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8  -*-
 #
-# Copyright (C) 2009-2021 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -37,11 +37,11 @@ extra_deps = {
         "cryptography >= 3.4.7",  # Storing bot passwords + keys in the config file
     ],
     "sql": [
-        "oursql3 >= 0.9.4",  # Interfacing with MediaWiki databases
+        "pymysql >= 1.1.0",  # Interfacing with MediaWiki databases
     ],
     "copyvios": [
         "beautifulsoup4 >= 4.9.3",  # Parsing/scraping HTML
-        "cchardet >= 2.1.7",  # Encoding detection for BeautifulSoup
+        "charset_normalizer >= 3.3.2",  # Encoding detection for BeautifulSoup
         "lxml >= 4.6.3",  # Faster parser for BeautifulSoup
         "nltk >= 3.6.1",  # Parsing sentences to split article content
         "pdfminer >= 20191125",  # Extracting text from PDF files
@@ -58,21 +58,21 @@ with open("README.rst") as fp:
     long_docs = fp.read()
 
 setup(
-    name = "earwigbot",
-    packages = find_packages(exclude=("tests",)),
-    entry_points = {"console_scripts": ["earwigbot = earwigbot.util:main"]},
-    install_requires = dependencies,
-    test_suite = "tests",
-    version = __version__,
-    author = "Ben Kurtovic",
-    author_email = "ben.kurtovic@gmail.com",
-    url = "https://github.com/earwig/earwigbot",
-    description = "EarwigBot is a Python robot that edits Wikipedia and interacts with people over IRC.",
-    long_description = long_docs,
-    download_url = "https://github.com/earwig/earwigbot/tarball/v{0}".format(__version__),
-    keywords = "earwig earwigbot irc wikipedia wiki mediawiki",
-    license = "MIT License",
-    classifiers = [
+    name="earwigbot",
+    packages=find_packages(exclude=("tests",)),
+    entry_points={"console_scripts": ["earwigbot = earwigbot.util:main"]},
+    install_requires=dependencies,
+    test_suite="tests",
+    version=__version__,
+    author="Ben Kurtovic",
+    author_email="ben.kurtovic@gmail.com",
+    url="https://github.com/earwig/earwigbot",
+    description="EarwigBot is a Python robot that edits Wikipedia and interacts with people over IRC.",
+    long_description=long_docs,
+    download_url="https://github.com/earwig/earwigbot/tarball/v{0}".format(__version__),
+    keywords="earwig earwigbot irc wikipedia wiki mediawiki",
+    license="MIT License",
+    classifiers=[
         "Development Status :: 3 - Alpha",
         "Environment :: Console",
         "Intended Audience :: Developers",
@@ -81,6 +81,6 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
         "Topic :: Communications :: Chat :: Internet Relay Chat",
-        "Topic :: Internet :: WWW/HTTP"
+        "Topic :: Internet :: WWW/HTTP",
     ],
 )
