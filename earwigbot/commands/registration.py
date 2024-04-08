@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,8 +24,10 @@ from time import mktime
 from earwigbot import exceptions
 from earwigbot.commands import Command
 
+
 class Registration(Command):
     """Return when a user registered."""
+
     name = "registration"
     commands = ["registration", "reg", "age"]
 
@@ -35,7 +35,7 @@ class Registration(Command):
         if not data.args:
             name = data.nick
         else:
-            name = ' '.join(data.args)
+            name = " ".join(data.args)
 
         site = self.bot.wiki.get_site()
         user = site.get_user(name)
@@ -43,7 +43,7 @@ class Registration(Command):
         try:
             reg = user.registration
         except exceptions.UserNotFoundError:
-            msg = "The user \x0302{0}\x0F does not exist."
+            msg = "The user \x0302{0}\x0f does not exist."
             self.reply(data, msg.format(name))
             return
 
@@ -58,15 +58,16 @@ class Registration(Command):
         else:
             gender = "They're"  # Singular they?
 
-        msg = "\x0302{0}\x0F registered on {1}. {2} {3} old."
+        msg = "\x0302{0}\x0f registered on {1}. {2} {3} old."
         self.reply(data, msg.format(name, date, gender, age))
 
     def get_age(self, birth):
         msg = []
+
         def insert(unit, num):
             if not num:
                 return
-            msg.append("{0} {1}".format(num, unit if num == 1 else unit + "s"))
+            msg.append("{} {}".format(num, unit if num == 1 else unit + "s"))
 
         now = datetime.utcnow()
         bd_passed = now.timetuple()[1:-3] < birth.timetuple()[1:-3]

@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2021 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,9 +20,10 @@
 
 from time import sleep
 
-from earwigbot.irc import IRCConnection, Data
+from earwigbot.irc import Data, IRCConnection
 
 __all__ = ["Frontend"]
+
 
 class Frontend(IRCConnection):
     """
@@ -38,13 +37,20 @@ class Frontend(IRCConnection):
     :py:mod:`earwigbot.commands` or the bot's custom command directory
     (explained in the :doc:`documentation </customizing>`).
     """
+
     NICK_SERVICES = "NickServ"
 
     def __init__(self, bot):
         self.bot = bot
         cf = bot.config.irc["frontend"]
-        super().__init__(cf["host"], cf["port"], cf["nick"], cf["ident"],
-                         cf["realname"], bot.logger.getChild("frontend"))
+        super().__init__(
+            cf["host"],
+            cf["port"],
+            cf["nick"],
+            cf["ident"],
+            cf["realname"],
+            bot.logger.getChild("frontend"),
+        )
 
         self._auth_wait = False
         self._channels = set()
@@ -53,8 +59,9 @@ class Frontend(IRCConnection):
     def __repr__(self):
         """Return the canonical string representation of the Frontend."""
         res = "Frontend(host={0!r}, port={1!r}, nick={2!r}, ident={3!r}, realname={4!r}, bot={5!r})"
-        return res.format(self.host, self.port, self.nick, self.ident,
-                          self.realname, self.bot)
+        return res.format(
+            self.host, self.port, self.nick, self.ident, self.realname, self.bot
+        )
 
     def __str__(self):
         """Return a nice string representation of the Frontend."""
@@ -133,7 +140,7 @@ class Frontend(IRCConnection):
                 self._join_channels()
             else:
                 self.logger.debug("Identifying with services")
-                msg = "IDENTIFY {0} {1}".format(username, password)
+                msg = f"IDENTIFY {username} {password}"
                 self.say(self.NICK_SERVICES, msg, hidelog=True)
                 self._auth_wait = True
 

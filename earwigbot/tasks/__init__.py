@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,9 +19,9 @@
 # SOFTWARE.
 
 from earwigbot import exceptions
-from earwigbot import wiki
 
 __all__ = ["Task"]
+
 
 class Task:
     """
@@ -39,6 +37,7 @@ class Task:
     <earwigbot.managers.TaskManager.start>`. ``**kwargs`` get passed to the
     Task's :meth:`run` method.
     """
+
     name = None
     number = 0
 

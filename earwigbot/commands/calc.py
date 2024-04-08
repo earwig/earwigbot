@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,14 +19,16 @@
 # SOFTWARE.
 
 import re
-import urllib.request
 import urllib.parse
+import urllib.request
 
 from earwigbot.commands import Command
+
 
 class Calc(Command):
     """A somewhat advanced calculator: see https://futureboy.us/fsp/frink.fsp
     for details."""
+
     name = "calc"
 
     def process(self, data):
@@ -36,15 +36,15 @@ class Calc(Command):
             self.reply(data, "What do you want me to calculate?")
             return
 
-        query = ' '.join(data.args)
+        query = " ".join(data.args)
         query = self.cleanup(query)
 
         url = "https://futureboy.us/fsp/frink.fsp?fromVal={0}"
         url = url.format(urllib.parse.quote(query))
         result = urllib.request.urlopen(url).read().decode()
 
-        r_result = re.compile(r'(?i)<A NAME=results>(.*?)</A>')
-        r_tag = re.compile(r'<\S+.*?>')
+        r_result = re.compile(r"(?i)<A NAME=results>(.*?)</A>")
+        r_tag = re.compile(r"<\S+.*?>")
 
         match = r_result.search(result)
         if not match:
@@ -52,32 +52,32 @@ class Calc(Command):
             return
 
         result = match.group(1)
-        result = r_tag.sub("", result) # strip span.warning tags
+        result = r_tag.sub("", result)  # strip span.warning tags
         result = result.replace("&gt;", ">")
         result = result.replace("(undefined symbol)", "(?) ")
         result = result.strip()
 
         if not result:
-            result = '?'
+            result = "?"
         elif " in " in query:
             result += " " + query.split(" in ", 1)[1]
 
-        res = "%s = %s" % (query, result)
+        res = f"{query} = {result}"
         self.reply(data, res)
 
     @staticmethod
     def cleanup(query):
         fixes = [
-            (' in ', ' -> '),
-            (' over ', ' / '),
-            ('¬£', 'GBP '),
-            ('‚Ç¨', 'EUR '),
-            (r'\$', 'USD '),
-            (r'\bKB\b', 'kilobytes'),
-            (r'\bMB\b', 'megabytes'),
-            (r'\bGB\b', 'gigabytes'),
-            ('kbps', '(kilobits / second)'),
-            ('mbps', '(megabits / second)')
+            (" in ", " -> "),
+            (" over ", " / "),
+            ("¬£", "GBP "),
+            ("‚Ç¨", "EUR "),
+            (r"\$", "USD "),
+            (r"\bKB\b", "kilobytes"),
+            (r"\bMB\b", "megabytes"),
+            (r"\bGB\b", "gigabytes"),
+            ("kbps", "(kilobits / second)"),
+            ("mbps", "(megabits / second)"),
         ]
 
         for original, fix in fixes:

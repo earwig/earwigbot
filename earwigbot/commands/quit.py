@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,9 +20,11 @@
 
 from earwigbot.commands import Command
 
+
 class Quit(Command):
     """Quit, restart, or reload components from the bot. Only the owners can
     run this command."""
+
     name = "quit"
     commands = ["quit", "restart", "reload"]
 
@@ -45,24 +45,26 @@ class Quit(Command):
             reason = " ".join(args)
         else:
             if not args or args[0].lower() != data.my_nick:
-                self.reply(data, "To confirm this action, the first argument must be my name.")
+                self.reply(
+                    data, "To confirm this action, the first argument must be my name."
+                )
                 return
             reason = " ".join(args[1:])
 
         if reason:
-            self.bot.stop("Stopped by {0}: {1}".format(data.nick, reason))
+            self.bot.stop(f"Stopped by {data.nick}: {reason}")
         else:
-            self.bot.stop("Stopped by {0}".format(data.nick))
+            self.bot.stop(f"Stopped by {data.nick}")
 
     def do_restart(self, data):
         if data.args:
             msg = " ".join(data.args)
-            self.bot.restart("Restarted by {0}: {1}".format(data.nick, msg))
+            self.bot.restart(f"Restarted by {data.nick}: {msg}")
         else:
-            self.bot.restart("Restarted by {0}".format(data.nick))
+            self.bot.restart(f"Restarted by {data.nick}")
 
     def do_reload(self, data):
-        self.logger.info("{0} requested command/task reload".format(data.nick))
+        self.logger.info(f"{data.nick} requested command/task reload")
         self.bot.commands.load()
         self.bot.tasks.load()
         self.reply(data, "IRC commands and bot tasks reloaded.")

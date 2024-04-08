@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,8 +23,10 @@ import re
 from earwigbot import exceptions
 from earwigbot.commands import Command
 
+
 class Dictionary(Command):
     """Define words and stuff."""
+
     name = "dictionary"
     commands = ["dict", "dictionary", "define", "def"]
 
@@ -63,7 +63,7 @@ class Dictionary(Command):
 
         level, languages = self.get_languages(entry)
         if not languages:
-            return "Couldn't parse {0}!".format(page.url)
+            return f"Couldn't parse {page.url}!"
 
         if "#" in term:  # Requesting a specific language
             lcase_langs = {lang.lower(): lang for lang in languages}
@@ -73,12 +73,12 @@ class Dictionary(Command):
                 resp = "Language {0} not found in definition."
                 return resp.format(request)
             definition = self.get_definition(languages[lang], level)
-            return "({0}) {1}".format(lang, definition)
+            return f"({lang}) {definition}"
 
         result = []
         for lang, section in sorted(languages.items()):
             definition = self.get_definition(section, level)
-            result.append("({0}) {1}".format(lang, definition))
+            result.append(f"({lang}) {definition}")
         return "; ".join(result)
 
     def get_languages(self, entry, level=2):
@@ -119,19 +119,22 @@ class Dictionary(Command):
         blocks = "=" * (level + 1)
         defs = []
         for part, basename in parts_of_speech.items():
-            fullnames = [basename, r"\{\{" + basename + r"\}\}",
-                         r"\{\{" + basename.lower() + r"\}\}"]
+            fullnames = [
+                basename,
+                r"\{\{" + basename + r"\}\}",
+                r"\{\{" + basename.lower() + r"\}\}",
+            ]
             for fullname in fullnames:
                 regex = blocks + r"\s*" + fullname + r"\s*" + blocks
                 if re.search(regex, section):
                     regex = blocks + r"\s*" + fullname
-                    regex += r"\s*{0}(.*?)(?:(?:{0})|\Z)".format(blocks)
+                    regex += rf"\s*{blocks}(.*?)(?:(?:{blocks})|\Z)"
                     bodies = re.findall(regex, section, re.DOTALL)
                     if bodies:
                         for body in bodies:
                             definition = self.parse_body(body)
                             if definition:
-                                msg = "\x02{0}\x0F {1}"
+                                msg = "\x02{0}\x0f {1}"
                                 defs.append(msg.format(part, definition))
 
         return "; ".join(defs)
@@ -167,7 +170,7 @@ class Dictionary(Command):
 
         result = []  # Number the senses incrementally
         for i, sense in enumerate(senses):
-            result.append("{0}. {1}".format(i + 1, sense))
+            result.append(f"{i + 1}. {sense}")
         return " ".join(result)
 
     def strip_templates(self, line):

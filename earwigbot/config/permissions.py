@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,11 +18,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from fnmatch import fnmatch
 import sqlite3 as sqlite
+from fnmatch import fnmatch
 from threading import Lock
 
 __all__ = ["PermissionsDB"]
+
 
 class PermissionsDB:
     """
@@ -33,6 +32,7 @@ class PermissionsDB:
     Controls the :file:`permissions.db` file, which stores the bot's owners and
     admins for the purposes of using certain dangerous IRC commands.
     """
+
     ADMIN = 1
     OWNER = 2
 
@@ -49,7 +49,7 @@ class PermissionsDB:
 
     def __str__(self):
         """Return a nice string representation of the PermissionsDB."""
-        return "<PermissionsDB at {0}>".format(self._dbfile)
+        return f"<PermissionsDB at {self._dbfile}>"
 
     def _create(self, conn):
         """Initialize the permissions database with its necessary tables."""
@@ -198,8 +198,10 @@ class PermissionsDB:
         with self._db_access_lock, sqlite.connect(self._dbfile) as conn:
             conn.execute(query, (user, key))
 
+
 class User:
     """A class that represents an IRC user for the purpose of testing rules."""
+
     def __init__(self, nick, ident, host):
         self.nick = nick
         self.ident = ident
@@ -212,7 +214,7 @@ class User:
 
     def __str__(self):
         """Return a nice string representation of the User."""
-        return "{0}!{1}@{2}".format(self.nick, self.ident, self.host)
+        return f"{self.nick}!{self.ident}@{self.host}"
 
     def __contains__(self, user):
         if fnmatch(user.nick, self.nick):

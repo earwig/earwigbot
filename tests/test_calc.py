@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,8 +23,8 @@ import unittest
 from earwigbot.commands.calc import Command
 from tests import CommandTestCase
 
-class TestCalc(CommandTestCase):
 
+class TestCalc(CommandTestCase):
     def setUp(self):
         super().setUp(Command)
 
@@ -54,6 +52,7 @@ class TestCalc(CommandTestCase):
             q = test[0].strip().split()
             self.command.process(self.make_msg("calc", *q))
             self.assertReply(test[1])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

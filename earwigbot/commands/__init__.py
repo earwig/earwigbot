@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,6 +20,7 @@
 
 __all__ = ["Command"]
 
+
 class Command:
     """
     **EarwigBot: Base IRC Command**
@@ -36,6 +35,7 @@ class Command:
     This docstring is reported to the user when they type ``"!help
     <command>"``.
     """
+
     # The command's name, as reported to the user when they use !help:
     name = None
 
@@ -62,15 +62,31 @@ class Command:
         self.logger = bot.commands.logger.getChild(self.name)
 
         # Convenience functions:
-        self.say = lambda target, msg, hidelog=False: self.bot.frontend.say(target, msg, hidelog)
-        self.reply = lambda data, msg, hidelog=False: self.bot.frontend.reply(data, msg, hidelog)
-        self.action = lambda target, msg, hidelog=False: self.bot.frontend.action(target, msg, hidelog)
-        self.notice = lambda target, msg, hidelog=False: self.bot.frontend.notice(target, msg, hidelog)
+        self.say = lambda target, msg, hidelog=False: self.bot.frontend.say(
+            target, msg, hidelog
+        )
+        self.reply = lambda data, msg, hidelog=False: self.bot.frontend.reply(
+            data, msg, hidelog
+        )
+        self.action = lambda target, msg, hidelog=False: self.bot.frontend.action(
+            target, msg, hidelog
+        )
+        self.notice = lambda target, msg, hidelog=False: self.bot.frontend.notice(
+            target, msg, hidelog
+        )
         self.join = lambda chan, hidelog=False: self.bot.frontend.join(chan, hidelog)
-        self.part = lambda chan, msg=None, hidelog=False: self.bot.frontend.part(chan, msg, hidelog)
-        self.mode = lambda t, level, msg, hidelog=False: self.bot.frontend.mode(t, level, msg, hidelog)
-        self.ping = lambda target, hidelog=False: self.bot.frontend.ping(target, hidelog)
-        self.pong = lambda target, hidelog=False: self.bot.frontend.pong(target, hidelog)
+        self.part = lambda chan, msg=None, hidelog=False: self.bot.frontend.part(
+            chan, msg, hidelog
+        )
+        self.mode = lambda t, level, msg, hidelog=False: self.bot.frontend.mode(
+            t, level, msg, hidelog
+        )
+        self.ping = lambda target, hidelog=False: self.bot.frontend.ping(
+            target, hidelog
+        )
+        self.pong = lambda target, hidelog=False: self.bot.frontend.pong(
+            target, hidelog
+        )
 
         self.setup()
 
@@ -81,7 +97,7 @@ class Command:
 
     def __str__(self):
         """Return a nice string representation of the Command."""
-        return "<Command {0} of {1}>".format(self.name, self.bot)
+        return f"<Command {self.name} of {self.bot}>"
 
     def setup(self):
         """Hook called immediately after the command is loaded.

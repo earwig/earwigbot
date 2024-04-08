@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2019 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,9 +18,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from hashlib import md5
-from logging import getLogger, NullHandler
 import re
+from hashlib import md5
+from logging import NullHandler, getLogger
 from time import gmtime, strftime
 from urllib.parse import quote
 
@@ -32,6 +30,7 @@ from earwigbot import exceptions
 from earwigbot.wiki.copyvios import CopyvioMixIn
 
 __all__ = ["Page"]
+
 
 class Page(CopyvioMixIn):
     """
@@ -75,13 +74,13 @@ class Page(CopyvioMixIn):
     - :py:meth:`~earwigbot.wiki.copyvios.CopyrightMixIn.copyvio_compare`:
       checks the page like :py:meth:`copyvio_check`, but against a specific URL
     """
+
     PAGE_UNKNOWN = 0
     PAGE_INVALID = 1
     PAGE_MISSING = 2
     PAGE_EXISTS = 3
 
-    def __init__(self, site, title, follow_redirects=False, pageid=None,
-                 logger=None):
+    def __init__(self, site, title, follow_redirects=False, pageid=None, logger=None):
         """Constructor for new Page instances.
 
         Takes four arguments: a Site object, the Page's title (or pagename),
@@ -145,7 +144,7 @@ class Page(CopyvioMixIn):
 
     def __str__(self):
         """Return a nice string representation of the Page."""
-        return '<Page "{0}" of {1}>'.format(self.title, str(self.site))
+        return f'<Page "{self.title}" of {str(self.site)}>'
 
     def _assert_validity(self):
         """Used to ensure that our page's title is valid.
@@ -157,7 +156,7 @@ class Page(CopyvioMixIn):
         contains "[") it will always be invalid, and cannot be edited.
         """
         if self._exists == self.PAGE_INVALID:
-            e = "Page '{0}' is invalid.".format(self._title)
+            e = f"Page '{self._title}' is invalid."
             raise exceptions.InvalidPageError(e)
 
     def _assert_existence(self):
@@ -169,7 +168,7 @@ class Page(CopyvioMixIn):
         """
         self._assert_validity()
         if self._exists == self.PAGE_MISSING:
-            e = "Page '{0}' does not exist.".format(self._title)
+            e = f"Page '{self._title}' does not exist."
             raise exceptions.PageNotFoundError(e)
 
     def _load(self):
@@ -208,9 +207,15 @@ class Page(CopyvioMixIn):
         """
         if not result:
             query = self.site.api_query
-            result = query(action="query", prop="info|revisions",
-                           inprop="protection|url", rvprop="user", rvlimit=1,
-                           rvdir="newer", titles=self._title)
+            result = query(
+                action="query",
+                prop="info|revisions",
+                inprop="protection|url",
+                rvprop="user",
+                rvlimit=1,
+                rvdir="newer",
+                titles=self._title,
+            )
 
         if "interwiki" in result["query"]:
             self._title = result["query"]["interwiki"][0]["title"]
@@ -247,7 +252,7 @@ class Page(CopyvioMixIn):
         # These last two fields will only be specified if the page exists:
         self._lastrevid = res.get("lastrevid")
         try:
-            self._creator = res['revisions'][0]['user']
+            self._creator = res["revisions"][0]["user"]
         except KeyError:
             pass
 
@@ -263,9 +268,14 @@ class Page(CopyvioMixIn):
         """
         if not result:
             query = self.site.api_query
-            result = query(action="query", prop="revisions", rvlimit=1,
-                           rvprop="content|timestamp", rvslots="main",
-                           titles=self._title)
+            result = query(
+                action="query",
+                prop="revisions",
+                rvlimit=1,
+                rvprop="content|timestamp",
+                rvslots="main",
+                titles=self._title,
+            )
 
         res = list(result["query"]["pages"].values())[0]
         try:
@@ -279,8 +289,19 @@ class Page(CopyvioMixIn):
             self._load_attributes()
             self._assert_existence()
 
-    def _edit(self, params=None, text=None, summary=None, minor=None, bot=None,
-              force=None, section=None, captcha_id=None, captcha_word=None, **kwargs):
+    def _edit(
+        self,
+        params=None,
+        text=None,
+        summary=None,
+        minor=None,
+        bot=None,
+        force=None,
+        section=None,
+        captcha_id=None,
+        captcha_word=None,
+        **kwargs,
+    ):
         """Edit the page!
 
         If *params* is given, we'll use it as our API query parameters.
@@ -296,9 +317,18 @@ class Page(CopyvioMixIn):
 
         # Build our API query string:
         if not params:
-            params = self._build_edit_params(text, summary, minor, bot, force,
-                                             section, captcha_id, captcha_word, kwargs)
-        else: # Make sure we have the right token:
+            params = self._build_edit_params(
+                text,
+                summary,
+                minor,
+                bot,
+                force,
+                section,
+                captcha_id,
+                captcha_word,
+                kwargs,
+            )
+        else:  # Make sure we have the right token:
             params["token"] = self.site.get_token()
 
         # Try the API query, catching most errors with our handler:
@@ -319,14 +349,29 @@ class Page(CopyvioMixIn):
         # Otherwise, there was some kind of problem. Throw an exception:
         raise exceptions.EditError(result["edit"])
 
-    def _build_edit_params(self, text, summary, minor, bot, force, section,
-                           captcha_id, captcha_word, kwargs):
+    def _build_edit_params(
+        self,
+        text,
+        summary,
+        minor,
+        bot,
+        force,
+        section,
+        captcha_id,
+        captcha_word,
+        kwargs,
+    ):
         """Given some keyword arguments, build an API edit query string."""
         unitxt = text.encode("utf8") if isinstance(text, str) else text
         hashed = md5(unitxt).hexdigest()  # Checksum to ensure text is correct
         params = {
-            "action": "edit", "title": self._title, "text": text,
-            "token": self.site.get_token(), "summary": summary, "md5": hashed}
+            "action": "edit",
+            "title": self._title,
+            "text": text,
+            "token": self.site.get_token(),
+            "summary": summary,
+            "md5": hashed,
+        }
 
         if section:
             params["section"] = section
@@ -365,9 +410,16 @@ class Page(CopyvioMixIn):
         is protected), or we'll try to fix it (for example, if the token is
         invalid, we'll try to get a new one).
         """
-        perms = ["noedit", "noedit-anon", "cantcreate", "cantcreate-anon",
-                 "protectedtitle", "noimageredirect", "noimageredirect-anon",
-                 "blocked"]
+        perms = [
+            "noedit",
+            "noedit-anon",
+            "cantcreate",
+            "cantcreate-anon",
+            "protectedtitle",
+            "noimageredirect",
+            "noimageredirect-anon",
+            "blocked",
+        ]
         if error.code in perms:
             raise exceptions.PermissionsError(error.info)
         elif error.code in ["editconflict", "pagedeleted", "articleexists"]:
@@ -551,7 +603,7 @@ class Page(CopyvioMixIn):
         """
         if self._namespace < 0:
             ns = self.site.namespace_id_to_name(self._namespace)
-            e = "Pages in the {0} namespace can't have talk pages.".format(ns)
+            e = f"Pages in the {ns} namespace can't have talk pages."
             raise exceptions.InvalidPageError(e)
 
         if self._is_talkpage:
@@ -587,9 +639,15 @@ class Page(CopyvioMixIn):
             # Kill two birds with one stone by doing an API query for both our
             # attributes and our page content:
             query = self.site.api_query
-            result = query(action="query", rvlimit=1, titles=self._title,
-                           prop="info|revisions", inprop="protection|url",
-                           rvprop="content|timestamp", rvslots="main")
+            result = query(
+                action="query",
+                rvlimit=1,
+                titles=self._title,
+                prop="info|revisions",
+                inprop="protection|url",
+                rvprop="content|timestamp",
+                rvslots="main",
+            )
             self._load_attributes(result=result)
             self._assert_existence()
             self._load_content(result=result)
@@ -674,8 +732,9 @@ class Page(CopyvioMixIn):
         the page was deleted/recreated between getting our edit token and
         editing our page. Be careful with this!
         """
-        self._edit(text=text, summary=summary, minor=minor, bot=bot,
-                   force=force, **kwargs)
+        self._edit(
+            text=text, summary=summary, minor=minor, bot=bot, force=force, **kwargs
+        )
 
     def add_section(self, text, title, minor=False, bot=True, force=False, **kwargs):
         """Add a new section to the bottom of the page.
@@ -687,8 +746,15 @@ class Page(CopyvioMixIn):
         This should create the page if it does not already exist, with just the
         new section as content.
         """
-        self._edit(text=text, summary=title, minor=minor, bot=bot, force=force,
-                   section="new", **kwargs)
+        self._edit(
+            text=text,
+            summary=title,
+            minor=minor,
+            bot=bot,
+            force=force,
+            section="new",
+            **kwargs,
+        )
 
     def check_exclusion(self, username=None, optouts=None):
         """Check whether or not we are allowed to edit the page.
@@ -710,6 +776,7 @@ class Page(CopyvioMixIn):
         ``{{bots|optout=all}}``, but `True` on
         ``{{bots|optout=orfud,norationale,replaceable}}``.
         """
+
         def parse_param(template, param):
             value = template.get(param).value
             return [item.strip().lower() for item in value.split(",")]

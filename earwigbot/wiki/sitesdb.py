@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,13 +18,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from collections import OrderedDict
 import errno
-from http.cookiejar import LWPCookieJar, LoadError
+import sqlite3 as sqlite
+import stat
+from collections import OrderedDict
+from http.cookiejar import LoadError, LWPCookieJar
 from os import chmod, path
 from platform import python_version
-import stat
-import sqlite3 as sqlite
 
 from earwigbot import __version__
 from earwigbot.exceptions import SiteNotFoundError
@@ -78,7 +76,7 @@ class SitesDB:
 
     def __str__(self):
         """Return a nice string representation of the SitesDB."""
-        return "<SitesDB at {0}>".format(self._sitesdb)
+        return f"<SitesDB at {self._sitesdb}>"
 
     def _get_cookiejar(self):
         """Return a LWPCookieJar object loaded from our .cookies file.
@@ -102,7 +100,7 @@ class SitesDB:
             self._cookiejar.load()
         except LoadError:
             pass  # File contains bad data, so ignore it completely
-        except IOError as e:
+        except OSError as e:
             if e.errno == errno.ENOENT:  # "No such file or directory"
                 # Create the file and restrict reading/writing only to the
                 # owner, so others can't peak at our cookies:
@@ -149,7 +147,7 @@ class SitesDB:
         query1 = "SELECT * FROM sites WHERE site_name = ?"
         query2 = "SELECT sql_data_key, sql_data_value FROM sql_data WHERE sql_site = ?"
         query3 = "SELECT ns_id, ns_name, ns_is_primary_name FROM namespaces WHERE ns_site = ?"
-        error = "Site '{0}' not found in the sitesdb.".format(name)
+        error = f"Site '{name}' not found in the sitesdb."
         with sqlite.connect(self._sitesdb) as conn:
             try:
                 site_data = conn.execute(query1, (name,)).fetchone()
@@ -263,7 +261,7 @@ class SitesDB:
                 if site:
                     return site[0]
                 else:
-                    url = "//{0}.{1}.%".format(lang, project)
+                    url = f"//{lang}.{project}.%"
                     site = conn.execute(query2, (url,)).fetchone()
                     return site[0] if site else None
             except sqlite.OperationalError:
@@ -322,7 +320,7 @@ class SitesDB:
             else:
                 conn.execute("DELETE FROM sql_data WHERE sql_site = ?", (name,))
                 conn.execute("DELETE FROM namespaces WHERE ns_site = ?", (name,))
-                self._logger.info("Removed site '{0}'".format(name))
+                self._logger.info(f"Removed site '{name}'")
                 return True
 
     def get_site(self, name=None, project=None, lang=None):
@@ -379,7 +377,7 @@ class SitesDB:
         name = self._get_site_name_from_sitesdb(project, lang)
         if name:
             return self._get_site_object(name)
-        e = "Site '{0}:{1}' not found in the sitesdb.".format(project, lang)
+        e = f"Site '{project}:{lang}' not found in the sitesdb."
         raise SiteNotFoundError(e)
 
     def add_site(
@@ -412,7 +410,7 @@ class SitesDB:
             if not project or not lang:
                 e = "Without a base_url, both a project and a lang must be given."
                 raise SiteNotFoundError(e)
-            base_url = "//{0}.{1}.org".format(lang, project)
+            base_url = f"//{lang}.{project}.org"
         cookiejar = self._get_cookiejar()
 
         config = self.config
@@ -443,7 +441,7 @@ class SitesDB:
             wait_between_queries=wait_between_queries,
         )
 
-        self._logger.info("Added site '{0}'".format(site.name))
+        self._logger.info(f"Added site '{site.name}'")
         self._add_site_to_sitesdb(site)
         return self._get_site_object(site.name)
 

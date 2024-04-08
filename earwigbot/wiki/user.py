@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,15 +18,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from logging import getLogger, NullHandler
+from logging import NullHandler, getLogger
+from socket import AF_INET, AF_INET6, inet_pton
 from time import gmtime, strptime
-from socket import AF_INET, AF_INET6, error as socket_error, inet_pton
 
 from earwigbot.exceptions import UserNotFoundError
 from earwigbot.wiki import constants
 from earwigbot.wiki.page import Page
 
 __all__ = ["User"]
+
 
 class User:
     """
@@ -88,11 +87,11 @@ class User:
 
     def __repr__(self):
         """Return the canonical string representation of the User."""
-        return "User(name={0!r}, site={1!r})".format(self._name, self._site)
+        return f"User(name={self._name!r}, site={self._site!r})"
 
     def __str__(self):
         """Return a nice string representation of the User."""
-        return '<User "{0}" of {1}>'.format(self.name, str(self.site))
+        return f'<User "{self.name}" of {str(self.site)}>'
 
     def _get_attribute(self, attr):
         """Internally used to get an attribute by name.
@@ -106,7 +105,7 @@ class User:
         if not hasattr(self, attr):
             self._load_attributes()
         if not self._exists:
-            e = "User '{0}' does not exist.".format(self._name)
+            e = f"User '{self._name}' does not exist."
             raise UserNotFoundError(e)
         return getattr(self, attr)
 
@@ -117,8 +116,9 @@ class User:
         is not defined. This defines it.
         """
         props = "blockinfo|groups|rights|editcount|registration|emailable|gender"
-        result = self.site.api_query(action="query", list="users",
-                                     ususers=self._name, usprop=props)
+        result = self.site.api_query(
+            action="query", list="users", ususers=self._name, usprop=props
+        )
         res = result["query"]["users"][0]
 
         # normalize our username in case it was entered oddly
@@ -136,7 +136,7 @@ class User:
             self._blockinfo = {
                 "by": res["blockedby"],
                 "reason": res["blockreason"],
-                "expiry": res["blockexpiry"]
+                "expiry": res["blockexpiry"],
             }
         except KeyError:
             self._blockinfo = False
@@ -280,10 +280,10 @@ class User:
         """
         try:
             inet_pton(AF_INET, self.name)
-        except socket_error:
+        except OSError:
             try:
                 inet_pton(AF_INET6, self.name)
-            except socket_error:
+            except OSError:
                 return False
         return True
 
@@ -302,7 +302,7 @@ class User:
         conventions are followed.
         """
         prefix = self.site.namespace_id_to_name(constants.NS_USER)
-        pagename = ':'.join((prefix, self._name))
+        pagename = ":".join((prefix, self._name))
         return Page(self.site, pagename)
 
     def get_talkpage(self):
@@ -312,5 +312,5 @@ class User:
         conventions are followed.
         """
         prefix = self.site.namespace_id_to_name(constants.NS_USER_TALK)
-        pagename = ':'.join((prefix, self._name))
+        pagename = ":".join((prefix, self._name))
         return Page(self.site, pagename)

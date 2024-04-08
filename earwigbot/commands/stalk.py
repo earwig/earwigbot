@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2021 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,18 +18,30 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from ast import literal_eval
 import re
+from ast import literal_eval
 
 from earwigbot.commands import Command
 from earwigbot.irc import RC
 
+
 class Stalk(Command):
     """Stalk a particular user (!stalk/!unstalk) or page (!watch/!unwatch) for
     edits. Prefix regular expressions with "re:" (uses re.match)."""
+
     name = "stalk"
-    commands = ["stalk", "watch", "unstalk", "unwatch", "stalks", "watches",
-                "allstalks", "allwatches", "unstalkall", "unwatchall"]
+    commands = [
+        "stalk",
+        "watch",
+        "unstalk",
+        "unwatch",
+        "stalks",
+        "watches",
+        "allstalks",
+        "allwatches",
+        "unstalkall",
+        "unwatchall",
+    ]
     hooks = ["msg", "rc"]
     MAX_STALKS_PER_USER = 5
 
@@ -58,20 +68,29 @@ class Stalk(Command):
             if data.is_admin:
                 self.reply(data, self._all_stalks())
             else:
-                self.reply(data, "You must be a bot admin to view all stalked "
-                                 "users or watched pages. View your own with "
-                                 "\x0306!stalks\x0F.")
+                self.reply(
+                    data,
+                    "You must be a bot admin to view all stalked "
+                    "users or watched pages. View your own with "
+                    "\x0306!stalks\x0f.",
+                )
             return
 
         if data.command.endswith("all"):
             if not data.is_admin:
-                self.reply(data, "You must be a bot admin to unstalk a user "
-                                 "or unwatch a page for all users.")
+                self.reply(
+                    data,
+                    "You must be a bot admin to unstalk a user "
+                    "or unwatch a page for all users.",
+                )
                 return
             if not data.args:
-                self.reply(data, "You must give a user to unstalk or a page "
-                                 "to unwatch. View all active with "
-                                 "\x0306!allstalks\x0F.")
+                self.reply(
+                    data,
+                    "You must give a user to unstalk or a page "
+                    "to unwatch. View all active with "
+                    "\x0306!allstalks\x0f.",
+                )
                 return
 
         if not data.args or data.command in ["stalks", "watches"]:
@@ -98,9 +117,12 @@ class Stalk(Command):
             if data.is_private:
                 stalkinfo = (data.nick, None, modifiers)
             elif not data.is_admin:
-                self.reply(data, "You must be a bot admin to stalk users or "
-                                 "watch pages publicly. Retry this command in "
-                                 "a private message.")
+                self.reply(
+                    data,
+                    "You must be a bot admin to stalk users or "
+                    "watch pages publicly. Retry this command in "
+                    "a private message.",
+                )
                 return
             else:
                 stalkinfo = (data.nick, data.chan, modifiers)
@@ -120,6 +142,7 @@ class Stalk(Command):
 
     def _process_rc(self, rc):
         """Process a watcher event."""
+
         def _update_chans(items, flags):
             for item in items:
                 modifiers = item[2] if len(item) > 2 else {}
@@ -167,7 +190,7 @@ class Stalk(Command):
                     pretty = rc.prettify(color=chan not in nocolor)
                     if users:
                         nicks = ", ".join(sorted(users))
-                        msg = "\x02{0}\x0F: {1}".format(nicks, pretty)
+                        msg = f"\x02{nicks}\x0f: {pretty}"
                     else:
                         msg = pretty
                     if len(msg) > 400:
@@ -199,8 +222,10 @@ class Stalk(Command):
         if not data.is_admin:
             nstalks = len(self._get_stalks_by_nick(data.nick, table))
             if nstalks >= self.MAX_STALKS_PER_USER:
-                msg = ("Already {0}ing {1} {2}s for you, which is the limit "
-                       "for non-bot admins.")
+                msg = (
+                    "Already {0}ing {1} {2}s for you, which is the limit "
+                    "for non-bot admins."
+                )
                 self.reply(data, msg.format(verb, nstalks, stalktype))
                 return
             if stalkinfo[1] and not stalkinfo[1].startswith("##"):
@@ -218,7 +243,7 @@ class Stalk(Command):
         else:
             table[target] = [stalkinfo]
 
-        msg = "Now {0}ing {1} \x0302{2}\x0F. Remove with \x0306!un{0} {2}\x0F."
+        msg = "Now {0}ing {1} \x0302{2}\x0f. Remove with \x0306!un{0} {2}\x0f."
         self.reply(data, msg.format(verb, stalktype, target))
         self._save_stalks()
 
@@ -240,11 +265,15 @@ class Stalk(Command):
                     to_remove.append(info)
 
         if not to_remove:
-            msg = ("I haven't been {0}ing that {1} for you in the first "
-                   "place. View your active {2} with \x0306!{2}\x0F.")
+            msg = (
+                "I haven't been {0}ing that {1} for you in the first "
+                "place. View your active {2} with \x0306!{2}\x0f."
+            )
             if data.is_admin:
-                msg += (" As a bot admin, you can clear all active {2} on "
-                        "that {1} with \x0306!un{0}all {3}\x0F.")
+                msg += (
+                    " As a bot admin, you can clear all active {2} on "
+                    "that {1} with \x0306!un{0}all {3}\x0f."
+                )
             self.reply(data, msg.format(verb, stalktype, plural, target))
             return
 
@@ -252,7 +281,7 @@ class Stalk(Command):
             table[target].remove(info)
         if not table[target]:
             del table[target]
-        msg = "No longer {0}ing {1} \x0302{2}\x0F for you."
+        msg = "No longer {0}ing {1} \x0302{2}\x0f for you."
         self.reply(data, msg.format(verb, stalktype, target))
         self._save_stalks()
 
@@ -270,53 +299,63 @@ class Stalk(Command):
         try:
             del table[target]
         except KeyError:
-            msg = ("I haven't been {0}ing that {1} for anyone in the first "
-                   "place. View all active {2} with \x0306!all{2}\x0F.")
+            msg = (
+                "I haven't been {0}ing that {1} for anyone in the first "
+                "place. View all active {2} with \x0306!all{2}\x0f."
+            )
             self.reply(data, msg.format(verb, stalktype, plural))
         else:
-            msg = "No longer {0}ing {1} \x0302{2}\x0F for anyone."
+            msg = "No longer {0}ing {1} \x0302{2}\x0f for anyone."
             self.reply(data, msg.format(verb, stalktype, target))
             self._save_stalks()
 
     def _current_stalks(self, nick):
         """Return the given user's current stalks."""
+
         def _format_chans(chans):
             if None in chans:
                 chans.remove(None)
                 if not chans:
                     return "privately"
                 if len(chans) == 1:
-                    return "in {0} and privately".format(chans[0])
+                    return f"in {chans[0]} and privately"
                 return "in " + ", ".join(chans) + ", and privately"
             return "in " + ", ".join(chans)
 
         def _format_stalks(stalks):
             return ", ".join(
-                "\x0302{0}\x0F ({1})".format(target, _format_chans(chans))
-                for target, chans in stalks.items())
+                f"\x0302{target}\x0f ({_format_chans(chans)})"
+                for target, chans in stalks.items()
+            )
 
         users = self._get_stalks_by_nick(nick, self._users)
         pages = self._get_stalks_by_nick(nick, self._pages)
         if users:
-            uinfo = " Users: {0}.".format(_format_stalks(users))
+            uinfo = f" Users: {_format_stalks(users)}."
         if pages:
-            pinfo = " Pages: {0}.".format(_format_stalks(pages))
+            pinfo = f" Pages: {_format_stalks(pages)}."
 
         msg = "Currently stalking {0} user{1} and watching {2} page{3} for you.{4}{5}"
-        return msg.format(len(users), "s" if len(users) != 1 else "",
-                          len(pages), "s" if len(pages) != 1 else "",
-                          uinfo if users else "", pinfo if pages else "")
+        return msg.format(
+            len(users),
+            "s" if len(users) != 1 else "",
+            len(pages),
+            "s" if len(pages) != 1 else "",
+            uinfo if users else "",
+            pinfo if pages else "",
+        )
 
     def _all_stalks(self):
         """Return all existing stalks, for bot admins."""
+
         def _format_info(info):
             if info[1]:
-                result = "for {0} in {1}".format(info[0], info[1])
+                result = f"for {info[0]} in {info[1]}"
             else:
-                result = "for {0} privately".format(info[0])
+                result = f"for {info[0]} privately"
             modifiers = ", ".join(info[2]) if len(info) > 2 else ""
             if modifiers:
-                result += " ({0})".format(modifiers)
+                result += f" ({modifiers})"
             return result
 
         def _format_data(data):
@@ -324,19 +363,25 @@ class Stalk(Command):
 
         def _format_stalks(stalks):
             return ", ".join(
-                "\x0302{0}\x0F ({1})".format(target, _format_data(data))
-                for target, data in stalks.items())
+                f"\x0302{target}\x0f ({_format_data(data)})"
+                for target, data in stalks.items()
+            )
 
         users, pages = self._users, self._pages
         if users:
-            uinfo = " Users: {0}.".format(_format_stalks(users))
+            uinfo = f" Users: {_format_stalks(users)}."
         if pages:
-            pinfo = " Pages: {0}.".format(_format_stalks(pages))
+            pinfo = f" Pages: {_format_stalks(pages)}."
 
         msg = "Currently stalking {0} user{1} and watching {2} page{3}.{4}{5}"
-        return msg.format(len(users), "s" if len(users) != 1 else "",
-                          len(pages), "s" if len(pages) != 1 else "",
-                          uinfo if users else "", pinfo if pages else "")
+        return msg.format(
+            len(users),
+            "s" if len(users) != 1 else "",
+            len(pages),
+            "s" if len(pages) != 1 else "",
+            uinfo if users else "",
+            pinfo if pages else "",
+        )
 
     def _load_stalks(self):
         """Load saved stalks from the database."""

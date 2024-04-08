@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,13 +19,13 @@
 # SOFTWARE.
 
 import base64
-from collections import OrderedDict
-from getpass import getpass
 import os
-from os import chmod, makedirs, mkdir, path
 import re
 import stat
 import sys
+from collections import OrderedDict
+from getpass import getpass
+from os import chmod, makedirs, mkdir, path
 from textwrap import fill, wrap
 
 import yaml
@@ -50,23 +48,27 @@ def process(bot, rc):
     pass
 """
 
+
 class ConfigScript:
     """A script to guide a user through the creation of a new config file."""
+
     WIDTH = 79
     PROMPT = "\x1b[32m> \x1b[0m"
     PBKDF_ROUNDS = 100000
 
     def __init__(self, config):
         self.config = config
-        self.data = OrderedDict([
-            ("metadata", OrderedDict()),
-            ("components", OrderedDict()),
-            ("wiki", OrderedDict()),
-            ("irc", OrderedDict()),
-            ("commands", OrderedDict()),
-            ("tasks", OrderedDict()),
-            ("schedule", [])
-        ])
+        self.data = OrderedDict(
+            [
+                ("metadata", OrderedDict()),
+                ("components", OrderedDict()),
+                ("wiki", OrderedDict()),
+                ("irc", OrderedDict()),
+                ("commands", OrderedDict()),
+                ("tasks", OrderedDict()),
+                ("schedule", []),
+            ]
+        )
 
         self._cipher = None
         self._wmf = False
@@ -86,7 +88,7 @@ class ConfigScript:
     def _ask(self, text, default=None, require=True):
         text = self.PROMPT + text
         if default:
-            text += " \x1b[33m[{0}]\x1b[0m".format(default)
+            text += f" \x1b[33m[{default}]\x1b[0m"
         lines = wrap(re.sub(r"\s\s+", " ", text), self.WIDTH)
         if len(lines) > 1:
             print("\n".join(lines[:-1]))
@@ -157,7 +159,9 @@ class ConfigScript:
                     salt=salt,
                     iterations=self.PBKDF_ROUNDS,
                 )
-                self._cipher = fernet.Fernet(base64.urlsafe_b64encode(kdf.derive(key.encode())))
+                self._cipher = fernet.Fernet(
+                    base64.urlsafe_b64encode(kdf.derive(key.encode()))
+                )
             except ImportError:
                 print(" error!")
                 self._print("""Encryption requires the 'cryptography' package:
@@ -198,7 +202,7 @@ class ConfigScript:
                        front-end.""")
         frontend = self._ask_bool("Enable the IRC front-end?")
         watcher = self._ask_bool("Enable the IRC watcher?")
-        scheduler  = self._ask_bool("Enable the wiki task scheduler?")
+        scheduler = self._ask_bool("Enable the wiki task scheduler?")
         self.data["components"]["irc_frontend"] = frontend
         self.data["components"]["irc_watcher"] = watcher
         self.data["components"]["wiki_scheduler"] = scheduler
@@ -269,7 +273,9 @@ class ConfigScript:
         self.data["wiki"]["username"] = self._ask("Bot username:")
         password = self._ask_pass("Bot password:", encrypt=False)
         self.data["wiki"]["password"] = password
-        self.data["wiki"]["userAgent"] = "EarwigBot/$1 (Python/$2; https://github.com/earwig/earwigbot)"
+        self.data["wiki"]["userAgent"] = (
+            "EarwigBot/$1 (Python/$2; https://github.com/earwig/earwigbot)"
+        )
         self.data["wiki"]["summary"] = "([[WP:BOT|Bot]]) $2"
         self.data["wiki"]["useHTTPS"] = True
         self.data["wiki"]["assert"] = "user"
@@ -282,15 +288,17 @@ class ConfigScript:
             msg = "Will this bot run from the Wikimedia Tool Labs?"
             labs = self._ask_bool(msg, default=False)
             if labs:
-                args = [("host", "$1.labsdb"), ("db", "$1_p"),
-                        ("read_default_file", "~/replica.my.cnf")]
+                args = [
+                    ("host", "$1.labsdb"),
+                    ("db", "$1_p"),
+                    ("read_default_file", "~/replica.my.cnf"),
+                ]
                 self.data["wiki"]["sql"] = OrderedDict(args)
             else:
                 msg = "Will this bot run from the Wikimedia Toolserver?"
                 toolserver = self._ask_bool(msg, default=False)
                 if toolserver:
-                    args = [("host", "$1-p.rrdb.toolserver.org"),
-                            ("db", "$1_p")]
+                    args = [("host", "$1-p.rrdb.toolserver.org"), ("db", "$1_p")]
                     self.data["wiki"]["sql"] = OrderedDict(args)
 
         self.data["wiki"]["shutoff"] = {}
@@ -314,11 +322,13 @@ class ConfigScript:
             print()
             frontend = self.data["irc"]["frontend"] = OrderedDict()
             frontend["host"] = self._ask(
-                "Hostname of the frontend's IRC server:", "irc.libera.chat")
+                "Hostname of the frontend's IRC server:", "irc.libera.chat"
+            )
             frontend["port"] = self._ask("Frontend port:", 6667)
             frontend["nick"] = self._ask("Frontend bot's nickname:")
             frontend["ident"] = self._ask(
-                "Frontend bot's ident:", frontend["nick"].lower())
+                "Frontend bot's ident:", frontend["nick"].lower()
+            )
             question = "Frontend bot's real name (gecos):"
             frontend["realname"] = self._ask(question, "EarwigBot")
             if self._ask_bool("Should the bot identify to NickServ?"):
@@ -370,7 +380,7 @@ class ConfigScript:
                 watcher["nickservUsername"] = ns_user
                 watcher["nickservPassword"] = ns_pass
             if self._wmf:
-                chan = "#{0}.{1}".format(self._lang, self._proj)
+                chan = f"#{self._lang}.{self._proj}"
                 watcher["channels"] = [chan]
             else:
                 chan_question = "Watcher channels to join by default:"
@@ -387,14 +397,17 @@ class ConfigScript:
                 fp.write(RULES_TEMPLATE)
             self._pause()
 
-        self.data["irc"]["version"] = "EarwigBot - $1 - Python/$2 https://github.com/earwig/earwigbot"
+        self.data["irc"]["version"] = (
+            "EarwigBot - $1 - Python/$2 https://github.com/earwig/earwigbot"
+        )
 
     def _set_commands(self):
         print()
         msg = """Would you like to disable the default IRC commands? You can
                  fine-tune which commands are disabled later on."""
-        if (not self.data["components"]["irc_frontend"] or
-                self._ask_bool(msg, default=False)):
+        if not self.data["components"]["irc_frontend"] or self._ask_bool(
+            msg, default=False
+        ):
             self.data["commands"]["disable"] = True
         print()
         self._print("""I am now creating the 'commands/' directory, where you
@@ -435,8 +448,14 @@ class ConfigScript:
 
     def _save(self):
         with open(self.config.path, "w") as stream:
-            yaml.dump(self.data, stream, OrderedDumper, indent=4,
-                      allow_unicode=True, default_flow_style=False)
+            yaml.dump(
+                self.data,
+                stream,
+                OrderedDumper,
+                indent=4,
+                allow_unicode=True,
+                default_flow_style=False,
+            )
 
     def make_new(self):
         """Make a new config file based on the user's input."""
@@ -447,8 +466,8 @@ class ConfigScript:
                 raise
         try:
             open(self.config.path, "w").close()
-            chmod(self.config.path, stat.S_IRUSR|stat.S_IWUSR)
-        except IOError:
+            chmod(self.config.path, stat.S_IRUSR | stat.S_IWUSR)
+        except OSError:
             print("I can't seem to write to the config file:")
             raise
         self._set_metadata()

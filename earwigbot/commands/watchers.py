@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,8 +20,10 @@
 
 from earwigbot.commands import Command
 
+
 class Watchers(Command):
     """Get the number of users watching a given page."""
+
     name = "watchers"
 
     def process(self, data):
@@ -33,13 +33,14 @@ class Watchers(Command):
             return
 
         site = self.bot.wiki.get_site()
-        query = site.api_query(action="query", prop="info", inprop="watchers",
-                               titles=" ".join(data.args))
+        query = site.api_query(
+            action="query", prop="info", inprop="watchers", titles=" ".join(data.args)
+        )
         page = list(query["query"]["pages"].values())[0]
         title = page["title"].encode("utf8")
 
         if "invalid" in page:
-            msg = "\x0302{0}\x0F is an invalid page title."
+            msg = "\x0302{0}\x0f is an invalid page title."
             self.reply(data, msg.format(title))
             return
 
@@ -48,5 +49,5 @@ class Watchers(Command):
         else:
             watchers = "<30"
         plural = "" if watchers == 1 else "s"
-        msg = "\x0302{0}\x0F has \x02{1}\x0F watcher{2}."
+        msg = "\x0302{0}\x0f has \x02{1}\x0f watcher{2}."
         self.reply(data, msg.format(title, watchers, plural))

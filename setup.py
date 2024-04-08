@@ -1,6 +1,4 @@
 #! /usr/bin/env python
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 from earwigbot import __version__
 
@@ -69,7 +67,7 @@ setup(
     url="https://github.com/earwig/earwigbot",
     description="EarwigBot is a Python robot that edits Wikipedia and interacts with people over IRC.",
     long_description=long_docs,
-    download_url="https://github.com/earwig/earwigbot/tarball/v{0}".format(__version__),
+    download_url=f"https://github.com/earwig/earwigbot/tarball/v{__version__}",
     keywords="earwig earwigbot irc wikipedia wiki mediawiki",
     license="MIT License",
     classifiers=[

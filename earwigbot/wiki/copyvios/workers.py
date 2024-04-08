@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2019 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,21 +20,20 @@
 
 import base64
 import collections
-from collections import deque
 import functools
+import time
+import urllib.parse
+from collections import deque
 from gzip import GzipFile
 from http.client import HTTPException
+from io import StringIO
 from logging import getLogger
 from math import log
 from queue import Empty, Queue
-from socket import error as socket_error
-from io import StringIO
 from struct import error as struct_error
 from threading import Lock, Thread
-import time
 from urllib.error import URLError
-import urllib.parse
-from urllib.request import build_opener, Request
+from urllib.request import Request, build_opener
 
 from earwigbot import importer
 from earwigbot.exceptions import ParserExclusionError, ParserRedirectError
@@ -49,13 +46,14 @@ tldextract = importer.new("tldextract")
 __all__ = ["globalize", "localize", "CopyvioWorkspace"]
 
 _MAX_REDIRECTS = 3
-_MAX_RAW_SIZE = 20 * 1024 ** 2
+_MAX_RAW_SIZE = 20 * 1024**2
 
 _is_globalized = False
 _global_queues = None
 _global_workers = []
 
-_OpenedURL = collections.namedtuple('_OpenedURL', ['content', 'parser_class'])
+_OpenedURL = collections.namedtuple("_OpenedURL", ["content", "parser_class"])
+
 
 def globalize(num_workers=8):
     """Cause all copyvio checks to be done by one global set of workers.
@@ -74,10 +72,11 @@ def globalize(num_workers=8):
 
     _global_queues = _CopyvioQueues()
     for i in range(num_workers):
-        worker = _CopyvioWorker("global-{0}".format(i), _global_queues)
+        worker = _CopyvioWorker(f"global-{i}", _global_queues)
         worker.start()
         _global_workers.append(worker)
     _is_globalized = True
+
 
 def localize():
     """Return to using page-specific workers for copyvio checks.
@@ -137,11 +136,12 @@ class _CopyvioWorker:
             if "path" in proxy_info:
                 if not parsed.path.startswith(proxy_info["path"]):
                     continue
-                path = path[len(proxy_info["path"]):]
+                path = path[len(proxy_info["path"]) :]
             url = proxy_info["target"] + path
             if "auth" in proxy_info:
                 extra_headers["Authorization"] = "Basic %s" % (
-                    base64.b64encode(proxy_info["auth"]))
+                    base64.b64encode(proxy_info["auth"])
+                )
             return url, True
         return url, False
 
@@ -158,8 +158,10 @@ class _CopyvioWorker:
         request = Request(url, headers=extra_headers)
         try:
             response = self._opener.open(request, timeout=timeout)
-        except (URLError, HTTPException, socket_error, ValueError):
-            url, remapped = self._try_map_proxy_url(url, parsed, extra_headers, is_error=True)
+        except (OSError, URLError, HTTPException, ValueError):
+            url, remapped = self._try_map_proxy_url(
+                url, parsed, extra_headers, is_error=True
+            )
             if not remapped:
                 self._logger.exception("Failed to fetch URL: %s", url)
                 return None
@@ -167,7 +169,7 @@ class _CopyvioWorker:
             request = Request(url, headers=extra_headers)
             try:
                 response = self._opener.open(request, timeout=timeout)
-            except (URLError, HTTPException, socket_error, ValueError):
+            except (OSError, URLError, HTTPException, ValueError):
                 self._logger.exception("Failed to fetch URL after proxy remap: %s", url)
                 return None
 
@@ -180,18 +182,19 @@ class _CopyvioWorker:
         content_type = content_type.split(";", 1)[0]
         parser_class = get_parser(content_type)
         if not parser_class and (
-                not allow_content_types or content_type not in allow_content_types):
+            not allow_content_types or content_type not in allow_content_types
+        ):
             return None
         if not parser_class:
             parser_class = get_parser("text/plain")
-        if size > (15 if parser_class.TYPE == "PDF" else 2) * 1024 ** 2:
+        if size > (15 if parser_class.TYPE == "PDF" else 2) * 1024**2:
             return None
 
         try:
             # Additional safety check for pages using Transfer-Encoding: chunked
             # where we can't read the Content-Length
             content = response.read(_MAX_RAW_SIZE + 1)
-        except (URLError, socket_error):
+        except (OSError, URLError):
             return None
         if len(content) > _MAX_RAW_SIZE:
             return None
@@ -201,7 +204,7 @@ class _CopyvioWorker:
             gzipper = GzipFile(fileobj=stream)
             try:
                 content = gzipper.read()
-            except (IOError, struct_error):
+            except (OSError, struct_error):
                 return None
 
         if len(content) > _MAX_RAW_SIZE:
@@ -252,7 +255,7 @@ class _CopyvioWorker:
         site, queue = self._queues.unassigned.get(timeout=timeout)
         if site is StopIteration:
             raise StopIteration
-        self._logger.debug("Acquired new site queue: {0}".format(site))
+        self._logger.debug(f"Acquired new site queue: {site}")
         self._site = site
         self._queue = queue
 
@@ -274,7 +277,7 @@ class _CopyvioWorker:
             self._queues.lock.release()
             return self._dequeue()
 
-        self._logger.debug("Got source URL: {0}".format(source.url))
+        self._logger.debug(f"Got source URL: {source.url}")
         if source.skipped:
             self._logger.debug("Source has been skipped")
             self._queues.lock.release()
@@ -335,9 +338,20 @@ class _CopyvioWorker:
 class CopyvioWorkspace:
     """Manages a single copyvio check distributed across threads."""
 
-    def __init__(self, article, min_confidence, max_time, logger, headers,
-                 url_timeout=5, num_workers=8, short_circuit=True,
-                 parser_args=None, exclude_check=None, config=None):
+    def __init__(
+        self,
+        article,
+        min_confidence,
+        max_time,
+        logger,
+        headers,
+        url_timeout=5,
+        num_workers=8,
+        short_circuit=True,
+        parser_args=None,
+        exclude_check=None,
+        config=None,
+    ):
         self.sources = []
         self.finished = False
         self.possible_miss = False
@@ -351,8 +365,12 @@ class CopyvioWorkspace:
         self._finish_lock = Lock()
         self._short_circuit = short_circuit
         self._source_args = {
-            "workspace": self, "headers": headers, "timeout": url_timeout,
-            "parser_args": parser_args, "search_config": config}
+            "workspace": self,
+            "headers": headers,
+            "timeout": url_timeout,
+            "parser_args": parser_args,
+            "search_config": config,
+        }
         self._exclude_check = exclude_check
 
         if _is_globalized:
@@ -361,11 +379,12 @@ class CopyvioWorkspace:
             self._queues = _CopyvioQueues()
             self._num_workers = num_workers
             for i in range(num_workers):
-                name = "local-{0:04}.{1}".format(id(self) % 10000, i)
+                name = f"local-{id(self) % 10000:04}.{i}"
                 _CopyvioWorker(name, self._queues, self._until).start()
 
     def _calculate_confidence(self, delta):
         """Return the confidence of a violation as a float between 0 and 1."""
+
         def conf_with_article_and_delta(article, delta):
             """Calculate confidence using the article and delta chain sizes."""
             # This piecewise function exhibits exponential growth until it
@@ -377,7 +396,7 @@ class CopyvioWorkspace:
             if ratio <= 0.52763:
                 return -log(1 - ratio)
             else:
-                return (-0.8939 * (ratio ** 2)) + (1.8948 * ratio) - 0.0009
+                return (-0.8939 * (ratio**2)) + (1.8948 * ratio) - 0.0009
 
         def conf_with_delta(delta):
             """Calculate confidence using just the delta chain size."""
@@ -395,8 +414,12 @@ class CopyvioWorkspace:
                 return (delta - 50) / delta
 
         d_size = float(delta.size)
-        return abs(max(conf_with_article_and_delta(self._article.size, d_size),
-                       conf_with_delta(d_size)))
+        return abs(
+            max(
+                conf_with_article_and_delta(self._article.size, d_size),
+                conf_with_delta(d_size),
+            )
+        )
 
     def _finish_early(self):
         """Finish handling links prematurely (if we've hit min_confidence)."""
@@ -418,12 +441,12 @@ class CopyvioWorkspace:
                 self.sources.append(source)
 
                 if self._exclude_check and self._exclude_check(url):
-                    self._logger.debug("enqueue(): exclude {0}".format(url))
+                    self._logger.debug(f"enqueue(): exclude {url}")
                     source.excluded = True
                     source.skip()
                     continue
                 if self._short_circuit and self.finished:
-                    self._logger.debug("enqueue(): auto-skip {0}".format(url))
+                    self._logger.debug(f"enqueue(): auto-skip {url}")
                     source.skip()
                     continue
 
@@ -431,6 +454,7 @@ class CopyvioWorkspace:
                     key = tldextract.extract(url).registered_domain
                 except ImportError:  # Fall back on very naive method
                     from urllib.parse import urlparse
+
                     key = ".".join(urlparse(url).netloc.split(".")[-2:])
 
                 logmsg = "enqueue(): {0} {1} -> {2}"
@@ -450,7 +474,7 @@ class CopyvioWorkspace:
             conf = self._calculate_confidence(delta)
         else:
             conf = 0.0
-        self._logger.debug("compare(): {0} -> {1}".format(source.url, conf))
+        self._logger.debug(f"compare(): {source.url} -> {conf}")
         with self._finish_lock:
             if source_chain:
                 source.update(conf, source_chain, delta)
@@ -463,7 +487,7 @@ class CopyvioWorkspace:
 
     def wait(self):
         """Wait for the workers to finish handling the sources."""
-        self._logger.debug("Waiting on {0} sources".format(len(self.sources)))
+        self._logger.debug(f"Waiting on {len(self.sources)} sources")
         for source in self.sources:
             source.join(self._until)
         with self._finish_lock:
@@ -474,6 +498,7 @@ class CopyvioWorkspace:
 
     def get_result(self, num_queries=0):
         """Return a CopyvioCheckResult containing the results of this check."""
+
         def cmpfunc(s1, s2):
             if s2.confidence != s1.confidence:
                 return 1 if s2.confidence > s1.confidence else -1
@@ -482,6 +507,11 @@ class CopyvioWorkspace:
             return int(s1.skipped) - int(s2.skipped)
 
         self.sources.sort(cmpfunc)
-        return CopyvioCheckResult(self.finished, self.sources, num_queries,
-                                  time.time() - self._start_time, self._article,
-                                  self.possible_miss)
+        return CopyvioCheckResult(
+            self.finished,
+            self.sources,
+            num_queries,
+            time.time() - self._start_time,
+            self._article,
+            self.possible_miss,
+        )

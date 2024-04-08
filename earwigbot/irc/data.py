@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,6 +22,7 @@ import re
 
 __all__ = ["Data"]
 
+
 class Data:
     """Store data from an individual line received on IRC."""
 
@@ -46,7 +45,7 @@ class Data:
 
     def __str__(self):
         """Return a nice string representation of the Data."""
-        return "<Data of {0!r}>".format(" ".join(self.line))
+        return "<Data of {!r}>".format(" ".join(self.line))
 
     def _parse(self):
         """Parse a line from IRC into its components as instance attributes."""
@@ -97,8 +96,7 @@ class Data:
             self._is_command = True
             self._trigger = self.command[0]
             self._command = self.command[1:]  # Strip the "!" or "."
-        elif re.match(r"{0}\W*?$".format(re.escape(self.my_nick)),
-                      self.command, re.U):
+        elif re.match(rf"{re.escape(self.my_nick)}\W*?$", self.command, re.U):
             # e.g. "EarwigBot, command arg1 arg2"
             self._is_command = True
             self._trigger = self.my_nick

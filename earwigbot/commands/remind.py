@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,20 +19,20 @@
 # SOFTWARE.
 
 import ast
-from itertools import chain
 import operator
 import random
-from threading import RLock, Thread
 import time
+from itertools import chain
+from threading import RLock, Thread
 
 from earwigbot.commands import Command
 from earwigbot.irc import Data
 
 DISPLAY = ["display", "show", "info", "details"]
-CANCEL = ["cancel", "stop", "delete", "del", "stop", "unremind", "forget",
-          "disregard"]
+CANCEL = ["cancel", "stop", "delete", "del", "stop", "unremind", "forget", "disregard"]
 SNOOZE = ["snooze", "delay", "reset", "adjust", "modify", "change"]
 SNOOZE_ONLY = ["snooze", "delay", "reset"]
+
 
 def _format_time(epoch):
     """Format a UNIX timestamp nicely."""
@@ -48,9 +46,17 @@ def _format_time(epoch):
 class Remind(Command):
     """Set a message to be repeated to you in a certain amount of time. See
     usage with !remind help."""
+
     name = "remind"
-    commands = ["remind", "reminder", "reminders", "snooze", "cancel",
-                "unremind", "forget"]
+    commands = [
+        "remind",
+        "reminder",
+        "reminders",
+        "snooze",
+        "cancel",
+        "unremind",
+        "forget",
+    ]
 
     @staticmethod
     def _normalize(command):
@@ -68,19 +74,27 @@ class Remind(Command):
     def _parse_time(arg):
         """Parse the wait time for a reminder."""
         ast_to_op = {
-            ast.Add: operator.add, ast.Sub: operator.sub,
-            ast.Mult: operator.mul, ast.Div: operator.truediv,
-            ast.FloorDiv: operator.floordiv, ast.Mod: operator.mod,
-            ast.Pow: operator.pow
+            ast.Add: operator.add,
+            ast.Sub: operator.sub,
+            ast.Mult: operator.mul,
+            ast.Div: operator.truediv,
+            ast.FloorDiv: operator.floordiv,
+            ast.Mod: operator.mod,
+            ast.Pow: operator.pow,
         }
         time_units = {
-            "s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800, "y": 31536000
+            "s": 1,
+            "m": 60,
+            "h": 3600,
+            "d": 86400,
+            "w": 604800,
+            "y": 31536000,
         }
 
         def _evaluate(node):
             """Convert an AST node into a real number or raise an exception."""
             if isinstance(node, ast.Num):
-                if not isinstance(node.n, (int, float)):
+                if not isinstance(node.n, int | float):
                     raise ValueError(node.n)
                 return node.n
             elif isinstance(node, ast.BinOp):
@@ -114,7 +128,7 @@ class Remind(Command):
         """Get a free ID for a new reminder."""
         taken = set(robj.id for robj in chain(*list(self.reminders.values())))
         num = random.choice(list(set(range(4096)) - taken))
-        return "R{0:03X}".format(num)
+        return f"R{num:03X}"
 
     def _start_reminder(self, reminder, user):
         """Start the given reminder object for the given user."""
@@ -129,12 +143,14 @@ class Remind(Command):
         try:
             wait = self._parse_time(data.args[0])
         except ValueError:
-            msg = "Invalid time \x02{0}\x0F. Time must be a positive integer, in seconds."
+            msg = (
+                "Invalid time \x02{0}\x0f. Time must be a positive integer, in seconds."
+            )
             return self.reply(data, msg.format(data.args[0]))
 
         if wait > 1000 * 365 * 24 * 60 * 60:
             # Hard to think of a good upper limit, but 1000 years works.
-            msg = "Given time \x02{0}\x0F is too large. Keep it reasonable."
+            msg = "Given time \x02{0}\x0f is too large. Keep it reasonable."
             return self.reply(data, msg.format(data.args[0]))
 
         message = " ".join(data.args[1:])
@@ -146,14 +162,15 @@ class Remind(Command):
 
         reminder = _Reminder(rid, data.host, wait, message, data, self)
         self._start_reminder(reminder, data.host)
-        msg = "Set reminder \x0303{0}\x0F ({1})."
+        msg = "Set reminder \x0303{0}\x0f ({1})."
         self.reply(data, msg.format(rid, reminder.end_time))
 
     def _display_reminder(self, data, reminder):
         """Display a particular reminder's information."""
-        msg = 'Reminder \x0303{0}\x0F: {1} seconds ({2}): "{3}".'
-        msg = msg.format(reminder.id, reminder.wait, reminder.end_time,
-                         reminder.message)
+        msg = 'Reminder \x0303{0}\x0f: {1} seconds ({2}): "{3}".'
+        msg = msg.format(
+            reminder.id, reminder.wait, reminder.end_time, reminder.message
+        )
         self.reply(data, msg)
 
     def _cancel_reminder(self, data, reminder):
@@ -163,7 +180,7 @@ class Remind(Command):
         self.reminders[data.host].remove(reminder)
         if not self.reminders[data.host]:
             del self.reminders[data.host]
-        msg = "Reminder \x0303{0}\x0F canceled."
+        msg = "Reminder \x0303{0}\x0f canceled."
         self.reply(data, msg.format(reminder.id))
 
     def _snooze_reminder(self, data, reminder, arg=None):
@@ -176,7 +193,7 @@ class Remind(Command):
 
         reminder.reset(duration)
         end = _format_time(reminder.end)
-        msg = "Reminder \x0303{0}\x0F {1} until {2}."
+        msg = "Reminder \x0303{0}\x0f {1} until {2}."
         self.reply(data, msg.format(reminder.id, verb, end))
 
     def _load_reminders(self):
@@ -202,39 +219,52 @@ class Remind(Command):
     def _show_reminders(self, data):
         """Show all of a user's current reminders."""
         if data.host not in self.reminders:
-            self.reply(data, "You have no reminders. Set one with "
-                             "\x0306!remind [time] [message]\x0F. See also: "
-                             "\x0306!remind help\x0F.")
+            self.reply(
+                data,
+                "You have no reminders. Set one with "
+                "\x0306!remind [time] [message]\x0f. See also: "
+                "\x0306!remind help\x0f.",
+            )
             return
 
-        shorten = lambda s: (s[:37] + "..." if len(s) > 40 else s)
-        dest = lambda data: (
-            "privately" if data.is_private else "in {0}".format(data.chan))
-        fmt = lambda robj: '\x0303{0}\x0F ("{1}" {2}, {3})'.format(
-            robj.id, shorten(robj.message), dest(robj.data), robj.end_time)
+        def shorten(s):
+            return s[:37] + "..." if len(s) > 40 else s
+
+        def dest(data):
+            return "privately" if data.is_private else f"in {data.chan}"
+
+        def fmt(robj):
+            return f'\x0303{robj.id}\x0f ("{shorten(robj.message)}" {dest(robj.data)}, {robj.end_time})'
 
         rlist = ", ".join(fmt(robj) for robj in self.reminders[data.host])
-        self.reply(data, "Your reminders: {0}.".format(rlist))
+        self.reply(data, f"Your reminders: {rlist}.")
 
     def _show_all_reminders(self, data):
         """Show all reminders to bot admins."""
         if not self.config.irc["permissions"].is_admin(data):
-            self.reply(data, "You must be a bot admin to view other users' "
-                             "reminders. View your own with "
-                             "\x0306!reminders\x0F.")
+            self.reply(
+                data,
+                "You must be a bot admin to view other users' "
+                "reminders. View your own with "
+                "\x0306!reminders\x0f.",
+            )
             return
         if not self.reminders:
             self.reply(data, "There are no active reminders.")
             return
 
-        dest = lambda data: (
-            "privately" if data.is_private else "in {0}".format(data.chan))
-        fmt = lambda robj, user: '\x0303{0}\x0F (for {1} {2}, {3})'.format(
-            robj.id, user, dest(robj.data), robj.end_time)
+        def dest(data):
+            return "privately" if data.is_private else f"in {data.chan}"
 
-        rlist = (fmt(rem, user) for user, rems in self.reminders.items()
-                 for rem in rems)
-        self.reply(data, "All reminders: {0}.".format(", ".join(rlist)))
+        def fmt(robj, user):
+            return (
+                f"\x0303{robj.id}\x0f (for {user} {dest(robj.data)}, {robj.end_time})"
+            )
+
+        rlist = (
+            fmt(rem, user) for user, rems in self.reminders.items() for rem in rems
+        )
+        self.reply(data, "All reminders: {}.".format(", ".join(rlist)))
 
     def _show_help(self, data):
         """Reply to the user with help for all major subcommands."""
@@ -245,10 +275,10 @@ class Remind(Command):
             ("Cancel", "!remind cancel [id]"),
             ("Adjust", "!remind adjust [id] [time]"),
             ("Restart", "!snooze [id] [time]"),
-            ("Admin", "!remind all")
+            ("Admin", "!remind all"),
         ]
-        extra = "The \x0306[id]\x0F can be omitted if you have only one reminder."
-        joined = " ".join("{0}: \x0306{1}\x0F.".format(k, v) for k, v in parts)
+        extra = "The \x0306[id]\x0f can be omitted if you have only one reminder."
+        joined = " ".join(f"{k}: \x0306{v}\x0f." for k, v in parts)
         self.reply(data, joined + " " + extra)
 
     def _dispatch_command(self, data, command, args):
@@ -259,7 +289,9 @@ class Remind(Command):
             try:
                 reminder = self._get_reminder_by_id(user, args[0])
             except IndexError:
-                msg = "Couldn't find a reminder for \x0302{0}\x0F with ID \x0303{1}\x0F."
+                msg = (
+                    "Couldn't find a reminder for \x0302{0}\x0f with ID \x0303{1}\x0f."
+                )
                 self.reply(data, msg.format(user, args[0]))
                 return
             args.pop(0)
@@ -292,7 +324,7 @@ class Remind(Command):
         elif command in SNOOZE:
             self._snooze_reminder(data, reminder, args[0] if args else None)
         else:
-            msg = "Unknown action \x02{0}\x0F for reminder \x0303{1}\x0F."
+            msg = "Unknown action \x02{0}\x0f for reminder \x0303{1}\x0f."
             self.reply(data, msg.format(command, reminder.id))
 
     def _process(self, data):
@@ -317,8 +349,7 @@ class Remind(Command):
             return self._create_reminder(data)
         if len(data.args) == 1:
             return self._dispatch_command(data, "display", data.args)
-        self._dispatch_command(
-            data, data.args[1], [data.args[0]] + data.args[2:])
+        self._dispatch_command(data, data.args[1], [data.args[0]] + data.args[2:])
 
     @property
     def lock(self):
@@ -431,6 +462,7 @@ class _ReminderThread:
 
 class _Reminder:
     """Represents a single reminder."""
+
     def __init__(self, rid, user, wait, message, data, cmdobj, end=None):
         self.id = rid
         self.wait = wait
@@ -476,7 +508,7 @@ class _Reminder:
         """Return a string representing the end time of a reminder."""
         if self._expired or self.end < time.time():
             return "expired"
-        return "ends {0}".format(_format_time(self.end))
+        return f"ends {_format_time(self.end)}"
 
     @property
     def expired(self):

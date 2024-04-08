@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2019 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,11 +19,11 @@
 # SOFTWARE.
 
 import json
-from os import path
 import re
-from io import StringIO
 import urllib.parse
 import urllib.request
+from io import StringIO
+from os import path
 
 import mwparserfromhell
 
@@ -40,8 +38,10 @@ pdfpage = importer.new("pdfminer.pdfpage")
 
 __all__ = ["ArticleTextParser", "get_parser"]
 
+
 class _BaseTextParser:
     """Base class for a parser that handles text."""
+
     TYPE = None
 
     def __init__(self, text, url=None, args=None):
@@ -51,16 +51,17 @@ class _BaseTextParser:
 
     def __repr__(self):
         """Return the canonical string representation of the text parser."""
-        return "{0}(text={1!r})".format(self.__class__.__name__, self.text)
+        return f"{self.__class__.__name__}(text={self.text!r})"
 
     def __str__(self):
         """Return a nice string representation of the text parser."""
         name = self.__class__.__name__
-        return "<{0} of text with size {1}>".format(name, len(self.text))
+        return f"<{name} of text with size {len(self.text)}>"
 
 
 class ArticleTextParser(_BaseTextParser):
     """A parser that can strip and chunk wikicode article text."""
+
     TYPE = "Article"
     TEMPLATE_MERGE_THRESHOLD = 35
     NLTK_DEFAULT = "english"
@@ -81,7 +82,7 @@ class ArticleTextParser(_BaseTextParser):
         "pt": "portuguese",
         "sl": "slovene",
         "sv": "swedish",
-        "tr": "turkish"
+        "tr": "turkish",
     }
 
     def _merge_templates(self, code):
@@ -100,8 +101,11 @@ class ArticleTextParser(_BaseTextParser):
 
     def _get_tokenizer(self):
         """Return a NLTK punctuation tokenizer for the article's language."""
-        datafile = lambda lang: "file:" + path.join(
-            self._args["nltk_dir"], "tokenizers", "punkt", lang + ".pickle")
+
+        def datafile(lang):
+            return "file:" + path.join(
+                self._args["nltk_dir"], "tokenizers", "punkt", lang + ".pickle"
+            )
 
         lang = self.NLTK_LANGS.get(self._args.get("lang"), self.NLTK_DEFAULT)
         try:
@@ -112,6 +116,7 @@ class ArticleTextParser(_BaseTextParser):
 
     def _get_sentences(self, min_query, max_query, split_thresh):
         """Split the article text into sentences of a certain length."""
+
         def cut_sentence(words):
             div = len(words)
             if div == 0:
@@ -125,7 +130,7 @@ class ArticleTextParser(_BaseTextParser):
             result = []
             if length >= split_thresh:
                 result.append(" ".join(words[:div]))
-            return result + cut_sentence(words[div + 1:])
+            return result + cut_sentence(words[div + 1 :])
 
         tokenizer = self._get_tokenizer()
         sentences = []
@@ -150,6 +155,7 @@ class ArticleTextParser(_BaseTextParser):
 
         The actual stripping is handled by :py:mod:`mwparserfromhell`.
         """
+
         def remove(code, node):
             """Remove a node from a code object, ignoring ValueError.
 
@@ -223,16 +229,14 @@ class ArticleTextParser(_BaseTextParser):
         """
         schemes = ("http://", "https://")
         links = mwparserfromhell.parse(self.text).ifilter_external_links()
-        return [str(link.url) for link in links
-                if link.url.startswith(schemes)]
+        return [str(link.url) for link in links if link.url.startswith(schemes)]
 
 
 class _HTMLParser(_BaseTextParser):
     """A parser that can extract the text from an HTML document."""
+
     TYPE = "HTML"
-    hidden_tags = [
-        "script", "style"
-    ]
+    hidden_tags = ["script", "style"]
 
     def _fail_if_mirror(self, soup):
         """Look for obvious signs that the given soup is a wiki mirror.
@@ -243,8 +247,9 @@ class _HTMLParser(_BaseTextParser):
         if "mirror_hints" not in self._args:
             return
 
-        func = lambda attr: attr and any(
-            hint in attr for hint in self._args["mirror_hints"])
+        def func(attr):
+            return attr and any(hint in attr for hint in self._args["mirror_hints"])
+
         if soup.find_all(href=func) or soup.find_all(src=func):
             raise ParserExclusionError()
 
@@ -258,7 +263,10 @@ class _HTMLParser(_BaseTextParser):
 
     def _clean_soup(self, soup):
         """Clean a BeautifulSoup tree of invisible tags."""
-        is_comment = lambda text: isinstance(text, bs4.element.Comment)
+
+        def is_comment(text):
+            return isinstance(text, bs4.element.Comment)
+
         for comment in soup.find_all(text=is_comment):
             comment.extract()
         for tag in self.hidden_tags:
@@ -281,15 +289,17 @@ class _HTMLParser(_BaseTextParser):
         if not match:
             return ""
         post_id = match.group(1)
-        url = "https://%s/feeds/posts/default/%s?" % (url.netloc, post_id)
+        url = f"https://{url.netloc}/feeds/posts/default/{post_id}?"
         params = {
             "alt": "json",
             "v": "2",
             "dynamicviews": "1",
             "rewriteforssl": "true",
         }
-        raw = self._open(url + urllib.parse.urlencode(params),
-                         allow_content_types=["application/json"])
+        raw = self._open(
+            url + urllib.parse.urlencode(params),
+            allow_content_types=["application/json"],
+        )
         if raw is None:
             return ""
         try:
@@ -334,6 +344,7 @@ class _HTMLParser(_BaseTextParser):
 
 class _PDFParser(_BaseTextParser):
     """A parser that can extract text from a PDF file."""
+
     TYPE = "PDF"
     substitutions = [
         ("\x0c", "\n"),
@@ -364,6 +375,7 @@ class _PDFParser(_BaseTextParser):
 
 class _PlainTextParser(_BaseTextParser):
     """A parser that can unicode-ify and strip text from a plain text page."""
+
     TYPE = "Text"
 
     def parse(self):
@@ -377,8 +389,9 @@ _CONTENT_TYPES = {
     "application/xhtml+xml": _HTMLParser,
     "application/pdf": _PDFParser,
     "application/x-pdf": _PDFParser,
-    "text/plain": _PlainTextParser
+    "text/plain": _PlainTextParser,
 }
+
 
 def get_parser(content_type):
     """Return the parser most able to handle a given content type, or None."""

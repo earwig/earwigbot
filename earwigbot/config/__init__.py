@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,12 +19,12 @@
 # SOFTWARE.
 
 import base64
-from collections import OrderedDict
-from getpass import getpass
 import logging
 import logging.handlers
-from os import mkdir, path
 import stat
+from collections import OrderedDict
+from getpass import getpass
+from os import mkdir, path
 
 import yaml
 
@@ -43,6 +41,7 @@ hashes = importer.new("cryptography.hazmat.primitives.hashes")
 pbkdf2 = importer.new("cryptography.hazmat.primitives.kdf.pbkdf2")
 
 __all__ = ["BotConfig"]
+
 
 class BotConfig:
     """
@@ -89,8 +88,14 @@ class BotConfig:
         self._tasks = ConfigNode()
         self._metadata = ConfigNode()
 
-        self._nodes = [self._components, self._wiki, self._irc, self._commands,
-                       self._tasks, self._metadata]
+        self._nodes = [
+            self._components,
+            self._wiki,
+            self._irc,
+            self._commands,
+            self._tasks,
+            self._metadata,
+        ]
 
         self._decryptable_nodes = [  # Default nodes to decrypt
             (self._wiki, ("password",)),
@@ -107,7 +112,7 @@ class BotConfig:
 
     def __str__(self):
         """Return a nice string representation of the BotConfig."""
-        return "<BotConfig at {0}>".format(self.root_dir)
+        return f"<BotConfig at {self.root_dir}>"
 
     def _handle_missing_config(self):
         print("Config file missing or empty:", self._config_path)
@@ -124,11 +129,11 @@ class BotConfig:
     def _load(self):
         """Load data from our JSON config file (config.yml) into self._data."""
         filename = self._config_path
-        with open(filename, 'r') as fp:
+        with open(filename) as fp:
             try:
                 self._data = yaml.load(fp, OrderedLoader)
             except yaml.YAMLError:
-                print("Error parsing config file {0}:".format(filename))
+                print(f"Error parsing config file {filename}:")
                 raise
 
     def _setup_logging(self):
@@ -142,11 +147,13 @@ class BotConfig:
 
         if self.metadata.get("enableLogging"):
             hand = logging.handlers.TimedRotatingFileHandler
-            logfile = lambda f: path.join(log_dir, f)
+
+            def logfile(f):
+                return path.join(log_dir, f)
 
             if not path.isdir(log_dir):
                 if not path.exists(log_dir):
-                    mkdir(log_dir, stat.S_IWUSR|stat.S_IRUSR|stat.S_IXUSR)
+                    mkdir(log_dir, stat.S_IWUSR | stat.S_IRUSR | stat.S_IXUSR)
                 else:
                     msg = "log_dir ({0}) exists but is not a directory!"
                     print(msg.format(log_dir))
@@ -296,7 +303,8 @@ class BotConfig:
                     raise NoConfigError(e)
                 key = getpass("Enter key to decrypt bot passwords: ")
                 self._decryption_cipher = fernet.Fernet(
-                    base64.urlsafe_b64encode(kdf.derive(key.encode())))
+                    base64.urlsafe_b64encode(kdf.derive(key.encode()))
+                )
             for node, nodes in self._decryptable_nodes:
                 self._decrypt(node, nodes)
 
@@ -336,8 +344,13 @@ class BotConfig:
         # or just the task_name:
         tasks = []
 
-        now = {"minute": minute, "hour": hour, "month_day": month_day,
-                "month": month, "week_day": week_day}
+        now = {
+            "minute": minute,
+            "hour": hour,
+            "month_day": month_day,
+            "month": month,
+            "week_day": week_day,
+        }
 
         data = self._data.get("schedule", [])
         for event in data:

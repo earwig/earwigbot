@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,13 +18,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import threading
 import re
+import threading
 
 from earwigbot.commands import Command
 
+
 class Threads(Command):
     """Manage wiki tasks from IRC, and check on thread status."""
+
     name = "threads"
     commands = ["tasks", "task", "threads", "tasklist"]
 
@@ -55,7 +55,7 @@ class Threads(Command):
             self.do_listall()
 
         else:  # They asked us to do something we don't know
-            msg = "Unknown argument: \x0303{0}\x0F.".format(data.args[0])
+            msg = f"Unknown argument: \x0303{data.args[0]}\x0f."
             self.reply(data, msg)
 
     def do_list(self):
@@ -71,34 +71,38 @@ class Threads(Command):
             tname = thread.name
             ident = thread.ident % 10000
             if tname == "MainThread":
-                t = "\x0302main\x0F (id {0})"
+                t = "\x0302main\x0f (id {0})"
                 normal_threads.append(t.format(ident))
             elif tname in self.config.components:
-                t = "\x0302{0}\x0F (id {1})"
+                t = "\x0302{0}\x0f (id {1})"
                 normal_threads.append(t.format(tname, ident))
             elif tname.startswith("cvworker-"):
-                t = "\x0302copyvio worker\x0F (site {0})"
-                daemon_threads.append(t.format(tname[len("cvworker-"):]))
+                t = "\x0302copyvio worker\x0f (site {0})"
+                daemon_threads.append(t.format(tname[len("cvworker-") :]))
             else:
                 match = re.findall(r"^(.*?) \((.*?)\)$", tname)
                 if match:
-                    t = "\x0302{0}\x0F (id {1}, since {2})"
+                    t = "\x0302{0}\x0f (id {1}, since {2})"
                     thread_info = t.format(match[0][0], ident, match[0][1])
                     daemon_threads.append(thread_info)
                 else:
-                    t = "\x0302{0}\x0F (id {1})"
+                    t = "\x0302{0}\x0f (id {1})"
                     daemon_threads.append(t.format(tname, ident))
 
         if daemon_threads:
             if len(daemon_threads) > 1:
-                msg = "\x02{0}\x0F threads active: {1}, and \x02{2}\x0F command/task threads: {3}."
+                msg = "\x02{0}\x0f threads active: {1}, and \x02{2}\x0f command/task threads: {3}."
             else:
-                msg = "\x02{0}\x0F threads active: {1}, and \x02{2}\x0F command/task thread: {3}."
-            msg = msg.format(len(threads), ', '.join(normal_threads),
-                             len(daemon_threads), ', '.join(daemon_threads))
+                msg = "\x02{0}\x0f threads active: {1}, and \x02{2}\x0f command/task thread: {3}."
+            msg = msg.format(
+                len(threads),
+                ", ".join(normal_threads),
+                len(daemon_threads),
+                ", ".join(daemon_threads),
+            )
         else:
-            msg = "\x02{0}\x0F threads active: {1}, and \x020\x0F command/task threads."
-            msg = msg.format(len(threads), ', '.join(normal_threads))
+            msg = "\x02{0}\x0f threads active: {1}, and \x020\x0f command/task threads."
+            msg = msg.format(len(threads), ", ".join(normal_threads))
 
         self.reply(self.data, msg)
 
@@ -111,17 +115,17 @@ class Threads(Command):
             threadlist = [t for t in threads if t.name.startswith(task)]
             ids = [str(t.ident) for t in threadlist]
             if not ids:
-                tasklist.append("\x0302{0}\x0F (idle)".format(task))
+                tasklist.append(f"\x0302{task}\x0f (idle)")
             elif len(ids) == 1:
-                t = "\x0302{0}\x0F (\x02active\x0F as id {1})"
+                t = "\x0302{0}\x0f (\x02active\x0f as id {1})"
                 tasklist.append(t.format(task, ids[0]))
             else:
-                t = "\x0302{0}\x0F (\x02active\x0F as ids {1})"
-                tasklist.append(t.format(task, ', '.join(ids)))
+                t = "\x0302{0}\x0f (\x02active\x0f as ids {1})"
+                tasklist.append(t.format(task, ", ".join(ids)))
 
         tasks = ", ".join(tasklist)
 
-        msg = "\x02{0}\x0F tasks loaded: {1}.".format(len(tasklist), tasks)
+        msg = f"\x02{len(tasklist)}\x0f tasks loaded: {tasks}."
         self.reply(self.data, msg)
 
     def do_start(self):
@@ -143,8 +147,9 @@ class Threads(Command):
 
         data.kwargs["fromIRC"] = True
         data.kwargs["_IRCCallback"] = lambda: self.reply(
-            data, "Task \x0302{0}\x0F finished.".format(task_name))
+            data, f"Task \x0302{task_name}\x0f finished."
+        )
 
         self.bot.tasks.start(task_name, **data.kwargs)
-        msg = "Task \x0302{0}\x0F started.".format(task_name)
+        msg = f"Task \x0302{task_name}\x0f started."
         self.reply(data, msg)

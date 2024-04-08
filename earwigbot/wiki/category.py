@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,6 +21,7 @@
 from earwigbot.wiki.page import Page
 
 __all__ = ["Category"]
+
 
 class Category(Page):
     """
@@ -56,7 +55,7 @@ class Category(Page):
 
     def __str__(self):
         """Return a nice string representation of the Category."""
-        return '<Category "{0}" of {1}>'.format(self.title, str(self.site))
+        return f'<Category "{self.title}" of {str(self.site)}>'
 
     def __iter__(self):
         """Iterate over all members of the category."""
@@ -64,8 +63,12 @@ class Category(Page):
 
     def _get_members_via_api(self, limit, follow):
         """Iterate over Pages in the category using the API."""
-        params = {"action": "query", "list": "categorymembers",
-                  "cmtitle": self.title, "continue": ""}
+        params = {
+            "action": "query",
+            "list": "categorymembers",
+            "cmtitle": self.title,
+            "continue": "",
+        }
 
         while 1:
             params["cmlimit"] = limit if limit else "max"
@@ -102,13 +105,13 @@ class Category(Page):
                 title = ":".join((namespace, base))
             else:  # Avoid doing a silly (albeit valid) ":Pagename" thing
                 title = base
-            yield self.site.get_page(title, follow_redirects=follow,
-                                     pageid=row[2])
+            yield self.site.get_page(title, follow_redirects=follow, pageid=row[2])
 
     def _get_size_via_api(self, member_type):
         """Return the size of the category using the API."""
-        result = self.site.api_query(action="query", prop="categoryinfo",
-                                     titles=self.title)
+        result = self.site.api_query(
+            action="query", prop="categoryinfo", titles=self.title
+        )
         info = list(result["query"]["pages"].values())[0]["categoryinfo"]
         return info[member_type]
 
@@ -127,7 +130,7 @@ class Category(Page):
         """Return the size of the category."""
         services = {
             self.site.SERVICE_API: self._get_size_via_api,
-            self.site.SERVICE_SQL: self._get_size_via_sql
+            self.site.SERVICE_SQL: self._get_size_via_sql,
         }
         return self.site.delegate(services, (member_type,))
 
@@ -201,7 +204,7 @@ class Category(Page):
         """
         services = {
             self.site.SERVICE_API: self._get_members_via_api,
-            self.site.SERVICE_SQL: self._get_members_via_sql
+            self.site.SERVICE_SQL: self._get_members_via_sql,
         }
         if follow_redirects is None:
             follow_redirects = self._follow_redirects

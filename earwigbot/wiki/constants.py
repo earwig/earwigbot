@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -34,8 +32,10 @@ Import directly with ``from earwigbot.wiki import constants`` or
 """
 
 # Default User Agent when making API queries:
-from earwigbot import __version__ as _v
 from platform import python_version as _p
+
+from earwigbot import __version__ as _v
+
 USER_AGENT = "EarwigBot/{0} (Python/{1}; https://github.com/earwig/earwigbot)"
 USER_AGENT = USER_AGENT.format(_v, _p())
 del _v, _p

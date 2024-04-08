@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,14 +18,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from platform import python_version
 import re
+from platform import python_version
 
 from earwigbot import __version__
 from earwigbot.commands import Command
 
+
 class Help(Command):
     """Displays information about the bot."""
+
     name = "help"
     commands = ["help", "version"]
 
@@ -53,7 +53,7 @@ class Help(Command):
         """Give the user a general help message with a list of all commands."""
         msg = "Hi, I'm a bot! I have {0} commands loaded: {1}. You can get help for any command with '!help <command>'."
         cmnds = sorted([cmnd.name for cmnd in self.bot.commands])
-        msg = msg.format(len(cmnds), ', '.join(cmnds))
+        msg = msg.format(len(cmnds), ", ".join(cmnds))
         self.reply(data, msg)
 
     def do_command_help(self, data):
@@ -65,16 +65,18 @@ class Help(Command):
                 if command.__doc__:
                     doc = command.__doc__.replace("\n", "")
                     doc = re.sub(r"\s\s+", " ", doc)
-                    msg = 'Help for command \x0303{0}\x0F: "{1}"'
+                    msg = 'Help for command \x0303{0}\x0f: "{1}"'
                     self.reply(data, msg.format(target, doc))
                     return
 
-        msg = "Sorry, no help for \x0303{0}\x0F.".format(target)
+        msg = f"Sorry, no help for \x0303{target}\x0f."
         self.reply(data, msg)
 
     def do_hello(self, data):
-        self.say(data.chan, "Yes, {0}?".format(data.nick))
+        self.say(data.chan, f"Yes, {data.nick}?")
 
     def do_version(self, data):
-        vers = "EarwigBot v{bot} on Python {python}: https://github.com/earwig/earwigbot"
+        vers = (
+            "EarwigBot v{bot} on Python {python}: https://github.com/earwig/earwigbot"
+        )
         self.reply(data, vers.format(bot=__version__, python=python_version()))

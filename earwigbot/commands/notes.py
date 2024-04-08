@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,16 +18,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from datetime import datetime
-from os import path
 import re
 import sqlite3 as sqlite
+from datetime import datetime
+from os import path
 from threading import Lock
 
 from earwigbot.commands import Command
 
+
 class Notes(Command):
     """A mini IRC-based wiki for storing notes, tips, and reminders."""
+
     name = "notes"
     commands = ["notes", "note", "about"]
     version = "2.1"
@@ -43,7 +43,7 @@ class Notes(Command):
         "change": "edit",
         "modify": "edit",
         "move": "rename",
-        "remove": "delete"
+        "remove": "delete",
     }
 
     def setup(self):
@@ -70,7 +70,7 @@ class Notes(Command):
         elif command in self.aliases:
             commands[self.aliases[command]](data)
         else:
-            msg = "Unknown subcommand: \x0303{0}\x0F.".format(command)
+            msg = f"Unknown subcommand: \x0303{command}\x0f."
             self.reply(data, msg)
 
     def do_help(self, data):
@@ -94,8 +94,10 @@ class Notes(Command):
         try:
             command = data.args[1]
         except IndexError:
-            msg = ("\x0302The Earwig Mini-Wiki\x0F: running v{0}. Subcommands "
-                   "are: {1}. You can get help on any with '!{2} help subcommand'.")
+            msg = (
+                "\x0302The Earwig Mini-Wiki\x0f: running v{0}. Subcommands "
+                "are: {1}. You can get help on any with '!{2} help subcommand'."
+            )
             cmnds = ", ".join(info.keys())
             self.reply(data, msg.format(self.version, cmnds, data.command))
             return
@@ -103,9 +105,9 @@ class Notes(Command):
             command = self.aliases[command]
         try:
             help_ = re.sub(r"\s\s+", " ", info[command].replace("\n", ""))
-            self.reply(data, "\x0303{0}\x0F: ".format(command) + help_)
+            self.reply(data, f"\x0303{command}\x0f: " + help_)
         except KeyError:
-            msg = "Unknown subcommand: \x0303{0}\x0F.".format(command)
+            msg = f"Unknown subcommand: \x0303{command}\x0f."
             self.reply(data, msg)
 
     def do_list(self, data):
@@ -119,7 +121,7 @@ class Notes(Command):
 
         if entries:
             entries = [entry[0].encode("utf8") for entry in entries]
-            self.reply(data, "Entries: {0}".format(", ".join(entries)))
+            self.reply(data, "Entries: {}".format(", ".join(entries)))
         else:
             self.reply(data, "No entries in the database.")
 
@@ -142,10 +144,10 @@ class Notes(Command):
 
         title = title.encode("utf8")
         if content:
-            msg = "\x0302{0}\x0F: {1}"
+            msg = "\x0302{0}\x0f: {1}"
             self.reply(data, msg.format(title, content.encode("utf8")))
         else:
-            self.reply(data, "Entry \x0302{0}\x0F not found.".format(title))
+            self.reply(data, f"Entry \x0302{title}\x0f not found.")
 
     def do_edit(self, data):
         """Edit an entry in the notes database."""
@@ -191,7 +193,7 @@ class Notes(Command):
             else:
                 conn.execute(query4, (revid, id_))
 
-        msg = "Entry \x0302{0}\x0F updated."
+        msg = "Entry \x0302{0}\x0f updated."
         self.reply(data, msg.format(title.encode("utf8")))
 
     def do_info(self, data):
@@ -216,17 +218,17 @@ class Notes(Command):
             title = info[0][0]
             times = [datum[1] for datum in info]
             earliest = min(times)
-            msg = "\x0302{0}\x0F: {1} edits since {2}"
+            msg = "\x0302{0}\x0f: {1} edits since {2}"
             msg = msg.format(title.encode("utf8"), len(info), earliest)
             if len(times) > 1:
                 latest = max(times)
-                msg += "; last edit on {0}".format(latest)
+                msg += f"; last edit on {latest}"
             names = [datum[2] for datum in info]
-            msg += "; authors: {0}.".format(", ".join(list(set(names))))
+            msg += "; authors: {}.".format(", ".join(list(set(names))))
             self.reply(data, msg)
         else:
             title = data.args[1]
-            self.reply(data, "Entry \x0302{0}\x0F not found.".format(title))
+            self.reply(data, f"Entry \x0302{title}\x0f not found.")
 
     def do_rename(self, data):
         """Rename an entry in the notes database."""
@@ -254,7 +256,7 @@ class Notes(Command):
             try:
                 id_, author = conn.execute(query1, (slug,)).fetchone()
             except (sqlite.OperationalError, TypeError):
-                msg = "Entry \x0302{0}\x0F not found.".format(data.args[1])
+                msg = f"Entry \x0302{data.args[1]}\x0f not found."
                 self.reply(data, msg)
                 return
             permdb = self.config.irc["permissions"]
@@ -265,7 +267,7 @@ class Notes(Command):
             args = (self._slugify(newtitle), newtitle.decode("utf8"), id_)
             conn.execute(query2, args)
 
-        msg = "Entry \x0302{0}\x0F renamed to \x0302{1}\x0F."
+        msg = "Entry \x0302{0}\x0f renamed to \x0302{1}\x0f."
         self.reply(data, msg.format(data.args[1], newtitle))
 
     def do_delete(self, data):
@@ -286,7 +288,7 @@ class Notes(Command):
             try:
                 id_, author = conn.execute(query1, (slug,)).fetchone()
             except (sqlite.OperationalError, TypeError):
-                msg = "Entry \x0302{0}\x0F not found.".format(data.args[1])
+                msg = f"Entry \x0302{data.args[1]}\x0f not found."
                 self.reply(data, msg)
                 return
             permdb = self.config.irc["permissions"]
@@ -297,7 +299,7 @@ class Notes(Command):
             conn.execute(query2, (id_,))
             conn.execute(query3, (id_,))
 
-        self.reply(data, "Entry \x0302{0}\x0F deleted.".format(data.args[1]))
+        self.reply(data, f"Entry \x0302{data.args[1]}\x0f deleted.")
 
     def _slugify(self, name):
         """Convert *name* into an identifier for storing in the database."""

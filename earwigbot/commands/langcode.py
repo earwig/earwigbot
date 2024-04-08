@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,9 +20,11 @@
 
 from earwigbot.commands import Command
 
+
 class Langcode(Command):
     """Convert a language code into its name (or vice versa), and give a list
     of WMF sites in that language."""
+
     name = "langcode"
     commands = ["langcode", "lang", "language"]
 
@@ -46,17 +46,17 @@ class Langcode(Command):
             localname = site["localname"].encode("utf8")
             if site["code"] == lcase:
                 if name != localname:
-                    name += " ({0})".format(localname)
+                    name += f" ({localname})"
                 sites = ", ".join([s["url"] for s in site["site"]])
-                msg = "\x0302{0}\x0F is {1} ({2})".format(code, name, sites)
+                msg = f"\x0302{code}\x0f is {name} ({sites})"
                 self.reply(data, msg)
                 return
             elif name.lower() == lcase or localname.lower() == lcase:
                 if name != localname:
-                    name += " ({0})".format(localname)
+                    name += f" ({localname})"
                 sites = ", ".join([s["url"] for s in site["site"]])
-                msg = "{0} is \x0302{1}\x0F ({2})"
+                msg = "{0} is \x0302{1}\x0f ({2})"
                 self.reply(data, msg.format(name, site["code"], sites))
                 return
 
-        self.reply(data, "Language \x0302{0}\x0F not found.".format(code))
+        self.reply(data, f"Language \x0302{code}\x0f not found.")

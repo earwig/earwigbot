@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,17 +18,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from time import sleep, time
+from time import sleep
 from urllib.request import build_opener
 
 from earwigbot import exceptions
 from earwigbot.wiki.copyvios.markov import MarkovChain
 from earwigbot.wiki.copyvios.parsers import ArticleTextParser
 from earwigbot.wiki.copyvios.search import SEARCH_ENGINES
-from earwigbot.wiki.copyvios.workers import (
-    globalize, localize, CopyvioWorkspace)
+from earwigbot.wiki.copyvios.workers import CopyvioWorkspace, globalize, localize
 
 __all__ = ["CopyvioMixIn", "globalize", "localize"]
+
 
 class CopyvioMixIn:
     """
@@ -46,8 +44,10 @@ class CopyvioMixIn:
     def __init__(self, site):
         self._search_config = site._search_config
         self._exclusions_db = self._search_config.get("exclusions_db")
-        self._addheaders = [("User-Agent", site.user_agent),
-                            ("Accept-Encoding", "gzip")]
+        self._addheaders = [
+            ("User-Agent", site.user_agent),
+            ("Accept-Encoding", "gzip"),
+        ]
 
     def _get_search_engine(self):
         """Return a function that can be called to do web searches.
@@ -80,8 +80,15 @@ class CopyvioMixIn:
 
         return klass(credentials, opener)
 
-    def copyvio_check(self, min_confidence=0.75, max_queries=15, max_time=-1,
-                      no_searches=False, no_links=False, short_circuit=True):
+    def copyvio_check(
+        self,
+        min_confidence=0.75,
+        max_queries=15,
+        max_time=-1,
+        no_searches=False,
+        no_links=False,
+        short_circuit=True,
+    ):
         """Check the page for copyright violations.
 
         Returns a :class:`.CopyvioCheckResult` object with information on the
@@ -117,25 +124,34 @@ class CopyvioMixIn:
         log = "Starting copyvio check for [[{0}]]"
         self._logger.info(log.format(self.title))
         searcher = self._get_search_engine()
-        parser = ArticleTextParser(self.get(), args={
-            "nltk_dir": self._search_config["nltk_dir"],
-            "lang": self._site.lang
-        })
+        parser = ArticleTextParser(
+            self.get(),
+            args={"nltk_dir": self._search_config["nltk_dir"], "lang": self._site.lang},
+        )
         article = MarkovChain(parser.strip())
         parser_args = {}
 
         if self._exclusions_db:
             self._exclusions_db.sync(self.site.name)
-            exclude = lambda u: self._exclusions_db.check(self.site.name, u)
-            parser_args["mirror_hints"] = \
-                self._exclusions_db.get_mirror_hints(self)
+
+            def exclude(u):
+                return self._exclusions_db.check(self.site.name, u)
+
+            parser_args["mirror_hints"] = self._exclusions_db.get_mirror_hints(self)
         else:
             exclude = None
 
         workspace = CopyvioWorkspace(
-            article, min_confidence, max_time, self._logger, self._addheaders,
-            short_circuit=short_circuit, parser_args=parser_args, exclude_check=exclude,
-            config=self._search_config)
+            article,
+            min_confidence,
+            max_time,
+            self._logger,
+            self._addheaders,
+            short_circuit=short_circuit,
+            parser_args=parser_args,
+            exclude_check=exclude,
+            config=self._search_config,
+        )
 
         if article.size < 20:  # Auto-fail very small articles
             result = workspace.get_result()
@@ -187,8 +203,15 @@ class CopyvioMixIn:
         self._logger.info(log.format(self.title, url))
         article = MarkovChain(ArticleTextParser(self.get()).strip())
         workspace = CopyvioWorkspace(
-            article, min_confidence, max_time, self._logger, self._addheaders,
-            max_time, num_workers=1, config=self._search_config)
+            article,
+            min_confidence,
+            max_time,
+            self._logger,
+            self._addheaders,
+            max_time,
+            num_workers=1,
+            config=self._search_config,
+        )
         workspace.enqueue([url])
         workspace.wait()
         result = workspace.get_result()

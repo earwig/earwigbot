@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,8 +22,10 @@ from unicodedata import normalize
 
 from earwigbot.commands import Command
 
+
 class Trout(Command):
     """Slap someone with a trout, or related fish."""
+
     name = "trout"
     commands = ["trout", "whale"]
 
@@ -44,5 +44,5 @@ class Trout(Command):
         if normal in self.exceptions:
             self.reply(data, self.exceptions[normal])
         else:
-            msg = "slaps \x02{0}\x0F around a bit with a large {1}."
+            msg = "slaps \x02{0}\x0f around a bit with a large {1}."
             self.action(data.chan, msg.format(target, animal))

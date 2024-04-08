@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,8 +23,8 @@ import unittest
 from earwigbot.commands.test import Command
 from tests import CommandTestCase
 
-class TestTest(CommandTestCase):
 
+class TestTest(CommandTestCase):
     def setUp(self):
         super().setUp(Command)
 
@@ -40,10 +38,11 @@ class TestTest(CommandTestCase):
     def test_process(self):
         def test():
             self.command.process(self.make_msg("test"))
-            self.assertSaidIn(["Hey \x02Foo\x0F!", "'sup \x02Foo\x0F?"])
+            self.assertSaidIn(["Hey \x02Foo\x0f!", "'sup \x02Foo\x0f?"])
 
         for i in range(64):
             test()
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

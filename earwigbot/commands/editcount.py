@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,8 +23,10 @@ from urllib.parse import quote_plus
 from earwigbot import exceptions
 from earwigbot.commands import Command
 
+
 class Editcount(Command):
     """Return a user's edit count."""
+
     name = "editcount"
     commands = ["ec", "editcount"]
 
@@ -34,7 +34,7 @@ class Editcount(Command):
         if not data.args:
             name = data.nick
         else:
-            name = ' '.join(data.args)
+            name = " ".join(data.args)
 
         site = self.bot.wiki.get_site()
         user = site.get_user(name)
@@ -42,12 +42,12 @@ class Editcount(Command):
         try:
             count = user.editcount
         except exceptions.UserNotFoundError:
-            msg = "The user \x0302{0}\x0F does not exist."
+            msg = "The user \x0302{0}\x0f does not exist."
             self.reply(data, msg.format(name))
             return
 
         safe = quote_plus(user.name.encode("utf8"))
-        url = "https://xtools.wmflabs.org/ec/{}/{}".format(site.domain, safe)
+        url = f"https://xtools.wmflabs.org/ec/{site.domain}/{safe}"
         fullurl = url.format(safe, site.domain)
-        msg = "\x0302{0}\x0F has {1} edits ({2})."
+        msg = "\x0302{0}\x0f has {1} edits ({2})."
         self.reply(data, msg.format(name, count, fullurl))

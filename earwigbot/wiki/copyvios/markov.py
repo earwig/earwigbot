@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,13 +18,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from re import sub, UNICODE
+from re import UNICODE, sub
 
-__all__ = ["EMPTY", "EMPTY_INTERSECTION", "MarkovChain",
-           "MarkovChainIntersection"]
+__all__ = ["EMPTY", "EMPTY_INTERSECTION", "MarkovChain", "MarkovChainIntersection"]
+
 
 class MarkovChain:
     """Implements a basic ngram Markov chain of words."""
+
     START = -1
     END = -2
     degree = 5  # 2 for bigrams, 3 for trigrams, etc.
@@ -44,7 +43,7 @@ class MarkovChain:
         chain = {}
 
         for i in range(len(words) - self.degree + 1):
-            phrase = tuple(words[i:i+self.degree])
+            phrase = tuple(words[i : i + self.degree])
             if phrase in chain:
                 chain[phrase] += 1
             else:
@@ -57,11 +56,11 @@ class MarkovChain:
 
     def __repr__(self):
         """Return the canonical string representation of the MarkovChain."""
-        return "MarkovChain(text={0!r})".format(self.text)
+        return f"MarkovChain(text={self.text!r})"
 
     def __str__(self):
         """Return a nice string representation of the MarkovChain."""
-        return "<MarkovChain of size {0}>".format(self.size)
+        return f"<MarkovChain of size {self.size}>"
 
 
 class MarkovChainIntersection(MarkovChain):

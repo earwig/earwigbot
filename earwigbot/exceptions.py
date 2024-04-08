@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -55,8 +53,10 @@ This module contains all exceptions used by EarwigBot::
                +-- ParserExclusionError
 """
 
+
 class EarwigBotError(Exception):
     """Base exception class for errors in EarwigBot."""
+
 
 class NoConfigError(EarwigBotError):
     """The bot cannot be run without a config file.
@@ -65,8 +65,10 @@ class NoConfigError(EarwigBotError):
     one to be created.
     """
 
+
 class IRCError(EarwigBotError):
     """Base exception class for errors in IRC-relation sections of the bot."""
+
 
 class BrokenSocketError(IRCError):
     """A socket has broken, because it is not sending data.
@@ -75,14 +77,17 @@ class BrokenSocketError(IRCError):
     <earwigbot.irc.connection.IRCConnection._get>`.
     """
 
+
 class WikiToolsetError(EarwigBotError):
     """Base exception class for errors in the Wiki Toolset."""
+
 
 class SiteNotFoundError(WikiToolsetError):
     """A particular site could not be found in the sites database.
 
     Raised by :py:class:`~earwigbot.wiki.sitesdb.SitesDB`.
     """
+
 
 class ServiceError(WikiToolsetError):
     """Base exception class for an error within a service (the API or SQL).
@@ -91,6 +96,7 @@ class ServiceError(WikiToolsetError):
     <earwigbot.wiki.site.Site.delegate>` to indicate a service is
     non-functional so another, less-preferred one can be tried.
     """
+
 
 class APIError(ServiceError):
     """Couldn't connect to a site's API.
@@ -101,17 +107,20 @@ class APIError(ServiceError):
     Raised by :py:meth:`Site.api_query <earwigbot.wiki.site.Site.api_query>`.
     """
 
+
 class SQLError(ServiceError):
     """Some error involving SQL querying occurred.
 
     Raised by :py:meth:`Site.sql_query <earwigbot.wiki.site.Site.sql_query>`.
     """
 
+
 class NoServiceError(WikiToolsetError):
     """No service is functioning to handle a specific task.
 
     Raised by :py:meth:`Site.delegate <earwigbot.wiki.site.Site.delegate>`.
     """
+
 
 class LoginError(WikiToolsetError):
     """An error occured while trying to login.
@@ -120,6 +129,7 @@ class LoginError(WikiToolsetError):
 
     Raised by :py:meth:`Site._login <earwigbot.wiki.site.Site._login>`.
     """
+
 
 class PermissionsError(WikiToolsetError):
     """A permissions error ocurred.
@@ -134,6 +144,7 @@ class PermissionsError(WikiToolsetError):
     other API methods depending on settings.
     """
 
+
 class NamespaceNotFoundError(WikiToolsetError):
     """A requested namespace name or namespace ID does not exist.
 
@@ -143,17 +154,20 @@ class NamespaceNotFoundError(WikiToolsetError):
     <earwigbot.wiki.site.Site.namespace_name_to_id>`.
     """
 
+
 class PageNotFoundError(WikiToolsetError):
     """Attempted to get information about a page that does not exist.
 
     Raised by :py:class:`~earwigbot.wiki.page.Page`.
     """
 
+
 class InvalidPageError(WikiToolsetError):
     """Attempted to get information about a page whose title is invalid.
 
     Raised by :py:class:`~earwigbot.wiki.page.Page`.
     """
+
 
 class RedirectError(WikiToolsetError):
     """A redirect-only method was called on a malformed or non-redirect page.
@@ -162,11 +176,13 @@ class RedirectError(WikiToolsetError):
     <earwigbot.wiki.page.Page.get_redirect_target>`.
     """
 
+
 class UserNotFoundError(WikiToolsetError):
     """Attempted to get certain information about a user that does not exist.
 
     Raised by :py:class:`~earwigbot.wiki.user.User`.
     """
+
 
 class EditError(WikiToolsetError):
     """An error occured while editing.
@@ -178,12 +194,14 @@ class EditError(WikiToolsetError):
     :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`.
     """
 
+
 class EditConflictError(EditError):
     """We gotten an edit conflict or a (rarer) delete/recreate conflict.
 
     Raised by :py:meth:`Page.edit <earwigbot.wiki.page.Page.edit>` and
     :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`.
     """
+
 
 class NoContentError(EditError):
     """We tried to create a page or new section with no content.
@@ -192,12 +210,14 @@ class NoContentError(EditError):
     :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`.
     """
 
+
 class ContentTooBigError(EditError):
     """The edit we tried to push exceeded the article size limit.
 
     Raised by :py:meth:`Page.edit <earwigbot.wiki.page.Page.edit>` and
     :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`.
     """
+
 
 class SpamDetectedError(EditError):
     """The spam filter refused our edit.
@@ -206,12 +226,14 @@ class SpamDetectedError(EditError):
     :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`.
     """
 
+
 class FilteredError(EditError):
     """The edit filter refused our edit.
 
     Raised by :py:meth:`Page.edit <earwigbot.wiki.page.Page.edit>` and
     :py:meth:`Page.add_section <earwigbot.wiki.page.Page.add_section>`.
     """
+
 
 class CopyvioCheckError(WikiToolsetError):
     """An error occured when checking a page for copyright violations.
@@ -225,6 +247,7 @@ class CopyvioCheckError(WikiToolsetError):
     <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_compare>`.
     """
 
+
 class UnknownSearchEngineError(CopyvioCheckError):
     """Attempted to do a copyvio check with an unknown search engine.
 
@@ -234,6 +257,7 @@ class UnknownSearchEngineError(CopyvioCheckError):
     Raised by :py:meth:`Page.copyvio_check
     <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>`.
     """
+
 
 class UnsupportedSearchEngineError(CopyvioCheckError):
     """Attmpted to do a copyvio check using an unavailable engine.
@@ -245,12 +269,14 @@ class UnsupportedSearchEngineError(CopyvioCheckError):
     <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>`.
     """
 
+
 class SearchQueryError(CopyvioCheckError):
     """Some error ocurred while doing a search query.
 
     Raised by :py:meth:`Page.copyvio_check
     <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>`.
     """
+
 
 class ParserExclusionError(CopyvioCheckError):
     """A content parser detected that the given source should be excluded.
@@ -260,6 +286,7 @@ class ParserExclusionError(CopyvioCheckError):
     exposed in client code.
     """
 
+
 class ParserRedirectError(CopyvioCheckError):
     """A content parser detected that a redirect should be followed.
 
@@ -267,6 +294,7 @@ class ParserRedirectError(CopyvioCheckError):
     <earwigbot.wiki.copyvios.CopyvioMixIn.copyvio_check>`; should not be
     exposed in client code.
     """
+
     def __init__(self, url):
         super().__init__()
         self.url = url

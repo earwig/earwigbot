@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,9 +27,11 @@ from earwigbot.commands import Command
 
 pytz = importer.new("pytz")
 
+
 class Time(Command):
     """Report the current time in any timezone (UTC default), UNIX epoch time,
     or beat time."""
+
     name = "time"
     commands = ["time", "beats", "swatch", "epoch", "date"]
 
@@ -54,7 +54,7 @@ class Time(Command):
     def do_beats(self, data):
         beats = ((time() + 3600) % 86400) / 86.4
         beats = int(floor(beats))
-        self.reply(data, "@{0:0>3}".format(beats))
+        self.reply(data, f"@{beats:0>3}")
 
     def do_time(self, data, timezone):
         try:
@@ -64,7 +64,7 @@ class Time(Command):
             self.reply(data, msg)
             return
         except pytz.exceptions.UnknownTimeZoneError:
-            self.reply(data, "Unknown timezone: {0}.".format(timezone))
+            self.reply(data, f"Unknown timezone: {timezone}.")
             return
         now = pytz.utc.localize(datetime.utcnow()).astimezone(tzinfo)
         self.reply(data, now.strftime("%Y-%m-%d %H:%M:%S %Z"))

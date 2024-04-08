@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -33,17 +31,22 @@ __all__ = ["ExclusionsDB"]
 DEFAULT_SOURCES = {
     "all": [  # Applies to all, but located on enwiki
         "User:EarwigBot/Copyvios/Exclusions",
-        "User:EranBot/Copyright/Blacklist"
+        "User:EranBot/Copyright/Blacklist",
     ],
     "enwiki": [
-        "Wikipedia:Mirrors and forks/ABC", "Wikipedia:Mirrors and forks/DEF",
-        "Wikipedia:Mirrors and forks/GHI", "Wikipedia:Mirrors and forks/JKL",
-        "Wikipedia:Mirrors and forks/MNO", "Wikipedia:Mirrors and forks/PQR",
-        "Wikipedia:Mirrors and forks/STU", "Wikipedia:Mirrors and forks/VWXYZ"
-    ]
+        "Wikipedia:Mirrors and forks/ABC",
+        "Wikipedia:Mirrors and forks/DEF",
+        "Wikipedia:Mirrors and forks/GHI",
+        "Wikipedia:Mirrors and forks/JKL",
+        "Wikipedia:Mirrors and forks/MNO",
+        "Wikipedia:Mirrors and forks/PQR",
+        "Wikipedia:Mirrors and forks/STU",
+        "Wikipedia:Mirrors and forks/VWXYZ",
+    ],
 }
 
 _RE_STRIP_PREFIX = r"^https?://(www\.)?"
+
 
 class ExclusionsDB:
     """
@@ -66,7 +69,7 @@ class ExclusionsDB:
 
     def __str__(self):
         """Return a nice string representation of the ExclusionsDB."""
-        return "<ExclusionsDB at {0}>".format(self._dbfile)
+        return f"<ExclusionsDB at {self._dbfile}>"
 
     def _create(self):
         """Initialize the exclusions database with its necessary tables."""
@@ -95,7 +98,10 @@ class ExclusionsDB:
 
         if source == "User:EarwigBot/Copyvios/Exclusions":
             for line in data.splitlines():
-                match = re.match(r"^\s*url\s*=\s*(?:\<nowiki\>\s*)?(.+?)\s*(?:\</nowiki\>\s*)?(?:#.*?)?$", line)
+                match = re.match(
+                    r"^\s*url\s*=\s*(?:\<nowiki\>\s*)?(.+?)\s*(?:\</nowiki\>\s*)?(?:#.*?)?$",
+                    line,
+                )
                 if match:
                     url = re.sub(_RE_STRIP_PREFIX, "", match.group(1))
                     if url:
@@ -121,7 +127,9 @@ class ExclusionsDB:
         """Update the database from listed sources in the index."""
         query1 = "SELECT source_page FROM sources WHERE source_sitename = ?"
         query2 = "SELECT exclusion_url FROM exclusions WHERE exclusion_sitename = ?"
-        query3 = "DELETE FROM exclusions WHERE exclusion_sitename = ? AND exclusion_url = ?"
+        query3 = (
+            "DELETE FROM exclusions WHERE exclusion_sitename = ? AND exclusion_url = ?"
+        )
         query4 = "INSERT INTO exclusions VALUES (?, ?)"
         query5 = "SELECT 1 FROM updates WHERE update_sitename = ?"
         query6 = "UPDATE updates SET update_time = ? WHERE update_sitename = ?"
@@ -206,7 +214,7 @@ class ExclusionsDB:
                     self._logger.debug(log.format(sitename, url))
                     return True
 
-        log = "No exclusions in {0} for {1}".format(sitename, url)
+        log = f"No exclusions in {sitename} for {url}"
         self._logger.debug(log)
         return False
 
@@ -224,9 +232,12 @@ class ExclusionsDB:
         if try_mobile:
             fragments = re.search(r"^([\w]+)\.([\w]+).([\w]+)$", site.domain)
             if fragments:
-                roots.append("{0}.m.{1}.{2}".format(*fragments.groups()))
+                roots.append("{}.m.{}.{}".format(*fragments.groups()))
 
-        general = [root + site._script_path + "/" + script
-                   for root in roots for script in scripts]
+        general = [
+            root + site._script_path + "/" + script
+            for root in roots
+            for script in scripts
+        ]
         specific = [root + path for root in roots]
         return general + specific

@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,14 +22,16 @@ import random
 
 from earwigbot.commands import Command
 
+
 class Test(Command):
     """Test the bot!"""
+
     name = "test"
 
     def process(self, data):
-        user = "\x02" + data.nick + "\x0F"  # Wrap nick in bold
+        user = "\x02" + data.nick + "\x0f"  # Wrap nick in bold
         hey = random.randint(0, 1)
         if hey:
-            self.say(data.chan, "Hey {0}!".format(user))
+            self.say(data.chan, f"Hey {user}!")
         else:
-            self.say(data.chan, "'Sup {0}?".format(user))
+            self.say(data.chan, f"'Sup {user}?")

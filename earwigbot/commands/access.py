@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,8 +22,10 @@ import re
 
 from earwigbot.commands import Command
 
+
 class Access(Command):
     """Control and get info on who can access the bot."""
+
     name = "access"
     commands = ["access", "permission", "permissions", "perm", "perms"]
 
@@ -42,15 +42,15 @@ class Access(Command):
         elif data.args[0] == "help":
             self.reply(data, "Subcommands are self, list, add, and remove.")
         else:
-            msg = "Unknown subcommand \x0303{0}\x0F. Subcommands are self, list, add, remove."
+            msg = "Unknown subcommand \x0303{0}\x0f. Subcommands are self, list, add, remove."
             self.reply(data, msg.format(data.args[0]))
 
     def do_self(self, data, permdb):
         if permdb.is_owner(data):
-            msg = "You are a bot owner (matching rule \x0302{0}\x0F)."
+            msg = "You are a bot owner (matching rule \x0302{0}\x0f)."
             self.reply(data, msg.format(permdb.is_owner(data)))
         elif permdb.is_admin(data):
-            msg = "You are a bot admin (matching rule \x0302{0}\x0F)."
+            msg = "You are a bot admin (matching rule \x0302{0}\x0f)."
             self.reply(data, msg.format(permdb.is_admin(data)))
         else:
             self.reply(data, "You do not match any bot access rules.")
@@ -62,18 +62,18 @@ class Access(Command):
             elif data.args[1] in ["admin", "admins"]:
                 name, rules = "admins", permdb.users.get(permdb.ADMIN)
             else:
-                msg = "Unknown access level \x0302{0}\x0F."
+                msg = "Unknown access level \x0302{0}\x0f."
                 self.reply(data, msg.format(data.args[1]))
                 return
             if rules:
-                msg = "Bot {0}: {1}.".format(name, ", ".join(map(str, rules)))
+                msg = "Bot {}: {}.".format(name, ", ".join(map(str, rules)))
             else:
-                msg = "No bot {0}.".format(name)
+                msg = f"No bot {name}."
             self.reply(data, msg)
         else:
             owners = len(permdb.users.get(permdb.OWNER, []))
             admins = len(permdb.users.get(permdb.ADMIN, []))
-            msg = "There are \x02{0}\x0F bot owners and \x02{1}\x0F bot admins. Use '!{2} list owners' or '!{2} list admins' for details."
+            msg = "There are \x02{0}\x0f bot owners and \x02{1}\x0f bot admins. Use '!{2} list owners' or '!{2} list admins' for details."
             self.reply(data, msg.format(owners, admins, data.command))
 
     def do_add(self, data, permdb):
@@ -85,12 +85,12 @@ class Access(Command):
             else:
                 name, level, adder = "admin", permdb.ADMIN, permdb.add_admin
             if permdb.has_exact(level, nick, ident, host):
-                rule = "{0}!{1}@{2}".format(nick, ident, host)
-                msg = "\x0302{0}\x0F is already a bot {1}.".format(rule, name)
+                rule = f"{nick}!{ident}@{host}"
+                msg = f"\x0302{rule}\x0f is already a bot {name}."
                 self.reply(data, msg)
             else:
                 rule = adder(nick, ident, host)
-                msg = "Added bot {0} \x0302{1}\x0F.".format(name, rule)
+                msg = f"Added bot {name} \x0302{rule}\x0f."
                 self.reply(data, msg)
 
     def do_remove(self, data, permdb):
@@ -103,11 +103,11 @@ class Access(Command):
                 name, rmver = "admin", permdb.remove_admin
             rule = rmver(nick, ident, host)
             if rule:
-                msg = "Removed bot {0} \x0302{1}\x0F.".format(name, rule)
+                msg = f"Removed bot {name} \x0302{rule}\x0f."
                 self.reply(data, msg)
             else:
-                rule = "{0}!{1}@{2}".format(nick, ident, host)
-                msg = "No bot {0} matching \x0302{1}\x0F.".format(name, rule)
+                rule = f"{nick}!{ident}@{host}"
+                msg = f"No bot {name} matching \x0302{rule}\x0f."
                 self.reply(data, msg)
 
     def get_user_from_args(self, data, permdb):
@@ -136,6 +136,6 @@ class Access(Command):
         return user.group(1), user.group(2), user.group(3)
 
     def no_arg_error(self, data):
-        msg = 'Please specify a user, either as "\x0302nick\x0F!\x0302ident\x0F@\x0302host\x0F"'
-        msg += ' or "nick=\x0302nick\x0F, ident=\x0302ident\x0F, host=\x0302host\x0F".'
+        msg = 'Please specify a user, either as "\x0302nick\x0f!\x0302ident\x0f@\x0302host\x0f"'
+        msg += ' or "nick=\x0302nick\x0f, ident=\x0302ident\x0f, host=\x0302host\x0f".'
         self.reply(data, msg)

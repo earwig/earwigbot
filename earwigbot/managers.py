@@ -1,6 +1,4 @@
 #! /usr/bin/env python
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -69,12 +67,11 @@ class _ResourceManager:
 
     def __str__(self):
         """Return a nice string representation of the manager."""
-        return "<{0} of {1}>".format(self.__class__.__name__, self.bot)
+        return f"<{self.__class__.__name__} of {self.bot}>"
 
     def __iter__(self):
         with self.lock:
-            for resource in self._resources.values():
-                yield resource
+            yield from self._resources.values()
 
     def _is_disabled(self, name):
         """Check whether a resource should be disabled."""
@@ -99,7 +96,7 @@ class _ResourceManager:
             self.logger.exception(e.format(res_type, name, path))
         else:
             self._resources[resource.name] = resource
-            self.logger.debug("Loaded {0} {1}".format(res_type, resource.name))
+            self.logger.debug(f"Loaded {res_type} {resource.name}")
 
     def _load_module(self, name, path):
         """Load a specific resource from a module, identified by name and path.
@@ -124,12 +121,12 @@ class _ResourceManager:
         for obj in vars(module).values():
             if type(obj) is type:
                 isresource = issubclass(obj, self._resource_base)
-                if isresource and not obj is self._resource_base:
+                if isresource and obj is not self._resource_base:
                     self._load_resource(name, path, obj)
 
     def _load_directory(self, dir):
         """Load all valid resources in a given directory."""
-        self.logger.debug("Loading directory {0}".format(dir))
+        self.logger.debug(f"Loading directory {dir}")
         processed = []
         for name in listdir(dir):
             if not name.endswith(".py") and not name.endswith(".pyc"):
@@ -141,7 +138,7 @@ class _ResourceManager:
                 continue
             processed.append(modname)
             if self._is_disabled(modname):
-                log = "Skipping disabled module {0}".format(modname)
+                log = f"Skipping disabled module {modname}"
                 self.logger.debug(log)
                 continue
             self._load_module(modname, dir)
@@ -188,7 +185,7 @@ class _ResourceManager:
             resources = ", ".join(self._resources.keys())
             self.logger.info(msg.format(len(self._resources), name, resources))
         else:
-            self.logger.info("Loaded 0 {0}".format(name))
+            self.logger.info(f"Loaded 0 {name}")
 
     def get(self, key):
         """Return the class instance associated with a certain resource.
@@ -241,7 +238,7 @@ class CommandManager(_ResourceManager):
             if hook in command.hooks and self._wrap_check(command, data):
                 thread = Thread(target=self._wrap_process, args=(command, data))
                 start_time = strftime("%b %d %H:%M:%S")
-                thread.name = "irc:{0} ({1})".format(command.name, start_time)
+                thread.name = f"irc:{command.name} ({start_time})"
                 thread.daemon = True
                 thread.start()
                 return
@@ -287,7 +284,7 @@ class TaskManager(_ResourceManager):
 
         task_thread = Thread(target=self._wrapper, args=(task,), kwargs=kwargs)
         start_time = strftime("%b %d %H:%M:%S")
-        task_thread.name = "{0} ({1})".format(task_name, start_time)
+        task_thread.name = f"{task_name} ({start_time})"
         task_thread.daemon = True
         task_thread.start()
         return task_thread

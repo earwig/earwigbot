@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,7 +20,7 @@
 
 from http.cookiejar import CookieJar
 from json import dumps
-from logging import getLogger, NullHandler
+from logging import NullHandler, getLogger
 from os.path import expanduser
 from threading import RLock
 from time import sleep, time
@@ -228,11 +226,11 @@ class Site:
             )
         )
         name, password = self._login_info
-        login = "({0}, {1})".format(repr(name), "hidden" if password else None)
+        login = "({}, {})".format(repr(name), "hidden" if password else None)
         oauth = "hidden" if self._oauth else None
         cookies = self._cookiejar.__class__.__name__
         if hasattr(self._cookiejar, "filename"):
-            cookies += "({0!r})".format(getattr(self._cookiejar, "filename"))
+            cookies += "({!r})".format(getattr(self._cookiejar, "filename"))
         else:
             cookies += "()"
         agent = self.user_agent
@@ -267,26 +265,26 @@ class Site:
         since_last_query = time() - self._last_query_time  # Throttling support
         if since_last_query < self._wait_between_queries:
             wait_time = self._wait_between_queries - since_last_query
-            log = "Throttled: waiting {0} seconds".format(round(wait_time, 2))
+            log = f"Throttled: waiting {round(wait_time, 2)} seconds"
             self._logger.debug(log)
             sleep(wait_time)
         self._last_query_time = time()
 
         url, params = self._build_api_query(params, ignore_maxlag, no_assert)
         if "lgpassword" in params:
-            self._logger.debug("{0} -> <hidden>".format(url))
+            self._logger.debug(f"{url} -> <hidden>")
         else:
             data = dumps(params)
             if len(data) > 1000:
-                self._logger.debug("{0} -> {1}...".format(url, data[:997]))
+                self._logger.debug(f"{url} -> {data[:997]}...")
             else:
-                self._logger.debug("{0} -> {1}".format(url, data))
+                self._logger.debug(f"{url} -> {data}")
 
         try:
             response = self._session.post(url, data=params)
             response.raise_for_status()
         except requests.RequestException as exc:
-            raise exceptions.APIError("API query failed: {0}".format(exc))
+            raise exceptions.APIError(f"API query failed: {exc}")
 
         return self._handle_api_result(response, params, tries, wait, ae_retry)
 
@@ -602,7 +600,7 @@ class Site:
         elif res == "WrongPass" or res == "WrongPluginPass":
             e = "The given password is incorrect."
         else:
-            e = "Couldn't login; server says '{0}'.".format(res)
+            e = f"Couldn't login; server says '{res}'."
         raise exceptions.LoginError(e)
 
     def _logout(self):
@@ -915,7 +913,7 @@ class Site:
             else:
                 return self._namespaces[ns_id][0]
         except KeyError:
-            e = "There is no namespace with id {0}.".format(ns_id)
+            e = f"There is no namespace with id {ns_id}."
             raise exceptions.NamespaceNotFoundError(e)
 
     def namespace_name_to_id(self, name):
@@ -933,7 +931,7 @@ class Site:
             if lname in lnames:
                 return ns_id
 
-        e = "There is no namespace with name '{0}'.".format(name)
+        e = f"There is no namespace with name '{name}'."
         raise exceptions.NamespaceNotFoundError(e)
 
     def get_page(self, title, follow_redirects=False, pageid=None):

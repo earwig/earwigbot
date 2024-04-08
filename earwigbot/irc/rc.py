@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2021 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,14 +22,18 @@ import re
 
 __all__ = ["RC"]
 
+
 class RC:
     """Store data from an event received from our IRC watcher."""
+
     re_color = re.compile("\x03([0-9]{1,2}(,[0-9]{1,2})?)?")
-    re_edit = re.compile("\A\[\[(.*?)\]\]\s(.*?)\s(https?://.*?)\s\*\s(.*?)\s\*\s(.*?)\Z")
+    re_edit = re.compile(
+        "\A\[\[(.*?)\]\]\s(.*?)\s(https?://.*?)\s\*\s(.*?)\s\*\s(.*?)\Z"
+    )
     re_log = re.compile("\A\[\[(.*?)\]\]\s(.*?)\s\s\*\s(.*?)\s\*\s(.*?)\Z")
 
-    pretty_edit = "\x02New {0}\x0F: \x0314[[\x0307{1}\x0314]]\x0306 * \x0303{2}\x0306 * \x0302{3}\x0306 * \x0310{4}"
-    pretty_log = "\x02New {0}\x0F: \x0303{1}\x0306 * \x0302{2}\x0306 * \x0310{3}"
+    pretty_edit = "\x02New {0}\x0f: \x0314[[\x0307{1}\x0314]]\x0306 * \x0303{2}\x0306 * \x0302{3}\x0306 * \x0310{4}"
+    pretty_log = "\x02New {0}\x0f: \x0303{1}\x0306 * \x0302{2}\x0306 * \x0310{3}"
     plain_edit = "New {0}: [[{1}]] * {2} * {3} * {4}"
     plain_log = "New {0}: {1} * {2} * {3}"
 
@@ -41,11 +43,11 @@ class RC:
 
     def __repr__(self):
         """Return the canonical string representation of the RC."""
-        return "RC(chan={0!r}, msg={1!r})".format(self.chan, self.msg)
+        return f"RC(chan={self.chan!r}, msg={self.msg!r})"
 
     def __str__(self):
         """Return a nice string representation of the RC."""
-        return "<RC of {0!r} on {1}>".format(self.msg, self.chan)
+        return f"<RC of {self.msg!r} on {self.chan}>"
 
     def parse(self):
         """Parse a recent change event into some variables."""
@@ -62,7 +64,7 @@ class RC:
             # We're probably missing the https:// part, because it's a log
             # entry, which lacks a URL:
             page, flags, user, comment = self.re_log.findall(msg)[0]
-            url = "https://{0}.org/wiki/{1}".format(self.chan[1:], page)
+            url = f"https://{self.chan[1:]}.org/wiki/{page}"
 
             self.is_edit = False  # This is a log entry, not edit
 

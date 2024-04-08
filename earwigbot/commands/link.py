@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,8 +22,10 @@ import re
 
 from earwigbot.commands import Command
 
+
 class Link(Command):
     """Convert a Wikipedia page name into a URL."""
+
     name = "link"
 
     def setup(self):
@@ -72,7 +72,10 @@ class Link(Command):
         # Find all {{templates}}
         templates = re.findall(r"(\{\{(.*?)(\||\}\}))", line)
         if templates:
-            p_tmpl = lambda name: self.site.get_page("Template:" + name).url
+
+            def p_tmpl(name):
+                return self.site.get_page("Template:" + name).url
+
             templates = [p_tmpl(i[1]) for i in templates]
             results += templates
 

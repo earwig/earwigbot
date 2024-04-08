@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,8 +21,10 @@
 from earwigbot import exceptions
 from earwigbot.commands import Command
 
+
 class Lag(Command):
     """Return replag or maxlag information on specific databases."""
+
     name = "lag"
     commands = ["lag", "replag", "maxlag"]
 
@@ -33,22 +33,21 @@ class Lag(Command):
         if not site:
             return
         if data.command == "replag":
-            base = "\x0302{0}\x0F: {1}."
+            base = "\x0302{0}\x0f: {1}."
             msg = base.format(site.name, self.get_replag(site))
         elif data.command == "maxlag":
-            base = "\x0302{0}\x0F: {1}."
+            base = "\x0302{0}\x0f: {1}."
             msg = base.format(site.name, self.get_maxlag(site))
         else:
-            base = "\x0302{0}\x0F: {1}; {2}."
-            msg = base.format(site.name, self.get_replag(site),
-                              self.get_maxlag(site))
+            base = "\x0302{0}\x0f: {1}; {2}."
+            msg = base.format(site.name, self.get_replag(site), self.get_maxlag(site))
         self.reply(data, msg)
 
     def get_replag(self, site):
-        return "SQL replag is {0}".format(self.time(site.get_replag()))
+        return f"SQL replag is {self.time(site.get_replag())}"
 
     def get_maxlag(self, site):
-        return "API maxlag is {0}".format(self.time(site.get_maxlag()))
+        return f"API maxlag is {self.time(site.get_maxlag())}"
 
     def get_site(self, data):
         if data.kwargs and "project" in data.kwargs and "lang" in data.kwargs:
@@ -60,7 +59,7 @@ class Lag(Command):
 
         if len(data.args) > 1:
             name = " ".join(data.args)
-            self.reply(data, "Unknown site: \x0302{0}\x0F.".format(name))
+            self.reply(data, f"Unknown site: \x0302{name}\x0f.")
             return
         name = data.args[0]
         if "." in name:
@@ -71,7 +70,7 @@ class Lag(Command):
             try:
                 return self.bot.wiki.get_site(name)
             except exceptions.SiteNotFoundError:
-                msg = "Unknown site: \x0302{0}\x0F.".format(name)
+                msg = f"Unknown site: \x0302{name}\x0f."
                 self.reply(data, msg)
                 return
         return self.get_site_from_proj_and_lang(data, project, lang)
@@ -83,19 +82,24 @@ class Lag(Command):
             try:
                 site = self.bot.wiki.add_site(project=project, lang=lang)
             except exceptions.APIError:
-                msg = "Site \x0302{0}:{1}\x0F not found."
+                msg = "Site \x0302{0}:{1}\x0f not found."
                 self.reply(data, msg.format(project, lang))
                 return
         return site
 
     def time(self, seconds):
-        parts = [("year", 31536000), ("day", 86400), ("hour", 3600),
-                 ("minute", 60), ("second", 1)]
+        parts = [
+            ("year", 31536000),
+            ("day", 86400),
+            ("hour", 3600),
+            ("minute", 60),
+            ("second", 1),
+        ]
         msg = []
         for name, size in parts:
             num = seconds / size
             seconds -= num * size
             if num:
-                chunk = "{0} {1}".format(num, name if num == 1 else name + "s")
+                chunk = "{} {}".format(num, name if num == 1 else name + "s")
                 msg.append(chunk)
         return ", ".join(msg) if msg else "0 seconds"

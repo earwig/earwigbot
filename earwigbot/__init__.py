@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2019 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -37,13 +35,17 @@ __email__ = "ben.kurtovic@gmail.com"
 __release__ = False
 
 if not __release__:
+
     def _get_git_commit_id():
         """Return the ID of the git HEAD commit."""
+        from os.path import dirname, split
+
         from git import Repo
-        from os.path import split, dirname
+
         path = split(dirname(__file__))[0]
         commit_id = Repo(path).head.object.hexsha
         return commit_id[:8]
+
     try:
         __version__ += "+" + _get_git_commit_id()
     except Exception:

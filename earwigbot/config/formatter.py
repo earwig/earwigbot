@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,12 +22,13 @@ import logging
 
 __all__ = ["BotFormatter"]
 
+
 class BotFormatter(logging.Formatter):
     def __init__(self, color=False):
         self._format = super().format
         if color:
             fmt = "[%(asctime)s %(lvl)s] %(name)s: %(message)s"
-            self.format = lambda rec: self._format(self.format_color(rec))
+            self.format = lambda record: self._format(self.format_color(record))
         else:
             fmt = "[%(asctime)s %(levelname)-8s] %(name)s: %(message)s"
             self.format = self._format
@@ -37,15 +36,15 @@ class BotFormatter(logging.Formatter):
         super().__init__(fmt=fmt, datefmt=datefmt)
 
     def format_color(self, record):
-        l = record.levelname.ljust(8)
+        lvl = record.levelname.ljust(8)
         if record.levelno == logging.DEBUG:
-            record.lvl = l.join(("\x1b[34m", "\x1b[0m"))  # Blue
+            record.lvl = lvl.join(("\x1b[34m", "\x1b[0m"))  # Blue
         if record.levelno == logging.INFO:
-            record.lvl = l.join(("\x1b[32m", "\x1b[0m"))  # Green
+            record.lvl = lvl.join(("\x1b[32m", "\x1b[0m"))  # Green
         if record.levelno == logging.WARNING:
-            record.lvl = l.join(("\x1b[33m", "\x1b[0m"))  # Yellow
+            record.lvl = lvl.join(("\x1b[33m", "\x1b[0m"))  # Yellow
         if record.levelno == logging.ERROR:
-            record.lvl = l.join(("\x1b[31m", "\x1b[0m"))  # Red
+            record.lvl = lvl.join(("\x1b[31m", "\x1b[0m"))  # Red
         if record.levelno == logging.CRITICAL:
-            record.lvl = l.join(("\x1b[1m\x1b[31m", "\x1b[0m"))  # Bold red
+            record.lvl = lvl.join(("\x1b[1m\x1b[31m", "\x1b[0m"))  # Bold red
         return record

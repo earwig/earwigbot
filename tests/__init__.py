@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -39,17 +37,18 @@ Fake objects:
 """
 
 import logging
-from os import path
 import re
+from os import path
 from threading import Lock
 from unittest import TestCase
 
 from earwigbot.bot import Bot
 from earwigbot.commands import CommandManager
 from earwigbot.config import BotConfig
-from earwigbot.irc import IRCConnection, Data
+from earwigbot.irc import Data, IRCConnection
 from earwigbot.tasks import TaskManager
 from earwigbot.wiki import SitesDB
+
 
 class CommandTestCase(TestCase):
     re_sender = re.compile(":(.*?)!(.*?)@(.*?)\Z")
@@ -75,17 +74,17 @@ class CommandTestCase(TestCase):
         self.assertIn(line, msgs)
 
     def assertSaid(self, msg):
-        self.assertSent("PRIVMSG #channel :{0}".format(msg))
+        self.assertSent(f"PRIVMSG #channel :{msg}")
 
     def assertSaidIn(self, msgs):
-        msgs = ["PRIVMSG #channel :{0}".format(msg) for msg in msgs]
+        msgs = [f"PRIVMSG #channel :{msg}" for msg in msgs]
         self.assertSentIn(msgs)
 
     def assertReply(self, msg):
-        self.assertSaid("\x02Foo\x0F: {0}".format(msg))
+        self.assertSaid(f"\x02Foo\x0f: {msg}")
 
     def assertReplyIn(self, msgs):
-        msgs = ["\x02Foo\x0F: {0}".format(msg) for msg in msgs]
+        msgs = [f"\x02Foo\x0f: {msg}" for msg in msgs]
         self.assertSaidIn(msgs)
 
     def maker(self, line, chan, msg=None):
@@ -98,7 +97,7 @@ class CommandTestCase(TestCase):
         return data
 
     def make_msg(self, command, *args):
-        line = ":Foo!bar@example.com PRIVMSG #channel :!{0}".format(command)
+        line = f":Foo!bar@example.com PRIVMSG #channel :!{command}"
         line = line.strip().split()
         line.extend(args)
         return self.maker(line, line[2], " ".join(line[3:])[1:])

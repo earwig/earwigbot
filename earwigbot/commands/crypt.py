@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -31,9 +29,11 @@ fernet = importer.new("cryptography.fernet")
 hashes = importer.new("cryptography.hazmat.primitives.hashes")
 pbkdf2 = importer.new("cryptography.hazmat.primitives.kdf.pbkdf2")
 
+
 class Crypt(Command):
     """Provides hash functions with !hash (!hash list for supported algorithms)
     and basic encryption with !encrypt and !decrypt."""
+
     name = "crypt"
     commands = ["crypt", "hash", "encrypt", "decrypt"]
 
@@ -44,22 +44,22 @@ class Crypt(Command):
             return
 
         if not data.args:
-            msg = "What do you want me to {0}?".format(data.command)
+            msg = f"What do you want me to {data.command}?"
             self.reply(data, msg)
             return
 
         if data.command == "hash":
             algo = data.args[0]
             if algo == "list":
-                algos = ', '.join(hashlib.algorithms_available)
+                algos = ", ".join(hashlib.algorithms_available)
                 msg = algos.join(("Supported algorithms: ", "."))
                 self.reply(data, msg)
             elif algo in hashlib.algorithms_available:
-                string = ' '.join(data.args[1:])
+                string = " ".join(data.args[1:])
                 result = getattr(hashlib, algo)(string.encode()).hexdigest()
                 self.reply(data, result)
             else:
-                msg = "Unknown algorithm: '{0}'.".format(algo)
+                msg = f"Unknown algorithm: '{algo}'."
                 self.reply(data, msg)
 
         else:
@@ -81,7 +81,9 @@ class Crypt(Command):
                         salt=salt,
                         iterations=100000,
                     )
-                    f = fernet.Fernet(base64.urlsafe_b64encode(kdf.derive(key.encode())))
+                    f = fernet.Fernet(
+                        base64.urlsafe_b64encode(kdf.derive(key.encode()))
+                    )
                     ciphertext = f.encrypt(text.encode())
                     self.reply(data, base64.b64encode(salt + ciphertext).decode())
                 else:
@@ -95,9 +97,14 @@ class Crypt(Command):
                         salt=salt,
                         iterations=100000,
                     )
-                    f = fernet.Fernet(base64.urlsafe_b64encode(kdf.derive(key.encode())))
+                    f = fernet.Fernet(
+                        base64.urlsafe_b64encode(kdf.derive(key.encode()))
+                    )
                     self.reply(data, f.decrypt(ciphertext).decode())
             except ImportError:
-                self.reply(data, "This command requires the 'cryptography' package: https://cryptography.io/")
+                self.reply(
+                    data,
+                    "This command requires the 'cryptography' package: https://cryptography.io/",
+                )
             except Exception as error:
-                self.reply(data, "{}: {}".format(type(error).__name__, str(error)))
+                self.reply(data, f"{type(error).__name__}: {str(error)}")

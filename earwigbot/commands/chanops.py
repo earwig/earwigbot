@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2021 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,17 +20,32 @@
 
 from earwigbot.commands import Command
 
+
 class ChanOps(Command):
     """Voice, devoice, op, or deop users in the channel, or join or part from
     other channels."""
+
     name = "chanops"
-    commands = ["chanops", "voice", "devoice", "op", "deop", "join", "part", "listchans"]
+    commands = [
+        "chanops",
+        "voice",
+        "devoice",
+        "op",
+        "deop",
+        "join",
+        "part",
+        "listchans",
+    ]
 
     def process(self, data):
         if data.command == "chanops":
             msg = "Available commands are {0}."
-            self.reply(data, msg.format(", ".join(
-                "!" + cmd for cmd in self.commands if cmd != data.command)))
+            self.reply(
+                data,
+                msg.format(
+                    ", ".join("!" + cmd for cmd in self.commands if cmd != data.command)
+                ),
+            )
             return
         de_escalate = data.command in ["devoice", "deop"]
         if de_escalate and (not data.args or data.args[0] == data.nick):
@@ -70,7 +83,7 @@ class ChanOps(Command):
             return
 
         self.join(channel)
-        log = "{0} requested JOIN to {1}".format(data.nick, channel)
+        log = f"{data.nick} requested JOIN to {channel}"
         self.logger.info(log)
 
     def do_part(self, data):
@@ -85,11 +98,11 @@ class ChanOps(Command):
             else:  # "!part reason for parting"; assume current channel
                 reason = " ".join(data.args)
 
-        msg = "Requested by {0}".format(data.nick)
-        log = "{0} requested PART from {1}".format(data.nick, channel)
+        msg = f"Requested by {data.nick}"
+        log = f"{data.nick} requested PART from {channel}"
         if reason:
-            msg += ": {0}".format(reason)
-            log += ' ("{0}")'.format(reason)
+            msg += f": {reason}"
+            log += f' ("{reason}")'
         self.part(channel, msg)
         self.logger.info(log)
 
@@ -98,5 +111,9 @@ class ChanOps(Command):
         if not chans:
             self.reply(data, "I am currently in no channels.")
             return
-        self.reply(data, "I am currently in \x02{0}\x0F channel{1}: {2}.".format(
-            len(chans), "" if len(chans) == 1 else "s", ", ".join(sorted(chans))))
+        self.reply(
+            data,
+            "I am currently in \x02{}\x0f channel{}: {}.".format(
+                len(chans), "" if len(chans) == 1 else "s", ", ".join(sorted(chans))
+            ),
+        )

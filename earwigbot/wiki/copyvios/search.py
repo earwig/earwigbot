@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,22 +19,28 @@
 # SOFTWARE.
 
 from gzip import GzipFile
+from io import StringIO
 from json import loads
 from re import sub as re_sub
-from socket import error
-from io import StringIO
-from urllib.parse import quote, urlencode
 from urllib.error import URLError
+from urllib.parse import urlencode
 
 from earwigbot import importer
 from earwigbot.exceptions import SearchQueryError
 
 lxml = importer.new("lxml")
 
-__all__ = ["BingSearchEngine", "GoogleSearchEngine", "YandexSearchEngine", "SEARCH_ENGINES"]
+__all__ = [
+    "BingSearchEngine",
+    "GoogleSearchEngine",
+    "YandexSearchEngine",
+    "SEARCH_ENGINES",
+]
+
 
 class _BaseSearchEngine:
     """Base class for a simple search engine interface."""
+
     name = "Base"
 
     def __init__(self, cred, opener):
@@ -47,19 +51,19 @@ class _BaseSearchEngine:
 
     def __repr__(self):
         """Return the canonical string representation of the search engine."""
-        return "{0}()".format(self.__class__.__name__)
+        return f"{self.__class__.__name__}()"
 
     def __str__(self):
         """Return a nice string representation of the search engine."""
-        return "<{0}>".format(self.__class__.__name__)
+        return f"<{self.__class__.__name__}>"
 
     def _open(self, *args):
         """Open a URL (like urlopen) and try to return its contents."""
         try:
             response = self.opener.open(*args)
             result = response.read()
-        except (URLError, error) as exc:
-            err = SearchQueryError("{0} Error: {1}".format(self.name, exc))
+        except (OSError, URLError) as exc:
+            err = SearchQueryError(f"{self.name} Error: {exc}")
             err.cause = exc
             raise err
 
@@ -90,6 +94,7 @@ class _BaseSearchEngine:
 
 class BingSearchEngine(_BaseSearchEngine):
     """A search engine interface with Bing Search (via Azure Marketplace)."""
+
     name = "Bing"
 
     def __init__(self, cred, opener):
@@ -106,7 +111,7 @@ class BingSearchEngine(_BaseSearchEngine):
         Raises :py:exc:`~earwigbot.exceptions.SearchQueryError` on errors.
         """
         service = "SearchWeb" if self.cred["type"] == "searchweb" else "Search"
-        url = "https://api.datamarket.azure.com/Bing/{0}/Web?".format(service)
+        url = f"https://api.datamarket.azure.com/Bing/{service}/Web?"
         params = {
             "$format": "json",
             "$top": str(self.count),
@@ -114,7 +119,7 @@ class BingSearchEngine(_BaseSearchEngine):
             "Market": "'en-US'",
             "Adult": "'Off'",
             "Options": "'DisableLocationDetection'",
-            "WebSearchOptions": "'DisableHostCollapsing+DisableQueryAlterations'"
+            "WebSearchOptions": "'DisableHostCollapsing+DisableQueryAlterations'",
         }
 
         result = self._open(url + urlencode(params))
@@ -134,6 +139,7 @@ class BingSearchEngine(_BaseSearchEngine):
 
 class GoogleSearchEngine(_BaseSearchEngine):
     """A search engine interface with Google Search."""
+
     name = "Google"
 
     def search(self, query):
@@ -143,7 +149,7 @@ class GoogleSearchEngine(_BaseSearchEngine):
         Raises :py:exc:`~earwigbot.exceptions.SearchQueryError` on errors.
         """
         domain = self.cred.get("proxy", "www.googleapis.com")
-        url = "https://{0}/customsearch/v1?".format(domain)
+        url = f"https://{domain}/customsearch/v1?"
         params = {
             "cx": self.cred["id"],
             "key": self.cred["key"],
@@ -151,7 +157,7 @@ class GoogleSearchEngine(_BaseSearchEngine):
             "alt": "json",
             "num": str(self.count),
             "safe": "off",
-            "fields": "items(link)"
+            "fields": "items(link)",
         }
 
         result = self._open(url + urlencode(params))
@@ -170,6 +176,7 @@ class GoogleSearchEngine(_BaseSearchEngine):
 
 class YandexSearchEngine(_BaseSearchEngine):
     """A search engine interface with Yandex Search."""
+
     name = "Yandex"
 
     @staticmethod
@@ -183,7 +190,7 @@ class YandexSearchEngine(_BaseSearchEngine):
         Raises :py:exc:`~earwigbot.exceptions.SearchQueryError` on errors.
         """
         domain = self.cred.get("proxy", "yandex.com")
-        url = "https://{0}/search/xml?".format(domain)
+        url = f"https://{domain}/search/xml?"
         query = re_sub(r"[^a-zA-Z0-9 ]", "", query).encode("utf8")
         params = {
             "user": self.cred["user"],
@@ -192,7 +199,7 @@ class YandexSearchEngine(_BaseSearchEngine):
             "l10n": "en",
             "filter": "none",
             "maxpassages": "1",
-            "groupby": "mode=flat.groups-on-page={0}".format(self.count)
+            "groupby": f"mode=flat.groups-on-page={self.count}",
         }
 
         result = self._open(url + urlencode(params))
@@ -207,5 +214,5 @@ class YandexSearchEngine(_BaseSearchEngine):
 SEARCH_ENGINES = {
     "Bing": BingSearchEngine,
     "Google": GoogleSearchEngine,
-    "Yandex": YandexSearchEngine
+    "Yandex": YandexSearchEngine,
 }

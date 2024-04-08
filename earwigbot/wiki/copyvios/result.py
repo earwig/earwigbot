@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -27,6 +25,7 @@ from earwigbot.wiki.copyvios.markov import EMPTY, EMPTY_INTERSECTION
 
 __all__ = ["CopyvioSource", "CopyvioCheckResult"]
 
+
 class CopyvioSource:
     """
     **EarwigBot: Wiki Toolset: Copyvio Source**
@@ -43,8 +42,15 @@ class CopyvioSource:
     - :py:attr:`excluded`:   whether this URL was in the exclusions list
     """
 
-    def __init__(self, workspace, url, headers=None, timeout=5,
-                 parser_args=None, search_config=None):
+    def __init__(
+        self,
+        workspace,
+        url,
+        headers=None,
+        timeout=5,
+        parser_args=None,
+        search_config=None,
+    ):
         self.workspace = workspace
         self.url = url
         self.headers = headers
@@ -63,17 +69,18 @@ class CopyvioSource:
 
     def __repr__(self):
         """Return the canonical string representation of the source."""
-        res = ("CopyvioSource(url={0!r}, confidence={1!r}, skipped={2!r}, "
-               "excluded={3!r})")
-        return res.format(
-            self.url, self.confidence, self.skipped, self.excluded)
+        res = (
+            "CopyvioSource(url={0!r}, confidence={1!r}, skipped={2!r}, "
+            "excluded={3!r})"
+        )
+        return res.format(self.url, self.confidence, self.skipped, self.excluded)
 
     def __str__(self):
         """Return a nice string representation of the source."""
         if self.excluded:
-            return "<CopyvioSource ({0}, excluded)>".format(self.url)
+            return f"<CopyvioSource ({self.url}, excluded)>"
         if self.skipped:
-            return "<CopyvioSource ({0}, skipped)>".format(self.url)
+            return f"<CopyvioSource ({self.url}, skipped)>"
         res = "<CopyvioSource ({0} with {1} conf)>"
         return res.format(self.url, self.confidence)
 
@@ -129,8 +136,9 @@ class CopyvioCheckResult:
     - :py:attr:`possible_miss`: whether some URLs might have been missed
     """
 
-    def __init__(self, violation, sources, queries, check_time, article_chain,
-                 possible_miss):
+    def __init__(
+        self, violation, sources, queries, check_time, article_chain, possible_miss
+    ):
         self.violation = violation
         self.sources = sources
         self.queries = queries
@@ -141,8 +149,7 @@ class CopyvioCheckResult:
     def __repr__(self):
         """Return the canonical string representation of the result."""
         res = "CopyvioCheckResult(violation={0!r}, sources={1!r}, queries={2!r}, time={3!r})"
-        return res.format(self.violation, self.sources, self.queries,
-                          self.time)
+        return res.format(self.violation, self.sources, self.queries, self.time)
 
     def __str__(self):
         """Return a nice string representation of the result."""
@@ -171,5 +178,12 @@ class CopyvioCheckResult:
             return log.format(title, self.queries, self.time)
         log = "{0} for [[{1}]] (best: {2} ({3} confidence); {4} sources; {5} queries; {6} seconds)"
         is_vio = "Violation detected" if self.violation else "No violation"
-        return log.format(is_vio, title, self.url, self.confidence,
-                          len(self.sources), self.queries, self.time)
+        return log.format(
+            is_vio,
+            title,
+            self.url,
+            self.confidence,
+            len(self.sources),
+            self.queries,
+            self.time,
+        )

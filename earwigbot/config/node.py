@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,6 +22,7 @@ import base64
 from collections import OrderedDict
 
 __all__ = ["ConfigNode"]
+
 
 class ConfigNode:
     def __init__(self):
@@ -56,8 +55,7 @@ class ConfigNode:
             self._data[key] = item
 
     def __iter__(self):
-        for key in self._data:
-            yield key
+        yield from self._data
 
     def __contains__(self, item):
         return item in self._data

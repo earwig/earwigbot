@@ -1,6 +1,4 @@
 #! /usr/bin/env python
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -49,8 +47,8 @@ or run specific tasks.
 
 """
 
-from argparse import Action, ArgumentParser, REMAINDER
 import logging
+from argparse import REMAINDER, Action, ArgumentParser
 from os import path
 from time import sleep
 
@@ -59,8 +57,10 @@ from earwigbot.bot import Bot
 
 __all__ = ["main"]
 
+
 class _StoreTaskArg(Action):
     """A custom argparse action to read remaining command-line arguments."""
+
     def __call__(self, parser, namespace, values, option_string=None):
         kwargs = {}
         name = None
@@ -96,32 +96,53 @@ class _StoreTaskArg(Action):
 
 def main():
     """Main entry point for the command-line utility."""
-    version = "EarwigBot v{0}".format(__version__)
+    version = f"EarwigBot v{__version__}"
     desc = """This is EarwigBot's command-line utility, enabling you to easily
               start the bot or run specific tasks."""
     parser = ArgumentParser(description=desc)
-    parser.add_argument("path", nargs="?", metavar="PATH", default=path.curdir,
-                        help="""path to the bot's working directory, which will
+    parser.add_argument(
+        "path",
+        nargs="?",
+        metavar="PATH",
+        default=path.curdir,
+        help="""path to the bot's working directory, which will
                                 be created if it doesn't exist; current
-                                directory assumed if not specified""")
+                                directory assumed if not specified""",
+    )
     parser.add_argument("-v", "--version", action="version", version=version)
     logger = parser.add_mutually_exclusive_group()
-    logger.add_argument("-d", "--debug", action="store_true",
-                        help="print all logs, including DEBUG-level messages")
-    logger.add_argument("-q", "--quiet", action="store_true",
-                        help="don't print any logs except warnings and errors")
-    parser.add_argument("-t", "--task", metavar="NAME",
-                        help="""given the name of a task, the bot will run it
-                                instead of the main bot and then exit""")
-    parser.add_argument("task_args", nargs=REMAINDER, action=_StoreTaskArg,
-                        metavar="TASK_ARGS",
-                        help="""with --task, will pass these arguments to the
-                                task's run() method""")
+    logger.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="print all logs, including DEBUG-level messages",
+    )
+    logger.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="don't print any logs except warnings and errors",
+    )
+    parser.add_argument(
+        "-t",
+        "--task",
+        metavar="NAME",
+        help="""given the name of a task, the bot will run it
+                                instead of the main bot and then exit""",
+    )
+    parser.add_argument(
+        "task_args",
+        nargs=REMAINDER,
+        action=_StoreTaskArg,
+        metavar="TASK_ARGS",
+        help="""with --task, will pass these arguments to the
+                                task's run() method""",
+    )
     args = parser.parse_args()
 
     if not args.task and args.task_args:
         unrecognized = " ".join(args.task_args)
-        parser.error("unrecognized arguments: {0}".format(unrecognized))
+        parser.error(f"unrecognized arguments: {unrecognized}")
 
     level = logging.INFO
     if args.debug:
@@ -152,6 +173,7 @@ def main():
         finally:
             if bot.is_running:
                 bot.stop()
+
 
 if __name__ == "__main__":
     main()

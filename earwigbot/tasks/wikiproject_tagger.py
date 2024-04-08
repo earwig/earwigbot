@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -167,7 +165,7 @@ class WikiProjectTagger(Task):
             self.process_category(site.get_page(title), job, recursive)
 
         if "file" in kwargs:
-            with open(kwargs["file"], "r") as fileobj:
+            with open(kwargs["file"]) as fileobj:
                 for line in fileobj:
                     if line.strip():
                         if line.startswith("[[") and line.endswith("]]"):
@@ -344,9 +342,9 @@ class WikiProjectTagger(Task):
 
     def update_banner(self, banner, job, code):
         """Update an existing *banner* based on a *job* and a page's *code*."""
-        has = lambda key: (
-            banner.has(key) and banner.get(key).value.strip() not in ("", "?")
-        )
+
+        def has(key):
+            return banner.has(key) and banner.get(key).value.strip() not in ("", "?")
 
         updated = False
         if job.autoassess is not False:

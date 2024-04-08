@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,7 +19,8 @@
 # SOFTWARE.
 
 import logging
-from threading import Lock, Thread, enumerate as enumerate_threads
+from threading import Lock, Thread
+from threading import enumerate as enumerate_threads
 from time import gmtime, sleep
 
 from earwigbot import __version__
@@ -31,6 +30,7 @@ from earwigbot.managers import CommandManager, TaskManager
 from earwigbot.wiki import SitesDB
 
 __all__ = ["Bot"]
+
 
 class Bot:
     """
@@ -77,11 +77,11 @@ class Bot:
 
     def __repr__(self):
         """Return the canonical string representation of the Bot."""
-        return "Bot(config={0!r})".format(self.config)
+        return f"Bot(config={self.config!r})"
 
     def __str__(self):
         """Return a nice string representation of the Bot."""
-        return "<Bot at {0}>".format(self.config.root_dir)
+        return f"<Bot at {self.config.root_dir}>"
 
     def _dispatch_irc_component(self, name, klass):
         """Create a new IRC component, record it internally, and start it."""
@@ -100,6 +100,7 @@ class Bot:
 
     def _start_wiki_scheduler(self):
         """Start the wiki scheduler in a separate thread if enabled."""
+
         def wiki_scheduler():
             run_at = 15
             while self._keep_looping:
@@ -118,7 +119,7 @@ class Bot:
         if component:
             component.keep_alive()
             if component.is_stopped():
-                log = "IRC {0} has stopped; restarting".format(name)
+                log = f"IRC {name} has stopped; restarting"
                 self.logger.warn(log)
                 self._dispatch_irc_component(name, klass)
 
@@ -151,7 +152,8 @@ class Bot:
         skips = component_names + ["MainThread", "reminder", "irc:quit"]
         for thread in enumerate_threads():
             if thread.is_alive() and not any(
-                    thread.name.startswith(skip) for skip in skips):
+                thread.name.startswith(skip) for skip in skips
+            ):
                 tasks.append(thread.name)
         if tasks:
             log = "The following commands or tasks will be killed: {0}"
@@ -173,7 +175,7 @@ class Bot:
         ensuring that all components remain online and restarting components
         that get disconnected from their servers.
         """
-        self.logger.info("Starting bot (EarwigBot {0})".format(__version__))
+        self.logger.info(f"Starting bot (EarwigBot {__version__})")
         self._start_irc_components()
         self._start_wiki_scheduler()
         while self._keep_looping:
@@ -195,7 +197,7 @@ class Bot:
         If given, *msg* will be used as our quit message.
         """
         if msg:
-            self.logger.info('Restarting bot ("{0}")'.format(msg))
+            self.logger.info(f'Restarting bot ("{msg}")')
         else:
             self.logger.info("Restarting bot")
         with self.component_lock:
@@ -211,7 +213,7 @@ class Bot:
         If given, *msg* will be used as our quit message.
         """
         if msg:
-            self.logger.info('Stopping bot ("{0}")'.format(msg))
+            self.logger.info(f'Stopping bot ("{msg}")')
         else:
             self.logger.info("Stopping bot")
         with self.component_lock:

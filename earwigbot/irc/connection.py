@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,6 +26,7 @@ from earwigbot.exceptions import BrokenSocketError
 
 __all__ = ["IRCConnection"]
 
+
 class IRCConnection:
     """Interface with an IRC server."""
 
@@ -50,8 +49,7 @@ class IRCConnection:
     def __repr__(self):
         """Return the canonical string representation of the IRCConnection."""
         res = "IRCConnection(host={0!r}, port={1!r}, nick={2!r}, ident={3!r}, realname={4!r})"
-        return res.format(self.host, self.port, self.nick, self.ident,
-                          self.realname)
+        return res.format(self.host, self.port, self.nick, self.ident, self.realname)
 
     def __str__(self):
         """Return a nice string representation of the IRCConnection."""
@@ -63,18 +61,18 @@ class IRCConnection:
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self._sock.connect((self.host, self.port))
-        except socket.error:
+        except OSError:
             self.logger.exception("Couldn't connect to IRC server; retrying")
             sleep(8)
             self._connect()
-        self._send("NICK {0}".format(self.nick))
-        self._send("USER {0} {1} * :{2}".format(self.ident, self.host, self.realname))
+        self._send(f"NICK {self.nick}")
+        self._send(f"USER {self.ident} {self.host} * :{self.realname}")
 
     def _close(self):
         """Completely close our connection with the IRC server."""
         try:
             self._sock.shutdown(socket.SHUT_RDWR)  # Shut down connection first
-        except socket.error:
+        except OSError:
             pass  # Ignore if the socket is already down
         self._sock.close()
 
@@ -94,7 +92,7 @@ class IRCConnection:
                 sleep(0.75 - time_since_last)
             try:
                 self._sock.sendall(msg.encode() + b"\r\n")
-            except socket.error:
+            except OSError:
                 self._is_running = False
             else:
                 if not hidelog:
@@ -131,7 +129,7 @@ class IRCConnection:
     def _quit(self, msg=None):
         """Issue a quit message to the server. Doesn't close the connection."""
         if msg:
-            self._send("QUIT :{0}".format(msg))
+            self._send(f"QUIT :{msg}")
         else:
             self._send("QUIT")
 
@@ -142,11 +140,10 @@ class IRCConnection:
             self.pong(line[1][1:])
         elif line[1] == "001":  # Update nickname on startup
             if line[2] != self.nick:
-                self.logger.warn("Nickname changed from {0} to {1}".format(
-                    self.nick, line[2]))
+                self.logger.warn(f"Nickname changed from {self.nick} to {line[2]}")
                 self._nick = line[2]
         elif line[1] == "376":  # After sign-on, get our userhost
-            self._send("WHOIS {0}".format(self.nick))
+            self._send(f"WHOIS {self.nick}")
         elif line[1] == "311":  # Receiving WHOIS result
             if line[2] == self.nick:
                 self._ident = line[4]
@@ -189,7 +186,7 @@ class IRCConnection:
     def say(self, target, msg, hidelog=False):
         """Send a private message to a target on the server."""
         for msg in self._split(msg, len(target) + 10):
-            msg = "PRIVMSG {0} :{1}".format(target, msg)
+            msg = f"PRIVMSG {target} :{msg}"
             self._send(msg, hidelog)
 
     def reply(self, data, msg, hidelog=False):
@@ -197,45 +194,45 @@ class IRCConnection:
         if data.is_private:
             self.say(data.chan, msg, hidelog)
         else:
-            msg = "\x02{0}\x0F: {1}".format(data.reply_nick, msg)
+            msg = f"\x02{data.reply_nick}\x0f: {msg}"
             self.say(data.chan, msg, hidelog)
 
     def action(self, target, msg, hidelog=False):
         """Send a private message to a target on the server as an action."""
-        msg = "\x01ACTION {0}\x01".format(msg)
+        msg = f"\x01ACTION {msg}\x01"
         self.say(target, msg, hidelog)
 
     def notice(self, target, msg, hidelog=False):
         """Send a notice to a target on the server."""
         for msg in self._split(msg, len(target) + 9):
-            msg = "NOTICE {0} :{1}".format(target, msg)
+            msg = f"NOTICE {target} :{msg}"
             self._send(msg, hidelog)
 
     def join(self, chan, hidelog=False):
         """Join a channel on the server."""
-        msg = "JOIN {0}".format(chan)
+        msg = f"JOIN {chan}"
         self._send(msg, hidelog)
 
     def part(self, chan, msg=None, hidelog=False):
         """Part from a channel on the server, optionally using an message."""
         if msg:
-            self._send("PART {0} :{1}".format(chan, msg), hidelog)
+            self._send(f"PART {chan} :{msg}", hidelog)
         else:
-            self._send("PART {0}".format(chan), hidelog)
+            self._send(f"PART {chan}", hidelog)
 
     def mode(self, target, level, msg, hidelog=False):
         """Send a mode message to the server."""
-        msg = "MODE {0} {1} {2}".format(target, level, msg)
+        msg = f"MODE {target} {level} {msg}"
         self._send(msg, hidelog)
 
     def ping(self, target, hidelog=False):
         """Ping another entity on the server."""
-        msg = "PING {0}".format(target)
+        msg = f"PING {target}"
         self._send(msg, hidelog)
 
     def pong(self, target, hidelog=False):
         """Pong another entity on the server."""
-        msg = "PONG {0}".format(target)
+        msg = f"PONG {target}"
         self._send(msg, hidelog)
 
     def loop(self):

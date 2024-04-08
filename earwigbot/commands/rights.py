@@ -1,5 +1,3 @@
-# -*- coding: utf-8  -*-
-#
 # Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,8 +21,10 @@
 from earwigbot import exceptions
 from earwigbot.commands import Command
 
+
 class Rights(Command):
     """Retrieve a list of rights for a given username."""
+
     name = "rights"
     commands = ["rights", "groups", "permissions", "privileges"]
 
@@ -32,7 +32,7 @@ class Rights(Command):
         if not data.args:
             name = data.nick
         else:
-            name = ' '.join(data.args)
+            name = " ".join(data.args)
 
         site = self.bot.wiki.get_site()
         user = site.get_user(name)
@@ -40,7 +40,7 @@ class Rights(Command):
         try:
             rights = user.groups
         except exceptions.UserNotFoundError:
-            msg = "The user \x0302{0}\x0F does not exist."
+            msg = "The user \x0302{0}\x0f does not exist."
             self.reply(data, msg.format(name))
             return
 
@@ -48,5 +48,5 @@ class Rights(Command):
             rights.remove("*")  # Remove the '*' group given to everyone
         except ValueError:
             pass
-        msg = "The rights for \x0302{0}\x0F are {1}."
-        self.reply(data, msg.format(name, ', '.join(rights)))
+        msg = "The rights for \x0302{0}\x0f are {1}."
+        self.reply(data, msg.format(name, ", ".join(rights)))
