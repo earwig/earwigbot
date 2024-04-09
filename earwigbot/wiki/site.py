@@ -894,7 +894,7 @@ class Site:
             raise exceptions.APIError(err.format(action, res))
         return self._tokens[action]
 
-    def namespace_id_to_name(self, ns_id, all=False):
+    def namespace_id_to_name(self, ns_id: int, all: bool = False) -> str:
         """Given a namespace ID, returns associated namespace names.
 
         If *all* is ``False`` (default), we'll return the first name in the
