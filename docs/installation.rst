@@ -13,46 +13,26 @@ It's recommended to run the bot's unit tests before installing. Run
 some tests require an internet connection, and others may take a while to run.
 Coverage is currently rather incomplete.
 
-Latest release (v0.3)
----------------------
+Latest release
+--------------
 
 EarwigBot is available from the `Python Package Index`_, so you can install the
-latest release with :command:`pip install earwigbot` (`get pip`_).
+latest release with :command:`pip install earwigbot`.
 
 If you get an error while pip is installing dependencies, you may be missing
 some header files. For example, on Ubuntu, see `this StackOverflow post`_.
-
-You can also install it from source [1]_ directly::
-
-    curl -Lo earwigbot.tgz https://github.com/earwig/earwigbot/tarball/v0.3
-    tar -xf earwigbot.tgz
-    cd earwig-earwigbot-*
-    python setup.py install
-    cd ..
-    rm -r earwigbot.tgz earwig-earwigbot-*
 
 Development version
 -------------------
 
 You can install the development version of the bot from :command:`git` by using
-setuptools's :command:`develop` command [1]_, probably on the ``develop``
-branch which contains (usually) working code. ``master`` contains the latest
-release. EarwigBot uses `git flow`_, so you're free to browse by tags or by new
-features (``feature/*`` branches)::
+setuptools's :command:`develop` command::
 
     git clone git://github.com/earwig/earwigbot.git earwigbot
     cd earwigbot
     python setup.py develop
 
-.. rubric:: Footnotes
-
-.. [1] :command:`python setup.py install`/:command:`develop` may require root,
-       or use the :command:`--user` switch to install for the current user
-       only.
-
 .. _my instance of EarwigBot: https://en.wikipedia.org/wiki/User:EarwigBot
 .. _earwigbot-plugins:        https://github.com/earwig/earwigbot-plugins
 .. _Python Package Index:     https://pypi.python.org/pypi/earwigbot
-.. _get pip:                  https://pypi.python.org/pypi/pip
 .. _this StackOverflow post:  https://stackoverflow.com/questions/6504810/how-to-install-lxml-on-ubuntu/6504860#6504860
-.. _git flow:                 https://nvie.com/posts/a-successful-git-branching-model/

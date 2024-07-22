@@ -31,8 +31,8 @@ Tips
 - You can run a task by itself instead of the entire bot with
   :command:`earwigbot path/to/working/dir --task task_name`.
 
-- Questions, comments, or suggestions about the documentation? `Let me know`_,
-  or `create an issue`_ so I can improve it for other people.
+- Questions, comments, or suggestions about the documentation?
+  `Create an issue`_ so I can improve it for other people.
 
 .. rubric:: Footnotes
 
@@ -42,5 +42,4 @@ Tips
 
 .. _logging:         https://docs.python.org/library/logging.html
 .. _!git plugin:     https://github.com/earwig/earwigbot-plugins/blob/develop/commands/git.py
-.. _Let me know:     ben.kurtovic@gmail.com
 .. _create an issue: https://github.com/earwig/earwigbot/issues

@@ -35,32 +35,20 @@ setup.py test`` from the project's root directory. Note that some
 tests require an internet connection, and others may take a while to run.
 Coverage is currently rather incomplete.
 
-Latest release (v0.3)
-~~~~~~~~~~~~~~~~~~~~~
+Latest release
+~~~~~~~~~~~~~~
 
 EarwigBot is available from the `Python Package Index`_, so you can install the
-latest release with ``pip install earwigbot`` (`get pip`_).
+latest release with ``pip install earwigbot``.
 
 If you get an error while pip is installing dependencies, you may be missing
 some header files. For example, on Ubuntu, see `this StackOverflow post`_.
-
-You can also install it from source [1]_ directly::
-
-    curl -Lo earwigbot.tgz https://github.com/earwig/earwigbot/tarball/v0.3
-    tar -xf earwigbot.tgz
-    cd earwig-earwigbot-*
-    python setup.py install
-    cd ..
-    rm -r earwigbot.tgz earwig-earwigbot-*
 
 Development version
 ~~~~~~~~~~~~~~~~~~~
 
 You can install the development version of the bot from ``git`` by using
-setuptools's ``develop`` command [1]_, probably on the ``develop`` branch which
-contains (usually) working code. ``master`` contains the latest release.
-EarwigBot uses `git flow`_, so you're free to browse by tags or by new features
-(``feature/*`` branches)::
+setuptools's ``develop`` command::
 
     git clone git://github.com/earwig/earwigbot.git earwigbot
     cd earwigbot
@@ -171,15 +159,6 @@ docstrings`_ to learn how to use it in a more hands-on fashion. For reference,
 ``bot.wiki`` is an instance of ``earwigbot.wiki.SitesDB`` tied to the
 ``sites.db`` file in the bot's working directory.
 
-Footnotes
----------
-
-- Questions, comments, or suggestions about the documentation? `Let me know`_
-  so I can improve it for other people.
-
-.. [1] ``python setup.py install``/``develop`` may require root, or use the
-       ``--user`` switch to install for the current user only.
-
 .. _EarwigBot:                      https://en.wikipedia.org/wiki/User:EarwigBot
 .. _Python:                         https://python.org/
 .. _Wikipedia:                      https://en.wikipedia.org/
@@ -191,9 +170,7 @@ Footnotes
 .. _my instance of EarwigBot:       https://en.wikipedia.org/wiki/User:EarwigBot
 .. _earwigbot-plugins:              https://github.com/earwig/earwigbot-plugins
 .. _Python Package Index:           https://pypi.python.org/pypi/earwigbot
-.. _get pip:                        https://pypi.python.org/pypi/pip
 .. _this StackOverflow post:        https://stackoverflow.com/questions/6504810/how-to-install-lxml-on-ubuntu/6504860#6504860
-.. _git flow:                       https://nvie.com/posts/a-successful-git-branching-model/
 .. _explanation of YAML:            https://en.wikipedia.org/wiki/YAML
 .. _earwigbot.bot.Bot:              https://github.com/earwig/earwigbot/blob/develop/earwigbot/bot.py
 .. _earwigbot.config.BotConfig:     https://github.com/earwig/earwigbot/blob/develop/earwigbot/config.py
@@ -205,4 +182,3 @@ Footnotes
 .. _wikiproject_tagger:             https://github.com/earwig/earwigbot/blob/develop/earwigbot/tasks/wikiproject_tagger.py
 .. _afc_statistics:                 https://github.com/earwig/earwigbot-plugins/blob/develop/tasks/afc_statistics.py
 .. _its code and docstrings:        https://github.com/earwig/earwigbot/tree/develop/earwigbot/wiki
-.. _Let me know:                    ben.kurtovic@gmail.com
