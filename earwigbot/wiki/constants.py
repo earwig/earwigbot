@@ -31,14 +31,50 @@ Import directly with ``from earwigbot.wiki import constants`` or
 :py:mod:`earwigbot.wiki` directly (e.g. ``earwigbot.wiki.USER_AGENT``).
 """
 
+__all__ = [
+    "NS_CATEGORY_TALK",
+    "NS_CATEGORY",
+    "NS_DRAFT_TALK",
+    "NS_DRAFT",
+    "NS_FILE_TALK",
+    "NS_FILE",
+    "NS_HELP_TALK",
+    "NS_HELP",
+    "NS_MAIN",
+    "NS_MEDIA",
+    "NS_MEDIAWIKI_TALK",
+    "NS_MEDIAWIKI",
+    "NS_MODULE_TALK",
+    "NS_MODULE",
+    "NS_PORTAL_TALK",
+    "NS_PORTAL",
+    "NS_PROJECT_TALK",
+    "NS_PROJECT",
+    "NS_SPECIAL",
+    "NS_TALK",
+    "NS_TEMPLATE_TALK",
+    "NS_TEMPLATE",
+    "NS_USER_TALK",
+    "NS_USER",
+    "USER_AGENT",
+]
+
+import platform
+from enum import Enum
+
+import earwigbot
+
 # Default User Agent when making API queries:
-from platform import python_version as _p
+USER_AGENT = (
+    f"EarwigBot/{earwigbot.__version__} "
+    f"(Python/{platform.python_version()}; https://github.com/earwig/earwigbot)"
+)
 
-from earwigbot import __version__ as _v
 
-USER_AGENT = "EarwigBot/{0} (Python/{1}; https://github.com/earwig/earwigbot)"
-USER_AGENT = USER_AGENT.format(_v, _p())
-del _v, _p
+class Service(Enum):
+    API = 1
+    SQL = 2
+
 
 # Default namespace IDs:
 NS_MAIN = 0
@@ -57,5 +93,13 @@ NS_HELP = 12
 NS_HELP_TALK = 13
 NS_CATEGORY = 14
 NS_CATEGORY_TALK = 15
+
+NS_PORTAL = 100
+NS_PORTAL_TALK = 101
+NS_DRAFT = 118
+NS_DRAFT_TALK = 119
+NS_MODULE = 828
+NS_MODULE_TALK = 829
+
 NS_SPECIAL = -1
 NS_MEDIA = -2

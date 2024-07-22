@@ -18,26 +18,63 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from http.cookiejar import CookieJar
-from json import dumps
-from logging import NullHandler, getLogger
-from os.path import expanduser
+from __future__ import annotations
+
+import json
+import os.path
+import time
+import typing
+from collections.abc import Callable, Generator, Sequence
+from http.cookiejar import Cookie, CookieJar
+from logging import Logger, NullHandler, getLogger
 from threading import RLock
-from time import sleep, time
+from typing import Any, Literal, ParamSpec, TypedDict, TypeVar
 from urllib.parse import unquote_plus, urlparse
 
 import requests
+from requests.cookies import RequestsCookieJar
 from requests_oauthlib import OAuth1
 
 from earwigbot import exceptions, importer
 from earwigbot.wiki import constants
 from earwigbot.wiki.category import Category
+from earwigbot.wiki.constants import Service
 from earwigbot.wiki.page import Page
 from earwigbot.wiki.user import User
 
-pymysql = importer.new("pymysql")
+if typing.TYPE_CHECKING:
+    import pymysql
+    import pymysql.cursors
+    from pymysql.cursors import Cursor
+else:
+    pymysql = importer.new("pymysql")
 
 __all__ = ["Site"]
+
+T = TypeVar("T")
+P = ParamSpec("P")
+
+ApiParams = dict[str, str | int]
+ApiResult = dict[str, Any]
+SqlConnInfo = dict[str, Any]
+
+
+class OAuthInfo(TypedDict):
+    consumer_token: str
+    consumer_secret: str
+    access_token: str
+    access_secret: str
+
+
+class _ApiInfoCache(TypedDict):
+    maxlag: int
+    lastcheck: float
+
+
+class _SqlInfoCache(TypedDict):
+    replag: int
+    lastcheck: float
+    usable: bool | None
 
 
 class Site:
@@ -45,17 +82,14 @@ class Site:
     **EarwigBot: Wiki Toolset: Site**
 
     Represents a site, with support for API queries and returning
-    :py:class:`~earwigbot.wiki.page.Page`,
-    :py:class:`~earwigbot.wiki.user.User`,
-    and :py:class:`~earwigbot.wiki.category.Category` objects. The constructor
-    takes a bunch of arguments and you probably won't need to call it directly,
-    rather :py:meth:`wiki.get_site() <earwigbot.wiki.sitesdb.SitesDB.get_site>`
-    for returning :py:class:`Site`
-    instances, :py:meth:`wiki.add_site()
-    <earwigbot.wiki.sitesdb.SitesDB.add_site>` for adding new ones to our
-    database, and :py:meth:`wiki.remove_site()
-    <earwigbot.wiki.sitesdb.SitesDB.remove_site>` for removing old ones from
-    our database, should suffice.
+    :py:class:`~earwigbot.wiki.page.Page`, :py:class:`~earwigbot.wiki.user.User`, and
+    :py:class:`~earwigbot.wiki.category.Category` objects. The constructor takes a
+    bunch of arguments and you probably won't need to call it directly, rather
+    :py:meth:`wiki.get_site() <earwigbot.wiki.sitesdb.SitesDB.get_site>` for returning
+    :py:class:`Site` instances, :py:meth:`wiki.add_site()
+    <earwigbot.wiki.sitesdb.SitesDB.add_site>` for adding new ones to our database, and
+    :py:meth:`wiki.remove_site() <earwigbot.wiki.sitesdb.SitesDB.remove_site>` for
+    removing old ones from our database, should suffice.
 
     *Attributes:*
 
@@ -80,8 +114,6 @@ class Site:
     - :py:meth:`delegate`:             controls when the API or SQL is used
     """
 
-    SERVICE_API = 1
-    SERVICE_SQL = 2
     SPECIAL_TOKENS = [
         "createaccount",
         "deleteglobalaccount",
@@ -95,52 +127,51 @@ class Site:
 
     def __init__(
         self,
-        name=None,
-        project=None,
-        lang=None,
-        base_url=None,
-        article_path=None,
-        script_path=None,
-        sql=None,
-        namespaces=None,
-        login=(None, None),
-        oauth=None,
-        cookiejar=None,
-        user_agent=None,
-        use_https=True,
-        assert_edit=None,
-        maxlag=None,
-        wait_between_queries=1,
-        logger=None,
-        search_config=None,
-    ):
-        """Constructor for new Site instances.
+        name: str | None = None,
+        project: str | None = None,
+        lang: str | None = None,
+        base_url: str | None = None,
+        article_path: str | None = None,
+        script_path: str | None = None,
+        sql: SqlConnInfo | None = None,
+        namespaces: dict[int, list[str]] | None = None,
+        login: tuple[str, str] | tuple[None, None] = (None, None),
+        oauth: OAuthInfo | None = None,
+        cookiejar: CookieJar | None = None,
+        user_agent: str | None = None,
+        use_https: bool = True,
+        assert_edit: bool | None = None,
+        maxlag: int | None = None,
+        wait_between_queries: int = 1,
+        logger: Logger | None = None,
+        search_config: dict[str, Any] | None = None,
+    ) -> None:
+        """
+        Constructor for new Site instances.
 
-        This probably isn't necessary to call yourself unless you're building a
-        Site that's not in your config and you don't want to add it - normally
-        all you need is wiki.get_site(name), which creates the Site for you
-        based on your config file and the sites database. We accept a bunch of
-        kwargs, but the only ones you really "need" are *base_url* and
-        *script_path*; this is enough to figure out an API url. *login*, a
-        tuple of (username, password), can be used to log in using the legacy
-        BotPasswords system; otherwise, a dict of OAuth info should be provided
-        to *oauth*. *cookiejar* will be used to store cookies, and we'll use a
+        This probably isn't necessary to call yourself unless you're building a Site
+        that's not in your config and you don't want to add it - normally all you need
+        is wiki.get_site(name), which creates the Site for you based on your config file
+        and the sites database. We accept a bunch of kwargs, but the only ones you
+        really "need" are *base_url* and *script_path*; this is enough to figure out an
+        API url. *login*, a tuple of (username, password), can be used to log in using
+        the legacy BotPasswords system; otherwise, a dict of OAuth info should be
+        provided to *oauth*. *cookiejar* will be used to store cookies, and we'll use a
         normal CookieJar if none is given.
 
-        First, we'll store the given arguments as attributes, then set up our
-        requests session. We'll load any of the attributes that weren't given
-        from the API, and then log in if a username/pass was given and we
-        aren't already logged in.
+        First, we'll store the given arguments as attributes, then set up our requests
+        session. We'll load any of the attributes that weren't given from the API, and
+        then log in if a username/pass was given and we aren't already logged in.
         """
-        # Attributes referring to site information, filled in by an API query
-        # if they are missing (and an API url can be determined):
+        # Attributes referring to site information, filled in by an API query # if they
+        # are missing (and an API url can be determined):
         self._name = name
         self._project = project
         self._lang = lang
         self._base_url = base_url
         self._article_path = article_path
         self._script_path = script_path
-        self._namespaces = namespaces
+        self._namespaces: dict[int, list[str]] | None = namespaces
 
         # Attributes used for API queries:
         self._use_https = use_https
@@ -149,18 +180,18 @@ class Site:
         self._wait_between_queries = wait_between_queries
         self._max_retries = 6
         self._last_query_time = 0
-        self._tokens = {}
+        self._tokens: dict[str, str] = {}
         self._api_lock = RLock()
-        self._api_info_cache = {"maxlag": 0, "lastcheck": 0}
+        self._api_info_cache = _ApiInfoCache(maxlag=0, lastcheck=0)
 
         # Attributes used for SQL queries:
         if sql:
             self._sql_data = sql
         else:
-            self._sql_data = {}
+            self._sql_data: SqlConnInfo = {}
         self._sql_conn = None
         self._sql_lock = RLock()
-        self._sql_info_cache = {"replag": 0, "lastcheck": 0, "usable": None}
+        self._sql_info_cache = _SqlInfoCache(replag=0, lastcheck=0, usable=None)
 
         # Attribute used in copyright violation checks (see CopyrightMixIn):
         if search_config:
@@ -178,7 +209,7 @@ class Site:
             user_agent = constants.USER_AGENT  # Set default UA
         self._oauth = oauth
         self._session = requests.Session()
-        self._session.cookies = self._cookiejar
+        self._session.cookies = typing.cast(RequestsCookieJar, self._cookiejar)
         self._session.headers["User-Agent"] = user_agent
         if oauth:
             self._session.auth = OAuth1(
@@ -199,14 +230,16 @@ class Site:
         self._load_attributes()
 
         # If we have a name/pass and the API says we're not logged in, log in:
-        self._login_info = name, password = login
-        if not self._oauth and name and password:
+        self._login_user, self._login_password = login
+        if not self._oauth and self._login_user and self._login_password:
             logged_in_as = self._get_username_from_cookies()
-            if not logged_in_as or name.replace("_", " ") != logged_in_as:
-                self._login(login)
+            if not logged_in_as or self._login_user.replace("_", " ") != logged_in_as:
+                self._login()
 
-    def __repr__(self):
-        """Return the canonical string representation of the Site."""
+    def __repr__(self) -> str:
+        """
+        Return the canonical string representation of the Site.
+        """
         res = ", ".join(
             (
                 "Site(name={_name!r}",
@@ -225,8 +258,7 @@ class Site:
                 "cookiejar={2})",
             )
         )
-        name, password = self._login_info
-        login = "({}, {})".format(repr(name), "hidden" if password else None)
+        login = f"({self._login_user!r}, {'hidden' if self._login_password else None})"
         oauth = "hidden" if self._oauth else None
         cookies = self._cookiejar.__class__.__name__
         if hasattr(self._cookiejar, "filename"):
@@ -236,45 +268,42 @@ class Site:
         agent = self.user_agent
         return res.format(login, oauth, cookies, agent, **self.__dict__)
 
-    def __str__(self):
-        """Return a nice string representation of the Site."""
+    def __str__(self) -> str:
+        """
+        Return a nice string representation of the Site.
+        """
         res = "<Site {0} ({1}:{2}) at {3}>"
         return res.format(self.name, self.project, self.lang, self.domain)
 
-    def _unicodeify(self, value, encoding="utf8"):
-        """Return input as unicode if it's not unicode to begin with."""
-        if isinstance(value, str):
-            return value
-        return str(value, encoding)
-
     def _api_query(
         self,
-        params,
-        tries=0,
-        wait=5,
-        ignore_maxlag=False,
-        no_assert=False,
-        ae_retry=True,
-    ):
-        """Do an API query with *params* as a dict of parameters.
-
-        See the documentation for :py:meth:`api_query` for full implementation
-        details. *tries*, *wait*, and *ignore_maxlag* are for maxlag;
-        *no_assert* and *ae_retry* are for AssertEdit.
+        params: ApiParams,
+        tries: int = 0,
+        wait: int = 5,
+        ignore_maxlag: bool = False,
+        no_assert: bool = False,
+        ae_retry: bool = True,
+    ) -> ApiResult:
         """
-        since_last_query = time() - self._last_query_time  # Throttling support
+        Do an API query with *params* as a dict of parameters.
+
+        See the documentation for :py:meth:`api_query` for full implementation details.
+        *tries*, *wait*, and *ignore_maxlag* are for maxlag; *no_assert* and *ae_retry*
+        are for AssertEdit.
+        """
+        since_last_query = time.time() - self._last_query_time  # Throttling support
         if since_last_query < self._wait_between_queries:
             wait_time = self._wait_between_queries - since_last_query
             log = f"Throttled: waiting {round(wait_time, 2)} seconds"
             self._logger.debug(log)
-            sleep(wait_time)
-        self._last_query_time = time()
+            time.sleep(wait_time)
+        self._last_query_time = time.time()
 
         url, params = self._build_api_query(params, ignore_maxlag, no_assert)
         if "lgpassword" in params:
             self._logger.debug(f"{url} -> <hidden>")
         else:
-            data = dumps(params)
+            data = json.dumps(params)
             if len(data) > 1000:
                 self._logger.debug(f"{url} -> {data[:997]}...")
             else:
@@ -288,20 +317,28 @@ class Site:
 
         return self._handle_api_result(response, params, tries, wait, ae_retry)
 
-    def _request_csrf_token(self, params):
-        """If possible, add a request for a CSRF token to an API query."""
+    def _request_csrf_token(self, params: ApiParams) -> None:
+        """
+        If possible, add a request for a CSRF token to an API query.
+        """
         if params.get("action") == "query":
             if params.get("meta"):
+                assert isinstance(params["meta"], str), params["meta"]
                 if "tokens" not in params["meta"].split("|"):
                     params["meta"] += "|tokens"
             else:
                 params["meta"] = "tokens"
             if params.get("type"):
+                assert isinstance(params["type"], str), params["type"]
                 if "csrf" not in params["type"].split("|"):
                     params["type"] += "|csrf"
 
-    def _build_api_query(self, params, ignore_maxlag, no_assert):
-        """Given API query params, return the URL to query and POST data."""
+    def _build_api_query(
+        self, params: ApiParams, ignore_maxlag: bool, no_assert: bool
+    ) -> tuple[str, ApiParams]:
+        """
+        Given API query params, return the URL to query and POST data.
+        """
         if not self._base_url or self._script_path is None:
             e = "Tried to do an API query, but no API URL is known."
             raise exceptions.APIError(e)
@@ -319,8 +356,17 @@ class Site:
             self._request_csrf_token(params)
         return url, params
 
-    def _handle_api_result(self, response, params, tries, wait, ae_retry):
-        """Given an API query response, attempt to return useful data."""
+    def _handle_api_result(
+        self,
+        response: requests.Response,
+        params: ApiParams,
+        tries: int,
+        wait: int,
+        ae_retry: bool,
+    ) -> ApiResult:
+        """
+        Given an API query response, attempt to return useful data.
+        """
         try:
             res = response.json()
         except ValueError:
@@ -357,16 +403,22 @@ class Site:
             tries += 1
             msg = 'Server says "{0}"; retrying in {1} seconds ({2}/{3})'
             self._logger.info(msg.format(info, wait, tries, self._max_retries))
-            sleep(wait)
+            time.sleep(wait)
             return self._api_query(params, tries, wait * 2, ae_retry=ae_retry)
         elif code in ["assertuserfailed", "assertbotfailed"]:  # AssertEdit
-            if ae_retry and all(self._login_info) and not self._oauth:
+            if (
+                ae_retry
+                and self._login_user
+                and self._login_password
+                and not self._oauth
+            ):
                 # Try to log in if we got logged out:
-                self._login(self._login_info)
+                self._login()
                 if "token" in params:  # Fetch a new one; this is invalid now
+                    assert isinstance(params["action"], str), params["action"]
                     params["token"] = self.get_token(params["action"])
                 return self._api_query(params, tries, wait, ae_retry=False)
-            if not all(self._login_info) and not self._oauth:
+            if not self._oauth and not (self._login_user and self._login_password):
                 e = "Assertion failed, and no login info was provided."
             elif code == "assertbotfailed":
                 e = "Bot assertion failed: we don't have a bot flag!"
@@ -379,15 +431,16 @@ class Site:
             error.code, error.info = code, info
             raise error
 
-    def _load_attributes(self, force=False):
-        """Load data about our Site from the API.
+    def _load_attributes(self, force: bool = False) -> None:
+        """
+        Load data about our Site from the API.
 
-        This function is called by __init__() when one of the site attributes
-        was not given as a keyword argument. We'll do an API query to get the
-        missing data, but only if there actually *is* missing data.
+        This function is called by __init__() when one of the site attributes was not
+        given as a keyword argument. We'll do an API query to get the missing data, but
+        only if there actually *is* missing data.
 
-        Additionally, you can call this with *force* set to True to forcibly
-        reload all attributes.
+        Additionally, you can call this with *force* set to True to forcibly reload
+        all attributes.
         """
         # All attributes to be loaded, except _namespaces, which is a special
         # case because it requires additional params in the API query:
@@ -400,16 +453,24 @@ class Site:
             self._script_path,
         ]
 
-        params = {"action": "query", "meta": "siteinfo", "siprop": "general"}
+        params: ApiParams = {
+            "action": "query",
+            "meta": "siteinfo",
+            "siprop": "general",
+        }
 
         if not self._namespaces or force:
+            assert isinstance(params["siprop"], str), params["siprop"]
             params["siprop"] += "|namespaces|namespacealiases"
             with self._api_lock:
                 result = self._api_query(params, no_assert=True)
             self._load_namespaces(result)
-        elif all(attrs):  # Everything is already specified and we're not told
-            return  # to force a reload, so do nothing
-        else:  # We're only loading attributes other than _namespaces
+        elif all(attrs):
+            # Everything is already specified and we're not told to force a reload,
+            # so do nothing
+            return
+        else:
+            # We're only loading attributes other than _namespaces
             with self._api_lock:
                 result = self._api_query(params, no_assert=True)
 
@@ -421,11 +482,12 @@ class Site:
         self._article_path = res["articlepath"]
         self._script_path = res["scriptpath"]
 
-    def _load_namespaces(self, result):
-        """Fill self._namespaces with a dict of namespace IDs and names.
+    def _load_namespaces(self, result: ApiResult) -> None:
+        """
+        Fill self._namespaces with a dict of namespace IDs and names.
 
-        Called by _load_attributes() with API data as *result* when
-        self._namespaces was not given as an kwarg to __init__().
+        Called by _load_attributes() with API data as *result* when self._namespaces
+        was not given as an kwarg to __init__().
         """
         self._namespaces = {}
 
@@ -447,39 +509,42 @@ class Site:
             alias = namespace["*"]
             self._namespaces[ns_id].append(alias)
 
-    def _get_cookie(self, name, domain):
-        """Return the named cookie unless it is expired or doesn't exist."""
+    def _get_cookie(self, name: str, domain: str) -> Cookie | None:
+        """
+        Return the named cookie unless it is expired or doesn't exist.
+        """
         for cookie in self._cookiejar:
             if cookie.name == name and cookie.domain == domain:
                 if cookie.is_expired():
                     break
                 return cookie
 
-    def _get_username_from_cookies(self):
-        """Try to return our username based solely on cookies.
+    def _get_username_from_cookies(self) -> str | None:
+        """
+        Try to return our username based solely on cookies.
 
-        First, we'll look for a cookie named self._name + "Token", like
-        "enwikiToken". If it exists and isn't expired, we'll assume it's valid
-        and try to return the value of the cookie self._name + "UserName" (like
-        "enwikiUserName"). This should work fine on wikis without single-user
-        login.
+        First, we'll look for a cookie named self._name + "Token", like "enwikiToken".
+        If it exists and isn't expired, we'll assume it's valid and try to return the
+        value of the cookie self._name + "UserName" (like "enwikiUserName"). This
+        should work fine on wikis without single-user login.
 
         If `enwikiToken` doesn't exist, we'll try to find a cookie named
-        `centralauth_Token`. If this exists and is not expired, we'll try to
-        return the value of `centralauth_User`.
+        `centralauth_Token`. If this exists and is not expired, we'll try to return the
+        value of `centralauth_User`.
 
-        If we didn't get any matches, we'll return None. Our goal here isn't to
-        return the most likely username, or what we *want* our username to be
-        (for that, we'd do self._login_info[0]), but rather to get our current
-        username without an unnecessary ?action=query&meta=userinfo API query.
+        If we didn't get any matches, we'll return None. Our goal here isn't to return
+        the most likely username, or what we *want* our username to be (for that, we'd
+        do self._login_user), but rather to get our current username without an
+        unnecessary ?action=query&meta=userinfo API query.
         """
-        name = "".join((self._name, "Token"))
+        name = f"{self.name}Token"
         cookie = self._get_cookie(name, self.domain)
 
         if cookie:
-            name = "".join((self._name, "UserName"))
+            name = f"{self.name}UserName"
             user_name = self._get_cookie(name, self.domain)
             if user_name:
+                assert user_name.value, user_name
                 return unquote_plus(user_name.value)
 
         for cookie in self._cookiejar:
@@ -491,85 +556,88 @@ class Site:
             if self.domain.endswith(base):
                 user_name = self._get_cookie("centralauth_User", cookie.domain)
                 if user_name:
+                    assert user_name.value, user_name
                     return unquote_plus(user_name.value)
 
-    def _get_username_from_api(self):
-        """Do a simple API query to get our username and return it.
+    def _get_username_from_api(self) -> str:
+        """
+        Do a simple API query to get our username and return it.
 
-        This is a reliable way to make sure we are actually logged in, because
-        it doesn't deal with annoying cookie logic, but it results in an API
-        query that is unnecessary in some cases.
+        This is a reliable way to make sure we are actually logged in, because it
+        doesn't deal with annoying cookie logic, but it results in an API query that is
+        unnecessary in some cases.
 
-        Called by _get_username() (in turn called by get_user() with no
-        username argument) when cookie lookup fails, probably indicating that
-        we are logged out.
+        Called by _get_username() (in turn called by get_user() with no username
+        argument) when cookie lookup fails, probably indicating that we are logged out.
         """
         result = self.api_query(action="query", meta="userinfo")
         return result["query"]["userinfo"]["name"]
 
-    def _get_username(self):
-        """Return the name of the current user, whether logged in or not.
+    def _get_username(self) -> str:
+        """
+        Return the name of the current user, whether logged in or not.
 
-        First, we'll try to deduce it solely from cookies, to avoid an
-        unnecessary API query. For the cookie-detection method, see
-        _get_username_from_cookies()'s docs.
+        First, we'll try to deduce it solely from cookies, to avoid an unnecessary API
+        query. For the cookie-detection method, see _get_username_from_cookies()'s docs.
 
-        If our username isn't in cookies, then we're either using OAuth or
-        we're probably not logged in, or something fishy is going on (like
-        forced logout). If we're using OAuth and a username was configured,
-        assume it is accurate and use it. Otherwise, do a single API query for
-        our username (or IP address) and return that.
+        If our username isn't in cookies, then we're either using OAuth or we're
+        probably not logged in, or something fishy is going on (like forced logout).
+        If we're using OAuth and a username was configured, assume it is accurate and
+        use it. Otherwise, do a single API query for our username (or IP address) and
+        return that.
         """
         name = self._get_username_from_cookies()
         if name:
             return name
-        if self._oauth and self._login_info[0]:
-            return self._login_info[0]
+        if self._oauth and self._login_user:
+            return self._login_user
         return self._get_username_from_api()
 
-    def _should_save_cookiejar(self):
-        """Return a bool indicating whether we should save the cookiejar.
+    def _should_save_cookiejar(self) -> bool:
+        """
+        Return a bool indicating whether we should save the cookiejar.
 
-        This is True if we haven't saved the cookiejar yet this session, or if
-        our last save was over a day ago.
+        This is True if we haven't saved the cookiejar yet this session, or if our last
+        save was over a day ago.
         """
         max_staleness = 60 * 60 * 24  # 1 day
         if not self._last_cookiejar_save:
             return True
-        return time() - self._last_cookiejar_save > max_staleness
+        return time.time() - self._last_cookiejar_save > max_staleness
 
-    def _save_cookiejar(self):
-        """Try to save our cookiejar after doing a (normal) login or logout.
+    def _save_cookiejar(self) -> None:
+        """
+        Try to save our cookiejar after doing a (normal) login or logout.
 
-        Calls the standard .save() method with no filename. Don't fret if our
-        cookiejar doesn't support saving (CookieJar raises AttributeError,
-        FileCookieJar raises NotImplementedError) or no default filename was
-        given (LWPCookieJar and MozillaCookieJar raise ValueError).
+        Calls the standard .save() method with no filename. Don't fret if our cookiejar
+        doesn't support saving (CookieJar raises AttributeError, FileCookieJar raises
+        NotImplementedError) or no default filename was given (LWPCookieJar and
+        MozillaCookieJar raise ValueError).
         """
         if hasattr(self._cookiejar, "save"):
             try:
                 getattr(self._cookiejar, "save")()
             except (NotImplementedError, ValueError):
                 pass
-        self._last_cookiejar_save = time()
+        self._last_cookiejar_save = time.time()
 
-    def _login(self, login):
-        """Safely login through the API.
+    def _login(self) -> None:
+        """
+        Safely login through the API.
 
-        Normally, this is called by __init__() if a username and password have
-        been provided and no valid login cookies were found. The only other
-        time it needs to be called is when those cookies expire, which is done
-        automatically by api_query() if a query fails.
-
-        *login* is a (username, password) tuple.
+        Normally, this is called by __init__() if a username and password have been
+        provided and no valid login cookies were found. The only other time it needs to
+        be called is when those cookies expire, which is done automatically by
+        api_query() if a query fails.
 
         Raises LoginError on login errors (duh), like bad passwords and
         nonexistent usernames.
         """
+        assert self._login_user
+        assert self._login_password
         self._tokens.clear()
-        name, password = login
 
-        params = {"action": "query", "meta": "tokens", "type": "login"}
+        params: ApiParams = {"action": "query", "meta": "tokens", "type": "login"}
         with self._api_lock:
             result = self._api_query(params, no_assert=True)
         try:
@@ -579,8 +647,8 @@ class Site:
 
         params = {
             "action": "login",
-            "lgname": name,
-            "lgpassword": password,
+            "lgname": self._login_user,
+            "lgpassword": self._login_password,
             "lgtoken": token,
         }
         with self._api_lock:
@@ -603,27 +671,29 @@ class Site:
             e = f"Couldn't login; server says '{res}'."
         raise exceptions.LoginError(e)
 
-    def _logout(self):
-        """Safely logout through the API.
+    def _logout(self) -> None:
+        """
+        Safely logout through the API.
 
-        We'll do a simple API request (api.php?action=logout), clear our
-        cookiejar (which probably contains now-invalidated cookies) and try to
-        save it, if it supports that sort of thing.
+        We'll do a simple API request (api.php?action=logout), clear our cookiejar
+        (which probably contains now-invalidated cookies) and try to save it, if it
+        supports that sort of thing.
         """
         self.api_query(action="logout")
         self._cookiejar.clear()
         self._save_cookiejar()
 
-    def _sql_connect(self, **kwargs):
-        """Attempt to establish a connection with this site's SQL database.
+    def _sql_connect(self, **kwargs: Any) -> pymysql.Connection[Cursor]:
+        """
+        Attempt to establish a connection with this site's SQL database.
 
-        pymysql.connect() will be called with self._sql_data as its kwargs.
-        Any kwargs given to this function will be passed to connect() and will
-        have precedence over the config file.
+        pymysql.connect() will be called with self._sql_data as its kwargs. Any kwargs
+        given to this function will be passed to connect() and will have precedence
+        over the config file.
 
-        Will raise SQLError() if the module "pymysql" is not available. pymysql
-        may raise its own exceptions (e.g. pymysql.InterfaceError) if it cannot
-        establish a connection.
+        Will raise SQLError() if the module "pymysql" is not available. pymysql may
+        raise its own exceptions (e.g. pymysql.InterfaceError) if it cannot establish
+        a connection.
         """
         args = self._sql_data
         for key, value in kwargs.items():
@@ -633,35 +703,35 @@ class Site:
             and "user" not in args
             and "passwd" not in args
         ):
-            args["read_default_file"] = expanduser("~/.my.cnf")
+            args["read_default_file"] = os.path.expanduser("~/.my.cnf")
         elif "read_default_file" in args:
-            args["read_default_file"] = expanduser(args["read_default_file"])
+            args["read_default_file"] = os.path.expanduser(args["read_default_file"])
         if "autoping" not in args:
             args["autoping"] = True
         if "autoreconnect" not in args:
             args["autoreconnect"] = True
 
         try:
-            self._sql_conn = pymysql.connect(**args)
+            return pymysql.connect(**args)
         except ImportError:
             e = "SQL querying requires the 'pymysql' package: https://pymysql.readthedocs.io/"
             raise exceptions.SQLError(e)
 
-    def _get_service_order(self):
-        """Return a preferred order for using services (e.g. the API and SQL).
-
-        A list is returned, starting with the most preferred service first and
-        ending with the least preferred one. Currently, there are only two
-        services. SERVICE_API will always be included since the API is expected
-        to be always usable. In normal circumstances, self.SERVICE_SQL will be
-        first (with the API second), since using SQL directly is easier on the
-        servers than making web queries with the API. self.SERVICE_SQL will be
-        second if replag is greater than three minutes (a cached value updated
-        every two minutes at most), *unless* API lag is also very high.
-        self.SERVICE_SQL will not be included in the list if we cannot form a
-        proper SQL connection.
+    def _get_service_order(self) -> list[Service]:
         """
-        now = time()
+        Return a preferred order for using services (e.g. the API and SQL).
+
+        A list is returned, starting with the most preferred service first and ending
+        with the least preferred one. Currently, there are only two services.
+        SERVICE_API will always be included since the API is expected to be always
+        usable. In normal circumstances, self.SERVICE_SQL will be first (with the API
+        second), since using SQL directly is easier on the servers than making web
+        queries with the API. self.SERVICE_SQL will be second if replag is greater than
+        three minutes (a cached value updated every two minutes at most), *unless* API
+        lag is also very high. self.SERVICE_SQL will not be included in the list if we
+        cannot form a proper SQL connection.
+        """
+        now = time.time()
         if now - self._sql_info_cache["lastcheck"] > 120:
             self._sql_info_cache["lastcheck"] = now
             try:
@@ -671,16 +741,16 @@ class Site:
                     raise exceptions.SQLError(str(exc))
             except (exceptions.SQLError, ImportError):
                 self._sql_info_cache["usable"] = False
-                return [self.SERVICE_API]
+                return [Service.API]
             self._sql_info_cache["usable"] = True
         else:
             if not self._sql_info_cache["usable"]:
-                return [self.SERVICE_API]
+                return [Service.API]
             sqllag = self._sql_info_cache["replag"]
 
         if sqllag > 300:
             if not self._maxlag:
-                return [self.SERVICE_API, self.SERVICE_SQL]
+                return [Service.API, Service.SQL]
             if now - self._api_info_cache["lastcheck"] > 300:
                 self._api_info_cache["lastcheck"] = now
                 try:
@@ -690,35 +760,59 @@ class Site:
             else:
                 apilag = self._api_info_cache["maxlag"]
             if apilag > self._maxlag:
-                return [self.SERVICE_SQL, self.SERVICE_API]
-            return [self.SERVICE_API, self.SERVICE_SQL]
+                return [Service.SQL, Service.API]
+            return [Service.API, Service.SQL]
 
-        return [self.SERVICE_SQL, self.SERVICE_API]
+        return [Service.SQL, Service.API]
 
     @property
-    def name(self):
-        """The Site's name (or "wikiid" in the API), like ``"enwiki"``."""
+    def name(self) -> str:
+        """
+        The Site's name (or "wikiid" in the API), like ``"enwiki"``.
+        """
+        assert self._name is not None
         return self._name
 
     @property
-    def project(self):
-        """The Site's project name in lowercase, like ``"wikipedia"``."""
+    def project(self) -> str:
+        """
+        The Site's project name in lowercase, like ``"wikipedia"``.
+        """
+        assert self._project is not None
         return self._project
 
     @property
-    def lang(self):
-        """The Site's language code, like ``"en"`` or ``"es"``."""
+    def lang(self) -> str:
+        """
+        The Site's language code, like ``"en"`` or ``"es"``.
+        """
+        assert self._lang is not None
         return self._lang
 
     @property
-    def domain(self):
-        """The Site's web domain, like ``"en.wikipedia.org"``."""
-        return urlparse(self._base_url).netloc
+    def base_url(self) -> str:
+        """
+        The Site's base URL, like ``"https://en.wikipedia.org"``.
+
+        May be protocol-relative (e.g. ``"//en.wikipedia.org"``). See :py:attr:`url`
+        for an alternative.
+        """
+        assert self._base_url is not None
+        return self._base_url
 
     @property
-    def url(self):
-        """The Site's full base URL, like ``"https://en.wikipedia.org"``."""
-        url = self._base_url
+    def domain(self) -> str:
+        """
+        The Site's web domain, like ``"en.wikipedia.org"``.
+        """
+        return urlparse(self.base_url).netloc
+
+    @property
+    def url(self) -> str:
+        """
+        The Site's full base URL, like ``"https://en.wikipedia.org"``.
+        """
+        url = self.base_url
         if url.startswith("//"):  # Protocol-relative URLs from 1.18
             if self._use_https:
                 url = "https:" + url
@@ -727,37 +821,63 @@ class Site:
         return url
 
     @property
-    def user_agent(self):
-        """The User-Agent header sent to the API by the requests session."""
-        return self._session.headers["User-Agent"]
+    def article_path(self) -> str:
+        """
+        The base URL used to construct internal links, like ``"/wiki/$1"``.
+        """
+        assert self._article_path is not None
+        return self._article_path
 
-    def api_query(self, **kwargs):
-        """Do an API query with `kwargs` as the parameters.
+    @property
+    def script_path(self) -> str:
+        """
+        The base URL used to refer to other parts of the wiki, like ``"/w"``.
+        """
+        assert self._script_path is not None
+        return self._script_path
 
-        This will first attempt to construct an API url from
-        :py:attr:`self._base_url` and :py:attr:`self._script_path`. We need
-        both of these, or else we'll raise
-        :py:exc:`~earwigbot.exceptions.APIError`. If
-        :py:attr:`self._base_url` is protocol-relative (introduced in MediaWiki
-        1.18), we'll choose HTTPS only if :py:attr:`self._user_https` is
-        ``True``, otherwise HTTP.
+    @property
+    def user_agent(self) -> str:
+        """
+        The User-Agent header sent to the API by the requests session.
+        """
+        user_agent = self._session.headers["User-Agent"]
+        assert isinstance(user_agent, str), user_agent
+        return user_agent
 
-        We'll encode the given params, adding ``format=json`` along the way, as
-        well as ``&assert=`` and ``&maxlag=`` based on
-        :py:attr:`self._assert_edit` and :py:attr:`_maxlag` respectively.
-        Additionally, we'll sleep a bit if the last query was made fewer than
-        :py:attr:`self._wait_between_queries` seconds ago. The request is made
-        through :py:attr:`self._session`, which has cookie support
+    @property
+    def namespaces(self) -> dict[int, list[str]]:
+        """
+        The mapping of namespace IDs to namespace names.
+        """
+        assert self._namespaces
+        return self._namespaces
+
+    def api_query(self, **kwargs: str | int) -> ApiResult:
+        """
+        Do an API query with `kwargs` as the parameters.
+
+        This will first attempt to construct an API url from :py:attr:`self._base_url`
+        and :py:attr:`self._script_path`. We need both of these, or else we'll raise
+        :py:exc:`~earwigbot.exceptions.APIError`. If :py:attr:`self._base_url` is
+        protocol-relative (introduced in MediaWiki 1.18), we'll choose HTTPS only if
+        :py:attr:`self._user_https` is ``True``, otherwise HTTP.
+
+        We'll encode the given params, adding ``format=json`` along the way, as well as
+        ``&assert=`` and ``&maxlag=`` based on :py:attr:`self._assert_edit` and
+        :py:attr:`_maxlag` respectively. Additionally, we'll sleep a bit if the last
+        query was made fewer than :py:attr:`self._wait_between_queries` seconds ago.
+        The request is made through :py:attr:`self._session`, which has cookie support
         (:py:attr:`self._cookiejar`) and a ``User-Agent``
         (:py:const:`earwigbot.wiki.constants.USER_AGENT`).
 
-        Assuming everything went well, we'll gunzip the data (if compressed),
-        load it as a JSON object, and return it.
+        Assuming everything went well, we'll gunzip the data (if compressed), load it
+        as a JSON object, and return it.
 
         If our request failed for some reason, we'll raise
-        :py:exc:`~earwigbot.exceptions.APIError` with details. If that
-        reason was due to maxlag, we'll sleep for a bit and then repeat the
-        query until we exceed :py:attr:`self._max_retries`.
+        :py:exc:`~earwigbot.exceptions.APIError` with details. If that reason was due
+        to maxlag, we'll sleep for a bit and then repeat the query until we exceed
+        :py:attr:`self._max_retries`.
 
         There is helpful MediaWiki API documentation at `MediaWiki.org
         <https://www.mediawiki.org/wiki/API>`_.
@@ -765,31 +885,63 @@ class Site:
         with self._api_lock:
             return self._api_query(kwargs)
 
+    @typing.overload
     def sql_query(
         self,
-        query,
-        params=(),
-        plain_query=False,
-        dict_cursor=False,
-        cursor_class=None,
-        buffsize=1024,
-    ):
-        """Do an SQL query and yield its results.
+        query: str,
+        params: Sequence[Any] = (),
+        *,
+        dict_cursor: Literal[False] = False,
+        cursor_class: None = None,
+        buffsize: int = 1024,
+    ) -> Generator[tuple[Any, ...], None, None]: ...
+
+    @typing.overload
+    def sql_query(
+        self,
+        query: str,
+        params: Sequence[Any] = (),
+        *,
+        dict_cursor: Literal[True],
+        cursor_class: None = None,
+        buffsize: int = 1024,
+    ) -> Generator[dict[str, Any], None, None]: ...
+
+    @typing.overload
+    def sql_query(
+        self,
+        query: str,
+        params: Sequence[Any] = (),
+        *,
+        dict_cursor: bool = False,
+        cursor_class: type[pymysql.cursors.DictCursor],
+        buffsize: int = 1024,
+    ) -> Generator[dict[str, Any], None, None]: ...
+
+    def sql_query(
+        self,
+        query: str,
+        params: Sequence[Any] = (),
+        *,
+        dict_cursor: bool = False,
+        cursor_class: type[Cursor] | None = None,
+        buffsize: int = 1024,
+    ) -> Generator[tuple[Any, ...] | dict[str, Any], None, None]:
+        """
+        Do an SQL query and yield its results.
 
         If *plain_query* is ``True``, we will force an unparameterized query.
         Specifying both *params* and *plain_query* will cause an error. If
-        *dict_cursor* is ``True``, we will use
-        :py:class:`pymysql.cursors.DictCursor` as our cursor, otherwise the
-        default :py:class:`pymysql.cursors.Cursor`. If *cursor_class* is given,
-        it will override this option.
+        *dict_cursor* is ``True``, we will use :py:class:`pymysql.cursors.DictCursor`
+        as our cursor, otherwise the default :py:class:`pymysql.cursors.Cursor`. If
+        *cursor_class* is given, it will override this option.
 
-        *buffsize* is the size of each memory-buffered group of results, to
-        reduce the number of conversations with the database; it is passed to
-        :py:meth:`cursor.fetchmany() <pymysql.cursors.Cursor.fetchmany>`. If
-        set to ``0```, all results will be buffered in memory at once (this
-        uses :py:meth:`fetchall() <pymysql.cursors.Cursor.fetchall>`). If set
-        to ``1``, it is equivalent to using
-        :py:meth:`fetchone() <pymysql.cursors.Cursor.fetchone>`.
+        *buffsize* is the size of each memory-buffered group of results, to reduce the
+        number of conversations with the database; it is passed to
+        :py:meth:`cursor.fetchmany() <pymysql.cursors.Cursor.fetchmany>`. If set to
+        ``0```, all results will be buffered in memory at once (this uses
+        :py:meth:`fetchall() <pymysql.cursors.Cursor.fetchall>`). If set to ``1``, it
+        is equivalent to using :py:meth:`fetchone() <pymysql.cursors.Cursor.fetchone>`.
 
         Example usage::
 
@@ -802,14 +954,13 @@ class Site:
             >>> for row in result2: print row
             {'user_id': 7418060L, 'user_registration': '20080703215134'}
 
-        This may raise :py:exc:`~earwigbot.exceptions.SQLError` or one of
-        pymysql's exceptions (:py:exc:`pymysql.ProgrammingError`,
-        :py:exc:`pymysql.InterfaceError`, ...) if there were problems with the
-        query.
+        This may raise :py:exc:`~earwigbot.exceptions.SQLError` or one of pymysql's
+        exceptions (:py:exc:`pymysql.ProgrammingError`,
+        :py:exc:`pymysql.InterfaceError`, ...) if there were problems with the query.
 
-        See :py:meth:`_sql_connect` for information on how a connection is
-        acquired. Also relevant is `pymysql's documentation
-        <https://pymysql.readthedocs.io/>`_ for details on that package.
+        See :py:meth:`_sql_connect` for information on how a connection is acquired.
+        Also relevant is `pymysql's documentation <https://pymysql.readthedocs.io/>`_
+        for details on that package.
         """
         if not cursor_class:
             if dict_cursor:
@@ -820,33 +971,40 @@ class Site:
 
         with self._sql_lock:
             if not self._sql_conn:
-                self._sql_connect()
+                self._sql_conn = self._sql_connect()
+
             with self._sql_conn.cursor(klass) as cur:
-                cur.execute(query, params, plain_query)
+                cur.execute(query, params)
                 if buffsize:
-                    while True:
-                        group = cur.fetchmany(buffsize)
-                        if not group:
-                            return
-                        for result in group:
-                            yield result
-                for result in cur.fetchall():
-                    yield result
+                    while group := cur.fetchmany(buffsize):
+                        yield from group
+                else:
+                    yield from cur.fetchall()
 
-    def get_maxlag(self, showall=False):
-        """Return the internal database replication lag in seconds.
+    @typing.overload
+    def get_maxlag(self, showall: Literal[False] = False) -> int: ...
 
-        In a typical setup, this function returns the replication lag *within*
-        the WMF's cluster, *not* external replication lag affecting the
-        Toolserver (see :py:meth:`get_replag` for that). This is useful when
-        combined with the ``maxlag`` API query param (added by config), in
-        which queries will be halted and retried if the lag is too high,
-        usually above five seconds.
+    @typing.overload
+    def get_maxlag(self, showall: Literal[True]) -> list[int]: ...
 
-        With *showall*, will return a list of the lag for all servers in the
-        cluster, not just the one with the highest lag.
+    def get_maxlag(self, showall: bool = False) -> int | list[int]:
         """
-        params = {"action": "query", "meta": "siteinfo", "siprop": "dbrepllag"}
+        Return the internal database replication lag in seconds.
+
+        In a typical setup, this function returns the replication lag *within* the
+        WMF's cluster, *not* external replication lag affecting Toolforge (see
+        :py:meth:`get_replag` for that). This is useful when combined with the
+        ``maxlag`` API query param (added by config), in which queries will be halted
+        and retried if the lag is too high, usually above five seconds.
+
+        With *showall*, will return a list of the lag for all servers in the cluster,
+        not just the one with the highest lag.
+        """
+        params: ApiParams = {
+            "action": "query",
+            "meta": "siteinfo",
+            "siprop": "dbrepllag",
+        }
         if showall:
             params["sishowalldb"] = 1
         with self._api_lock:
@@ -855,17 +1013,18 @@ class Site:
             return [server["lag"] for server in result["query"]["dbrepllag"]]
         return result["query"]["dbrepllag"][0]["lag"]
 
-    def get_replag(self):
-        """Return the estimated external database replication lag in seconds.
+    def get_replag(self) -> int:
+        """
+        Return the estimated external database replication lag in seconds.
 
-        Requires SQL access. This function only makes sense on a replicated
-        database (e.g. the Wikimedia Toolserver) and on a wiki that receives a
-        large number of edits (ideally, at least one per second), or the result
-        may be larger than expected, since it works by subtracting the current
-        time from the timestamp of the latest recent changes event.
+        Requires SQL access. This function only makes sense on a replicated database
+        (e.g. Wikimedia Toolforge) and on a wiki that receives a large number of edits
+        (ideally, at least one per second), or the result may be larger than expected,
+        since it works by subtracting the current time from the timestamp of the latest
+        recent changes event.
 
-        This may raise :py:exc:`~earwigbot.exceptions.SQLError` or one of
-        pymysql's exceptions (:py:exc:`pymysql.ProgrammingError`,
+        This may raise :py:exc:`~earwigbot.exceptions.SQLError` or one of pymysql's
+        exceptions (:py:exc:`pymysql.ProgrammingError`,
         :py:exc:`pymysql.InterfaceError`, ...) if there were problems.
         """
         query = """SELECT UNIX_TIMESTAMP() - UNIX_TIMESTAMP(rc_timestamp) FROM
@@ -873,13 +1032,13 @@ class Site:
         result = list(self.sql_query(query))
         return int(result[0][0])
 
-    def get_token(self, action=None, force=False):
-        """Return a token for a data-modifying API action.
+    def get_token(self, action: str | None = None, force: bool = False) -> str:
+        """
+        Return a token for a data-modifying API action.
 
-        In general, this will be a CSRF token, unless *action* is in a special
-        list of non-CSRF tokens. Tokens are cached for the session (until
-        :meth:`_login` is called again); set *force* to ``True`` to force a new
-        token to be fetched.
+        In general, this will be a CSRF token, unless *action* is in a special list of
+        non-CSRF tokens. Tokens are cached for the session (until :meth:`_login` is
+        called again); set *force* to ``True`` to force a new token to be fetched.
 
         Raises :exc:`.APIError` if there was an API issue.
         """
@@ -894,39 +1053,46 @@ class Site:
             raise exceptions.APIError(err.format(action, res))
         return self._tokens[action]
 
-    def namespace_id_to_name(self, ns_id: int, all: bool = False) -> str:
-        """Given a namespace ID, returns associated namespace names.
+    @typing.overload
+    def namespace_id_to_name(self, ns_id: int, all: Literal[False] = False) -> str: ...
 
-        If *all* is ``False`` (default), we'll return the first name in the
-        list, which is usually the localized version. Otherwise, we'll return
-        the entire list, which includes the canonical name. For example, this
-        returns ``u"Wikipedia"`` if *ns_id* = ``4`` and *all* is ``False`` on
-        ``enwiki``; returns ``[u"Wikipedia", u"Project", u"WP"]`` if *ns_id* =
-        ``4`` and *all* is ``True``.
+    @typing.overload
+    def namespace_id_to_name(self, ns_id: int, all: Literal[True]) -> list[str]: ...
 
-        Raises :py:exc:`~earwigbot.exceptions.NamespaceNotFoundError` if the ID
-        is not found.
+    def namespace_id_to_name(self, ns_id: int, all: bool = False) -> str | list[str]:
+        """
+        Given a namespace ID, returns associated namespace names.
+
+        If *all* is ``False`` (default), we'll return the first name in the list, which
+        is usually the localized version. Otherwise, we'll return the entire list,
+        which includes the canonical name. For example, this returns ``"Wikipedia"``
+        if *ns_id* = ``4`` and *all* is ``False`` on ``enwiki``; returns
+        ``["Wikipedia", "Project", "WP"]`` if *ns_id* = ``4`` and *all* is ``True``.
+
+        Raises :py:exc:`~earwigbot.exceptions.NamespaceNotFoundError` if the ID is
+        not found.
         """
         try:
             if all:
-                return self._namespaces[ns_id]
+                return self.namespaces[ns_id]
             else:
-                return self._namespaces[ns_id][0]
+                return self.namespaces[ns_id][0]
         except KeyError:
             e = f"There is no namespace with id {ns_id}."
             raise exceptions.NamespaceNotFoundError(e)
 
-    def namespace_name_to_id(self, name):
-        """Given a namespace name, returns the associated ID.
+    def namespace_name_to_id(self, name: str) -> int:
+        """
+        Given a namespace name, returns the associated ID.
 
-        Like :py:meth:`namespace_id_to_name`, but reversed. Case is ignored,
-        because namespaces are assumed to be case-insensitive.
+        Like :py:meth:`namespace_id_to_name`, but reversed. Case is ignored, because
+        namespaces are assumed to be case-insensitive.
 
-        Raises :py:exc:`~earwigbot.exceptions.NamespaceNotFoundError` if the
-        name is not found.
+        Raises :py:exc:`~earwigbot.exceptions.NamespaceNotFoundError` if the name is
+        not found.
         """
         lname = name.lower()
-        for ns_id, names in self._namespaces.items():
+        for ns_id, names in self.namespaces.items():
             lnames = [n.lower() for n in names]  # Be case-insensitive
             if lname in lnames:
                 return ns_id
@@ -934,21 +1100,23 @@ class Site:
         e = f"There is no namespace with name '{name}'."
         raise exceptions.NamespaceNotFoundError(e)
 
-    def get_page(self, title, follow_redirects=False, pageid=None):
-        """Return a :py:class:`Page` object for the given title.
+    def get_page(
+        self, title: str, follow_redirects: bool = False, pageid: int | None = None
+    ) -> Page:
+        """
+        Return a :py:class:`Page` object for the given title.
 
-        *follow_redirects* is passed directly to
-        :py:class:`~earwigbot.wiki.page.Page`'s constructor. Also, this will
-        return a :py:class:`~earwigbot.wiki.category.Category` object instead
-        if the given title is in the category namespace. As
-        :py:class:`~earwigbot.wiki.category.Category` is a subclass of
-        :py:class:`~earwigbot.wiki.page.Page`, this should not cause problems.
+        *follow_redirects* is passed directly to :py:class:`~earwigbot.wiki.page.Page`'s
+        constructor. Also, this will return a
+        :py:class:`~earwigbot.wiki.category.Category` object instead if the given title
+        is in the category namespace. As :py:class:`~earwigbot.wiki.category.Category`
+        is a subclass of :py:class:`~earwigbot.wiki.page.Page`, this should not
+        cause problems.
 
         Note that this doesn't do any direct checks for existence or
         redirect-following: :py:class:`~earwigbot.wiki.page.Page`'s methods
         provide that.
         """
-        title = self._unicodeify(title)
         prefixes = self.namespace_id_to_name(constants.NS_CATEGORY, all=True)
         prefix = title.split(":", 1)[0]
         if prefix != title:  # Avoid a page that is simply "Category"
@@ -956,51 +1124,47 @@ class Site:
                 return Category(self, title, follow_redirects, pageid, self._logger)
         return Page(self, title, follow_redirects, pageid, self._logger)
 
-    def get_category(self, catname, follow_redirects=False, pageid=None):
-        """Return a :py:class:`Category` object for the given category name.
-
-        *catname* should be given *without* a namespace prefix. This method is
-        really just shorthand for :py:meth:`get_page("Category:" + catname)
-        <get_page>`.
+    def get_category(
+        self, catname: str, follow_redirects: bool = False, pageid: int | None = None
+    ) -> Category:
         """
-        catname = self._unicodeify(catname)
+        Return a :py:class:`Category` object for the given category name.
+
+        *catname* should be given *without* a namespace prefix. This method is really
+        just shorthand for :py:meth:`get_page("Category:" + catname) <get_page>`.
+        """
         prefix = self.namespace_id_to_name(constants.NS_CATEGORY)
         pagename = ":".join((prefix, catname))
         return Category(self, pagename, follow_redirects, pageid, self._logger)
 
-    def get_user(self, username=None):
-        """Return a :py:class:`User` object for the given username.
-
-        If *username* is left as ``None``, then a
-        :py:class:`~earwigbot.wiki.user.User` object representing the currently
-        logged-in (or anonymous!) user is returned.
+    def get_user(self, username: str | None = None) -> User:
         """
-        if username:
-            username = self._unicodeify(username)
-        else:
+        Return a :py:class:`User` object for the given username.
+
+        If *username* is left as ``None``, then a :py:class:`~earwigbot.wiki.user.User`
+        object representing the currently logged-in (or anonymous!) user is returned.
+        """
+        if not username:
             username = self._get_username()
         return User(self, username, self._logger)
 
-    def delegate(self, services, args=None, kwargs=None):
-        """Delegate a task to either the API or SQL depending on conditions.
+    def delegate(
+        self, services: dict[Service, Callable[P, T]], *args: P.args, **kwargs: P.kwargs
+    ) -> T:
+        """
+        Delegate a task to either the API or SQL depending on conditions.
 
         *services* should be a dictionary in which the key is the service name
         (:py:attr:`self.SERVICE_API <SERVICE_API>` or
-        :py:attr:`self.SERVICE_SQL <SERVICE_SQL>`), and the value is the
-        function to call for this service. All functions will be passed the
-        same arguments the tuple *args* and the dict *kwargs*, which are both
-        empty by default. The service order is determined by
-        :py:meth:`_get_service_order`.
+        :py:attr:`self.SERVICE_SQL <SERVICE_SQL>`), and the value is the function to
+        call for this service. All functions will be passed the same arguments the
+        tuple *args* and the dict *kwargs*, which are both empty by default. The
+        service order is determined by :py:meth:`_get_service_order`.
 
         Not every service needs an entry in the dictionary. Will raise
-        :py:exc:`~earwigbot.exceptions.NoServiceError` if an appropriate
-        service cannot be found.
+        :py:exc:`~earwigbot.exceptions.NoServiceError` if an appropriate service cannot
+        be found.
         """
-        if not args:
-            args = ()
-        if not kwargs:
-            kwargs = {}
-
         order = self._get_service_order()
         for srv in order:
             if srv in services:

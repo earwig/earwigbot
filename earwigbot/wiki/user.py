@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,13 +18,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from logging import NullHandler, getLogger
-from socket import AF_INET, AF_INET6, inet_pton
-from time import gmtime, strptime
+from __future__ import annotations
+
+import socket
+import time
+import typing
+from logging import Logger, NullHandler, getLogger
+from typing import Any, Literal
 
 from earwigbot.exceptions import UserNotFoundError
 from earwigbot.wiki import constants
 from earwigbot.wiki.page import Page
+
+if typing.TYPE_CHECKING:
+    from earwigbot.wiki.site import Site
 
 __all__ = ["User"]
 
@@ -33,10 +40,9 @@ class User:
     """
     **EarwigBot: Wiki Toolset: User**
 
-    Represents a user on a given :py:class:`~earwigbot.wiki.site.Site`. Has
-    methods for getting a bunch of information about the user, such as
-    editcount and user rights, methods for returning the user's userpage and
-    talkpage, etc.
+    Represents a user on a given :py:class:`~earwigbot.wiki.site.Site`. Has methods for
+    getting a bunch of information about the user, such as editcount and user rights,
+    methods for returning the user's userpage and talkpage, etc.
 
     *Attributes:*
 
@@ -56,24 +62,23 @@ class User:
     *Public methods:*
 
     - :py:meth:`reload`:       forcibly reloads the user's attributes
-    - :py:meth:`get_userpage`: returns a Page object representing the user's
-      userpage
-    - :py:meth:`get_talkpage`: returns a Page object representing the user's
-      talkpage
+    - :py:meth:`get_userpage`: returns a Page object representing the user's userpage
+    - :py:meth:`get_talkpage`: returns a Page object representing the user's talkpage
     """
 
-    def __init__(self, site, name, logger=None):
-        """Constructor for new User instances.
+    def __init__(self, site: Site, name: str, logger: Logger | None = None) -> None:
+        """
+        Constructor for new User instances.
 
-        Takes two arguments, a Site object (necessary for doing API queries),
-        and the name of the user, preferably without "User:" in front, although
-        this prefix will be automatically removed by the API if given.
+        Takes two arguments, a Site object (necessary for doing API queries), and the
+        name of the user, preferably without "User:" in front, although this prefix
+        will be automatically removed by the API if given.
 
-        You can also use site.get_user() instead, which returns a User object,
-        and is preferred.
+        You can also use site.get_user() instead, which returns a User object, and
+        is preferred.
 
-        We won't do any API queries yet for basic information about the user -
-        save that for when the information is requested.
+        We won't do any API queries yet for basic information about the user - save
+        that for when the information is requested.
         """
         self._site = site
         self._name = name
@@ -85,22 +90,27 @@ class User:
             self._logger = getLogger("earwigbot.wiki")
             self._logger.addHandler(NullHandler())
 
-    def __repr__(self):
-        """Return the canonical string representation of the User."""
+    def __repr__(self) -> str:
+        """
+        Return the canonical string representation of the User.
+        """
         return f"User(name={self._name!r}, site={self._site!r})"
 
-    def __str__(self):
-        """Return a nice string representation of the User."""
+    def __str__(self) -> str:
+        """
+        Return a nice string representation of the User.
+        """
         return f'<User "{self.name}" of {str(self.site)}>'
 
-    def _get_attribute(self, attr):
-        """Internally used to get an attribute by name.
+    def _get_attribute(self, attr: str) -> Any:
+        """
+        Internally used to get an attribute by name.
 
-        We'll call _load_attributes() to get this (and all other attributes)
-        from the API if it is not already defined.
+        We'll call _load_attributes() to get this (and all other attributes) from the
+        API if it is not already defined.
 
-        Raises UserNotFoundError if a nonexistant user prevents us from
-        returning a certain attribute.
+        Raises UserNotFoundError if a nonexistant user prevents us from returning a
+        certain attribute.
         """
         if not hasattr(self, attr):
             self._load_attributes()
@@ -109,11 +119,12 @@ class User:
             raise UserNotFoundError(e)
         return getattr(self, attr)
 
-    def _load_attributes(self):
-        """Internally used to load all attributes from the API.
+    def _load_attributes(self) -> None:
+        """
+        Internally used to load all attributes from the API.
 
-        Normally, this is called by _get_attribute() when a requested attribute
-        is not defined. This defines it.
+        Normally, this is called by _get_attribute() when a requested attribute is not
+        defined. This defines it.
         """
         props = "blockinfo|groups|rights|editcount|registration|emailable|gender"
         result = self.site.api_query(
@@ -150,11 +161,11 @@ class User:
 
         reg = res["registration"]
         try:
-            self._registration = strptime(reg, "%Y-%m-%dT%H:%M:%SZ")
+            self._registration = time.strptime(reg, "%Y-%m-%dT%H:%M:%SZ")
         except TypeError:
             # Sometimes the API doesn't give a date; the user's probably really
             # old. There's nothing else we can do!
-            self._registration = gmtime(0)
+            self._registration = time.gmtime(0)
 
         try:
             res["emailable"]
@@ -166,24 +177,28 @@ class User:
         self._gender = res["gender"]
 
     @property
-    def site(self):
-        """The user's corresponding Site object."""
+    def site(self) -> Site:
+        """
+        The user's corresponding Site object.
+        """
         return self._site
 
     @property
-    def name(self):
-        """The user's username.
+    def name(self) -> str:
+        """
+        The user's username.
 
-        This will never make an API query on its own, but if one has already
-        been made by the time this is retrieved, the username may have been
-        "normalized" from the original input to the constructor, converted into
-        a Unicode object, with underscores removed, etc.
+        This will never make an API query on its own, but if one has already been made
+        by the time this is retrieved, the username may have been "normalized" from the
+        original input to the constructor, converted into a Unicode object, with
+        underscores removed, etc.
         """
         return self._name
 
     @property
-    def exists(self):
-        """``True`` if the user exists, or ``False`` if they do not.
+    def exists(self) -> bool:
+        """
+        ``True`` if the user exists, or ``False`` if they do not.
 
         Makes an API query only if we haven't made one already.
         """
@@ -192,124 +207,135 @@ class User:
         return self._exists
 
     @property
-    def userid(self):
-        """An integer ID used by MediaWiki to represent the user.
+    def userid(self) -> int:
+        """
+        An integer ID used by MediaWiki to represent the user.
 
-        Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user
-        does not exist. Makes an API query only if we haven't made one already.
+        Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user does not
+        exist. Makes an API query only if we haven't made one already.
         """
         return self._get_attribute("_userid")
 
     @property
-    def blockinfo(self):
-        """Information about any current blocks on the user.
+    def blockinfo(self) -> dict[str, Any] | Literal[False]:
+        """
+        Information about any current blocks on the user.
 
-        If the user is not blocked, returns ``False``. If they are, returns a
-        dict with three keys: ``"by"`` is the blocker's username, ``"reason"``
-        is the reason why they were blocked, and ``"expiry"`` is when the block
-        expires.
+        If the user is not blocked, returns ``False``. If they are, returns a dict with
+        three keys: ``"by"`` is the blocker's username, ``"reason"`` is the reason why
+        they were blocked, and ``"expiry"`` is when the block expires.
 
-        Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user
-        does not exist. Makes an API query only if we haven't made one already.
+        Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user does not
+        exist. Makes an API query only if we haven't made one already.
         """
         return self._get_attribute("_blockinfo")
 
     @property
-    def groups(self):
-        """A list of groups this user is in, including ``"*"``.
+    def groups(self) -> list[str]:
+        """
+        A list of groups this user is in, including ``"*"``.
 
-        Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user
-        does not exist. Makes an API query only if we haven't made one already.
+        Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user does not
+        exist. Makes an API query only if we haven't made one already.
         """
         return self._get_attribute("_groups")
 
     @property
-    def rights(self):
-        """A list of this user's rights.
+    def rights(self) -> list[str]:
+        """
+        A list of this user's rights.
 
-        Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user
-        does not exist. Makes an API query only if we haven't made one already.
+        Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user does not
+        exist. Makes an API query only if we haven't made one already.
         """
         return self._get_attribute("_rights")
 
     @property
-    def editcount(self):
-        """Returns the number of edits made by the user.
+    def editcount(self) -> int:
+        """
+        Returns the number of edits made by the user.
 
-        Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user
-        does not exist. Makes an API query only if we haven't made one already.
+        Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user does not
+        exist. Makes an API query only if we haven't made one already.
         """
         return self._get_attribute("_editcount")
 
     @property
-    def registration(self):
-        """The time the user registered as a :py:class:`time.struct_time`.
+    def registration(self) -> time.struct_time:
+        """
+        The time the user registered as a :py:class:`time.struct_time`.
 
-        Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user
-        does not exist. Makes an API query only if we haven't made one already.
+        Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user does not
+        exist. Makes an API query only if we haven't made one already.
         """
         return self._get_attribute("_registration")
 
     @property
-    def emailable(self):
-        """``True`` if the user can be emailed, or ``False`` if they cannot.
+    def emailable(self) -> bool:
+        """
+        ``True`` if the user can be emailed, or ``False`` if they cannot.
 
-        Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user
-        does not exist. Makes an API query only if we haven't made one already.
+        Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user does not
+        exist. Makes an API query only if we haven't made one already.
         """
         return self._get_attribute("_emailable")
 
     @property
-    def gender(self):
-        """The user's gender.
+    def gender(self) -> str:
+        """
+        The user's gender.
 
-        Can return either ``"male"``, ``"female"``, or ``"unknown"``, if they
-        did not specify it.
+        Can return either ``"male"``, ``"female"``, or ``"unknown"``, if they did not
+        specify it.
 
-        Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user
-        does not exist. Makes an API query only if we haven't made one already.
+        Raises :py:exc:`~earwigbot.exceptions.UserNotFoundError` if the user does not
+        exist. Makes an API query only if we haven't made one already.
         """
         return self._get_attribute("_gender")
 
     @property
-    def is_ip(self):
-        """``True`` if the user is an IP address, or ``False`` otherwise.
+    def is_ip(self) -> bool:
+        """
+        ``True`` if the user is an IP address, or ``False`` otherwise.
 
-        This tests for IPv4 and IPv6 using :py:func:`socket.inet_pton` on the
-        username. No API queries are made.
+        This tests for IPv4 and IPv6 using :py:func:`socket.inet_pton` on the username.
+        No API queries are made.
         """
         try:
-            inet_pton(AF_INET, self.name)
+            socket.inet_pton(socket.AF_INET, self.name)
         except OSError:
             try:
-                inet_pton(AF_INET6, self.name)
+                socket.inet_pton(socket.AF_INET6, self.name)
             except OSError:
                 return False
         return True
 
-    def reload(self):
-        """Forcibly reload the user's attributes.
+    def reload(self) -> None:
+        """
+        Forcibly reload the user's attributes.
 
-        Emphasis on *reload*: this is only necessary if there is reason to
-        believe they have changed.
+        Emphasis on *reload*: this is only necessary if there is reason to believe they
+        have changed.
         """
         self._load_attributes()
 
-    def get_userpage(self):
-        """Return a Page object representing the user's userpage.
+    def get_userpage(self) -> Page:
+        """
+        Return a Page object representing the user's userpage.
 
-        No checks are made to see if it exists or not. Proper site namespace
-        conventions are followed.
+        No checks are made to see if it exists or not. Proper site namespace conventions
+        are followed.
         """
         prefix = self.site.namespace_id_to_name(constants.NS_USER)
         pagename = ":".join((prefix, self._name))
         return Page(self.site, pagename)
 
-    def get_talkpage(self):
-        """Return a Page object representing the user's talkpage.
+    def get_talkpage(self) -> Page:
+        """
+        Return a Page object representing the user's talkpage.
 
-        No checks are made to see if it exists or not. Proper site namespace
-        conventions are followed.
+        No checks are made to see if it exists or not. Proper site namespace conventions
+        are followed.
         """
         prefix = self.site.namespace_id_to_name(constants.NS_USER_TALK)
         pagename = ":".join((prefix, self._name))

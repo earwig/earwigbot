@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,6 +18,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from collections.abc import Iterator
+
+from earwigbot.wiki.constants import Service
 from earwigbot.wiki.page import Page
 
 __all__ = ["Category"]
@@ -27,14 +30,14 @@ class Category(Page):
     """
     **EarwigBot: Wiki Toolset: Category**
 
-    Represents a category on a given :py:class:`~earwigbot.wiki.site.Site`, a
-    subclass of :py:class:`~earwigbot.wiki.page.Page`. Provides additional
-    methods, but :py:class:`~earwigbot.wiki.page.Page`'s own methods should
-    work fine on :py:class:`Category` objects. :py:meth:`site.get_page()
-    <earwigbot.wiki.site.Site.get_page>` will return a :py:class:`Category`
-    instead of a :py:class:`~earwigbot.wiki.page.Page` if the given title is in
-    the category namespace; :py:meth:`~earwigbot.wiki.site.Site.get_category`
-    is shorthand, accepting category names without the namespace prefix.
+    Represents a category on a given :py:class:`~earwigbot.wiki.site.Site`, a subclass
+    of :py:class:`~earwigbot.wiki.page.Page`. Provides additional methods, but
+    :py:class:`~earwigbot.wiki.page.Page`'s own methods should work fine on
+    :py:class:`Category` objects. :py:meth:`site.get_page()
+    <earwigbot.wiki.site.Site.get_page>` will return a :py:class:`Category` instead of
+    a :py:class:`~earwigbot.wiki.page.Page` if the given title is in the category
+    namespace; :py:meth:`~earwigbot.wiki.site.Site.get_category` is shorthand,
+    accepting category names without the namespace prefix.
 
     *Attributes:*
 
@@ -48,22 +51,30 @@ class Category(Page):
     - :py:meth:`get_members`: iterates over Pages in the category
     """
 
-    def __repr__(self):
-        """Return the canonical string representation of the Category."""
+    def __repr__(self) -> str:
+        """
+        Return the canonical string representation of the Category.
+        """
         res = "Category(title={0!r}, follow_redirects={1!r}, site={2!r})"
         return res.format(self._title, self._follow_redirects, self._site)
 
-    def __str__(self):
-        """Return a nice string representation of the Category."""
+    def __str__(self) -> str:
+        """
+        Return a nice string representation of the Category.
+        """
         return f'<Category "{self.title}" of {str(self.site)}>'
 
-    def __iter__(self):
-        """Iterate over all members of the category."""
+    def __iter__(self) -> Iterator[Page]:
+        """
+        Iterate over all members of the category.
+        """
         return self.get_members()
 
-    def _get_members_via_api(self, limit, follow):
-        """Iterate over Pages in the category using the API."""
-        params = {
+    def _get_members_via_api(self, limit: int | None, follow: bool) -> Iterator[Page]:
+        """
+        Iterate over Pages in the category using the API.
+        """
+        params: dict[str, str | int] = {
             "action": "query",
             "list": "categorymembers",
             "cmtitle": self.title,
@@ -84,8 +95,10 @@ class Category(Page):
             else:
                 break
 
-    def _get_members_via_sql(self, limit, follow):
-        """Iterate over Pages in the category using SQL."""
+    def _get_members_via_sql(self, limit: int | None, follow: bool) -> Iterator[Page]:
+        """
+        Iterate over Pages in the category using SQL.
+        """
         query = """SELECT page_title, page_namespace, page_id FROM page
                    JOIN categorylinks ON page_id = cl_from
                    WHERE cl_to = ?"""
@@ -107,16 +120,20 @@ class Category(Page):
                 title = base
             yield self.site.get_page(title, follow_redirects=follow, pageid=row[2])
 
-    def _get_size_via_api(self, member_type):
-        """Return the size of the category using the API."""
+    def _get_size_via_api(self, member_type: str) -> int:
+        """
+        Return the size of the category using the API.
+        """
         result = self.site.api_query(
             action="query", prop="categoryinfo", titles=self.title
         )
         info = list(result["query"]["pages"].values())[0]["categoryinfo"]
         return info[member_type]
 
-    def _get_size_via_sql(self, member_type):
-        """Return the size of the category using SQL."""
+    def _get_size_via_sql(self, member_type: str) -> int:
+        """
+        Return the size of the category using SQL.
+        """
         query = "SELECT COUNT(*) FROM categorylinks WHERE cl_to = ?"
         title = self.title.replace(" ", "_").split(":", 1)[1]
         if member_type == "size":
@@ -126,49 +143,54 @@ class Category(Page):
             result = self.site.sql_query(query, (title, member_type[:-1]))
         return list(result)[0][0]
 
-    def _get_size(self, member_type):
-        """Return the size of the category."""
+    def _get_size(self, member_type: str) -> int:
+        """
+        Return the size of the category.
+        """
         services = {
-            self.site.SERVICE_API: self._get_size_via_api,
-            self.site.SERVICE_SQL: self._get_size_via_sql,
+            Service.API: self._get_size_via_api,
+            Service.SQL: self._get_size_via_sql,
         }
-        return self.site.delegate(services, (member_type,))
+        return self.site.delegate(services, member_type)
 
     @property
-    def size(self):
-        """The total number of members in the category.
+    def size(self) -> int:
+        """
+        The total number of members in the category.
 
         Includes pages, files, and subcats. Equal to :py:attr:`pages` +
-        :py:attr:`files` + :py:attr:`subcats`. This will use either the API or
-        SQL depending on which are enabled and the amount of lag on each. This
-        is handled by :py:meth:`site.delegate()
-        <earwigbot.wiki.site.Site.delegate>`.
+        :py:attr:`files` + :py:attr:`subcats`. This will use either the API or SQL
+        depending on which are enabled and the amount of lag on each. This is handled
+        by :py:meth:`site.delegate() <earwigbot.wiki.site.Site.delegate>`.
         """
         return self._get_size("size")
 
     @property
-    def pages(self):
-        """The number of pages in the category.
+    def pages(self) -> int:
+        """
+        The number of pages in the category.
 
-        This will use either the API or SQL depending on which are enabled and
-        the amount of lag on each. This is handled by :py:meth:`site.delegate()
+        This will use either the API or SQL depending on which are enabled and the
+        amount of lag on each. This is handled by :py:meth:`site.delegate()
         <earwigbot.wiki.site.Site.delegate>`.
         """
         return self._get_size("pages")
 
     @property
-    def files(self):
-        """The number of files in the category.
+    def files(self) -> int:
+        """
+        The number of files in the category.
 
-        This will use either the API or SQL depending on which are enabled and
-        the amount of lag on each. This is handled by :py:meth:`site.delegate()
+        This will use either the API or SQL depending on which are enabled and the
+        amount of lag on each. This is handled by :py:meth:`site.delegate()
         <earwigbot.wiki.site.Site.delegate>`.
         """
         return self._get_size("files")
 
     @property
-    def subcats(self):
-        """The number of subcategories in the category.
+    def subcats(self) -> int:
+        """
+        The number of subcategories in the category.
 
         This will use either the API or SQL depending on which are enabled and
         the amount of lag on each. This is handled by :py:meth:`site.delegate()
@@ -176,36 +198,38 @@ class Category(Page):
         """
         return self._get_size("subcats")
 
-    def get_members(self, limit=None, follow_redirects=None):
-        """Iterate over Pages in the category.
+    def get_members(
+        self, limit: int | None = None, follow_redirects: bool | None = None
+    ) -> Iterator[Page]:
+        """
+        Iterate over Pages in the category.
 
-        If *limit* is given, we will provide this many pages, or less if the
-        category is smaller. By default, *limit* is ``None``, meaning we will
-        keep iterating over members until the category is exhausted.
-        *follow_redirects* is passed directly to :py:meth:`site.get_page()
-        <earwigbot.wiki.site.Site.get_page>`; it defaults to ``None``, which
-        will use the value passed to our :py:meth:`__init__`.
+        If *limit* is given, we will provide this many pages, or less if the category
+        is smaller. By default, *limit* is ``None``, meaning we will keep iterating
+        over members until the category is exhausted. *follow_redirects* is passed
+        directly to :py:meth:`site.get_page() <earwigbot.wiki.site.Site.get_page>`;
+        it defaults to ``None``, which will use the value passed to our
+        :py:meth:`__init__`.
 
-        This will use either the API or SQL depending on which are enabled and
-        the amount of lag on each. This is handled by :py:meth:`site.delegate()
+        This will use either the API or SQL depending on which are enabled and the
+        amount of lag on each. This is handled by :py:meth:`site.delegate()
         <earwigbot.wiki.site.Site.delegate>`.
 
         .. note::
-           Be careful when iterating over very large categories with no limit.
-           If using the API, at best, you will make one query per 5000 pages,
-           which can add up significantly for categories with hundreds of
-           thousands of members. As for SQL, note that *all page titles are
-           stored internally* as soon as the query is made, so the site-wide
-           SQL lock can be freed and unrelated queries can be made without
-           requiring a separate connection to be opened. This is generally not
-           an issue unless your category's size approaches several hundred
+           Be careful when iterating over very large categories with no limit. If using
+           the API, at best, you will make one query per 5000 pages, which can add up
+           significantly for categories with hundreds of thousands of members. As for
+           SQL, note that *all page titles are stored internally* as soon as the query
+           is made, so the site-wide SQL lock can be freed and unrelated queries can be
+           made without requiring a separate connection to be opened. This is generally
+           not an issue unless your category's size approaches several hundred
            thousand, in which case the sheer number of titles in memory becomes
            problematic.
         """
         services = {
-            self.site.SERVICE_API: self._get_members_via_api,
-            self.site.SERVICE_SQL: self._get_members_via_sql,
+            Service.API: self._get_members_via_api,
+            Service.SQL: self._get_members_via_sql,
         }
         if follow_redirects is None:
             follow_redirects = self._follow_redirects
-        return self.site.delegate(services, (limit, follow_redirects))
+        return self.site.delegate(services, limit, follow_redirects)

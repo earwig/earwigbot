@@ -107,6 +107,9 @@ class APIError(ServiceError):
     Raised by :py:meth:`Site.api_query <earwigbot.wiki.site.Site.api_query>`.
     """
 
+    code: str
+    info: str
+
 
 class SQLError(ServiceError):
     """Some error involving SQL querying occurred.

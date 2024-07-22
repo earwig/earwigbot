@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2019 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,15 +20,16 @@
 
 """
 `EarwigBot <https://github.com/earwig/earwigbot>`_ is a Python robot that edits
-Wikipedia and interacts with people over IRC.
+Wikipedia and interacts over IRC.
 
-See :file:`README.rst` for an overview, or the :file:`docs/` directory for
-details. This documentation is also available `online
-<https://packages.python.org/earwigbot>`_.
+See :file:`README.rst` for an overview, or the :file:`docs/` directory for details.
+This documentation is also available `online <https://packages.python.org/earwigbot>`_.
 """
 
+import typing
+
 __author__ = "Ben Kurtovic"
-__copyright__ = "Copyright (C) 2009-2019 Ben Kurtovic"
+__copyright__ = "Copyright (C) 2009-2024 Ben Kurtovic"
 __license__ = "MIT License"
 __version__ = "0.4.dev0"
 __email__ = "ben.kurtovic@gmail.com"
@@ -57,12 +58,26 @@ from earwigbot import lazy
 
 importer = lazy.LazyImporter()
 
-bot = importer.new("earwigbot.bot")
-commands = importer.new("earwigbot.commands")
-config = importer.new("earwigbot.config")
-exceptions = importer.new("earwigbot.exceptions")
-irc = importer.new("earwigbot.irc")
-managers = importer.new("earwigbot.managers")
-tasks = importer.new("earwigbot.tasks")
-util = importer.new("earwigbot.util")
-wiki = importer.new("earwigbot.wiki")
+if typing.TYPE_CHECKING:
+    from earwigbot import (
+        bot,
+        commands,
+        config,
+        exceptions,
+        irc,
+        managers,
+        tasks,
+        util,
+        wiki,
+    )
+
+else:
+    bot = importer.new("earwigbot.bot")
+    commands = importer.new("earwigbot.commands")
+    config = importer.new("earwigbot.config")
+    exceptions = importer.new("earwigbot.exceptions")
+    irc = importer.new("earwigbot.irc")
+    managers = importer.new("earwigbot.managers")
+    tasks = importer.new("earwigbot.tasks")
+    util = importer.new("earwigbot.util")
+    wiki = importer.new("earwigbot.wiki")

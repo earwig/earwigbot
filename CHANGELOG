@@ -1,6 +1,6 @@
 v0.4 (unreleased):
 
-- Migrated to Python 3 (3.11+).
+- Migrated to Python 3 (3.11+). Substantial code cleanup.
 - Migrated from oursql to pymysql.
 - Copyvios: Configurable proxy support for specific domains.
 - Copyvios: Parser-directed URL redirection.

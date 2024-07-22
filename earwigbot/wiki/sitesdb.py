@@ -18,78 +18,102 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import annotations
+
 import errno
 import sqlite3 as sqlite
 import stat
+import typing
 from collections import OrderedDict
-from http.cookiejar import LoadError, LWPCookieJar
+from dataclasses import dataclass
+from http.cookiejar import CookieJar, LoadError, LWPCookieJar
 from os import chmod, path
 from platform import python_version
 
 from earwigbot import __version__
 from earwigbot.exceptions import SiteNotFoundError
 from earwigbot.wiki.copyvios.exclusions import ExclusionsDB
-from earwigbot.wiki.site import Site
+from earwigbot.wiki.site import Site, SqlConnInfo
+
+if typing.TYPE_CHECKING:
+    from earwigbot.bot import Bot
 
 __all__ = ["SitesDB"]
+
+
+@dataclass(frozen=True)
+class _SiteInfoFromDB:
+    name: str
+    project: str
+    lang: str
+    base_url: str
+    article_path: str
+    script_path: str
+    sql: SqlConnInfo
+    namespaces: dict[int, list[str]]
 
 
 class SitesDB:
     """
     **EarwigBot: Wiki Toolset: Sites Database Manager**
 
-    This class controls the :file:`sites.db` file, which stores information
-    about all wiki sites known to the bot. Three public methods act as bridges
-    between the bot's config files and :py:class:`~earwigbot.wiki.site.Site`
-    objects:
+    This class controls the :file:`sites.db` file, which stores information about all
+    wiki sites known to the bot. Three public methods act as bridges between the bot's
+    config files and :py:class:`~earwigbot.wiki.site.Site` objects:
 
     - :py:meth:`get_site`:    returns a Site object corresponding to a site
     - :py:meth:`add_site`:    stores a site in the database
     - :py:meth:`remove_site`: removes a site from the database
 
-    There's usually no need to use this class directly. All public methods
-    here are available as :py:meth:`bot.wiki.get_site`,
-    :py:meth:`bot.wiki.add_site`, and :py:meth:`bot.wiki.remove_site`, which
-    use a :file:`sites.db` file located in the same directory as our
-    :file:`config.yml` file. Lower-level access can be achieved by importing
-    the manager class (``from earwigbot.wiki import SitesDB``).
+    There's usually no need to use this class directly. All public methods here are
+    available as :py:meth:`bot.wiki.get_site`, :py:meth:`bot.wiki.add_site`, and
+    :py:meth:`bot.wiki.remove_site`, which use a :file:`sites.db` file located in the
+    same directory as our :file:`config.yml` file. Lower-level access can be achieved
+    by importing the manager class (``from earwigbot.wiki import SitesDB``).
     """
 
-    def __init__(self, bot):
-        """Set up the manager with an attribute for the base Bot object."""
+    def __init__(self, bot: Bot) -> None:
+        """
+        Set up the manager with an attribute for the base Bot object.
+        """
         self.config = bot.config
         self._logger = bot.logger.getChild("wiki")
 
-        self._sites = {}  # Internal site cache
+        self._sites: dict[str, Site] = {}  # Internal site cache
         self._sitesdb = path.join(bot.config.root_dir, "sites.db")
         self._cookie_file = path.join(bot.config.root_dir, ".cookies")
-        self._cookiejar = None
+        self._cookiejar: CookieJar | None = None
 
         excl_db = path.join(bot.config.root_dir, "exclusions.db")
         excl_logger = self._logger.getChild("exclusionsdb")
         self._exclusions_db = ExclusionsDB(self, excl_db, excl_logger)
 
-    def __repr__(self):
-        """Return the canonical string representation of the SitesDB."""
+    def __repr__(self) -> str:
+        """
+        Return the canonical string representation of the SitesDB.
+        """
         res = "SitesDB(config={0!r}, sitesdb={1!r}, cookie_file={2!r})"
         return res.format(self.config, self._sitesdb, self._cookie_file)
 
-    def __str__(self):
-        """Return a nice string representation of the SitesDB."""
+    def __str__(self) -> str:
+        """
+        Return a nice string representation of the SitesDB.
+        """
         return f"<SitesDB at {self._sitesdb}>"
 
-    def _get_cookiejar(self):
-        """Return a LWPCookieJar object loaded from our .cookies file.
+    def _get_cookiejar(self) -> CookieJar:
+        """
+        Return a LWPCookieJar object loaded from our .cookies file.
 
-        The same .cookies file is returned every time, located in the project
-        root, same directory as config.yml and bot.py. If it doesn't exist, we
-        will create the file and set it to be readable and writeable only by
-        us. If it exists but the information inside is bogus, we'll ignore it.
+        The same .cookies file is returned every time, located in the project root,
+        same directory as config.yml and bot.py. If it doesn't exist, we will create
+        the file and set it to be readable and writeable only by us. If it exists but
+        the information inside is bogus, we'll ignore it.
 
-        This is normally called by _make_site_object() (in turn called by
-        get_site()), and the cookiejar is passed to our Site's constructor,
-        used when it makes API queries. This way, we can easily preserve
-        cookies between sites (e.g., for CentralAuth), making logins easier.
+        This is normally called by _make_site_object() (in turn called by get_site()),
+        and the cookiejar is passed to our Site's constructor, used when it makes API
+        queries. This way, we can easily preserve cookies between sites (e.g., for
+        CentralAuth), making logins easier.
         """
         if self._cookiejar:
             return self._cookiejar
@@ -111,8 +135,10 @@ class SitesDB:
 
         return self._cookiejar
 
-    def _create_sitesdb(self):
-        """Initialize the sitesdb file with its three necessary tables."""
+    def _create_sitesdb(self) -> None:
+        """
+        Initialize the sitesdb file with its three necessary tables.
+        """
         script = """
         CREATE TABLE sites (site_name, site_project, site_lang, site_base_url,
                             site_article_path, site_script_path);
@@ -122,11 +148,12 @@ class SitesDB:
         with sqlite.connect(self._sitesdb) as conn:
             conn.executescript(script)
 
-    def _get_site_object(self, name):
-        """Return the site from our cache, or create it if it doesn't exist.
+    def _get_site_object(self, name: str) -> Site:
+        """
+        Return the site from our cache, or create it if it doesn't exist.
 
-        This is essentially just a wrapper around _make_site_object that
-        returns the same object each time a specific site is asked for.
+        This is essentially just a wrapper around _make_site_object that returns the
+        same object each time a specific site is asked for.
         """
         try:
             return self._sites[name]
@@ -135,14 +162,12 @@ class SitesDB:
             self._sites[name] = site
             return site
 
-    def _load_site_from_sitesdb(self, name):
-        """Return all information stored in the sitesdb relating to given site.
+    def _load_site_from_sitesdb(self, name: str) -> _SiteInfoFromDB:
+        """
+        Return all information stored in the sitesdb relating to given site.
 
-        The information will be returned as a tuple, containing the site's
-        name, project, language, base URL, article path, script path, SQL
-        connection data, and namespaces, in that order. If the site is not
-        found in the database, SiteNotFoundError will be raised. An empty
-        database will be created before the exception is raised if none exists.
+        If the site is not found in the database, SiteNotFoundError will be raised. An
+        empty database will be created before the exception is raised if none exists.
         """
         query1 = "SELECT * FROM sites WHERE site_name = ?"
         query2 = "SELECT sql_data_key, sql_data_value FROM sql_data WHERE sql_site = ?"
@@ -161,7 +186,7 @@ class SitesDB:
 
         name, project, lang, base_url, article_path, script_path = site_data
         sql = dict(sql_data)
-        namespaces = {}
+        namespaces: dict[int, list[str]] = {}
         for ns_id, ns_name, ns_is_primary_name in ns_data:
             try:
                 if ns_is_primary_name:  # "Primary" name goes first in list
@@ -171,7 +196,7 @@ class SitesDB:
             except KeyError:
                 namespaces[ns_id] = [ns_name]
 
-        return (
+        return _SiteInfoFromDB(
             name,
             project,
             lang,
@@ -182,16 +207,16 @@ class SitesDB:
             namespaces,
         )
 
-    def _make_site_object(self, name):
-        """Return a Site object associated with the site *name* in our sitesdb.
+    def _make_site_object(self, name: str) -> Site:
+        """
+        Return a Site object associated with the site *name* in our sitesdb.
 
-        This calls _load_site_from_sitesdb(), so SiteNotFoundError will be
-        raised if the site is not in our sitesdb.
+        This calls _load_site_from_sitesdb(), so SiteNotFoundError will be raised if
+        the site is not in our sitesdb.
         """
         cookiejar = self._get_cookiejar()
-        (name, project, lang, base_url, article_path, script_path, sql, namespaces) = (
-            self._load_site_from_sitesdb(name)
-        )
+        info = self._load_site_from_sitesdb(name)
+        name = info.name
 
         config = self.config
         login = (config.wiki.get("username"), config.wiki.get("password"))
@@ -213,6 +238,7 @@ class SitesDB:
             search_config["nltk_dir"] = nltk_dir
             search_config["exclusions_db"] = self._exclusions_db
 
+        sql = info.sql
         if not sql:
             sql = config.wiki.get("sql", OrderedDict()).copy()
             for key, value in sql.items():
@@ -221,13 +247,13 @@ class SitesDB:
 
         return Site(
             name=name,
-            project=project,
-            lang=lang,
-            base_url=base_url,
-            article_path=article_path,
-            script_path=script_path,
+            project=info.project,
+            lang=info.lang,
+            base_url=info.base_url,
+            article_path=info.article_path,
+            script_path=info.script_path,
             sql=sql,
-            namespaces=namespaces,
+            namespaces=info.namespaces,
             login=login,
             oauth=oauth,
             cookiejar=cookiejar,
@@ -240,18 +266,18 @@ class SitesDB:
             search_config=search_config,
         )
 
-    def _get_site_name_from_sitesdb(self, project, lang):
-        """Return the name of the first site with the given project and lang.
+    def _get_site_name_from_sitesdb(self, project: str, lang: str) -> str | None:
+        """
+        Return the name of the first site with the given project and lang.
 
-        If we can't find the site with the given information, we'll also try
-        searching for a site whose base_url contains "{lang}.{project}". There
-        are a few sites, like the French Wikipedia, that set their project to
-        something other than the expected "wikipedia" ("wikipédia" in this
-        case), but we should correctly find them when doing get_site(lang="fr",
-        project="wikipedia").
+        If we can't find the site with the given information, we'll also try searching
+        for a site whose base_url contains "{lang}.{project}". There are a few sites,
+        like the French Wikipedia, that set their project to something other than the
+        expected "wikipedia" ("wikipédia" in this case), but we should correctly find
+        them when doing get_site(lang="fr", project="wikipedia").
 
-        If the site is not found, return None. An empty sitesdb will be created
-        if none exists.
+        If the site is not found, return None. An empty sitesdb will be created if
+        none exists.
         """
         query1 = "SELECT site_name FROM sites WHERE site_project = ? and site_lang = ?"
         query2 = "SELECT site_name FROM sites WHERE site_base_url LIKE ?"
@@ -267,26 +293,27 @@ class SitesDB:
             except sqlite.OperationalError:
                 self._create_sitesdb()
 
-    def _add_site_to_sitesdb(self, site):
-        """Extract relevant info from a Site object and add it to the sitesdb.
+    def _add_site_to_sitesdb(self, site: Site) -> None:
+        """
+        Extract relevant info from a Site object and add it to the sitesdb.
 
-        Works like a reverse _load_site_from_sitesdb(); the site's project,
-        language, base URL, article path, script path, SQL connection data, and
-        namespaces are extracted from the site and inserted into the sites
-        database. If the sitesdb doesn't exist, we'll create it first.
+        Works like a reverse _load_site_from_sitesdb(); the site's project, language,
+        base URL, article path, script path, SQL connection data, and namespaces are
+        extracted from the site and inserted into the sites database. If the sitesdb
+        doesn't exist, we'll create it first.
         """
         name = site.name
         sites_data = (
             name,
             site.project,
             site.lang,
-            site._base_url,
-            site._article_path,
-            site._script_path,
+            site.base_url,
+            site.article_path,
+            site.script_path,
         )
         sql_data = [(name, key, val) for key, val in site._sql_data.items()]
-        ns_data = []
-        for ns_id, ns_names in site._namespaces.items():
+        ns_data: list[tuple[str, int, str, bool]] = []
+        for ns_id, ns_names in site.namespaces.items():
             ns_data.append((name, ns_id, ns_names.pop(0), True))
             for ns_name in ns_names:
                 ns_data.append((name, ns_id, ns_name, False))
@@ -306,8 +333,10 @@ class SitesDB:
             conn.executemany("INSERT INTO sql_data VALUES (?, ?, ?)", sql_data)
             conn.executemany("INSERT INTO namespaces VALUES (?, ?, ?, ?)", ns_data)
 
-    def _remove_site_from_sitesdb(self, name):
-        """Remove a site by name from the sitesdb and the internal cache."""
+    def _remove_site_from_sitesdb(self, name: str) -> bool:
+        """
+        Remove a site by name from the sitesdb and the internal cache.
+        """
         try:
             del self._sites[name]
         except KeyError:
@@ -323,30 +352,34 @@ class SitesDB:
                 self._logger.info(f"Removed site '{name}'")
                 return True
 
-    def get_site(self, name=None, project=None, lang=None):
-        """Return a Site instance based on information from the sitesdb.
+    def get_site(
+        self,
+        name: str | None = None,
+        project: str | None = None,
+        lang: str | None = None,
+    ) -> Site:
+        """
+        Return a Site instance based on information from the sitesdb.
 
-        With no arguments, return the default site as specified by our config
-        file. This is ``config.wiki["defaultSite"]``.
+        With no arguments, return the default site as specified by our config file.
+        This is ``config.wiki["defaultSite"]``.
 
-        With *name* specified, return the site with that name. This is
-        equivalent to the site's ``wikiid`` in the API, like *enwiki*.
+        With *name* specified, return the site with that name. This is equivalent to
+        the site's ``wikiid`` in the API, like *enwiki*.
 
-        With *project* and *lang* specified, return the site whose project and
-        language match these values. If there are multiple sites with the same
-        values (unlikely), this is not a reliable way of loading a site. Call
-        the function with an explicit *name* in that case.
+        With *project* and *lang* specified, return the site whose project and language
+        match these values. If there are multiple sites with the same values
+        (unlikely), this is not a reliable way of loading a site. Call the function
+        with an explicit *name* in that case.
 
         We will attempt to login to the site automatically using
-        ``config.wiki["username"]`` and ``config.wiki["password"]`` if both are
-        defined.
+        ``config.wiki["username"]`` and ``config.wiki["password"]`` if both are defined.
 
-        Specifying a project without a lang or a lang without a project will
-        raise :py:exc:`TypeError`. If all three args are specified, *name* will
-        be first tried, then *project* and *lang* if *name* doesn't work. If a
-        site cannot be found in the sitesdb,
-        :py:exc:`~earwigbot.exceptions.SiteNotFoundError` will be raised. An
-        empty sitesdb will be created if none is found.
+        Specifying a project without a lang or a lang without a project will raise
+        :py:exc:`TypeError`. If all three args are specified, *name* will be first
+        tried, then *project* and *lang* if *name* doesn't work. If a site cannot be
+        found in the sitesdb, :py:exc:`~earwigbot.exceptions.SiteNotFoundError` will be
+        raised. An empty sitesdb will be created if none is found.
         """
         # Someone specified a project without a lang, or vice versa:
         if (project and not lang) or (not project and lang):
@@ -374,6 +407,7 @@ class SitesDB:
                 raise
 
         # If we end up here, then project and lang are the only args given:
+        assert project is not None and lang is not None, (project, lang)
         name = self._get_site_name_from_sitesdb(project, lang)
         if name:
             return self._get_site_object(name)
@@ -381,30 +415,34 @@ class SitesDB:
         raise SiteNotFoundError(e)
 
     def add_site(
-        self, project=None, lang=None, base_url=None, script_path="/w", sql=None
-    ):
-        """Add a site to the sitesdb so it can be retrieved with get_site().
+        self,
+        project: str | None = None,
+        lang: str | None = None,
+        base_url: str | None = None,
+        script_path: str = "/w",
+        sql: SqlConnInfo | None = None,
+    ) -> Site:
+        """
+        Add a site to the sitesdb so it can be retrieved with get_site().
 
         If only a project and a lang are given, we'll guess the *base_url* as
-        ``"//{lang}.{project}.org"`` (which is protocol-relative, becoming
-        ``"https"`` if *useHTTPS* is ``True`` in config otherwise ``"http"``).
-        If this is wrong, provide the correct *base_url* as an argument (in
-        which case project and lang are ignored). Most wikis use ``"/w"`` as
-        the script path (meaning the API is located at
-        ``"{base_url}{script_path}/api.php"`` ->
-        ``"//{lang}.{project}.org/w/api.php"``), so this is the default. If
-        your wiki is different, provide the script_path as an argument. SQL
-        connection settings are guessed automatically using config's template
-        value. If this is wrong or not specified, provide a dict of kwargs as
-        *sql* and Site will pass it to :py:func:`pymysql.connect(**sql)
-        <pymysql.connect>`, allowing you to make queries with
-        :py:meth:`site.sql_query <earwigbot.wiki.site.Site.sql_query>`.
+        ``"//{lang}.{project}.org"`` (which is protocol-relative, becoming ``"https"``
+        if *useHTTPS* is ``True`` in config otherwise ``"http"``). If this is wrong,
+        provide the correct *base_url* as an argument (in which case project and lang
+        are ignored). Most wikis use ``"/w"`` as the script path (meaning the API is
+        located at ``"{base_url}{script_path}/api.php"`` ->
+        ``"//{lang}.{project}.org/w/api.php"``), so this is the default. If your wiki
+        is different, provide the script_path as an argument. SQL connection settings
+        are guessed automatically using config's template value. If this is wrong or
+        not specified, provide a dict of kwargs as *sql* and Site will pass it to
+        :py:func:`pymysql.connect(**sql) <pymysql.connect>`, allowing you to make
+        queries with :py:meth:`site.sql_query <earwigbot.wiki.site.Site.sql_query>`.
 
-        Returns ``True`` if the site was added successfully or ``False`` if the
-        site is already in our sitesdb (this can be done purposefully to update
-        old site info). Raises :py:exc:`~earwigbot.exception.SiteNotFoundError`
-        if not enough information has been provided to identify the site (e.g.
-        a *project* but not a *lang*).
+        Returns ``True`` if the site was added successfully or ``False`` if the site is
+        already in our sitesdb (this can be done purposefully to update old site info).
+        Raises :py:exc:`~earwigbot.exception.SiteNotFoundError` if not enough
+        information has been provided to identify the site (e.g. a *project* but not
+        a *lang*).
         """
         if not base_url:
             if not project or not lang:
@@ -445,7 +483,12 @@ class SitesDB:
         self._add_site_to_sitesdb(site)
         return self._get_site_object(site.name)
 
-    def remove_site(self, name=None, project=None, lang=None):
+    def remove_site(
+        self,
+        name: str | None = None,
+        project: str | None = None,
+        lang: str | None = None,
+    ) -> bool:
         """Remove a site from the sitesdb.
 
         Returns ``True`` if the site was removed successfully or ``False`` if

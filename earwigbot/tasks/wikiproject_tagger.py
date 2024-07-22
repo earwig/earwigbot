@@ -43,13 +43,14 @@ JobKwargs = TypedDict(
         "nocreate": NotRequired[bool],
         "recursive": NotRequired[bool | int],
         "tag-categories": NotRequired[bool],
+        "not-in-category": NotRequired[str],
         "site": NotRequired[str],
         "dry-run": NotRequired[bool],
     },
 )
 
 
-@dataclass
+@dataclass(frozen=True)
 class Job:
     """
     Represents a single wikiproject-tagging task.
@@ -68,11 +69,20 @@ class Job:
     only_with: set[str] | None
     nocreate: bool
     tag_categories: bool
+    not_in_category: str | None
     dry_run: bool
 
-    counter: int = 0
+    _counter: list[int] = [0]  # Wrap to allow frozen updates
     processed_cats: set[str] = field(default_factory=set)
     processed_pages: set[str] = field(default_factory=set)
+    skip_pages: set[str] = field(default_factory=set)
+
+    @property
+    def counter(self) -> int:
+        return self._counter[0]
+
+    def add_to_counter(self, value: int) -> None:
+        self._counter[0] += value
 
 
 class ShutoffEnabled(Exception):
@@ -90,7 +100,7 @@ class WikiProjectTagger(Task):
     Usage: :command:`earwigbot -t wikiproject_tagger PATH --banner BANNER
     [--category CAT | --file FILE] [--summary SUM] [--update] [--append PARAMS]
     [--autoassess [CLASSES]] [--only-with BANNER] [--nocreate] [--recursive [NUM]]
-    [--site SITE] [--dry-run]`
+    [--not-in-category CAT] [--site SITE] [--dry-run]`
 
     .. glossary::
 
@@ -126,6 +136,8 @@ class WikiProjectTagger(Task):
         ``NUM`` isn't provided, go infinitely (this can be dangerous)
     ``--tag-categories``
         also tag category pages
+    ``--not-in-category CAT``
+        skip talk pages that are already members of this category
     ``--site SITE``
         the ID of the site to tag pages on, defaulting to the default site
     ``--dry-run``
@@ -189,6 +201,7 @@ class WikiProjectTagger(Task):
         nocreate = kwargs.get("nocreate", False)
         recursive = kwargs.get("recursive", 0)
         tag_categories = kwargs.get("tag-categories", False)
+        not_in_category = kwargs.get("not-in-category")
         dry_run = kwargs.get("dry-run", False)
         banner, names = self.get_names(site, banner)
         if not names:
@@ -210,6 +223,7 @@ class WikiProjectTagger(Task):
             only_with=only_with,
             nocreate=nocreate,
             tag_categories=tag_categories,
+            not_in_category=not_in_category,
             dry_run=dry_run,
         )
 
@@ -224,6 +238,11 @@ class WikiProjectTagger(Task):
         """
         Run a tagging *job* on a given *site*.
         """
+        if job.not_in_category:
+            skip_category = site.get_category(job.not_in_category)
+            for page in skip_category.get_members():
+                job.skip_pages.add(page.title)
+
         if "category" in kwargs:
             title = kwargs["category"]
             title = self.guess_namespace(site, title, constants.NS_CATEGORY)
@@ -322,6 +341,10 @@ class WikiProjectTagger(Task):
         if not page.is_talkpage:
             page = page.toggle_talk()
 
+        if page.title in job.skip_pages:
+            self.logger.debug(f"Skipping page, in category to skip: [[{page.title}]]")
+            return
+
         if page.title in job.processed_pages:
             self.logger.debug(f"Skipping page, already processed: [[{page.title}]]")
             return
@@ -330,7 +353,7 @@ class WikiProjectTagger(Task):
         if job.counter % 10 == 0:  # Do a shutoff check every ten pages
             if self.shutoff_enabled(page.site):
                 raise ShutoffEnabled()
-        job.counter += 1
+        job.add_to_counter(1)
 
         try:
             code = page.parse()
