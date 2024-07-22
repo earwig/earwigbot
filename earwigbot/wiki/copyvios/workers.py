@@ -138,10 +138,11 @@ class _CopyvioWorker:
                     continue
                 path = path[len(proxy_info["path"]) :]
             url = proxy_info["target"] + path
+            if parsed.query:
+                url += "?" + parsed.query
             if "auth" in proxy_info:
-                extra_headers["Authorization"] = "Basic %s" % (
-                    base64.b64encode(proxy_info["auth"])
-                )
+                auth_hash = base64.b64encode(proxy_info["auth"].encode()).decode()
+                extra_headers["Authorization"] = f"Basic {auth_hash}"
             return url, True
         return url, False
 
