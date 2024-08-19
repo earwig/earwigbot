@@ -76,8 +76,8 @@ includes something like::
                 - "#channel"
                 - "#other-channel"
 
-...then :py:attr:`config.irc["frontend"]["nick"]` will be ``"MyAwesomeBot"``
-and :py:attr:`config.irc["frontend"]["channels"]` will be
+then :py:attr:`config.irc["frontend"]["nick"]` will be ``"MyAwesomeBot"`` and
+:py:attr:`config.irc["frontend"]["channels"]` will be
 ``["##earwigbot", "#channel", "#other-channel"]``.
 
 Custom IRC commands

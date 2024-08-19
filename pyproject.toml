@@ -1,3 +1,63 @@
+[project]
+name = "earwigbot"
+version = "0.4.dev0"
+authors = [
+  {name = "Ben Kurtovic", email = "ben@benkurtovic.com"},
+]
+description = "EarwigBot is a bot that edits Wikipedia and interacts over IRC"
+readme = "README.rst"
+requires-python = ">=3.11"
+dependencies = [
+    "PyYAML >= 5.4.1",  # Parsing config files
+    "mwparserfromhell >= 0.6",  # Parsing wikicode for manipulation
+    "requests >= 2.25.1",  # Wiki API requests
+    "requests_oauthlib >= 1.3.0",  # API authentication via OAuth
+]
+keywords = ["earwig", "earwigbot", "irc", "wikipedia", "wiki", "mediawiki"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Communications :: Chat :: Internet Relay Chat",
+    "Topic :: Internet :: WWW/HTTP",
+]
+
+[project.optional-dependencies]
+crypto = [
+    "cryptography >= 3.4.7",  # Storing bot passwords + keys in the config file
+]
+sql = [
+    "pymysql >= 1.1.0",  # Interfacing with MediaWiki databases
+]
+copyvios = [
+    "beautifulsoup4 >= 4.9.3",  # Parsing/scraping HTML
+    "charset_normalizer >= 3.3.2",  # Encoding detection for BeautifulSoup
+    "lxml >= 4.6.3",  # Faster parser for BeautifulSoup
+    "nltk >= 3.6.1",  # Parsing sentences to split article content
+    "pdfminer >= 20191125",  # Extracting text from PDF files
+    "tldextract >= 3.1.0",  # Getting domains for the multithreaded workers
+]
+dev = [
+    "pytest >= 8.3.1"
+]
+
+[project.urls]
+Homepage = "https://github.com/earwig/earwigbot"
+Documentation = "https://pythonhosted.org/earwigbot/"
+Issues = "https://github.com/earwig/earwigbot/issues"
+Changelog = "https://github.com/earwig/earwigbot/blob/main/CHANGELOG"
+
+[project.scripts]
+earwigbot = "earwigbot.cli:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [tool.ruff]
 target-version = "py311"
 

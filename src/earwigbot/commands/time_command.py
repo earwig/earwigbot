@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,14 +18,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from datetime import datetime
-from math import floor
-from time import time
+import math
+import time
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
-from earwigbot import importer
 from earwigbot.commands import Command
-
-pytz = importer.new("pytz")
+from earwigbot.irc import Data
 
 
 class Time(Command):
@@ -35,12 +34,12 @@ class Time(Command):
     name = "time"
     commands = ["time", "beats", "swatch", "epoch", "date"]
 
-    def process(self, data):
+    def process(self, data: Data) -> None:
         if data.command in ["beats", "swatch"]:
             self.do_beats(data)
             return
         if data.command == "epoch":
-            self.reply(data, time())
+            self.reply(data, time.time())
             return
         if data.args:
             timezone = data.args[0]
@@ -51,20 +50,16 @@ class Time(Command):
         else:
             self.do_time(data, timezone)
 
-    def do_beats(self, data):
-        beats = ((time() + 3600) % 86400) / 86.4
-        beats = int(floor(beats))
+    def do_beats(self, data: Data) -> None:
+        beats = ((time.time() + 3600) % 86400) / 86.4
+        beats = int(math.floor(beats))
         self.reply(data, f"@{beats:0>3}")
 
-    def do_time(self, data, timezone):
+    def do_time(self, data: Data, tzname: str) -> None:
         try:
-            tzinfo = pytz.timezone(timezone)
-        except ImportError:
-            msg = "This command requires the 'pytz' package: https://pypi.org/project/pytz/"
-            self.reply(data, msg)
+            tzinfo = ZoneInfo(tzname)
+        except LookupError:
+            self.reply(data, f"Unknown timezone: {timezone}")
             return
-        except pytz.exceptions.UnknownTimeZoneError:
-            self.reply(data, f"Unknown timezone: {timezone}.")
-            return
-        now = pytz.utc.localize(datetime.utcnow()).astimezone(tzinfo)
+        now = datetime.now(tz=tzinfo)
         self.reply(data, now.strftime("%Y-%m-%d %H:%M:%S %Z"))

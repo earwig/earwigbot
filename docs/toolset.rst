@@ -6,7 +6,7 @@ EarwigBot's answer to `Pywikibot`_ is the Wiki Toolset
 :py:attr:`bot.wiki <earwigbot.bot.Bot.wiki>`.
 
 :py:attr:`bot.wiki <earwigbot.bot.Bot.wiki>` provides three methods for the
-management of Sites - :py:meth:`~earwigbot.wiki.sitesdb.SitesDB.get_site`,
+management of Sites: :py:meth:`~earwigbot.wiki.sitesdb.SitesDB.get_site`,
 :py:meth:`~earwigbot.wiki.sitesdb.SitesDB.add_site`, and
 :py:meth:`~earwigbot.wiki.sitesdb.SitesDB.remove_site`. Sites are objects that
 simply represent a MediaWiki site. A single instance of EarwigBot (i.e. a

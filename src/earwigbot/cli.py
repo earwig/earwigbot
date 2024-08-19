@@ -64,6 +64,7 @@ class _StoreTaskArg(Action):
     def __call__(self, parser, namespace, values, option_string=None):
         kwargs = {}
         name = None
+        assert isinstance(values, list | tuple), values
         for value in values:
             if value.startswith("-") and "=" in value:
                 key, value = value.split("=", 1)

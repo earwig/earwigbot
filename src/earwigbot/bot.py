@@ -59,7 +59,7 @@ class Bot:
     :py:meth:`bot.wiki.get_site() <earwigbot.wiki.sitesdb.SitesDB.get_site>`.
     """
 
-    def __init__(self, root_dir, level=logging.INFO):
+    def __init__(self, root_dir: str, level=logging.INFO):
         self.config = BotConfig(self, root_dir, level)
         self.logger = logging.getLogger("earwigbot")
         self.commands = CommandManager(self)

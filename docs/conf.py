@@ -226,7 +226,7 @@ texinfo_documents = [
         "EarwigBot Documentation",
         "Ben Kurtovic",
         "EarwigBot",
-        "EarwigBot is a Python robot that edits Wikipedia and interacts with people over IRC.",
+        "EarwigBot is a bot that edits Wikipedia and interacts over IRC",
         "Miscellaneous",
     ),
 ]

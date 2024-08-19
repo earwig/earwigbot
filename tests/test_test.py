@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,31 +18,23 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import unittest
-
-from earwigbot.commands.test import Command
-from tests import CommandTestCase
+from conftest import MockCommand
+from earwigbot.commands.test import Test
 
 
-class TestTest(CommandTestCase):
-    def setUp(self):
-        super().setUp(Command)
+def test_check(command: MockCommand):
+    command.setup(Test)
 
-    def test_check(self):
-        self.assertFalse(self.command.check(self.make_msg("bloop")))
-        self.assertFalse(self.command.check(self.make_join()))
+    assert command.command.check(command.make_msg("bloop")) is False
+    assert command.command.check(command.make_join()) is False
 
-        self.assertTrue(self.command.check(self.make_msg("test")))
-        self.assertTrue(self.command.check(self.make_msg("TEST", "foo")))
-
-    def test_process(self):
-        def test():
-            self.command.process(self.make_msg("test"))
-            self.assertSaidIn(["Hey \x02Foo\x0f!", "'sup \x02Foo\x0f?"])
-
-        for i in range(64):
-            test()
+    assert command.command.check(command.make_msg("test")) is True
+    assert command.command.check(command.make_msg("TEST", "foo")) is True
 
 
-if __name__ == "__main__":
-    unittest.main(verbosity=2)
+def test_process(command: MockCommand):
+    command.setup(Test)
+
+    for i in range(64):
+        command.command.process(command.make_msg("test"))
+        command.assert_said_in(["Hey \x02Foo\x0f!", "'Sup \x02Foo\x0f?"])

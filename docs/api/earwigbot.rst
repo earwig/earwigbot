@@ -15,6 +15,13 @@ earwigbot Package
     :members:
     :undoc-members:
 
+:mod:`cli` Module
+------------------
+
+.. automodule:: earwigbot.cli
+    :members:
+    :undoc-members:
+
 :mod:`exceptions` Module
 ------------------------
 
@@ -37,13 +44,6 @@ earwigbot Package
     :members: _ResourceManager, CommandManager, TaskManager
     :undoc-members:
     :show-inheritance:
-
-:mod:`util` Module
-------------------
-
-.. automodule:: earwigbot.util
-    :members:
-    :undoc-members:
 
 Subpackages
 -----------

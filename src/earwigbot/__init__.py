@@ -61,23 +61,23 @@ importer = lazy.LazyImporter()
 if typing.TYPE_CHECKING:
     from earwigbot import (
         bot,
+        cli,
         commands,
         config,
         exceptions,
         irc,
         managers,
         tasks,
-        util,
         wiki,
     )
 
 else:
     bot = importer.new("earwigbot.bot")
+    cli = importer.new("earwigbot.cli")
     commands = importer.new("earwigbot.commands")
     config = importer.new("earwigbot.config")
     exceptions = importer.new("earwigbot.exceptions")
     irc = importer.new("earwigbot.irc")
     managers = importer.new("earwigbot.managers")
     tasks = importer.new("earwigbot.tasks")
-    util = importer.new("earwigbot.util")
     wiki = importer.new("earwigbot.wiki")
