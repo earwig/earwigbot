@@ -21,6 +21,8 @@
 from threading import Event
 from time import time
 
+import urlparse
+
 from earwigbot.wiki.copyvios.markov import EMPTY, EMPTY_INTERSECTION
 
 __all__ = ["CopyvioSource", "CopyvioCheckResult"]
@@ -84,6 +86,11 @@ class CopyvioSource:
         res = "<CopyvioSource ({0} with {1} conf)>"
         return res.format(self.url, self.confidence)
 
+    @property
+    def domain(self):
+        """The source URL's domain name, or None."""
+        return urlparse.urlparse(self.url).netloc or None
+
     def start_work(self):
         """Mark this source as being worked on right now."""
         self._event2.clear()
@@ -137,14 +144,25 @@ class CopyvioCheckResult:
     """
 
     def __init__(
-        self, violation, sources, queries, check_time, article_chain, possible_miss
+        self,
+        violation,
+        sources,
+        queries,
+        check_time,
+        article_chain,
+        possible_miss,
+        included_sources=None,
+        unified_confidence=None,
     ):
+        assert isinstance(sources, list)
         self.violation = violation
         self.sources = sources
         self.queries = queries
         self.time = check_time
         self.article_chain = article_chain
         self.possible_miss = possible_miss
+        self.included_sources = included_sources if included_sources else []
+        self.unified_confidence = unified_confidence
 
     def __repr__(self):
         """Return the canonical string representation of the result."""
@@ -164,7 +182,13 @@ class CopyvioCheckResult:
     @property
     def confidence(self):
         """The confidence of the best source, or 0 if no sources exist."""
-        return self.best.confidence if self.best else 0.0
+        return (
+            self.unified_confidence
+            if self.unified_confidence is not None
+            else self.best.confidence
+            if self.best
+            else 0.0
+        )
 
     @property
     def url(self):

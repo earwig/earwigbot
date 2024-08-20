@@ -273,7 +273,7 @@ class _HTMLParser(_BaseTextParser):
             for element in soup.find_all(tag):
                 element.extract()
 
-        return "\n".join(soup.stripped_strings)
+        return "\n".join(s.replace("\n", " ") for s in soup.stripped_strings)
 
     def _open(self, url, **kwargs):
         """Try to read a URL. Return None if it couldn't be read."""

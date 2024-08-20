@@ -180,8 +180,8 @@ class CopyvioMixIn:
         self._logger.info(result.get_log_message(self.title))
         return result
 
-    def copyvio_compare(self, url, min_confidence=0.75, max_time=30, degree=5):
-        """Check the page like :py:meth:`copyvio_check` against a specific URL.
+    def copyvio_compare(self, urls, min_confidence=0.75, max_time=30, degree=5):
+        """Check the page like :py:meth:`copyvio_check` against specific URLs.
 
         This is essentially a reduced version of :meth:`copyvio_check` - a
         copyivo comparison is made using Markov chains and the result is
@@ -201,9 +201,11 @@ class CopyvioMixIn:
         Since no searching is done, neither :exc:`.UnknownSearchEngineError`
         nor :exc:`.SearchQueryError` will be raised.
         """
+        if not isinstance(urls, list):
+            urls = [urls]
         log = "Starting copyvio compare for [[{0}]] against {1}"
-        self._logger.info(log.format(self.title, url))
-        article = MarkovChain(ArticleTextParser(self.get()).strip(), degree=5)
+        self._logger.info(log.format(self.title, ", ".join(urls)))
+        article = MarkovChain(ArticleTextParser(self.get()).strip(), degree=degree)
         workspace = CopyvioWorkspace(
             article,
             min_confidence,
@@ -211,11 +213,12 @@ class CopyvioMixIn:
             self._logger,
             self._addheaders,
             max_time,
-            num_workers=1,
+            num_workers=min(len(urls), 8),
+            short_circuit=False,
             config=self._search_config,
             degree=degree,
         )
-        workspace.enqueue([url])
+        workspace.enqueue(urls)
         workspace.wait()
         result = workspace.get_result()
         self._logger.info(result.get_log_message(self.title))
