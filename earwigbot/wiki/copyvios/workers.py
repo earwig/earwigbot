@@ -39,13 +39,15 @@ import urlparse
 
 from earwigbot import importer
 from earwigbot.exceptions import ParserExclusionError, ParserRedirectError
-from earwigbot.wiki.copyvios.markov import MarkovChain, MarkovChainIntersection
+from earwigbot.wiki.copyvios.markov import MarkovChain, MarkovChainIntersection, MarkovChainUnion
 from earwigbot.wiki.copyvios.parsers import get_parser
 from earwigbot.wiki.copyvios.result import CopyvioCheckResult, CopyvioSource
 
 tldextract = importer.new("tldextract")
 
 __all__ = ["globalize", "localize", "CopyvioWorkspace"]
+
+INCLUDE_THRESHOLD = 0.15
 
 _MAX_REDIRECTS = 3
 _MAX_RAW_SIZE = 20 * 1024 ** 2
@@ -476,14 +478,21 @@ class CopyvioWorkspace(object):
 
     def get_result(self, num_queries=0):
         """Return a CopyvioCheckResult containing the results of this check."""
-        def cmpfunc(s1, s2):
-            if s2.confidence != s1.confidence:
-                return 1 if s2.confidence > s1.confidence else -1
-            if s2.excluded != s1.excluded:
-                return 1 if s1.excluded else -1
-            return int(s1.skipped) - int(s2.skipped)
+        self.sources.sort(
+            key=lambda s: (s.confidence, not s.excluded, not s.skipped, s.chains[0].size),
+            reverse=True,
+        )
 
-        self.sources.sort(cmpfunc)
+        included_sources = [
+            source for source in self.sources if source.confidence >= INCLUDE_THRESHOLD
+        ]
+        if included_sources:
+            unified = MarkovChainUnion(source.chains[0] for source in included_sources)
+            delta = MarkovChainIntersection(self._article, unified)
+            unified_confidence = self._calculate_confidence(delta)
+        else:
+            unified_confidence = None
+
         return CopyvioCheckResult(self.finished, self.sources, num_queries,
                                   time.time() - self._start_time, self._article,
-                                  self.possible_miss)
+                                  self.possible_miss, included_sources, unified_confidence)

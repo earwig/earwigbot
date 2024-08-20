@@ -94,5 +94,35 @@ class MarkovChainIntersection(MarkovChain):
         return res.format(self.size, self.mc1, self.mc2)
 
 
+class MarkovChainUnion(MarkovChain):
+    """Implemented the union of multiple chains."""
+
+    def __init__(self, chains):
+        self.chains = list(chains)
+        self.chain = self._build()
+        self.size = self._get_size()
+
+    def _build(self):
+        """Build and return the Markov chain from the input chains."""
+        union = {}
+        for chain in self.chains:
+            for phrase, count in chain.chain.iteritems():
+                if phrase in union:
+                    union[phrase] += count
+                else:
+                    union[phrase] = count
+        return union
+
+    def __repr__(self):
+        """Return the canonical string representation of the union."""
+        res = "MarkovChainUnion(chains={!r})"
+        return res.format(self.chains)
+
+    def __str__(self):
+        """Return a nice string representation of the union."""
+        res = "<MarkovChainUnion of size {} ({})>"
+        return res.format(self.size, "| ".join(str(chain) for chain in self.chains))
+
+
 EMPTY = MarkovChain("")
 EMPTY_INTERSECTION = MarkovChainIntersection(EMPTY, EMPTY)
