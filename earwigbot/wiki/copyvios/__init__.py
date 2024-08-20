@@ -81,7 +81,7 @@ class CopyvioMixIn(object):
         return klass(credentials, opener)
 
     def copyvio_check(self, min_confidence=0.75, max_queries=15, max_time=-1,
-                      no_searches=False, no_links=False, short_circuit=True):
+                      no_searches=False, no_links=False, short_circuit=True, degree=5):
         """Check the page for copyright violations.
 
         Returns a :class:`.CopyvioCheckResult` object with information on the
@@ -121,7 +121,7 @@ class CopyvioMixIn(object):
             "nltk_dir": self._search_config["nltk_dir"],
             "lang": self._site.lang
         })
-        article = MarkovChain(parser.strip())
+        article = MarkovChain(parser.strip(), degree=degree)
         parser_args = {}
 
         if self._exclusions_db:
@@ -135,7 +135,7 @@ class CopyvioMixIn(object):
         workspace = CopyvioWorkspace(
             article, min_confidence, max_time, self._logger, self._addheaders,
             short_circuit=short_circuit, parser_args=parser_args, exclude_check=exclude,
-            config=self._search_config)
+            config=self._search_config, degree=degree)
 
         if article.size < 20:  # Auto-fail very small articles
             result = workspace.get_result()
@@ -162,7 +162,7 @@ class CopyvioMixIn(object):
         self._logger.info(result.get_log_message(self.title))
         return result
 
-    def copyvio_compare(self, url, min_confidence=0.75, max_time=30):
+    def copyvio_compare(self, url, min_confidence=0.75, max_time=30, degree=5):
         """Check the page like :py:meth:`copyvio_check` against a specific URL.
 
         This is essentially a reduced version of :meth:`copyvio_check` - a
@@ -185,10 +185,10 @@ class CopyvioMixIn(object):
         """
         log = u"Starting copyvio compare for [[{0}]] against {1}"
         self._logger.info(log.format(self.title, url))
-        article = MarkovChain(ArticleTextParser(self.get()).strip())
+        article = MarkovChain(ArticleTextParser(self.get()).strip(), degree=degree)
         workspace = CopyvioWorkspace(
             article, min_confidence, max_time, self._logger, self._addheaders,
-            max_time, num_workers=1, config=self._search_config)
+            max_time, num_workers=1, config=self._search_config, degree=degree)
         workspace.enqueue([url])
         workspace.wait()
         result = workspace.get_result()

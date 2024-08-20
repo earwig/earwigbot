@@ -28,6 +28,8 @@ from StringIO import StringIO
 from urllib import quote, urlencode
 from urllib2 import URLError
 
+import ssl
+
 from earwigbot import importer
 from earwigbot.exceptions import SearchQueryError
 
@@ -58,6 +60,7 @@ class _BaseSearchEngine(object):
     def _open(self, *args):
         """Open a URL (like urlopen) and try to return its contents."""
         try:
+            ssl._create_default_https_context = ssl._create_unverified_context
             response = self.opener.open(*args)
             result = response.read()
         except (URLError, error) as exc:

@@ -157,6 +157,7 @@ class Site(object):
             user_agent = constants.USER_AGENT  # Set default UA
         self._oauth = oauth
         self._session = requests.Session()
+        self._session.verify = False  # XXX
         self._session.cookies = self._cookiejar
         self._session.headers["User-Agent"] = user_agent
         if oauth:

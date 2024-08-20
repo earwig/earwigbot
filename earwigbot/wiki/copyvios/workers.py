@@ -307,7 +307,7 @@ class _CopyvioWorker(object):
             source.skip()
             source.finish_work()
         else:
-            chain = MarkovChain(text) if text else None
+            chain = MarkovChain(text, degree=source.workspace._degree) if text else None
             source.workspace.compare(source, chain)
         return True
 
@@ -338,7 +338,7 @@ class CopyvioWorkspace(object):
 
     def __init__(self, article, min_confidence, max_time, logger, headers,
                  url_timeout=5, num_workers=8, short_circuit=True,
-                 parser_args=None, exclude_check=None, config=None):
+                 parser_args=None, exclude_check=None, config=None, degree=5):
         self.sources = []
         self.finished = False
         self.possible_miss = False
@@ -355,6 +355,7 @@ class CopyvioWorkspace(object):
             "workspace": self, "headers": headers, "timeout": url_timeout,
             "parser_args": parser_args, "search_config": config}
         self._exclude_check = exclude_check
+        self._degree = degree
 
         if _is_globalized:
             self._queues = _global_queues
