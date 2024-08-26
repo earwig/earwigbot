@@ -88,6 +88,7 @@ class CopyvioMixIn:
         no_searches=False,
         no_links=False,
         short_circuit=True,
+        degree=5,
     ):
         """Check the page for copyright violations.
 
@@ -128,7 +129,7 @@ class CopyvioMixIn:
             self.get(),
             args={"nltk_dir": self._search_config["nltk_dir"], "lang": self._site.lang},
         )
-        article = MarkovChain(parser.strip())
+        article = MarkovChain(parser.strip(), degree=degree)
         parser_args = {}
 
         if self._exclusions_db:
@@ -151,6 +152,7 @@ class CopyvioMixIn:
             parser_args=parser_args,
             exclude_check=exclude,
             config=self._search_config,
+            degree=degree,
         )
 
         if article.size < 20:  # Auto-fail very small articles
@@ -178,7 +180,7 @@ class CopyvioMixIn:
         self._logger.info(result.get_log_message(self.title))
         return result
 
-    def copyvio_compare(self, url, min_confidence=0.75, max_time=30):
+    def copyvio_compare(self, url, min_confidence=0.75, max_time=30, degree=5):
         """Check the page like :py:meth:`copyvio_check` against a specific URL.
 
         This is essentially a reduced version of :meth:`copyvio_check` - a
@@ -201,7 +203,7 @@ class CopyvioMixIn:
         """
         log = "Starting copyvio compare for [[{0}]] against {1}"
         self._logger.info(log.format(self.title, url))
-        article = MarkovChain(ArticleTextParser(self.get()).strip())
+        article = MarkovChain(ArticleTextParser(self.get()).strip(), degree=5)
         workspace = CopyvioWorkspace(
             article,
             min_confidence,
@@ -211,6 +213,7 @@ class CopyvioMixIn:
             max_time,
             num_workers=1,
             config=self._search_config,
+            degree=degree,
         )
         workspace.enqueue([url])
         workspace.wait()
