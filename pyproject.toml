@@ -58,6 +58,20 @@ earwigbot = "earwigbot.cli:main"
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
+[tool.pyright]
+exclude = [
+    # TODO
+    "src/earwigbot/commands",
+    "src/earwigbot/config",
+    "src/earwigbot/lazy.py",
+    "src/earwigbot/irc",
+    "src/earwigbot/tasks",
+    "src/earwigbot/wiki/copyvios"
+]
+pythonVersion = "3.11"
+venvPath = "."
+venv = "venv"
+
 [tool.ruff]
 target-version = "py311"
 

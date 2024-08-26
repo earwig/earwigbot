@@ -18,10 +18,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import urllib.parse
 from threading import Event
 from time import time
-
-import urlparse
 
 from earwigbot.wiki.copyvios.markov import EMPTY, EMPTY_INTERSECTION
 
@@ -89,7 +88,7 @@ class CopyvioSource:
     @property
     def domain(self):
         """The source URL's domain name, or None."""
-        return urlparse.urlparse(self.url).netloc or None
+        return urllib.parse.urlparse(self.url).netloc or None
 
     def start_work(self):
         """Mark this source as being worked on right now."""
@@ -182,13 +181,11 @@ class CopyvioCheckResult:
     @property
     def confidence(self):
         """The confidence of the best source, or 0 if no sources exist."""
-        return (
-            self.unified_confidence
-            if self.unified_confidence is not None
-            else self.best.confidence
-            if self.best
-            else 0.0
-        )
+        if self.unified_confidence is not None:
+            return self.unified_confidence
+        if self.best:
+            return self.best.confidence
+        return 0.0
 
     @property
     def url(self):
