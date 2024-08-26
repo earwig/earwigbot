@@ -177,7 +177,9 @@ class WikiProjectTagger(Task):
         except IndexError:
             return text
 
-    def run(self, **kwargs: Unpack[JobKwargs]) -> None:
+    def run(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self, **kwargs: Unpack[JobKwargs]
+    ) -> None:
         """
         Main entry point for the bot task.
         """
@@ -364,6 +366,7 @@ class WikiProjectTagger(Task):
             self.logger.error(f"Skipping invalid page: [[{page.title}]]")
             return
 
+        banner = None
         is_update = False
         for template in code.ifilter_templates(recursive=True):
             if template.name.matches(job.names):
@@ -389,6 +392,7 @@ class WikiProjectTagger(Task):
                 return
 
         if is_update:
+            assert banner is not None
             updated = self.update_banner(banner, job, code)
             if not updated:
                 self.logger.info(

@@ -69,7 +69,7 @@ class Threads(Command):
 
         for thread in threads:
             tname = thread.name
-            ident = thread.ident % 10000
+            ident = thread.ident % 10000 if thread.ident else "unknown"
             if tname == "MainThread":
                 t = "\x0302main\x0f (id {0})"
                 normal_threads.append(t.format(ident))

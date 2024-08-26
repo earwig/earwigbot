@@ -163,7 +163,7 @@ class Notes(Command):
         except IndexError:
             self.reply(data, "Please specify an entry to edit.")
             return
-        content = " ".join(data.args[2:]).strip().decode("utf8")
+        content = " ".join(data.args[2:]).strip()
         if not content:
             self.reply(data, "Please give some content to put in the entry.")
             return

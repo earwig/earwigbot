@@ -22,8 +22,10 @@ import ast
 import operator
 import random
 import time
+from collections.abc import Callable
 from itertools import chain
 from threading import RLock, Thread
+from typing import Any
 
 from earwigbot.commands import Command
 from earwigbot.irc import Data
@@ -69,11 +71,12 @@ class Remind(Command):
             return "snooze"
         if command in SNOOZE:  # "adjust" == snoozing active reminders
             return "adjust"
+        raise ValueError(command)
 
     @staticmethod
     def _parse_time(arg):
         """Parse the wait time for a reminder."""
-        ast_to_op = {
+        ast_to_op: dict[type[ast.operator], Callable[[Any, Any], Any]] = {
             ast.Add: operator.add,
             ast.Sub: operator.sub,
             ast.Mult: operator.mul,

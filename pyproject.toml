@@ -61,8 +61,6 @@ build-backend = "setuptools.build_meta"
 [tool.pyright]
 exclude = [
     # TODO
-    "src/earwigbot/commands",
-    "src/earwigbot/tasks",
     "src/earwigbot/wiki/copyvios"
 ]
 pythonVersion = "3.11"

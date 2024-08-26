@@ -126,6 +126,8 @@ class Stalk(Command):
                 return
             else:
                 stalkinfo = (data.nick, data.chan, modifiers)
+        else:
+            stalkinfo = None
 
         if data.command == "stalk":
             self._add_stalk("user", data, target, stalkinfo)
@@ -330,10 +332,8 @@ class Stalk(Command):
 
         users = self._get_stalks_by_nick(nick, self._users)
         pages = self._get_stalks_by_nick(nick, self._pages)
-        if users:
-            uinfo = f" Users: {_format_stalks(users)}."
-        if pages:
-            pinfo = f" Pages: {_format_stalks(pages)}."
+        uinfo = f" Users: {_format_stalks(users)}." if users else None
+        pinfo = f" Pages: {_format_stalks(pages)}." if pages else None
 
         msg = "Currently stalking {0} user{1} and watching {2} page{3} for you.{4}{5}"
         return msg.format(
@@ -368,10 +368,8 @@ class Stalk(Command):
             )
 
         users, pages = self._users, self._pages
-        if users:
-            uinfo = f" Users: {_format_stalks(users)}."
-        if pages:
-            pinfo = f" Pages: {_format_stalks(pages)}."
+        uinfo = f" Users: {_format_stalks(users)}." if users else None
+        pinfo = f" Pages: {_format_stalks(pages)}." if pages else None
 
         msg = "Currently stalking {0} user{1} and watching {2} page{3}.{4}{5}"
         return msg.format(

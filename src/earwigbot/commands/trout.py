@@ -40,7 +40,7 @@ class Trout(Command):
         target = " ".join(data.args) or data.nick
         target = "himself" if target == "yourself" else target
 
-        normal = normalize("NFKD", target.decode("utf8")).lower()
+        normal = normalize("NFKD", target).lower()
         if normal in self.exceptions:
             self.reply(data, self.exceptions[normal])
         else:

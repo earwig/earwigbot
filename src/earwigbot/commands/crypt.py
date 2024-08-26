@@ -76,6 +76,7 @@ class Crypt(Command):
                     data,
                     "This command requires the 'cryptography' package: https://cryptography.io/",
                 )
+                return
 
             try:
                 if data.command == "encrypt":

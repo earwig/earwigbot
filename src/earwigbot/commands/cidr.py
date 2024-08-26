@@ -62,8 +62,7 @@ class CIDR(Command):
         try:
             ips = [self._parse_ip(arg) for arg in data.args]
         except ValueError as exc:
-            msg = "Can't parse IP address \x0302{0}\x0f."
-            self.reply(data, msg.format(exc.message))
+            self.reply(data, f"Can't parse IP address: \x0302{exc}\x0f")
             return
 
         if any(ip.family == AF_INET for ip in ips) and any(
@@ -112,8 +111,9 @@ class CIDR(Command):
                 return _IP(AF_INET6, socket.inet_pton(AF_INET6, arg), size)
             except OSError:
                 raise ValueError(oldarg)
-        if size > 32:
-            raise ValueError(oldarg)
+        else:
+            if size and size > 32:
+                raise ValueError(oldarg)
         return ip
 
     def _parse_arg(self, arg):
@@ -180,7 +180,10 @@ class CIDR(Command):
         """Convert an IP's binary representation to presentation format."""
         return socket.inet_ntop(
             family,
-            "".join(chr(int(binary[i : i + 8], 2)) for i in range(0, len(binary), 8)),
+            b"".join(
+                chr(int(binary[i : i + 8], 2)).encode()
+                for i in range(0, len(binary), 8)
+            ),
         )
 
     @staticmethod
