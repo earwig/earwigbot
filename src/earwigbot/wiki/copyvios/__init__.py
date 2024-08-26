@@ -18,208 +18,142 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+__all__ = [
+    "DEFAULT_DEGREE",
+    "CopyvioChecker",
+    "CopyvioCheckResult",
+    "globalize",
+    "localize",
+]
+
+import functools
+import logging
 import time
-from urllib.request import build_opener
+from collections.abc import Callable
 
-from earwigbot import exceptions
-from earwigbot.wiki.copyvios.markov import MarkovChain
-from earwigbot.wiki.copyvios.parsers import ArticleTextParser
-from earwigbot.wiki.copyvios.search import SEARCH_ENGINES
+from earwigbot.wiki.copyvios.exclusions import ExclusionsDB
+from earwigbot.wiki.copyvios.markov import DEFAULT_DEGREE, MarkovChain
+from earwigbot.wiki.copyvios.parsers import ArticleParser, ParserArgs
+from earwigbot.wiki.copyvios.result import CopyvioCheckResult
+from earwigbot.wiki.copyvios.search import SearchEngine, get_search_engine
 from earwigbot.wiki.copyvios.workers import CopyvioWorkspace, globalize, localize
+from earwigbot.wiki.page import Page
 
-__all__ = ["CopyvioMixIn", "globalize", "localize"]
 
-
-class CopyvioMixIn:
+class CopyvioChecker:
     """
-    **EarwigBot: Wiki Toolset: Copyright Violation MixIn**
+    Manages the lifecycle of a copyvio check or comparison.
 
-    This is a mixin that provides two public methods, :py:meth:`copyvio_check`
-    and :py:meth:`copyvio_compare`. The former checks the page for copyright
-    violations using a search engine API, and the latter compares the page
-    against a given URL. Credentials for the search engine API are stored in
-    the :py:class:`~earwigbot.wiki.site.Site`'s config.
+    Created by :py:class:`~earwigbot.wiki.page.Page` and handles the implementation
+    details of running a check.
     """
 
-    def __init__(self, site):
-        self._search_config = site._search_config
-        self._exclusions_db = self._search_config.get("exclusions_db")
-        self._addheaders = [
-            ("User-Agent", site.user_agent),
+    def __init__(
+        self,
+        page: Page,
+        *,
+        min_confidence: float = 0.75,
+        max_time: float = 30,
+        degree: int = DEFAULT_DEGREE,
+        logger: logging.Logger | None = None,
+    ) -> None:
+        self._page = page
+        self._site = page.site
+        self._config = page.site._search_config
+        self._min_confidence = min_confidence
+        self._max_time = max_time
+        self._degree = degree
+        self._logger = logger or logging.getLogger("earwigbot.wiki")
+
+        self._headers = [
+            ("User-Agent", page.site.user_agent),
             ("Accept-Encoding", "gzip"),
         ]
 
-    def _get_search_engine(self):
-        """Return a function that can be called to do web searches.
-
-        The function takes one argument, a search query, and returns a list of
-        URLs, ranked by importance. The underlying logic depends on the
-        *engine* argument within our config; for example, if *engine* is
-        "Yahoo! BOSS", we'll use YahooBOSSSearchEngine for querying.
-
-        Raises UnknownSearchEngineError if the 'engine' listed in our config is
-        unknown to us, and UnsupportedSearchEngineError if we are missing a
-        required package or module, like oauth2 for "Yahoo! BOSS".
-        """
-        engine = self._search_config["engine"]
-        if engine not in SEARCH_ENGINES:
-            raise exceptions.UnknownSearchEngineError(engine)
-
-        klass = SEARCH_ENGINES[engine]
-        credentials = self._search_config["credentials"]
-        opener = build_opener()
-        opener.addheaders = self._addheaders
-
-        for dep in klass.requirements():
-            try:
-                __import__(dep).__name__
-            except (ModuleNotFoundError, AttributeError):
-                e = "Missing a required dependency ({}) for the {} engine"
-                e = e.format(dep, engine)
-                raise exceptions.UnsupportedSearchEngineError(e)
-
-        return klass(credentials, opener)
-
-    def copyvio_check(
-        self,
-        min_confidence=0.75,
-        max_queries=15,
-        max_time=-1,
-        no_searches=False,
-        no_links=False,
-        short_circuit=True,
-        degree=5,
-    ):
-        """Check the page for copyright violations.
-
-        Returns a :class:`.CopyvioCheckResult` object with information on the
-        results of the check.
-
-        *min_confidence* is the minimum amount of confidence we must have in
-        the similarity between a source text and the article in order for us to
-        consider it a suspected violation. This is a number between 0 and 1.
-
-        *max_queries* is self-explanatory; we will never make more than this
-        number of queries in a given check.
-
-        *max_time* can be set to prevent copyvio checks from taking longer than
-        a set amount of time (generally around a minute), which can be useful
-        if checks are called through a web server with timeouts. We will stop
-        checking new URLs as soon as this limit is reached.
-
-        Setting *no_searches* to ``True`` will cause only URLs in the wikitext
-        of the page to be checked; no search engine queries will be made.
-        Setting *no_links* to ``True`` will cause the opposite to happen: URLs
-        in the wikitext will be ignored; search engine queries will be made
-        only. Setting both of these to ``True`` is pointless.
-
-        Normally, the checker will short-circuit if it finds a URL that meets
-        *min_confidence*. This behavior normally causes it to skip any
-        remaining URLs and web queries, but setting *short_circuit* to
-        ``False`` will prevent this.
-
-        Raises :exc:`.CopyvioCheckError` or subclasses
-        (:exc:`.UnknownSearchEngineError`, :exc:`.SearchQueryError`, ...) on
-        errors.
-        """
-        log = "Starting copyvio check for [[{0}]]"
-        self._logger.info(log.format(self.title))
-        searcher = self._get_search_engine()
-        parser = ArticleTextParser(
-            self.get(),
-            args={"nltk_dir": self._search_config["nltk_dir"], "lang": self._site.lang},
+        self._parser = ArticleParser(
+            self._page.get(),
+            lang=self._site.lang,
+            nltk_dir=self._config["nltk_dir"],
         )
-        article = MarkovChain(parser.strip(), degree=degree)
-        parser_args = {}
+        self._article = MarkovChain(self._parser.strip(), degree=self._degree)
 
+    @functools.cached_property
+    def _searcher(self) -> SearchEngine:
+        return get_search_engine(self._config, self._headers)
+
+    @property
+    def _exclusions_db(self) -> ExclusionsDB | None:
+        return self._config.get("exclusions_db")
+
+    def _get_exclusion_callback(self) -> Callable[[str], bool] | None:
+        if not self._exclusions_db:
+            return None
+        return functools.partial(self._exclusions_db.check, self._site.name)
+
+    def run_check(
+        self,
+        *,
+        max_queries: int = 15,
+        no_searches: bool = False,
+        no_links: bool = False,
+        short_circuit: bool = True,
+    ) -> CopyvioCheckResult:
+        parser_args: ParserArgs = {}
         if self._exclusions_db:
-            self._exclusions_db.sync(self.site.name)
-
-            def exclude(u):
-                return self._exclusions_db.check(self.site.name, u)
-
-            parser_args["mirror_hints"] = self._exclusions_db.get_mirror_hints(self)
-        else:
-            exclude = None
+            self._exclusions_db.sync(self._site.name)
+            mirror_hints = self._exclusions_db.get_mirror_hints(self._page)
+            parser_args["mirror_hints"] = mirror_hints
 
         workspace = CopyvioWorkspace(
-            article,
-            min_confidence,
-            max_time,
-            self._logger,
-            self._addheaders,
+            self._article,
+            min_confidence=self._min_confidence,
+            max_time=self._max_time,
+            logger=self._logger,
+            headers=self._headers,
             short_circuit=short_circuit,
             parser_args=parser_args,
-            exclude_check=exclude,
-            config=self._search_config,
-            degree=degree,
+            exclusion_callback=self._get_exclusion_callback(),
+            config=self._config,
+            degree=self._degree,
         )
 
-        if article.size < 20:  # Auto-fail very small articles
-            result = workspace.get_result()
-            self._logger.info(result.get_log_message(self.title))
-            return result
+        if self._article.size < 20:  # Auto-fail very small articles
+            return workspace.get_result()
 
         if not no_links:
-            workspace.enqueue(parser.get_links())
+            workspace.enqueue(self._parser.get_links())
         num_queries = 0
         if not no_searches:
-            chunks = parser.chunk(max_queries)
+            chunks = self._parser.chunk(max_queries)
             for chunk in chunks:
                 if short_circuit and workspace.finished:
                     workspace.possible_miss = True
                     break
-                log = "[[{0}]] -> querying {1} for {2!r}"
-                self._logger.debug(log.format(self.title, searcher.name, chunk))
-                workspace.enqueue(searcher.search(chunk))
+                self._logger.debug(
+                    f"[[{self._page.title}]] -> querying {self._searcher.name} "
+                    f"for {chunk!r}"
+                )
+                workspace.enqueue(self._searcher.search(chunk))
                 num_queries += 1
-                time.sleep(1)
+                time.sleep(1)  # TODO: Check whether this is needed
 
         workspace.wait()
-        result = workspace.get_result(num_queries)
-        self._logger.info(result.get_log_message(self.title))
-        return result
+        return workspace.get_result(num_queries)
 
-    def copyvio_compare(self, urls, min_confidence=0.75, max_time=30, degree=5):
-        """Check the page like :py:meth:`copyvio_check` against specific URLs.
-
-        This is essentially a reduced version of :meth:`copyvio_check` - a
-        copyivo comparison is made using Markov chains and the result is
-        returned in a :class:`.CopyvioCheckResult` object - but without using a
-        search engine, since the suspected "violated" URL is supplied from the
-        start.
-
-        Its primary use is to generate a result when the URL is retrieved from
-        a cache, like the one used in EarwigBot's Tool Labs site. After a
-        search is done, the resulting URL is stored in a cache for 72 hours so
-        future checks against that page will not require another set of
-        time-and-money-consuming search engine queries. However, the comparison
-        itself (which includes the article's and the source's content) cannot
-        be stored for data retention reasons, so a fresh comparison is made
-        using this function.
-
-        Since no searching is done, neither :exc:`.UnknownSearchEngineError`
-        nor :exc:`.SearchQueryError` will be raised.
-        """
-        if not isinstance(urls, list):
-            urls = [urls]
-        log = "Starting copyvio compare for [[{0}]] against {1}"
-        self._logger.info(log.format(self.title, ", ".join(urls)))
-        article = MarkovChain(ArticleTextParser(self.get()).strip(), degree=degree)
+    def run_compare(self, urls: list[str]) -> CopyvioCheckResult:
         workspace = CopyvioWorkspace(
-            article,
-            min_confidence,
-            max_time,
-            self._logger,
-            self._addheaders,
-            max_time,
+            self._article,
+            min_confidence=self._min_confidence,
+            max_time=self._max_time,
+            logger=self._logger,
+            headers=self._headers,
+            url_timeout=self._max_time,
             num_workers=min(len(urls), 8),
             short_circuit=False,
-            config=self._search_config,
-            degree=degree,
+            config=self._config,
+            degree=self._degree,
         )
+
         workspace.enqueue(urls)
         workspace.wait()
-        result = workspace.get_result()
-        self._logger.info(result.get_log_message(self.title))
-        return result
+        return workspace.get_result()

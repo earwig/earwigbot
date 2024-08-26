@@ -18,15 +18,24 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import annotations
+
+__all__ = ["ExclusionsDB"]
+
+import logging
 import re
 import sqlite3
 import threading
 import time
+import typing
 import urllib.parse
 
 from earwigbot import exceptions
 
-__all__ = ["ExclusionsDB"]
+if typing.TYPE_CHECKING:
+    from earwigbot.wiki.page import Page
+    from earwigbot.wiki.site import Site
+    from earwigbot.wiki.sitesdb import SitesDB
 
 DEFAULT_SOURCES = {
     "all": [  # Applies to all, but located on enwiki
@@ -52,26 +61,28 @@ class ExclusionsDB:
     """
     **EarwigBot: Wiki Toolset: Exclusions Database Manager**
 
-    Controls the :file:`exclusions.db` file, which stores URLs excluded from
-    copyright violation checks on account of being known mirrors, for example.
+    Controls the :file:`exclusions.db` file, which stores URLs excluded from copyright
+    violation checks on account of being known mirrors, for example.
     """
 
-    def __init__(self, sitesdb, dbfile, logger):
+    def __init__(self, sitesdb: SitesDB, dbfile: str, logger: logging.Logger) -> None:
         self._sitesdb = sitesdb
         self._dbfile = dbfile
         self._logger = logger
         self._db_access_lock = threading.Lock()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Return the canonical string representation of the ExclusionsDB."""
-        res = "ExclusionsDB(sitesdb={0!r}, dbfile={1!r}, logger={2!r})"
-        return res.format(self._sitesdb, self._dbfile, self._logger)
+        return (
+            f"ExclusionsDB(sitesdb={self._sitesdb!r}, dbfile={self._dbfile!r}, "
+            f"logger={self._logger!r})"
+        )
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return a nice string representation of the ExclusionsDB."""
         return f"<ExclusionsDB at {self._dbfile}>"
 
-    def _create(self):
+    def _create(self) -> None:
         """Initialize the exclusions database with its necessary tables."""
         script = """
             CREATE TABLE sources (source_sitename, source_page);
@@ -79,7 +90,7 @@ class ExclusionsDB:
             CREATE TABLE exclusions (exclusion_sitename, exclusion_url);
         """
         query = "INSERT INTO sources VALUES (?, ?);"
-        sources = []
+        sources: list[tuple[str, str]] = []
         for sitename, pages in DEFAULT_SOURCES.items():
             for page in pages:
                 sources.append((sitename, page))
@@ -88,9 +99,9 @@ class ExclusionsDB:
             conn.executescript(script)
             conn.executemany(query, sources)
 
-    def _load_source(self, site, source):
+    def _load_source(self, site: Site, source: str) -> set[str]:
         """Load from a specific source and return a set of URLs."""
-        urls = set()
+        urls: set[str] = set()
         try:
             data = site.get_page(source, follow_redirects=True).get()
         except exceptions.PageNotFoundError:
@@ -123,7 +134,7 @@ class ExclusionsDB:
                         urls.add(url)
         return urls
 
-    def _update(self, sitename):
+    def _update(self, sitename: str) -> None:
         """Update the database from listed sources in the index."""
         query1 = "SELECT source_page FROM sources WHERE source_sitename = ?"
         query2 = "SELECT exclusion_url FROM exclusions WHERE exclusion_sitename = ?"
@@ -140,7 +151,7 @@ class ExclusionsDB:
         else:
             site = self._sitesdb.get_site(sitename)
         with self._db_access_lock, sqlite3.connect(self._dbfile) as conn:
-            urls = set()
+            urls: set[str] = set()
             for (source,) in conn.execute(query1, (sitename,)):
                 urls |= self._load_source(site, source)
             for (url,) in conn.execute(query2, (sitename,)):
@@ -154,7 +165,7 @@ class ExclusionsDB:
             else:
                 conn.execute(query7, (sitename, int(time.time())))
 
-    def _get_last_update(self, sitename):
+    def _get_last_update(self, sitename: str) -> int:
         """Return the UNIX timestamp of the last time the db was updated."""
         query = "SELECT update_time FROM updates WHERE update_sitename = ?"
         with self._db_access_lock, sqlite3.connect(self._dbfile) as conn:
@@ -165,28 +176,34 @@ class ExclusionsDB:
                 return 0
             return result[0] if result else 0
 
-    def sync(self, sitename, force=False):
-        """Update the database if it hasn't been updated recently.
+    def sync(self, sitename: str, force: bool = False) -> None:
+        """
+        Update the database if it hasn't been updated recently.
 
         This updates the exclusions database for the site *sitename* and "all".
 
-        Site-specific lists are considered stale after 48 hours; global lists
-        after 12 hours.
+        Site-specific lists are considered stale after 48 hours; global lists after
+        12 hours.
         """
         max_staleness = 60 * 60 * (12 if sitename == "all" else 48)
         time_since_update = int(time.time() - self._get_last_update(sitename))
         if force or time_since_update > max_staleness:
-            log = "Updating stale database: {0} (last updated {1} seconds ago)"
-            self._logger.info(log.format(sitename, time_since_update))
+            self._logger.info(
+                f"Updating stale database: {sitename} (last updated "
+                f"{time_since_update} seconds ago)"
+            )
             self._update(sitename)
         else:
-            log = "Database for {0} is still fresh (last updated {1} seconds ago)"
-            self._logger.debug(log.format(sitename, time_since_update))
+            self._logger.debug(
+                f"Database for {sitename} is still fresh (last updated "
+                f"{time_since_update} seconds ago)"
+            )
         if sitename != "all":
             self.sync("all", force=force)
 
-    def check(self, sitename, url):
-        """Check whether a given URL is in the exclusions database.
+    def check(self, sitename: str, url: str) -> bool:
+        """
+        Check whether a given URL is in the exclusions database.
 
         Return ``True`` if the URL is in the database, or ``False`` otherwise.
         """
@@ -216,19 +233,18 @@ class ExclusionsDB:
                 else:
                     matches = normalized.startswith(excl)
                 if matches:
-                    log = "Exclusion detected in {0} for {1}"
-                    self._logger.debug(log.format(sitename, url))
+                    self._logger.debug(f"Exclusion detected in {sitename} for {url}")
                     return True
 
-        log = f"No exclusions in {sitename} for {url}"
-        self._logger.debug(log)
+        self._logger.debug(f"No exclusions in {sitename} for {url}")
         return False
 
-    def get_mirror_hints(self, page, try_mobile=True):
-        """Return a list of strings that indicate the existence of a mirror.
+    def get_mirror_hints(self, page: Page, try_mobile: bool = True) -> list[str]:
+        """
+        Return a list of strings that indicate the existence of a mirror.
 
-        The source parser checks for the presence of these strings inside of
-        certain HTML tag attributes (``"href"`` and ``"src"``).
+        The source parser checks for the presence of these strings inside of certain
+        HTML tag attributes (``"href"`` and ``"src"``).
         """
         site = page.site
         path = urllib.parse.urlparse(page.url).path
@@ -238,10 +254,10 @@ class ExclusionsDB:
         if try_mobile:
             fragments = re.search(r"^([\w]+)\.([\w]+).([\w]+)$", site.domain)
             if fragments:
-                roots.append("{}.m.{}.{}".format(*fragments.groups()))
+                roots.append(f"{fragments[1]}.m.{fragments[2]}.{fragments[3]}")
 
         general = [
-            root + site._script_path + "/" + script
+            root + site.script_path + "/" + script
             for root in roots
             for script in scripts
         ]

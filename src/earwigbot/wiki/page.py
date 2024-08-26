@@ -35,14 +35,14 @@ import mwparserfromhell
 
 from earwigbot import exceptions
 from earwigbot.exceptions import APIError
-from earwigbot.wiki.copyvios import CopyvioMixIn
+from earwigbot.wiki.copyvios import DEFAULT_DEGREE, CopyvioChecker, CopyvioCheckResult
 
 if typing.TYPE_CHECKING:
     from earwigbot.wiki.site import Site
     from earwigbot.wiki.user import User
 
 
-class Page(CopyvioMixIn):
+class Page:
     """
     **EarwigBot: Wiki Toolset: Page**
 
@@ -110,7 +110,6 @@ class Page(CopyvioMixIn):
         __init__() will not do any API queries, but it will use basic namespace logic
         to determine our namespace ID and if we are a talkpage.
         """
-        super().__init__(site)
         self._site = site
         self._title = title.strip()
         self._follow_redirects = self._keep_following = follow_redirects
@@ -873,3 +872,108 @@ class Page(CopyvioMixIn):
                 return False
 
         return True
+
+    def copyvio_check(
+        self,
+        min_confidence: float = 0.75,
+        max_queries: int = 15,
+        max_time: float = -1,
+        no_searches: bool = False,
+        no_links: bool = False,
+        short_circuit: bool = True,
+        degree: int = DEFAULT_DEGREE,
+    ) -> CopyvioCheckResult:
+        """
+        Check the page for copyright violations.
+
+        Returns a :class:`.CopyvioCheckResult` object with information on the results
+        of the check.
+
+        *min_confidence* is the minimum amount of confidence we must have in the
+        similarity between a source text and the article in order for us to consider it
+        a suspected violation. This is a number between 0 and 1.
+
+        *max_queries* is self-explanatory; we will never make more than this number of
+        queries in a given check.
+
+        *max_time* can be set to prevent copyvio checks from taking longer than a set
+        amount of time (generally around a minute), which can be useful if checks are
+        called through a web server with timeouts. We will stop checking new URLs as
+        soon as this limit is reached.
+
+        Setting *no_searches* to ``True`` will cause only URLs in the wikitext of the
+        page to be checked; no search engine queries will be made. Setting *no_links*
+        to ``True`` will cause the opposite to happen: URLs in the wikitext will be
+        ignored; search engine queries will be made only. Setting both of these to
+        ``True`` is pointless.
+
+        Normally, the checker will short-circuit if it finds a URL that meets
+        *min_confidence*. This behavior normally causes it to skip any remaining URLs
+        and web queries, but setting *short_circuit* to ``False`` will prevent this.
+
+        The *degree* controls the n-gram word size used in comparing similarity. It
+        should usually be a number between 3 and 5.
+
+        Raises :exc:`.CopyvioCheckError` or subclasses
+        (:exc:`.UnknownSearchEngineError`, :exc:`.SearchQueryError`, ...) on errors.
+        """
+        self._logger.info(f"Starting copyvio check for [[{self.title}]]")
+        checker = CopyvioChecker(
+            self,
+            min_confidence=min_confidence,
+            max_time=max_time,
+            degree=degree,
+            logger=self._logger,
+        )
+
+        result = checker.run_check(
+            max_queries=max_queries,
+            no_searches=no_searches,
+            no_links=no_links,
+            short_circuit=short_circuit,
+        )
+        self._logger.info(result.get_log_message(self.title))
+        return result
+
+    def copyvio_compare(
+        self,
+        urls: list[str] | str,
+        min_confidence: float = 0.75,
+        max_time: float = 30,
+        degree: int = DEFAULT_DEGREE,
+    ) -> CopyvioCheckResult:
+        """
+        Check the page, like :py:meth:`copyvio_check`, against specific URLs.
+
+        This is essentially a reduced version of :meth:`copyvio_check` - a copyivo
+        comparison is made using Markov chains and the result is returned in a
+        :class:`.CopyvioCheckResult` object - but without using a search engine, since
+        the suspected "violated" URL is supplied from the start.
+
+        One use case is to generate a result when the URL is retrieved from a cache,
+        like the one used in EarwigBot's Toolforge site. After a search is done, the
+        resulting URL is stored in a cache for 72 hours so future checks against that
+        page will not require another set of time-and-money-consuming search engine
+        queries. However, the comparison itself (which includes the article's and the
+        source's content) cannot be stored for data retention reasons, so a fresh
+        comparison is made using this function.
+
+        Since no searching is done, neither :exc:`.UnknownSearchEngineError` nor
+        :exc:`.SearchQueryError` will be raised.
+        """
+        if not isinstance(urls, list):
+            urls = [urls]
+        self._logger.info(
+            f"Starting copyvio compare for [[{self.title}]] against {', '.join(urls)}"
+        )
+        checker = CopyvioChecker(
+            self,
+            min_confidence=min_confidence,
+            max_time=max_time,
+            degree=degree,
+            logger=self._logger,
+        )
+
+        result = checker.run_compare(urls)
+        self._logger.info(result.get_log_message(self.title))
+        return result

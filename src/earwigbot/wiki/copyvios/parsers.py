@@ -18,44 +18,34 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import annotations
+
+__all__ = ["ArticleParser", "get_parser"]
+
 import io
 import json
 import os.path
 import re
+import typing
 import urllib.parse
 import urllib.request
+from abc import ABC, abstractmethod
+from collections.abc import Callable
+from typing import Any, ClassVar, Literal, TypedDict
 
 import mwparserfromhell
 
 from earwigbot.exceptions import ParserExclusionError, ParserRedirectError
 
-__all__ = ["ArticleTextParser", "get_parser"]
+if typing.TYPE_CHECKING:
+    import bs4
+
+    from earwigbot.wiki.copyvios.workers import OpenedURL
 
 
-class _BaseTextParser:
-    """Base class for a parser that handles text."""
-
-    TYPE = None
-
-    def __init__(self, text, url=None, args=None):
-        self.text = text
-        self.url = url
-        self._args = args or {}
-
-    def __repr__(self):
-        """Return the canonical string representation of the text parser."""
-        return f"{self.__class__.__name__}(text={self.text!r})"
-
-    def __str__(self):
-        """Return a nice string representation of the text parser."""
-        name = self.__class__.__name__
-        return f"<{name} of text with size {len(self.text)}>"
-
-
-class ArticleTextParser(_BaseTextParser):
+class ArticleParser:
     """A parser that can strip and chunk wikicode article text."""
 
-    TYPE = "Article"
     TEMPLATE_MERGE_THRESHOLD = 35
     NLTK_DEFAULT = "english"
     NLTK_LANGS = {
@@ -78,7 +68,18 @@ class ArticleTextParser(_BaseTextParser):
         "tr": "turkish",
     }
 
-    def _merge_templates(self, code):
+    def __init__(self, text: str, lang: str, nltk_dir: str) -> None:
+        self.text = text
+        self._lang = lang
+        self._nltk_dir = nltk_dir
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(text={self.text!r})"
+
+    def __str__(self) -> str:
+        return f"<{self.__class__.__name__} of text with size {len(self.text)}>"
+
+    def _merge_templates(self, code: mwparserfromhell.wikicode.Wikicode) -> None:
         """Merge template contents in to wikicode when the values are long."""
         for template in code.filter_templates(recursive=code.RECURSE_OTHERS):
             chunks = []
@@ -92,23 +93,25 @@ class ArticleTextParser(_BaseTextParser):
             else:
                 code.remove(template)
 
-    def _get_tokenizer(self):
+    def _get_tokenizer(self) -> Any:
         """Return a NLTK punctuation tokenizer for the article's language."""
         import nltk
 
-        def datafile(lang):
+        def datafile(lang: str) -> str:
             return "file:" + os.path.join(
-                self._args["nltk_dir"], "tokenizers", "punkt", lang + ".pickle"
+                self._nltk_dir, "tokenizers", "punkt", lang + ".pickle"
             )
 
-        lang = self.NLTK_LANGS.get(self._args.get("lang"), self.NLTK_DEFAULT)
+        lang = self.NLTK_LANGS.get(self._lang, self.NLTK_DEFAULT)
         try:
             nltk.data.load(datafile(self.NLTK_DEFAULT))
         except LookupError:
-            nltk.download("punkt", self._args["nltk_dir"])
+            nltk.download("punkt", self._nltk_dir)
         return nltk.data.load(datafile(lang))
 
-    def _get_sentences(self, min_query, max_query, split_thresh):
+    def _get_sentences(
+        self, min_query: int, max_query: int, split_thresh: int
+    ) -> list[str]:
         """Split the article text into sentences of a certain length."""
 
         def cut_sentence(words):
@@ -138,24 +141,27 @@ class ArticleTextParser(_BaseTextParser):
                 sentences.extend(cut_sentence(sentence.split()))
         return [sen for sen in sentences if len(sen) >= min_query]
 
-    def strip(self):
-        """Clean the page's raw text by removing templates and formatting.
+    def strip(self) -> str:
+        """
+        Clean the page's raw text by removing templates and formatting.
 
-        Return the page's text with all HTML and wikicode formatting removed,
-        including templates, tables, and references. It retains punctuation
-        (spacing, paragraphs, periods, commas, (semi)-colons, parentheses,
-        quotes), original capitalization, and so forth. HTML entities are
-        replaced by their unicode equivalents.
+        Return the page's text with all HTML and wikicode formatting removed, including
+        templates, tables, and references. It retains punctuation (spacing, paragraphs,
+        periods, commas, (semi)-colons, parentheses, quotes), original capitalization,
+        and so forth. HTML entities are replaced by their unicode equivalents.
 
         The actual stripping is handled by :py:mod:`mwparserfromhell`.
         """
 
-        def remove(code, node):
-            """Remove a node from a code object, ignoring ValueError.
+        def remove(
+            code: mwparserfromhell.wikicode.Wikicode, node: mwparserfromhell.nodes.Node
+        ) -> None:
+            """
+            Remove a node from a code object, ignoring ValueError.
 
-            Sometimes we will remove a node that contains another node we wish
-            to remove, and we fail when we try to remove the inner one. Easiest
-            solution is to just ignore the exception.
+            Sometimes we will remove a node that contains another node we wish to
+            remove, and we fail when we try to remove the inner one. Easiest solution
+            is to just ignore the exception.
             """
             try:
                 code.remove(node)
@@ -181,26 +187,32 @@ class ArticleTextParser(_BaseTextParser):
         self.clean = re.sub(r"\n\n+", "\n", clean).strip()
         return self.clean
 
-    def chunk(self, max_chunks, min_query=8, max_query=128, split_thresh=32):
-        """Convert the clean article text into a list of web-searchable chunks.
+    def chunk(
+        self,
+        max_chunks: int,
+        min_query: int = 8,
+        max_query: int = 128,
+        split_thresh: int = 32,
+    ) -> list[str]:
+        """
+        Convert the clean article text into a list of web-searchable chunks.
 
-        No greater than *max_chunks* will be returned. Each chunk will only be
-        a sentence or two long at most (no more than *max_query*). The idea is
-        to return a sample of the article text rather than the whole, so we'll
-        pick and choose from parts of it, especially if the article is large
-        and *max_chunks* is low, so we don't end up just searching for just the
-        first paragraph.
+        No greater than *max_chunks* will be returned. Each chunk will only be a
+        sentence or two long at most (no more than *max_query*). The idea is to return
+        a sample of the article text rather than the whole, so we'll pick and choose
+        from parts of it, especially if the article is large and *max_chunks* is low,
+        so we don't end up just searching for just the first paragraph.
 
-        This is implemented using :py:mod:`nltk` (https://nltk.org/). A base
-        directory (*nltk_dir*) is required to store nltk's punctuation
-        database, and should be passed as an argument to the constructor. It is
-        typically located in the bot's working directory.
+        This is implemented using :py:mod:`nltk` (https://nltk.org/). A base directory
+        (*nltk_dir*) is required to store nltk's punctuation database, and should be
+        passed as an argument to the constructor. It is typically located in the bot's
+        working directory.
         """
         sentences = self._get_sentences(min_query, max_query, split_thresh)
         if len(sentences) <= max_chunks:
             return sentences
 
-        chunks = []
+        chunks: list[str] = []
         while len(chunks) < max_chunks:
             if len(chunks) % 5 == 0:
                 chunk = sentences.pop(0)  # Pop from beginning
@@ -216,7 +228,8 @@ class ArticleTextParser(_BaseTextParser):
         return chunks
 
     def get_links(self):
-        """Return a list of all external links in the article.
+        """
+        Return a list of all external links in the article.
 
         The list is restricted to things that we suspect we can parse: i.e.,
         those with schemes of ``http`` and ``https``.
@@ -226,14 +239,42 @@ class ArticleTextParser(_BaseTextParser):
         return [str(link.url) for link in links if link.url.startswith(schemes)]
 
 
-class _HTMLParser(_BaseTextParser):
+class ParserArgs(TypedDict, total=False):
+    mirror_hints: list[str]
+    open_url: Callable[[str], OpenedURL | None]
+
+
+class SourceParser(ABC):
+    """Base class for a parser that handles text."""
+
+    TYPE: ClassVar[str]
+
+    def __init__(self, text: bytes, url: str, args: ParserArgs | None = None) -> None:
+        self.text = text
+        self.url = url
+        self._args = args or {}
+
+    def __repr__(self) -> str:
+        """Return the canonical string representation of the text parser."""
+        return f"{self.__class__.__name__}(text={self.text!r})"
+
+    def __str__(self) -> str:
+        """Return a nice string representation of the text parser."""
+        return f"<{self.__class__.__name__} of text with size {len(self.text)}>"
+
+    @abstractmethod
+    def parse(self) -> str: ...
+
+
+class HTMLParser(SourceParser):
     """A parser that can extract the text from an HTML document."""
 
     TYPE = "HTML"
     hidden_tags = ["script", "style"]
 
-    def _fail_if_mirror(self, soup):
-        """Look for obvious signs that the given soup is a wiki mirror.
+    def _fail_if_mirror(self, soup: bs4.BeautifulSoup) -> None:
+        """
+        Look for obvious signs that the given soup is a wiki mirror.
 
         If so, raise ParserExclusionError, which is caught in the workers and
         causes this source to excluded.
@@ -242,13 +283,14 @@ class _HTMLParser(_BaseTextParser):
             return
 
         def func(attr):
+            assert "mirror_hints" in self._args
             return attr and any(hint in attr for hint in self._args["mirror_hints"])
 
         if soup.find_all(href=func) or soup.find_all(src=func):
             raise ParserExclusionError()
 
     @staticmethod
-    def _get_soup(text):
+    def _get_soup(text: bytes) -> bs4.BeautifulSoup:
         """Parse some text using BeautifulSoup."""
         import bs4
 
@@ -257,11 +299,11 @@ class _HTMLParser(_BaseTextParser):
         except ValueError:
             return bs4.BeautifulSoup(text)
 
-    def _clean_soup(self, soup):
+    def _clean_soup(self, soup: bs4.element.Tag) -> str:
         """Clean a BeautifulSoup tree of invisible tags."""
         import bs4
 
-        def is_comment(text):
+        def is_comment(text: bs4.element.Tag) -> bool:
             return isinstance(text, bs4.element.Comment)
 
         for comment in soup.find_all(text=is_comment):
@@ -272,7 +314,7 @@ class _HTMLParser(_BaseTextParser):
 
         return "\n".join(s.replace("\n", " ") for s in soup.stripped_strings)
 
-    def _open(self, url, **kwargs):
+    def _open(self, url: str, **kwargs: Any) -> bytes | None:
         """Try to read a URL. Return None if it couldn't be read."""
         opener = self._args.get("open_url")
         if not opener:
@@ -280,13 +322,13 @@ class _HTMLParser(_BaseTextParser):
         result = opener(url, **kwargs)
         return result.content if result else None
 
-    def _load_from_blogspot(self, url):
+    def _load_from_blogspot(self, url: urllib.parse.ParseResult) -> str:
         """Load dynamic content from Blogger Dynamic Views."""
-        match = re.search(r"'postId': '(\d+)'", self.text)
+        match = re.search(rb"'postId': '(\d+)'", self.text)
         if not match:
             return ""
         post_id = match.group(1)
-        url = f"https://{url.netloc}/feeds/posts/default/{post_id}?"
+        feed_url = f"https://{url.netloc}/feeds/posts/default/{post_id}?"
         params = {
             "alt": "json",
             "v": "2",
@@ -294,7 +336,7 @@ class _HTMLParser(_BaseTextParser):
             "rewriteforssl": "true",
         }
         raw = self._open(
-            url + urllib.parse.urlencode(params),
+            feed_url + urllib.parse.urlencode(params),
             allow_content_types=["application/json"],
         )
         if raw is None:
@@ -308,19 +350,24 @@ class _HTMLParser(_BaseTextParser):
         except KeyError:
             return ""
         soup = self._get_soup(text)
+        if not soup.body:
+            return ""
         return self._clean_soup(soup.body)
 
-    def parse(self):
-        """Return the actual text contained within an HTML document.
+    def parse(self) -> str:
+        """
+        Return the actual text contained within an HTML document.
 
         Implemented using :py:mod:`BeautifulSoup <bs4>`
-        (https://www.crummy.com/software/BeautifulSoup/).
+        (https://pypi.org/project/beautifulsoup4/).
         """
+        import bs4
+
         url = urllib.parse.urlparse(self.url) if self.url else None
         soup = self._get_soup(self.text)
         if not soup.body:
-            # No <body> tag present in HTML ->
-            # no scrapable content (possibly JS or <iframe> magic):
+            # No <body> tag present in HTML -> # no scrapable content
+            # (possibly JS or <iframe> magic):
             return ""
 
         self._fail_if_mirror(soup)
@@ -328,7 +375,7 @@ class _HTMLParser(_BaseTextParser):
 
         if url and url.netloc == "web.archive.org" and url.path.endswith(".pdf"):
             playback = body.find(id="playback")
-            if playback and "src" in playback.attrs:
+            if isinstance(playback, bs4.element.Tag) and "src" in playback.attrs:
                 raise ParserRedirectError(playback.attrs["src"])
 
         content = self._clean_soup(body)
@@ -339,7 +386,7 @@ class _HTMLParser(_BaseTextParser):
         return content
 
 
-class _PDFParser(_BaseTextParser):
+class PDFParser(SourceParser):
     """A parser that can extract text from a PDF file."""
 
     TYPE = "PDF"
@@ -348,7 +395,7 @@ class _PDFParser(_BaseTextParser):
         ("\u2022", " "),
     ]
 
-    def parse(self):
+    def parse(self) -> str:
         """Return extracted text from the PDF."""
         from pdfminer import converter, pdfinterp, pdfpage
 
@@ -358,7 +405,7 @@ class _PDFParser(_BaseTextParser):
         interp = pdfinterp.PDFPageInterpreter(manager, conv)
 
         try:
-            pages = pdfpage.PDFPage.get_pages(io.StringIO(self.text))
+            pages = pdfpage.PDFPage.get_pages(io.BytesIO(self.text))
             for page in pages:
                 interp.process_page(page)
         except Exception:  # pylint: disable=broad-except
@@ -372,12 +419,12 @@ class _PDFParser(_BaseTextParser):
         return re.sub(r"\n\n+", "\n", value).strip()
 
 
-class _PlainTextParser(_BaseTextParser):
+class PlainTextParser(SourceParser):
     """A parser that can unicode-ify and strip text from a plain text page."""
 
     TYPE = "Text"
 
-    def parse(self):
+    def parse(self) -> str:
         """Unicode-ify and strip whitespace from the plain text document."""
         from bs4.dammit import UnicodeDammit
 
@@ -385,15 +432,25 @@ class _PlainTextParser(_BaseTextParser):
         return converted.strip() if converted else ""
 
 
-_CONTENT_TYPES = {
-    "text/html": _HTMLParser,
-    "application/xhtml+xml": _HTMLParser,
-    "application/pdf": _PDFParser,
-    "application/x-pdf": _PDFParser,
-    "text/plain": _PlainTextParser,
+_CONTENT_TYPES: dict[str, type[SourceParser]] = {
+    "text/html": HTMLParser,
+    "application/xhtml+xml": HTMLParser,
+    "application/pdf": PDFParser,
+    "application/x-pdf": PDFParser,
+    "text/plain": PlainTextParser,
 }
 
 
-def get_parser(content_type):
+@typing.overload
+def get_parser(content_type: str) -> type[SourceParser] | None: ...
+
+
+@typing.overload
+def get_parser(
+    content_type: Literal["text/plain"] = "text/plain",
+) -> type[SourceParser]: ...
+
+
+def get_parser(content_type: str = "text/plain") -> type[SourceParser] | None:
     """Return the parser most able to handle a given content type, or None."""
     return _CONTENT_TYPES.get(content_type)

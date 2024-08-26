@@ -18,13 +18,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import urllib.parse
-from threading import Event
-from time import time
-
-from earwigbot.wiki.copyvios.markov import EMPTY, EMPTY_INTERSECTION
+from __future__ import annotations
 
 __all__ = ["CopyvioSource", "CopyvioCheckResult"]
+
+import time
+import typing
+import urllib.parse
+from threading import Event
+from typing import Any
+
+from earwigbot.wiki.copyvios.markov import (
+    EMPTY,
+    EMPTY_INTERSECTION,
+    MarkovChain,
+    MarkovChainIntersection,
+)
+
+if typing.TYPE_CHECKING:
+    from earwigbot.wiki.copyvios.parsers import ParserArgs
+    from earwigbot.wiki.copyvios.workers import CopyvioWorkspace
 
 
 class CopyvioSource:
@@ -45,13 +58,13 @@ class CopyvioSource:
 
     def __init__(
         self,
-        workspace,
-        url,
-        headers=None,
-        timeout=5,
-        parser_args=None,
-        search_config=None,
-    ):
+        workspace: CopyvioWorkspace,
+        url: str,
+        headers: list[tuple[str, str]] | None = None,
+        timeout: float = 5,
+        parser_args: ParserArgs | None = None,
+        search_config: dict[str, Any] | None = None,
+    ) -> None:
         self.workspace = workspace
         self.url = url
         self.headers = headers
@@ -68,54 +81,57 @@ class CopyvioSource:
         self._event2 = Event()
         self._event2.set()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Return the canonical string representation of the source."""
-        res = (
-            "CopyvioSource(url={0!r}, confidence={1!r}, skipped={2!r}, "
-            "excluded={3!r})"
+        return (
+            f"CopyvioSource(url={self.url!r}, confidence={self.confidence!r}, "
+            f"skipped={self.skipped!r}, excluded={self.excluded!r})"
         )
-        return res.format(self.url, self.confidence, self.skipped, self.excluded)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return a nice string representation of the source."""
         if self.excluded:
             return f"<CopyvioSource ({self.url}, excluded)>"
         if self.skipped:
             return f"<CopyvioSource ({self.url}, skipped)>"
-        res = "<CopyvioSource ({0} with {1} conf)>"
-        return res.format(self.url, self.confidence)
+        return f"<CopyvioSource ({self.url} with {self.confidence} conf)>"
 
     @property
-    def domain(self):
+    def domain(self) -> str | None:
         """The source URL's domain name, or None."""
         return urllib.parse.urlparse(self.url).netloc or None
 
-    def start_work(self):
+    def start_work(self) -> None:
         """Mark this source as being worked on right now."""
         self._event2.clear()
         self._event1.set()
 
-    def update(self, confidence, source_chain, delta_chain):
+    def update(
+        self,
+        confidence: float,
+        source_chain: MarkovChain,
+        delta_chain: MarkovChainIntersection,
+    ) -> None:
         """Fill out the confidence and chain information inside this source."""
         self.confidence = confidence
         self.chains = (source_chain, delta_chain)
 
-    def finish_work(self):
+    def finish_work(self) -> None:
         """Mark this source as finished."""
         self._event2.set()
 
-    def skip(self):
+    def skip(self) -> None:
         """Deactivate this source without filling in the relevant data."""
         if self._event1.is_set():
             return
         self.skipped = True
         self._event1.set()
 
-    def join(self, until):
+    def join(self, until: float | None = None) -> None:
         """Block until this violation result is filled out."""
         for event in [self._event1, self._event2]:
-            if until:
-                timeout = until - time()
+            if until is not None:
+                timeout = until - time.time()
                 if timeout <= 0:
                     return
                 event.wait(timeout)
@@ -144,16 +160,15 @@ class CopyvioCheckResult:
 
     def __init__(
         self,
-        violation,
-        sources,
-        queries,
-        check_time,
-        article_chain,
-        possible_miss,
-        included_sources=None,
-        unified_confidence=None,
+        violation: bool,
+        sources: list[CopyvioSource],
+        queries: int,
+        check_time: float,
+        article_chain: MarkovChain,
+        possible_miss: bool,
+        included_sources: list[CopyvioSource] | None = None,
+        unified_confidence: float | None = None,
     ):
-        assert isinstance(sources, list)
         self.violation = violation
         self.sources = sources
         self.queries = queries
@@ -163,48 +178,47 @@ class CopyvioCheckResult:
         self.included_sources = included_sources if included_sources else []
         self.unified_confidence = unified_confidence
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Return the canonical string representation of the result."""
-        res = "CopyvioCheckResult(violation={0!r}, sources={1!r}, queries={2!r}, time={3!r})"
-        return res.format(self.violation, self.sources, self.queries, self.time)
+        return (
+            f"CopyvioCheckResult(violation={self.violation!r}, "
+            f"sources={self.sources!r}, queries={self.queries!r}, time={self.time!r})"
+        )
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return a nice string representation of the result."""
-        res = "<CopyvioCheckResult ({0} with best {1})>"
-        return res.format(self.violation, self.best)
+        return f"<CopyvioCheckResult ({self.violation} with best {self.best})>"
 
     @property
-    def best(self):
+    def best(self) -> CopyvioSource | None:
         """The best known source, or None if no sources exist."""
         return self.sources[0] if self.sources else None
 
     @property
-    def confidence(self):
+    def confidence(self) -> float:
         """The confidence of the best source, or 0 if no sources exist."""
         if self.unified_confidence is not None:
             return self.unified_confidence
-        if self.best:
+        if self.best is not None:
             return self.best.confidence
         return 0.0
 
     @property
-    def url(self):
+    def url(self) -> str | None:
         """The URL of the best source, or None if no sources exist."""
         return self.best.url if self.best else None
 
-    def get_log_message(self, title):
+    def get_log_message(self, title: str) -> str:
         """Build a relevant log message for this copyvio check result."""
         if not self.sources:
-            log = "No violation for [[{0}]] (no sources; {1} queries; {2} seconds)"
-            return log.format(title, self.queries, self.time)
-        log = "{0} for [[{1}]] (best: {2} ({3} confidence); {4} sources; {5} queries; {6} seconds)"
+            return (
+                f"No violation for [[{title}]] (no sources; {self.queries} queries; "
+                f"{self.time} seconds)"
+            )
+
         is_vio = "Violation detected" if self.violation else "No violation"
-        return log.format(
-            is_vio,
-            title,
-            self.url,
-            self.confidence,
-            len(self.sources),
-            self.queries,
-            self.time,
+        return (
+            f"{is_vio} for [[{title}]] (best: {self.url} ({self.confidence} "
+            f"confidence); {len(self.sources)} sources; {self.queries} queries; "
+            f"{self.time} seconds)"
         )

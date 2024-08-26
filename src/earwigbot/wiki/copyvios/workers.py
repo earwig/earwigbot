@@ -18,36 +18,39 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import annotations
+
+__all__ = ["globalize", "localize", "CopyvioWorkspace"]
+
 import base64
 import collections
+import dataclasses
 import functools
+import gzip
+import io
+import logging
+import math
+import queue
+import struct
+import threading
 import time
 import urllib.parse
-from collections import deque
-from gzip import GzipFile
+import urllib.request
+from collections.abc import Callable, Container
+from dataclasses import dataclass
 from http.client import HTTPException
-from io import StringIO
-from logging import getLogger
-from math import log
-from queue import Empty, Queue
-from struct import error as struct_error
-from threading import Lock, Thread
+from typing import Any
 from urllib.error import URLError
-from urllib.request import Request, build_opener
 
-from earwigbot import importer
 from earwigbot.exceptions import ParserExclusionError, ParserRedirectError
 from earwigbot.wiki.copyvios.markov import (
+    DEFAULT_DEGREE,
     MarkovChain,
     MarkovChainIntersection,
     MarkovChainUnion,
 )
-from earwigbot.wiki.copyvios.parsers import get_parser
+from earwigbot.wiki.copyvios.parsers import ParserArgs, SourceParser, get_parser
 from earwigbot.wiki.copyvios.result import CopyvioCheckResult, CopyvioSource
-
-tldextract = importer.new("tldextract")
-
-__all__ = ["globalize", "localize", "CopyvioWorkspace"]
 
 INCLUDE_THRESHOLD = 0.15
 
@@ -55,22 +58,21 @@ _MAX_REDIRECTS = 3
 _MAX_RAW_SIZE = 20 * 1024**2
 
 _is_globalized = False
-_global_queues = None
-_global_workers = []
-
-_OpenedURL = collections.namedtuple("_OpenedURL", ["content", "parser_class"])
+_global_queues: _CopyvioQueues | None = None
+_global_workers: list[_CopyvioWorker] = []
 
 
-def globalize(num_workers=8):
-    """Cause all copyvio checks to be done by one global set of workers.
+def globalize(num_workers: int = 8) -> None:
+    """
+    Cause all copyvio checks to be done by one global set of workers.
 
-    This is useful when checks are being done through a web interface where
-    large numbers of simulatenous requests could be problematic. The global
-    workers are spawned when the function is called, run continuously, and
-    intelligently handle multiple checks.
+    This is useful when checks are being done through a web interface where large
+    numbers of simulatenous requests could be problematic. The global workers are
+    spawned when the function is called, run continuously, and intelligently handle
+    multiple checks.
 
-    This function is not thread-safe and should only be called when no checks
-    are being done. It has no effect if it has already been called.
+    This function is not thread-safe and should only be called when no checks are being
+    done. It has no effect if it has already been called.
     """
     global _is_globalized, _global_queues
     if _is_globalized:
@@ -84,19 +86,20 @@ def globalize(num_workers=8):
     _is_globalized = True
 
 
-def localize():
+def localize() -> None:
     """Return to using page-specific workers for copyvio checks.
 
-    This disables changes made by :func:`globalize`, including stoping the
-    global worker threads.
+    This disables changes made by :func:`globalize`, including stoping the global
+    worker threads.
 
-    This function is not thread-safe and should only be called when no checks
-    are being done.
+    This function is not thread-safe and should only be called when no checks are
+    being done.
     """
     global _is_globalized, _global_queues, _global_workers
     if not _is_globalized:
         return
 
+    assert _global_queues is not None
     for i in range(len(_global_workers)):
         _global_queues.unassigned.put((StopIteration, None))
     _global_queues = None
@@ -104,30 +107,50 @@ def localize():
     _is_globalized = False
 
 
+@dataclass(frozen=True)
+class OpenedURL:
+    content: bytes
+    parser_class: type[SourceParser]
+
+
+SourceQueue = collections.deque[CopyvioSource]
+UnassignedQueue = queue.Queue[
+    tuple[str, SourceQueue] | tuple[type[StopIteration], None]
+]
+
+
+@dataclass(frozen=True)
 class _CopyvioQueues:
     """Stores data necessary to maintain the various queues during a check."""
 
-    def __init__(self):
-        self.lock = Lock()
-        self.sites = {}
-        self.unassigned = Queue()
+    lock: threading.Lock = dataclasses.field(default_factory=threading.Lock)
+    sites: dict[str, SourceQueue] = dataclasses.field(default_factory=dict)
+    unassigned: UnassignedQueue = dataclasses.field(default_factory=queue.Queue)
 
 
 class _CopyvioWorker:
     """A multithreaded URL opener/parser instance."""
 
-    def __init__(self, name, queues, until=None):
+    def __init__(
+        self, name: str, queues: _CopyvioQueues, until: float | None = None
+    ) -> None:
         self._name = name
         self._queues = queues
         self._until = until
 
-        self._site = None
-        self._queue = None
-        self._search_config = None
-        self._opener = build_opener()
-        self._logger = getLogger("earwigbot.wiki.cvworker." + name)
+        self._site: str | None = None
+        self._queue: SourceQueue | None = None
+        self._search_config: dict[str, Any] | None = None
+        self._opener = urllib.request.build_opener()
+        self._logger = logging.getLogger("earwigbot.wiki.cvworker." + name)
 
-    def _try_map_proxy_url(self, url, parsed, extra_headers, is_error=False):
+    def _try_map_proxy_url(
+        self,
+        url: str,
+        parsed: urllib.parse.ParseResult,
+        extra_headers: dict[str, str],
+        is_error: bool = False,
+    ) -> tuple[str, bool]:
         if not self._search_config or "proxies" not in self._search_config:
             return url, False
         for proxy_info in self._search_config["proxies"]:
@@ -152,17 +175,20 @@ class _CopyvioWorker:
             return url, True
         return url, False
 
-    def _open_url_raw(self, url, timeout=5, allow_content_types=None):
+    def _open_url_raw(
+        self,
+        url: str,
+        timeout: float = 5,
+        allow_content_types: Container[str] | None = None,
+    ) -> OpenedURL | None:
         """Open a URL, without parsing it.
 
         None will be returned for URLs that cannot be read for whatever reason.
         """
         parsed = urllib.parse.urlparse(url)
-        if not isinstance(url, str):
-            url = url.encode("utf8")
-        extra_headers = {}
+        extra_headers: dict[str, str] = {}
         url, _ = self._try_map_proxy_url(url, parsed, extra_headers)
-        request = Request(url, headers=extra_headers)
+        request = urllib.request.Request(url, headers=extra_headers)
         try:
             response = self._opener.open(request, timeout=timeout)
         except (OSError, URLError, HTTPException, ValueError):
@@ -170,14 +196,14 @@ class _CopyvioWorker:
                 url, parsed, extra_headers, is_error=True
             )
             if not remapped:
-                self._logger.exception("Failed to fetch URL: %s", url)
+                self._logger.exception(f"Failed to fetch URL: {url}")
                 return None
-            self._logger.info("Failed to fetch URL, trying proxy remap: %s", url)
-            request = Request(url, headers=extra_headers)
+            self._logger.info(f"Failed to fetch URL, trying proxy remap: {url}")
+            request = urllib.request.Request(url, headers=extra_headers)
             try:
                 response = self._opener.open(request, timeout=timeout)
             except (OSError, URLError, HTTPException, ValueError):
-                self._logger.exception("Failed to fetch URL after proxy remap: %s", url)
+                self._logger.exception(f"Failed to fetch URL after proxy remap: {url}")
                 return None
 
         try:
@@ -193,7 +219,7 @@ class _CopyvioWorker:
         ):
             return None
         if not parser_class:
-            parser_class = get_parser("text/plain")
+            parser_class = get_parser()
         if size > (15 if parser_class.TYPE == "PDF" else 2) * 1024**2:
             return None
 
@@ -207,28 +233,27 @@ class _CopyvioWorker:
             return None
 
         if response.headers.get("Content-Encoding") == "gzip":
-            stream = StringIO(content)
-            gzipper = GzipFile(fileobj=stream)
+            stream = io.BytesIO(content)
+            gzipper = gzip.GzipFile(fileobj=stream)
             try:
                 content = gzipper.read()
-            except (OSError, struct_error):
+            except (OSError, struct.error):
                 return None
 
         if len(content) > _MAX_RAW_SIZE:
             return None
-        return _OpenedURL(content, parser_class)
+        return OpenedURL(content, parser_class)
 
-    def _open_url(self, source, redirects=0):
+    def _open_url(self, source: CopyvioSource, redirects: int = 0) -> str | None:
         """Open a URL and return its parsed content, or None.
 
-        First, we will decompress the content if the headers contain "gzip" as
-        its content encoding. Then, we will return the content stripped using
-        an HTML parser if the headers indicate it is HTML, or return the
-        content directly if it is plain text. If we don't understand the
-        content type, we'll return None.
+        First, we will decompress the content if the headers contain "gzip" as its
+        content encoding. Then, we will return the content stripped using an HTML
+        parser if the headers indicate it is HTML, or return the content directly if it
+        is plain text. If we don't understand the content type, we'll return None.
 
-        If a URLError was raised while opening the URL or an IOError was raised
-        while decompressing, None will be returned.
+        If a URLError was raised while opening the URL or an IOError was raised while
+        decompressing, None will be returned.
         """
         self._search_config = source.search_config
         if source.headers:
@@ -238,9 +263,9 @@ class _CopyvioWorker:
         if result is None:
             return None
 
-        args = source.parser_args.copy() if source.parser_args else {}
+        args: ParserArgs = source.parser_args.copy() if source.parser_args else {}
         args["open_url"] = functools.partial(self._open_url_raw, timeout=source.timeout)
-        parser = result.parser_class(result.content, url=source.url, args=args)
+        parser = result.parser_class(result.content, source.url, args=args)
         try:
             return parser.parse()
         except ParserRedirectError as exc:
@@ -249,30 +274,31 @@ class _CopyvioWorker:
             source.url = exc.url.decode("utf8")
             return self._open_url(source, redirects=redirects + 1)
 
-    def _acquire_new_site(self):
+    def _acquire_new_site(self) -> None:
         """Block for a new unassigned site queue."""
         if self._until:
             timeout = self._until - time.time()
             if timeout <= 0:
-                raise Empty
+                raise queue.Empty()
         else:
             timeout = None
 
         self._logger.debug("Waiting for new site queue")
-        site, queue = self._queues.unassigned.get(timeout=timeout)
-        if site is StopIteration:
+        site, q = self._queues.unassigned.get(timeout=timeout)
+        if isinstance(site, type) and issubclass(site, StopIteration):
             raise StopIteration
         self._logger.debug(f"Acquired new site queue: {site}")
         self._site = site
-        self._queue = queue
+        self._queue = q
 
-    def _dequeue(self):
+    def _dequeue(self) -> CopyvioSource:
         """Remove a source from one of the queues."""
         if not self._site:
             self._acquire_new_site()
+        assert self._site is not None
+        assert self._queue is not None
 
-        logmsg = "Fetching source URL from queue {0}"
-        self._logger.debug(logmsg.format(self._site))
+        self._logger.debug(f"Fetching source URL from queue {self._site}")
         self._queues.lock.acquire()
         try:
             source = self._queue.popleft()
@@ -294,11 +320,11 @@ class _CopyvioWorker:
         self._queues.lock.release()
         return source
 
-    def _handle_once(self):
-        """Handle a single source from one of the queues."""
+    def _handle_once(self) -> bool:
+        """Handle a single source from one of the queues. Return if we should exit."""
         try:
             source = self._dequeue()
-        except Empty:
+        except queue.Empty:
             self._logger.debug("Exiting: queue timed out")
             return False
         except StopIteration:
@@ -320,12 +346,11 @@ class _CopyvioWorker:
             source.workspace.compare(source, chain)
         return True
 
-    def _run(self):
+    def _run(self) -> None:
         """Main entry point for the worker thread.
 
-        We will keep fetching URLs from the queues and handling them until
-        either we run out of time, or we get an exit signal that the queue is
-        now empty.
+        We will keep fetching URLs from the queues and handling them until either we
+        run out of time, or we get an exit signal that the queue is now empty.
         """
         while True:
             try:
@@ -335,9 +360,9 @@ class _CopyvioWorker:
                 self._logger.exception("Uncaught exception in worker")
                 time.sleep(5)  # Delay if we get stuck in a busy loop
 
-    def start(self):
+    def start(self) -> None:
         """Start the copyvio worker in a new thread."""
-        thread = Thread(target=self._run, name="cvworker-" + self._name)
+        thread = threading.Thread(target=self._run, name="cvworker-" + self._name)
         thread.daemon = True
         thread.start()
 
@@ -347,20 +372,20 @@ class CopyvioWorkspace:
 
     def __init__(
         self,
-        article,
-        min_confidence,
-        max_time,
-        logger,
-        headers,
-        url_timeout=5,
-        num_workers=8,
-        short_circuit=True,
-        parser_args=None,
-        exclude_check=None,
-        config=None,
-        degree=5,
-    ):
-        self.sources = []
+        article: MarkovChain,
+        min_confidence: float,
+        max_time: float,
+        logger: logging.Logger,
+        headers: list[tuple[str, str]],
+        url_timeout: float = 5,
+        num_workers: int = 8,
+        short_circuit: bool = True,
+        parser_args: ParserArgs | None = None,
+        exclusion_callback: Callable[[str], bool] | None = None,
+        config: dict[str, Any] | None = None,
+        degree: int = DEFAULT_DEGREE,
+    ) -> None:
+        self.sources: list[CopyvioSource] = []
         self.finished = False
         self.possible_miss = False
 
@@ -369,8 +394,8 @@ class CopyvioWorkspace:
         self._min_confidence = min_confidence
         self._start_time = time.time()
         self._until = (self._start_time + max_time) if max_time > 0 else None
-        self._handled_urls = set()
-        self._finish_lock = Lock()
+        self._handled_urls: set[str] = set()
+        self._finish_lock = threading.Lock()
         self._short_circuit = short_circuit
         self._source_args = {
             "workspace": self,
@@ -379,10 +404,11 @@ class CopyvioWorkspace:
             "parser_args": parser_args,
             "search_config": config,
         }
-        self._exclude_check = exclude_check
+        self._exclusion_callback = exclusion_callback
         self._degree = degree
 
         if _is_globalized:
+            assert _global_queues is not None
             self._queues = _global_queues
         else:
             self._queues = _CopyvioQueues()
@@ -391,28 +417,27 @@ class CopyvioWorkspace:
                 name = f"local-{id(self) % 10000:04}.{i}"
                 _CopyvioWorker(name, self._queues, self._until).start()
 
-    def _calculate_confidence(self, delta):
+    def _calculate_confidence(self, delta: MarkovChainIntersection) -> float:
         """Return the confidence of a violation as a float between 0 and 1."""
 
-        def conf_with_article_and_delta(article, delta):
+        def conf_with_article_and_delta(article: float, delta: float) -> float:
             """Calculate confidence using the article and delta chain sizes."""
-            # This piecewise function exhibits exponential growth until it
-            # reaches the default "suspect" confidence threshold, at which
-            # point it transitions to polynomial growth with a limit of 1 as
-            # (delta / article) approaches 1.
+            # This piecewise function exhibits exponential growth until it reaches the
+            # default "suspect" confidence threshold, at which point it transitions to
+            # polynomial growth with a limit of 1 as # (delta / article) approaches 1.
             # A graph can be viewed here: https://goo.gl/mKPhvr
             ratio = delta / article
             if ratio <= 0.52763:
-                return -log(1 - ratio)
+                return -math.log(1 - ratio)
             else:
                 return (-0.8939 * (ratio**2)) + (1.8948 * ratio) - 0.0009
 
-        def conf_with_delta(delta):
+        def conf_with_delta(delta: float) -> float:
             """Calculate confidence using just the delta chain size."""
             # This piecewise function was derived from experimental data using
-            # reference points at (0, 0), (100, 0.5), (250, 0.75), (500, 0.9),
-            # and (1000, 0.95), with a limit of 1 as delta approaches infinity.
-            # A graph can be viewed here: https://goo.gl/lVl7or
+            # reference points at (0, 0), (100, 0.5), (250, 0.75), (500, 0.9), and
+            # (1000, 0.95), with a limit of 1 as delta approaches infinity. A graph can
+            # be viewed here: https://goo.gl/lVl7or
             if delta <= 100:
                 return delta / (delta + 100)
             elif delta <= 250:
@@ -430,7 +455,7 @@ class CopyvioWorkspace:
             )
         )
 
-    def _finish_early(self):
+    def _finish_early(self) -> None:
         """Finish handling links prematurely (if we've hit min_confidence)."""
         self._logger.debug("Confidence threshold met; skipping remaining sources")
         with self._queues.lock:
@@ -438,7 +463,7 @@ class CopyvioWorkspace:
                 source.skip()
             self.finished = True
 
-    def enqueue(self, urls):
+    def enqueue(self, urls: list[str]) -> None:
         """Put a list of URLs into the various worker queues."""
         for url in urls:
             with self._queues.lock:
@@ -449,7 +474,7 @@ class CopyvioWorkspace:
                 source = CopyvioSource(url=url, **self._source_args)
                 self.sources.append(source)
 
-                if self._exclude_check and self._exclude_check(url):
+                if self._exclusion_callback and self._exclusion_callback(url):
                     self._logger.debug(f"enqueue(): exclude {url}")
                     source.excluded = True
                     source.skip()
@@ -460,32 +485,37 @@ class CopyvioWorkspace:
                     continue
 
                 try:
+                    import tldextract
+
                     key = tldextract.extract(url).registered_domain
-                except ImportError:  # Fall back on very naive method
+                except ModuleNotFoundError:  # Fall back on very naive method
                     from urllib.parse import urlparse
 
                     key = ".".join(urlparse(url).netloc.split(".")[-2:])
 
-                logmsg = "enqueue(): {0} {1} -> {2}"
+                logmsg = f"enqueue(): %s {key} -> {url}"
                 if key in self._queues.sites:
-                    self._logger.debug(logmsg.format("append", key, url))
+                    self._logger.debug(logmsg % "append")
                     self._queues.sites[key].append(source)
                 else:
-                    self._logger.debug(logmsg.format("new", key, url))
-                    self._queues.sites[key] = queue = deque()
-                    queue.append(source)
-                    self._queues.unassigned.put((key, queue))
+                    self._logger.debug(logmsg % "new")
+                    q: SourceQueue = collections.deque()
+                    q.append(source)
+                    self._queues.sites[key] = q
+                    self._queues.unassigned.put((key, q))
 
-    def compare(self, source, source_chain):
+    def compare(self, source: CopyvioSource, source_chain: MarkovChain | None) -> None:
         """Compare a source to the article; call _finish_early if necessary."""
         if source_chain:
             delta = MarkovChainIntersection(self._article, source_chain)
             conf = self._calculate_confidence(delta)
         else:
+            delta = None
             conf = 0.0
         self._logger.debug(f"compare(): {source.url} -> {conf}")
         with self._finish_lock:
             if source_chain:
+                assert delta is not None
                 source.update(conf, source_chain, delta)
             source.finish_work()
             if not self.finished and conf >= self._min_confidence:
@@ -494,7 +524,7 @@ class CopyvioWorkspace:
                 else:
                     self.finished = True
 
-    def wait(self):
+    def wait(self) -> None:
         """Wait for the workers to finish handling the sources."""
         self._logger.debug(f"Waiting on {len(self.sources)} sources")
         for source in self.sources:
@@ -505,7 +535,7 @@ class CopyvioWorkspace:
             for i in range(self._num_workers):
                 self._queues.unassigned.put((StopIteration, None))
 
-    def get_result(self, num_queries=0):
+    def get_result(self, num_queries: int = 0) -> CopyvioCheckResult:
         """Return a CopyvioCheckResult containing the results of this check."""
         self.sources.sort(
             key=lambda s: (

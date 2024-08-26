@@ -18,91 +18,101 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import re
-from gzip import GzipFile
-from io import StringIO
-from json import loads
-from urllib.error import URLError
-from urllib.parse import urlencode
-
-from earwigbot.exceptions import SearchQueryError
-
 __all__ = [
     "BingSearchEngine",
     "GoogleSearchEngine",
+    "SearchEngine",
     "YandexSearchEngine",
-    "SEARCH_ENGINES",
+    "get_search_engine",
 ]
 
+import base64
+import gzip
+import io
+import json
+import re
+import urllib.parse
+import urllib.request
+from abc import ABC, abstractmethod
+from typing import Any
+from urllib.error import URLError
 
-class _BaseSearchEngine:
+from earwigbot import exceptions
+
+
+class SearchEngine(ABC):
     """Base class for a simple search engine interface."""
 
     name = "Base"
 
-    def __init__(self, cred, opener):
+    def __init__(
+        self, cred: dict[str, str], opener: urllib.request.OpenerDirector
+    ) -> None:
         """Store credentials (*cred*) and *opener* for searching later on."""
         self.cred = cred
         self.opener = opener
         self.count = 5
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Return the canonical string representation of the search engine."""
         return f"{self.__class__.__name__}()"
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return a nice string representation of the search engine."""
         return f"<{self.__class__.__name__}>"
 
-    def _open(self, *args):
+    def _open(self, url: str) -> bytes:
         """Open a URL (like urlopen) and try to return its contents."""
         try:
-            response = self.opener.open(*args)
+            response = self.opener.open(url)
             result = response.read()
         except (OSError, URLError) as exc:
-            err = SearchQueryError(f"{self.name} Error: {exc}")
-            err.cause = exc
-            raise err
+            raise exceptions.SearchQueryError(f"{self.name} Error: {exc}")
 
         if response.headers.get("Content-Encoding") == "gzip":
-            stream = StringIO(result)
-            gzipper = GzipFile(fileobj=stream)
+            stream = io.BytesIO(result)
+            gzipper = gzip.GzipFile(fileobj=stream)
             result = gzipper.read()
 
         code = response.getcode()
         if code != 200:
-            err = "{0} Error: got response code '{1}':\n{2}'"
-            raise SearchQueryError(err.format(self.name, code, result))
+            raise exceptions.SearchQueryError(
+                f"{self.name} Error: got response code '{code}':\n{result}'"
+            )
 
         return result
 
     @staticmethod
-    def requirements():
+    def requirements() -> list[str]:
         """Return a list of packages required by this search engine."""
         return []
 
-    def search(self, query):
-        """Use this engine to search for *query*.
+    @abstractmethod
+    def search(self, query: str) -> list[str]:
+        """
+        Use this engine to search for *query*.
 
         Not implemented in this base class; overridden in subclasses.
         """
-        raise NotImplementedError()
 
 
-class BingSearchEngine(_BaseSearchEngine):
+class BingSearchEngine(SearchEngine):
     """A search engine interface with Bing Search (via Azure Marketplace)."""
 
     name = "Bing"
 
-    def __init__(self, cred, opener):
+    def __init__(
+        self, cred: dict[str, str], opener: urllib.request.OpenerDirector
+    ) -> None:
         super().__init__(cred, opener)
 
         key = self.cred["key"]
-        auth = (key + ":" + key).encode("base64").replace("\n", "")
-        self.opener.addheaders.append(("Authorization", "Basic " + auth))
+        auth = base64.b64encode(f"{key}:{key}".encode()).decode()
+        self.opener.addheaders.append(("Authorization", f"Basic {auth}"))
 
     def search(self, query: str) -> list[str]:
-        """Do a Bing web search for *query*.
+        """
+        Do a Bing web search for *query*.
 
         Returns a list of URLs ranked by relevance (as determined by Bing).
         Raises :py:exc:`~earwigbot.exceptions.SearchQueryError` on errors.
@@ -112,20 +122,19 @@ class BingSearchEngine(_BaseSearchEngine):
         params = {
             "$format": "json",
             "$top": str(self.count),
-            "Query": "'\"" + query.replace('"', "").encode("utf8") + "\"'",
+            "Query": "'\"" + query.replace('"', "") + "\"'",
             "Market": "'en-US'",
             "Adult": "'Off'",
             "Options": "'DisableLocationDetection'",
             "WebSearchOptions": "'DisableHostCollapsing+DisableQueryAlterations'",
         }
 
-        result = self._open(url + urlencode(params))
+        result = self._open(url + urllib.parse.urlencode(params))
 
         try:
-            res = loads(result)
+            res = json.loads(result)
         except ValueError:
-            err = "Bing Error: JSON could not be decoded"
-            raise SearchQueryError(err)
+            raise exceptions.SearchQueryError("Bing Error: JSON could not be decoded")
 
         try:
             results = res["d"]["results"]
@@ -134,13 +143,14 @@ class BingSearchEngine(_BaseSearchEngine):
         return [result["Url"] for result in results]
 
 
-class GoogleSearchEngine(_BaseSearchEngine):
+class GoogleSearchEngine(SearchEngine):
     """A search engine interface with Google Search."""
 
     name = "Google"
 
     def search(self, query: str) -> list[str]:
-        """Do a Google web search for *query*.
+        """
+        Do a Google web search for *query*.
 
         Returns a list of URLs ranked by relevance (as determined by Google).
         Raises :py:exc:`~earwigbot.exceptions.SearchQueryError` on errors.
@@ -157,13 +167,13 @@ class GoogleSearchEngine(_BaseSearchEngine):
             "fields": "items(link)",
         }
 
-        result = self._open(url + urlencode(params))
+        result = self._open(url + urllib.parse.urlencode(params))
 
         try:
-            res = loads(result)
+            res = json.loads(result)
         except ValueError:
             err = "Google Error: JSON could not be decoded"
-            raise SearchQueryError(err)
+            raise exceptions.SearchQueryError(err)
 
         try:
             return [item["link"] for item in res["items"]]
@@ -171,7 +181,7 @@ class GoogleSearchEngine(_BaseSearchEngine):
             return []
 
 
-class YandexSearchEngine(_BaseSearchEngine):
+class YandexSearchEngine(SearchEngine):
     """A search engine interface with Yandex Search."""
 
     name = "Yandex"
@@ -181,7 +191,8 @@ class YandexSearchEngine(_BaseSearchEngine):
         return ["lxml.etree"]
 
     def search(self, query: str) -> list[str]:
-        """Do a Yandex web search for *query*.
+        """
+        Do a Yandex web search for *query*.
 
         Returns a list of URLs ranked by relevance (as determined by Yandex).
         Raises :py:exc:`~earwigbot.exceptions.SearchQueryError` on errors.
@@ -201,17 +212,51 @@ class YandexSearchEngine(_BaseSearchEngine):
             "groupby": f"mode=flat.groups-on-page={self.count}",
         }
 
-        result = self._open(url + urlencode(params))
+        result = self._open(url + urllib.parse.urlencode(params))
 
         try:
-            data = lxml.etree.fromstring(result)  # type: ignore
+            data = lxml.etree.fromstring(result)
             return [elem.text for elem in data.xpath(".//url")]
         except lxml.etree.Error as exc:
-            raise SearchQueryError("Yandex XML parse error: " + str(exc))
+            raise exceptions.SearchQueryError(f"Yandex XML parse error: {exc}")
 
 
-SEARCH_ENGINES = {
+SEARCH_ENGINES: dict[str, type[SearchEngine]] = {
     "Bing": BingSearchEngine,
     "Google": GoogleSearchEngine,
     "Yandex": YandexSearchEngine,
 }
+
+
+def get_search_engine(
+    search_config: dict[str, Any], headers: list[tuple[str, str]]
+) -> SearchEngine:
+    """Return a function that can be called to do web searches.
+
+    The function takes one argument, a search query, and returns a list of URLs, ranked
+    by importance. The underlying logic depends on the *engine* argument within our
+    config; for example, if *engine* is "Yahoo! BOSS", we'll use YahooBOSSSearchEngine
+    for querying.
+
+    Raises UnknownSearchEngineError if the 'engine' listed in our config is unknown to
+    us, and UnsupportedSearchEngineError if we are missing a required package or
+    module, like oauth2 for "Yahoo! BOSS".
+    """
+    engine = search_config["engine"]
+    if engine not in SEARCH_ENGINES:
+        raise exceptions.UnknownSearchEngineError(engine)
+
+    klass = SEARCH_ENGINES[engine]
+    credentials = search_config["credentials"]
+    opener = urllib.request.build_opener()
+    opener.addheaders = headers
+
+    for dep in klass.requirements():
+        try:
+            __import__(dep).__name__
+        except (ModuleNotFoundError, AttributeError):
+            e = "Missing a required dependency ({}) for the {} engine"
+            e = e.format(dep, engine)
+            raise exceptions.UnsupportedSearchEngineError(e)
+
+    return klass(credentials, opener)
