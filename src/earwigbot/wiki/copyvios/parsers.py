@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2019 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,23 +18,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import io
 import json
+import os.path
 import re
 import urllib.parse
 import urllib.request
-from io import StringIO
-from os import path
 
 import mwparserfromhell
 
-from earwigbot import importer
 from earwigbot.exceptions import ParserExclusionError, ParserRedirectError
-
-bs4 = importer.new("bs4")
-nltk = importer.new("nltk")
-converter = importer.new("pdfminer.converter")
-pdfinterp = importer.new("pdfminer.pdfinterp")
-pdfpage = importer.new("pdfminer.pdfpage")
 
 __all__ = ["ArticleTextParser", "get_parser"]
 
@@ -101,9 +94,10 @@ class ArticleTextParser(_BaseTextParser):
 
     def _get_tokenizer(self):
         """Return a NLTK punctuation tokenizer for the article's language."""
+        import nltk
 
         def datafile(lang):
-            return "file:" + path.join(
+            return "file:" + os.path.join(
                 self._args["nltk_dir"], "tokenizers", "punkt", lang + ".pickle"
             )
 
@@ -213,11 +207,11 @@ class ArticleTextParser(_BaseTextParser):
             elif len(chunks) % 5 == 1:
                 chunk = sentences.pop()  # Pop from end
             elif len(chunks) % 5 == 2:
-                chunk = sentences.pop(len(sentences) / 2)  # Pop from Q2
+                chunk = sentences.pop(len(sentences) // 2)  # Pop from Q2
             elif len(chunks) % 5 == 3:
-                chunk = sentences.pop(len(sentences) / 4)  # Pop from Q1
+                chunk = sentences.pop(len(sentences) // 4)  # Pop from Q1
             else:
-                chunk = sentences.pop(3 * len(sentences) / 4)  # Pop from Q3
+                chunk = sentences.pop(3 * len(sentences) // 4)  # Pop from Q3
             chunks.append(chunk)
         return chunks
 
@@ -256,6 +250,8 @@ class _HTMLParser(_BaseTextParser):
     @staticmethod
     def _get_soup(text):
         """Parse some text using BeautifulSoup."""
+        import bs4
+
         try:
             return bs4.BeautifulSoup(text, "lxml")
         except ValueError:
@@ -263,6 +259,7 @@ class _HTMLParser(_BaseTextParser):
 
     def _clean_soup(self, soup):
         """Clean a BeautifulSoup tree of invisible tags."""
+        import bs4
 
         def is_comment(text):
             return isinstance(text, bs4.element.Comment)
@@ -353,21 +350,23 @@ class _PDFParser(_BaseTextParser):
 
     def parse(self):
         """Return extracted text from the PDF."""
-        output = StringIO()
+        from pdfminer import converter, pdfinterp, pdfpage
+
+        output = io.StringIO()
         manager = pdfinterp.PDFResourceManager()
         conv = converter.TextConverter(manager, output)
         interp = pdfinterp.PDFPageInterpreter(manager, conv)
 
         try:
-            pages = pdfpage.PDFPage.get_pages(StringIO(self.text))
+            pages = pdfpage.PDFPage.get_pages(io.StringIO(self.text))
             for page in pages:
                 interp.process_page(page)
         except Exception:  # pylint: disable=broad-except
-            return output.getvalue().decode("utf8")
+            return output.getvalue()
         finally:
             conv.close()
 
-        value = output.getvalue().decode("utf8")
+        value = output.getvalue()
         for orig, new in self.substitutions:
             value = value.replace(orig, new)
         return re.sub(r"\n\n+", "\n", value).strip()
@@ -380,7 +379,9 @@ class _PlainTextParser(_BaseTextParser):
 
     def parse(self):
         """Unicode-ify and strip whitespace from the plain text document."""
-        converted = bs4.UnicodeDammit(self.text).unicode_markup
+        from bs4.dammit import UnicodeDammit
+
+        converted = UnicodeDammit(self.text).unicode_markup
         return converted.strip() if converted else ""
 
 

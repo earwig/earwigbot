@@ -26,8 +26,17 @@ See :file:`README.rst` for an overview, or the :file:`docs/` directory for detai
 This documentation is also available `online <https://packages.python.org/earwigbot>`_.
 """
 
-import typing
-
+__all__ = [
+    "bot",
+    "cli",
+    "commands",
+    "config",
+    "exceptions",
+    "irc",
+    "managers",
+    "tasks",
+    "wiki",
+]
 __author__ = "Ben Kurtovic"
 __copyright__ = "Copyright (C) 2009-2024 Ben Kurtovic"
 __license__ = "MIT License"
@@ -54,30 +63,14 @@ if not __release__:
     finally:
         del _get_git_commit_id
 
-from earwigbot import lazy
-
-importer = lazy.LazyImporter()
-
-if typing.TYPE_CHECKING:
-    from earwigbot import (
-        bot,
-        cli,
-        commands,
-        config,
-        exceptions,
-        irc,
-        managers,
-        tasks,
-        wiki,
-    )
-
-else:
-    bot = importer.new("earwigbot.bot")
-    cli = importer.new("earwigbot.cli")
-    commands = importer.new("earwigbot.commands")
-    config = importer.new("earwigbot.config")
-    exceptions = importer.new("earwigbot.exceptions")
-    irc = importer.new("earwigbot.irc")
-    managers = importer.new("earwigbot.managers")
-    tasks = importer.new("earwigbot.tasks")
-    wiki = importer.new("earwigbot.wiki")
+from earwigbot import (
+    bot,
+    cli,
+    commands,
+    config,
+    exceptions,
+    irc,
+    managers,
+    tasks,
+    wiki,
+)

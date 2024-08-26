@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,13 +18,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+__all__ = ["IRCConnection"]
+
 import socket
 from threading import Lock
 from time import sleep, time
 
 from earwigbot.exceptions import BrokenSocketError
-
-__all__ = ["IRCConnection"]
 
 
 class IRCConnection:

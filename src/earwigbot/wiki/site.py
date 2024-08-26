@@ -35,7 +35,7 @@ import requests
 from requests.cookies import RequestsCookieJar
 from requests_oauthlib import OAuth1
 
-from earwigbot import exceptions, importer
+from earwigbot import exceptions
 from earwigbot.wiki import constants
 from earwigbot.wiki.category import Category
 from earwigbot.wiki.constants import Service
@@ -47,7 +47,11 @@ if typing.TYPE_CHECKING:
     import pymysql.cursors
     from pymysql.cursors import Cursor
 else:
-    pymysql = importer.new("pymysql")
+    try:
+        import pymysql
+        import pymysql.cursors
+    except ModuleNotFoundError:
+        pymysql = None
 
 __all__ = ["Site"]
 
@@ -711,11 +715,11 @@ class Site:
         if "autoreconnect" not in args:
             args["autoreconnect"] = True
 
-        try:
-            return pymysql.connect(**args)
-        except ImportError:
-            e = "SQL querying requires the 'pymysql' package: https://pymysql.readthedocs.io/"
-            raise exceptions.SQLError(e)
+        if pymysql is None:
+            raise exceptions.SQLError(
+                "SQL querying requires the 'pymysql' package: https://pymysql.readthedocs.io/"
+            )
+        return pymysql.connect(**args)
 
     def _get_service_order(self) -> list[Service]:
         """
@@ -731,6 +735,10 @@ class Site:
         lag is also very high. self.SERVICE_SQL will not be included in the list if we
         cannot form a proper SQL connection.
         """
+        if pymysql is None:
+            self._sql_info_cache["usable"] = False
+            return [Service.API]
+
         now = time.time()
         if now - self._sql_info_cache["lastcheck"] > 120:
             self._sql_info_cache["lastcheck"] = now
@@ -739,7 +747,7 @@ class Site:
                     self._sql_info_cache["replag"] = sqllag = self.get_replag()
                 except pymysql.Error as exc:
                     raise exceptions.SQLError(str(exc))
-            except (exceptions.SQLError, ImportError):
+            except exceptions.SQLError:
                 self._sql_info_cache["usable"] = False
                 return [Service.API]
             self._sql_info_cache["usable"] = True

@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,9 +18,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import re
-
 __all__ = ["Data"]
+
+import re
 
 
 class Data:
@@ -78,6 +78,7 @@ class Data:
         bot's name); self.is_command will be set to True, and self.trigger will
         store the trigger string. Otherwise, is_command will be set to False.
         """
+        assert self.msg is not None
         self._args = self.msg.strip().split()
 
         try:
@@ -87,16 +88,16 @@ class Data:
             return
 
         # e.g. "!command>user arg1 arg2"
-        if ">" in self.command:
+        if ">" in self._command:
             command_uc, self._reply_nick = command_uc.split(">", 1)
             self._command = command_uc.lower()
 
-        if self.command.startswith("!") or self.command.startswith("."):
+        if self._command.startswith("!") or self._command.startswith("."):
             # e.g. "!command arg1 arg2"
             self._is_command = True
-            self._trigger = self.command[0]
-            self._command = self.command[1:]  # Strip the "!" or "."
-        elif re.match(rf"{re.escape(self.my_nick)}\W*?$", self.command, re.U):
+            self._trigger = self._command[0]
+            self._command = self._command[1:]  # Strip the "!" or "."
+        elif re.match(rf"{re.escape(self.my_nick)}\W*?$", self._command, re.U):
             # e.g. "EarwigBot, command arg1 arg2"
             self._is_command = True
             self._trigger = self.my_nick
@@ -110,7 +111,7 @@ class Data:
                         if self.args:
                             self.args[-1] = self.args[-1][:-1]
                         else:
-                            self._command = self.command[:-1]
+                            self._command = self._command[:-1]
                 except IndexError:
                     pass
 

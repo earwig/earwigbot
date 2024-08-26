@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,8 +18,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from earwigbot.irc.connection import *
-from earwigbot.irc.data import *
-from earwigbot.irc.frontend import *
-from earwigbot.irc.rc import *
-from earwigbot.irc.watcher import *
+__all__ = ["Data", "Frontend", "IRCConnection", "RC", "Watcher"]
+
+from earwigbot.irc.connection import IRCConnection
+from earwigbot.irc.data import Data
+from earwigbot.irc.frontend import Frontend
+from earwigbot.irc.rc import RC
+from earwigbot.irc.watcher import Watcher

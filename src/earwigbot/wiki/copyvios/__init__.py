@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from time import sleep
+import time
 from urllib.request import build_opener
 
 from earwigbot import exceptions
@@ -73,7 +73,7 @@ class CopyvioMixIn:
         for dep in klass.requirements():
             try:
                 __import__(dep).__name__
-            except (ImportError, AttributeError):
+            except (ModuleNotFoundError, AttributeError):
                 e = "Missing a required dependency ({}) for the {} engine"
                 e = e.format(dep, engine)
                 raise exceptions.UnsupportedSearchEngineError(e)
@@ -173,7 +173,7 @@ class CopyvioMixIn:
                 self._logger.debug(log.format(self.title, searcher.name, chunk))
                 workspace.enqueue(searcher.search(chunk))
                 num_queries += 1
-                sleep(1)
+                time.sleep(1)
 
         workspace.wait()
         result = workspace.get_result(num_queries)

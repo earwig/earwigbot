@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,17 +18,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import re
 from gzip import GzipFile
 from io import StringIO
 from json import loads
-from re import sub as re_sub
 from urllib.error import URLError
 from urllib.parse import urlencode
 
-from earwigbot import importer
 from earwigbot.exceptions import SearchQueryError
-
-lxml = importer.new("lxml")
 
 __all__ = [
     "BingSearchEngine",
@@ -104,7 +101,7 @@ class BingSearchEngine(_BaseSearchEngine):
         auth = (key + ":" + key).encode("base64").replace("\n", "")
         self.opener.addheaders.append(("Authorization", "Basic " + auth))
 
-    def search(self, query):
+    def search(self, query: str) -> list[str]:
         """Do a Bing web search for *query*.
 
         Returns a list of URLs ranked by relevance (as determined by Bing).
@@ -142,7 +139,7 @@ class GoogleSearchEngine(_BaseSearchEngine):
 
     name = "Google"
 
-    def search(self, query):
+    def search(self, query: str) -> list[str]:
         """Do a Google web search for *query*.
 
         Returns a list of URLs ranked by relevance (as determined by Google).
@@ -153,7 +150,7 @@ class GoogleSearchEngine(_BaseSearchEngine):
         params = {
             "cx": self.cred["id"],
             "key": self.cred["key"],
-            "q": '"' + query.replace('"', "").encode("utf8") + '"',
+            "q": '"' + query.replace('"', "") + '"',
             "alt": "json",
             "num": str(self.count),
             "safe": "off",
@@ -183,15 +180,17 @@ class YandexSearchEngine(_BaseSearchEngine):
     def requirements():
         return ["lxml.etree"]
 
-    def search(self, query):
+    def search(self, query: str) -> list[str]:
         """Do a Yandex web search for *query*.
 
         Returns a list of URLs ranked by relevance (as determined by Yandex).
         Raises :py:exc:`~earwigbot.exceptions.SearchQueryError` on errors.
         """
+        import lxml.etree
+
         domain = self.cred.get("proxy", "yandex.com")
         url = f"https://{domain}/search/xml?"
-        query = re_sub(r"[^a-zA-Z0-9 ]", "", query).encode("utf8")
+        query = re.sub(r"[^a-zA-Z0-9 ]", "", query)
         params = {
             "user": self.cred["user"],
             "key": self.cred["key"],
@@ -205,7 +204,7 @@ class YandexSearchEngine(_BaseSearchEngine):
         result = self._open(url + urlencode(params))
 
         try:
-            data = lxml.etree.fromstring(result)
+            data = lxml.etree.fromstring(result)  # type: ignore
             return [elem.text for elem in data.xpath(".//url")]
         except lxml.etree.Error as exc:
             raise SearchQueryError("Yandex XML parse error: " + str(exc))

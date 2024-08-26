@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2021 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,11 +18,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from time import sleep
+__all__ = ["Frontend"]
+
+import time
 
 from earwigbot.irc import Data, IRCConnection
-
-__all__ = ["Frontend"]
 
 
 class Frontend(IRCConnection):
@@ -121,10 +121,11 @@ class Frontend(IRCConnection):
         elif line[1] == "NOTICE":
             data = Data(self.nick, line, msgtype="NOTICE")
             if self._auth_wait and data.nick == self.NICK_SERVICES:
+                assert data.msg is not None
                 if data.msg.startswith("This nickname is registered."):
                     return
                 self._auth_wait = False
-                sleep(2)  # Wait for hostname change to propagate
+                time.sleep(2)  # Wait for hostname change to propagate
                 self._join_channels()
 
         elif line[1] == "KICK":

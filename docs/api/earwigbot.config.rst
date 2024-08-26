@@ -23,14 +23,6 @@ config Package
     :members:
     :undoc-members:
 
-:mod:`ordered_yaml` Module
---------------------------
-
-.. automodule:: earwigbot.config.ordered_yaml
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 :mod:`permissions` Module
 -------------------------
 

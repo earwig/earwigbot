@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2021 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,9 +18,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import re
-
 __all__ = ["RC"]
+
+import re
 
 
 class RC:
@@ -28,9 +28,9 @@ class RC:
 
     re_color = re.compile("\x03([0-9]{1,2}(,[0-9]{1,2})?)?")
     re_edit = re.compile(
-        "\A\[\[(.*?)\]\]\s(.*?)\s(https?://.*?)\s\*\s(.*?)\s\*\s(.*?)\Z"
+        r"\A\[\[(.*?)\]\]\s(.*?)\s(https?://.*?)\s\*\s(.*?)\s\*\s(.*?)\Z"
     )
-    re_log = re.compile("\A\[\[(.*?)\]\]\s(.*?)\s\s\*\s(.*?)\s\*\s(.*?)\Z")
+    re_log = re.compile(r"\A\[\[(.*?)\]\]\s(.*?)\s\s\*\s(.*?)\s\*\s(.*?)\Z")
 
     pretty_edit = "\x02New {0}\x0f: \x0314[[\x0307{1}\x0314]]\x0306 * \x0303{2}\x0306 * \x0302{3}\x0306 * \x0310{4}"
     pretty_log = "\x02New {0}\x0f: \x0303{1}\x0306 * \x0302{2}\x0306 * \x0310{3}"

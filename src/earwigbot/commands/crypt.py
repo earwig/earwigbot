@@ -22,12 +22,7 @@ import base64
 import hashlib
 import os
 
-from earwigbot import importer
 from earwigbot.commands import Command
-
-fernet = importer.new("cryptography.fernet")
-hashes = importer.new("cryptography.hazmat.primitives.hashes")
-pbkdf2 = importer.new("cryptography.hazmat.primitives.kdf.pbkdf2")
 
 
 class Crypt(Command):
@@ -73,6 +68,16 @@ class Crypt(Command):
                 return
 
             try:
+                from cryptography import fernet
+                from cryptography.hazmat.primitives import hashes
+                from cryptography.hazmat.primitives.kdf import pbkdf2
+            except ModuleNotFoundError:
+                self.reply(
+                    data,
+                    "This command requires the 'cryptography' package: https://cryptography.io/",
+                )
+
+            try:
                 if data.command == "encrypt":
                     salt = os.urandom(saltlen)
                     kdf = pbkdf2.PBKDF2HMAC(
@@ -101,10 +106,5 @@ class Crypt(Command):
                         base64.urlsafe_b64encode(kdf.derive(key.encode()))
                     )
                     self.reply(data, f.decrypt(ciphertext).decode())
-            except ImportError:
-                self.reply(
-                    data,
-                    "This command requires the 'cryptography' package: https://cryptography.io/",
-                )
             except Exception as error:
                 self.reply(data, f"{type(error).__name__}: {str(error)}")

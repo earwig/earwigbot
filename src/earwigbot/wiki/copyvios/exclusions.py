@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -19,10 +19,10 @@
 # SOFTWARE.
 
 import re
-import sqlite3 as sqlite
-from threading import Lock
-from time import time
-from urllib.parse import urlparse
+import sqlite3
+import threading
+import time
+import urllib.parse
 
 from earwigbot import exceptions
 
@@ -60,7 +60,7 @@ class ExclusionsDB:
         self._sitesdb = sitesdb
         self._dbfile = dbfile
         self._logger = logger
-        self._db_access_lock = Lock()
+        self._db_access_lock = threading.Lock()
 
     def __repr__(self):
         """Return the canonical string representation of the ExclusionsDB."""
@@ -84,7 +84,7 @@ class ExclusionsDB:
             for page in pages:
                 sources.append((sitename, page))
 
-        with sqlite.connect(self._dbfile) as conn:
+        with sqlite3.connect(self._dbfile) as conn:
             conn.executescript(script)
             conn.executemany(query, sources)
 
@@ -139,7 +139,7 @@ class ExclusionsDB:
             site = self._sitesdb.get_site("enwiki")
         else:
             site = self._sitesdb.get_site(sitename)
-        with self._db_access_lock, sqlite.connect(self._dbfile) as conn:
+        with self._db_access_lock, sqlite3.connect(self._dbfile) as conn:
             urls = set()
             for (source,) in conn.execute(query1, (sitename,)):
                 urls |= self._load_source(site, source)
@@ -150,17 +150,17 @@ class ExclusionsDB:
                     conn.execute(query3, (sitename, url))
             conn.executemany(query4, [(sitename, url) for url in urls])
             if conn.execute(query5, (sitename,)).fetchone():
-                conn.execute(query6, (int(time()), sitename))
+                conn.execute(query6, (int(time.time()), sitename))
             else:
-                conn.execute(query7, (sitename, int(time())))
+                conn.execute(query7, (sitename, int(time.time())))
 
     def _get_last_update(self, sitename):
         """Return the UNIX timestamp of the last time the db was updated."""
         query = "SELECT update_time FROM updates WHERE update_sitename = ?"
-        with self._db_access_lock, sqlite.connect(self._dbfile) as conn:
+        with self._db_access_lock, sqlite3.connect(self._dbfile) as conn:
             try:
                 result = conn.execute(query, (sitename,)).fetchone()
-            except sqlite.OperationalError:
+            except sqlite3.OperationalError:
                 self._create()
                 return 0
             return result[0] if result else 0
@@ -174,7 +174,7 @@ class ExclusionsDB:
         after 12 hours.
         """
         max_staleness = 60 * 60 * (12 if sitename == "all" else 48)
-        time_since_update = int(time() - self._get_last_update(sitename))
+        time_since_update = int(time.time() - self._get_last_update(sitename))
         if force or time_since_update > max_staleness:
             log = "Updating stale database: {0} (last updated {1} seconds ago)"
             self._logger.info(log.format(sitename, time_since_update))
@@ -191,10 +191,10 @@ class ExclusionsDB:
         Return ``True`` if the URL is in the database, or ``False`` otherwise.
         """
         normalized = re.sub(_RE_STRIP_PREFIX, "", url.lower())
-        parsed = urlparse(url.lower())
+        parsed = urllib.parse.urlparse(url.lower())
         query = """SELECT exclusion_url FROM exclusions
                    WHERE exclusion_sitename = ? OR exclusion_sitename = ?"""
-        with self._db_access_lock, sqlite.connect(self._dbfile) as conn:
+        with self._db_access_lock, sqlite3.connect(self._dbfile) as conn:
             for (excl,) in conn.execute(query, (sitename, "all")):
                 excl = excl.lower()
                 if excl.startswith("*."):
@@ -231,7 +231,7 @@ class ExclusionsDB:
         certain HTML tag attributes (``"href"`` and ``"src"``).
         """
         site = page.site
-        path = urlparse(page.url).path
+        path = urllib.parse.urlparse(page.url).path
         roots = [site.domain]
         scripts = ["index.php", "load.php", "api.php"]
 

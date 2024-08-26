@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -28,17 +28,11 @@ from os import mkdir, path
 
 import yaml
 
-from earwigbot import importer
 from earwigbot.config.formatter import BotFormatter
 from earwigbot.config.node import ConfigNode
-from earwigbot.config.ordered_yaml import OrderedLoader
 from earwigbot.config.permissions import PermissionsDB
 from earwigbot.config.script import ConfigScript
 from earwigbot.exceptions import NoConfigError
-
-fernet = importer.new("cryptography.fernet")
-hashes = importer.new("cryptography.hazmat.primitives.hashes")
-pbkdf2 = importer.new("cryptography.hazmat.primitives.kdf.pbkdf2")
 
 __all__ = ["BotConfig"]
 
@@ -128,12 +122,11 @@ class BotConfig:
 
     def _load(self):
         """Load data from our JSON config file (config.yml) into self._data."""
-        filename = self._config_path
-        with open(filename) as fp:
+        with open(self._config_path) as fp:
             try:
-                self._data = yaml.load(fp, OrderedLoader)
+                self._data = yaml.load(fp, yaml.CSafeLoader)
             except yaml.YAMLError:
-                print(f"Error parsing config file {filename}:")
+                print(f"Error parsing config file {self._config_path}:")
                 raise
 
     def _setup_logging(self):
@@ -276,9 +269,7 @@ class BotConfig:
         if not path.exists(self._config_path):
             self._handle_missing_config()
         self._load()
-        if not self._data:
-            self._handle_missing_config()
-            self._load()
+        assert self._data is not None
 
         self.components._load(self._data.get("components", OrderedDict()))
         self.wiki._load(self._data.get("wiki", OrderedDict()))
@@ -291,6 +282,10 @@ class BotConfig:
         if self.is_encrypted():
             if not self._decryption_cipher:
                 try:
+                    from cryptography import fernet
+                    from cryptography.hazmat.primitives import hashes
+                    from cryptography.hazmat.primitives.kdf import pbkdf2
+
                     salt = self.metadata["salt"]
                     kdf = pbkdf2.PBKDF2HMAC(
                         algorithm=hashes.SHA256(),
@@ -298,7 +293,7 @@ class BotConfig:
                         salt=salt,
                         iterations=ConfigScript.PBKDF_ROUNDS,
                     )
-                except ImportError:
+                except ModuleNotFoundError:
                     e = "Encryption requires the 'cryptography' package: https://cryptography.io/"
                     raise NoConfigError(e)
                 key = getpass("Enter key to decrypt bot passwords: ")
@@ -352,6 +347,7 @@ class BotConfig:
             "week_day": week_day,
         }
 
+        assert self._data is not None
         data = self._data.get("schedule", [])
         for event in data:
             do = True

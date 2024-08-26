@@ -30,13 +30,6 @@ earwigbot Package
     :undoc-members:
     :show-inheritance:
 
-:mod:`lazy` Module
-------------------
-
-.. automodule:: earwigbot.lazy
-    :members:
-    :undoc-members:
-
 :mod:`managers` Module
 ----------------------
 

@@ -62,9 +62,6 @@ build-backend = "setuptools.build_meta"
 exclude = [
     # TODO
     "src/earwigbot/commands",
-    "src/earwigbot/config",
-    "src/earwigbot/lazy.py",
-    "src/earwigbot/irc",
     "src/earwigbot/tasks",
     "src/earwigbot/wiki/copyvios"
 ]

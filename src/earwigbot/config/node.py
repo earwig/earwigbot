@@ -19,22 +19,21 @@
 # SOFTWARE.
 
 import base64
-from collections import OrderedDict
 
 __all__ = ["ConfigNode"]
 
 
 class ConfigNode:
     def __init__(self):
-        self._data = OrderedDict()
+        self._data = {}
 
-    def __repr__(self):
-        return self._data
+    def __repr__(self) -> str:
+        return repr(self._data)
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return bool(self._data)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._data)
 
     def __getitem__(self, key):

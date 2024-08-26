@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2009-2024 Ben Kurtovic <ben.kurtovic@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from re import UNICODE, sub
+import re
 
 __all__ = ["EMPTY", "EMPTY_INTERSECTION", "MarkovChain", "MarkovChainIntersection"]
 
@@ -38,7 +38,7 @@ class MarkovChain:
     def _build(self):
         """Build and return the Markov chain from the input text."""
         padding = self.degree - 1
-        words = sub(r"[^\w\s-]", "", self.text.lower(), flags=UNICODE).split()
+        words = re.sub(r"[^\w\s-]", "", self.text.lower(), flags=re.UNICODE).split()
         words = ([self.START] * padding) + words + ([self.END] * padding)
         chain = {}
 
