@@ -18,12 +18,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+__all__ = ["Category"]
+
 from collections.abc import Iterator
 
 from earwigbot.wiki.constants import Service
 from earwigbot.wiki.page import Page
-
-__all__ = ["Category"]
 
 
 class Category(Page):

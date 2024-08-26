@@ -18,11 +18,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+__all__ = ["PermissionsDB"]
+
 import sqlite3 as sqlite
 from fnmatch import fnmatch
 from threading import Lock
-
-__all__ = ["PermissionsDB"]
 
 
 class PermissionsDB:

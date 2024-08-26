@@ -19,6 +19,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+__all__ = ["CommandManager", "TaskManager"]
+
 import importlib.machinery
 import importlib.util
 from os import listdir, path
@@ -28,8 +30,6 @@ from time import gmtime, strftime
 
 from earwigbot.commands import Command
 from earwigbot.tasks import Task
-
-__all__ = ["CommandManager", "TaskManager"]
 
 
 class _ResourceManager:

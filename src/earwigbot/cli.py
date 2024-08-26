@@ -47,6 +47,8 @@ or run specific tasks.
 
 """
 
+__all__ = ["main"]
+
 import logging
 from argparse import REMAINDER, Action, ArgumentParser
 from os import path
@@ -54,8 +56,6 @@ from time import sleep
 
 from earwigbot import __version__
 from earwigbot.bot import Bot
-
-__all__ = ["main"]
 
 
 class _StoreTaskArg(Action):

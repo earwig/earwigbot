@@ -20,6 +20,8 @@
 
 from __future__ import annotations
 
+__all__ = ["Page"]
+
 import hashlib
 import re
 import time
@@ -38,8 +40,6 @@ from earwigbot.wiki.copyvios import CopyvioMixIn
 if typing.TYPE_CHECKING:
     from earwigbot.wiki.site import Site
     from earwigbot.wiki.user import User
-
-__all__ = ["Page"]
 
 
 class Page(CopyvioMixIn):

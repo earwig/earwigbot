@@ -18,6 +18,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+__all__ = ["BotConfig"]
+
 import base64
 import logging
 import logging.handlers
@@ -33,8 +35,6 @@ from earwigbot.config.node import ConfigNode
 from earwigbot.config.permissions import PermissionsDB
 from earwigbot.config.script import ConfigScript
 from earwigbot.exceptions import NoConfigError
-
-__all__ = ["BotConfig"]
 
 
 class BotConfig:

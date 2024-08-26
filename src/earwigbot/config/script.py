@@ -18,6 +18,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+__all__ = ["ConfigScript"]
+
 import base64
 import getpass
 import os
@@ -32,8 +34,6 @@ from typing import Any, Literal
 import yaml
 
 from earwigbot import exceptions
-
-__all__ = ["ConfigScript"]
 
 RULES_TEMPLATE = """\
 from earwigbot.bot import Bot

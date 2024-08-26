@@ -20,6 +20,8 @@
 
 from __future__ import annotations
 
+__all__ = ["SitesDB"]
+
 import errno
 import sqlite3 as sqlite
 import stat
@@ -37,8 +39,6 @@ from earwigbot.wiki.site import Site, SqlConnInfo
 
 if typing.TYPE_CHECKING:
     from earwigbot.bot import Bot
-
-__all__ = ["SitesDB"]
 
 
 @dataclass(frozen=True)

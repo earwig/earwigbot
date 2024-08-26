@@ -20,6 +20,8 @@
 
 from __future__ import annotations
 
+__all__ = ["User"]
+
 import socket
 import time
 import typing
@@ -32,8 +34,6 @@ from earwigbot.wiki.page import Page
 
 if typing.TYPE_CHECKING:
     from earwigbot.wiki.site import Site
-
-__all__ = ["User"]
 
 
 class User:

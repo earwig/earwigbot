@@ -20,6 +20,8 @@
 
 from __future__ import annotations
 
+__all__ = ["Site"]
+
 import json
 import os.path
 import time
@@ -52,8 +54,6 @@ else:
         import pymysql.cursors
     except ModuleNotFoundError:
         pymysql = None
-
-__all__ = ["Site"]
 
 T = TypeVar("T")
 P = ParamSpec("P")

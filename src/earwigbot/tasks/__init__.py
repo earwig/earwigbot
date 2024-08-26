@@ -18,11 +18,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+__all__ = ["Task"]
+
 from typing import Any
 
 from earwigbot import exceptions
-
-__all__ = ["Task"]
 
 
 class Task:

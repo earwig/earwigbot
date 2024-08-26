@@ -18,9 +18,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import base64
-
 __all__ = ["ConfigNode"]
+
+import base64
 
 
 class ConfigNode:

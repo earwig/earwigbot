@@ -18,6 +18,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+__all__ = ["Bot"]
+
 import logging
 from threading import Lock, Thread
 from threading import enumerate as enumerate_threads
@@ -28,8 +30,6 @@ from earwigbot.config import BotConfig
 from earwigbot.irc import Frontend, Watcher
 from earwigbot.managers import CommandManager, TaskManager
 from earwigbot.wiki import SitesDB
-
-__all__ = ["Bot"]
 
 
 class Bot:

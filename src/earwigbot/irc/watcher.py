@@ -18,12 +18,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+__all__ = ["Watcher"]
+
 import importlib.machinery
 import importlib.util
 
 from earwigbot.irc import RC, IRCConnection
-
-__all__ = ["Watcher"]
 
 
 class Watcher(IRCConnection):
