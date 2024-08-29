@@ -18,6 +18,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import annotations
+
 __all__ = [
     "DEFAULT_DEGREE",
     "CopyvioChecker",
@@ -29,6 +31,7 @@ __all__ = [
 import functools
 import logging
 import time
+import typing
 from collections.abc import Callable
 
 from earwigbot.wiki.copyvios.exclusions import ExclusionsDB
@@ -37,7 +40,9 @@ from earwigbot.wiki.copyvios.parsers import ArticleParser, ParserArgs
 from earwigbot.wiki.copyvios.result import CopyvioCheckResult
 from earwigbot.wiki.copyvios.search import SearchEngine, get_search_engine
 from earwigbot.wiki.copyvios.workers import CopyvioWorkspace, globalize, localize
-from earwigbot.wiki.page import Page
+
+if typing.TYPE_CHECKING:
+    from earwigbot.wiki.page import Page
 
 
 class CopyvioChecker:

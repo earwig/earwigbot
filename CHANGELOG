@@ -1,3 +1,7 @@
+v0.4.1 (unreleased):
+
+- Various bugfixes
+
 v0.4 (released August 28, 2024):
 
 - Migrated to Python 3 (3.11+). Substantial code cleanup.
