@@ -1,4 +1,4 @@
-v0.4 (unreleased):
+v0.4 (released August 28, 2024):
 
 - Migrated to Python 3 (3.11+). Substantial code cleanup.
 - Migrated to pyproject.toml and pytest.

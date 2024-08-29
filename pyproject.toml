@@ -1,6 +1,6 @@
 [project]
 name = "earwigbot"
-version = "0.4.dev0"
+version = "0.4"
 authors = [
   {name = "Ben Kurtovic", email = "ben@benkurtovic.com"},
 ]

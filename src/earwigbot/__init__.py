@@ -40,7 +40,7 @@ __all__ = [
 __author__ = "Ben Kurtovic"
 __copyright__ = "Copyright (C) 2009-2024 Ben Kurtovic"
 __license__ = "MIT License"
-__version__ = "0.4.dev0"
+__version__ = "0.4"
 __email__ = "ben.kurtovic@gmail.com"
 __release__ = False
 
