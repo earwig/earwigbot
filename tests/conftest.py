@@ -42,6 +42,7 @@ from collections.abc import Iterable, Sequence
 from threading import Lock
 
 import pytest
+
 from earwigbot.bot import Bot
 from earwigbot.commands import Command
 from earwigbot.config import BotConfig

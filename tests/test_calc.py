@@ -19,6 +19,7 @@
 # SOFTWARE.
 
 import pytest
+
 from conftest import MockCommand
 from earwigbot.commands.calc import Calc
 
