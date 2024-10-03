@@ -57,6 +57,7 @@ __all__ = [
     "NS_USER_TALK",
     "NS_USER",
     "USER_AGENT",
+    "Service",
 ]
 
 import platform

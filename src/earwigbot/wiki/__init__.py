@@ -41,9 +41,20 @@ of your :py:class:`~earwigbot.wiki.site.Site` (and thus,
 :py:class:`~earwigbot.wiki.user.User`) needs.
 """
 
-from earwigbot.wiki.category import *
-from earwigbot.wiki.constants import *
-from earwigbot.wiki.page import *
-from earwigbot.wiki.site import *
-from earwigbot.wiki.sitesdb import *
-from earwigbot.wiki.user import *
+__all__ = [
+    "Category",
+    "Page",
+    "Site",
+    "SitesDB",
+    "User",
+]
+
+from earwigbot.wiki import constants
+from earwigbot.wiki.category import Category
+from earwigbot.wiki.constants import *  # noqa: F403
+from earwigbot.wiki.page import Page
+from earwigbot.wiki.site import Site
+from earwigbot.wiki.sitesdb import SitesDB
+from earwigbot.wiki.user import User
+
+__all__ += constants.__all__

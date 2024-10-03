@@ -139,6 +139,20 @@ class CopyvioSource:
                 event.wait()
 
 
+class CheckResultMetadata:
+    def __getattr__(self, key: str) -> Any:
+        try:
+            return self.__dict__[key]
+        except KeyError:
+            raise AttributeError(key) from None
+
+    def __setattr__(self, key: str, val: Any) -> None:
+        self.__dict__[key] = val
+
+    def __delattr__(self, key: str) -> None:
+        del self.__dict__[key]
+
+
 class CopyvioCheckResult:
     """
     **EarwigBot: Wiki Toolset: Copyvio Check Result**
@@ -177,6 +191,7 @@ class CopyvioCheckResult:
         self.possible_miss = possible_miss
         self.included_sources = included_sources if included_sources else []
         self.unified_confidence = unified_confidence
+        self.metadata = CheckResultMetadata()  # Additional metadata for web tool
 
     def __repr__(self) -> str:
         """Return the canonical string representation of the result."""

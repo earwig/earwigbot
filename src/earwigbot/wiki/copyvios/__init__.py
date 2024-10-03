@@ -90,6 +90,10 @@ class CopyvioChecker:
     def _exclusions_db(self) -> ExclusionsDB | None:
         return self._config.get("exclusions_db")
 
+    @property
+    def article_chain(self) -> MarkovChain:
+        return self._article
+
     def _get_exclusion_callback(self) -> Callable[[str], bool] | None:
         if not self._exclusions_db:
             return None
