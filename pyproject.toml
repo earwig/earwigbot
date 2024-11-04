@@ -37,7 +37,7 @@ copyvios = [
     "beautifulsoup4 >= 4.9.3",  # Parsing/scraping HTML
     "charset_normalizer >= 3.3.2",  # Encoding detection for BeautifulSoup
     "lxml >= 4.6.3",  # Faster parser for BeautifulSoup
-    "nltk >= 3.6.1",  # Parsing sentences to split article content
+    "nltk >= 3.9.1",  # Parsing sentences to split article content
     "pdfminer >= 20191125",  # Extracting text from PDF files
     "tldextract >= 3.1.0",  # Getting domains for the multithreaded workers
 ]

@@ -95,19 +95,17 @@ class ArticleParser:
 
     def _get_tokenizer(self) -> Any:
         """Return a NLTK punctuation tokenizer for the article's language."""
-        import nltk
+        os.environ["NLTK_DATA"] = self._nltk_dir  # Yuck!
 
-        def datafile(lang: str) -> str:
-            return "file:" + os.path.join(
-                self._nltk_dir, "tokenizers", "punkt", lang + ".pickle"
-            )
+        import nltk
+        from nltk.tokenize import PunktTokenizer
 
         lang = self.NLTK_LANGS.get(self._lang, self.NLTK_DEFAULT)
         try:
-            nltk.data.load(datafile(self.NLTK_DEFAULT))
+            PunktTokenizer(lang)
         except LookupError:
-            nltk.download("punkt", self._nltk_dir)
-        return nltk.data.load(datafile(lang))
+            nltk.download("punkt_tab", self._nltk_dir)
+        return PunktTokenizer(lang)
 
     def _get_sentences(
         self, min_query: int, max_query: int, split_thresh: int
