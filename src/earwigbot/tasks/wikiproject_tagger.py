@@ -72,7 +72,8 @@ class Job:
     not_in_category: str | None
     dry_run: bool
 
-    _counter: list[int] = [0]  # Wrap to allow frozen updates
+    # Wrap to allow frozen updates
+    _counter: list[int] = field(default_factory=lambda: [0])
     processed_cats: set[str] = field(default_factory=set)
     processed_pages: set[str] = field(default_factory=set)
     skip_pages: set[str] = field(default_factory=set)

@@ -710,10 +710,6 @@ class Site:
             args["read_default_file"] = os.path.expanduser("~/.my.cnf")
         elif "read_default_file" in args:
             args["read_default_file"] = os.path.expanduser(args["read_default_file"])
-        if "autoping" not in args:
-            args["autoping"] = True
-        if "autoreconnect" not in args:
-            args["autoreconnect"] = True
 
         if pymysql is None:
             raise exceptions.SQLError(
