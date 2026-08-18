@@ -100,8 +100,9 @@ class Category(Page):
         Iterate over Pages in the category using SQL.
         """
         query = """SELECT page_title, page_namespace, page_id FROM page
-                   JOIN categorylinks ON page_id = cl_from
-                   WHERE cl_to = ?"""
+                   INNER JOIN categorylinks ON page_id = cl_from
+                   INNER JOIN linktarget ON cl_target_id = lt_id
+                   WHERE lt_namespace = 14 and lt_title = ?"""
         title = self.title.replace(" ", "_").split(":", 1)[1]
 
         if limit:
@@ -134,7 +135,12 @@ class Category(Page):
         """
         Return the size of the category using SQL.
         """
-        query = "SELECT COUNT(*) FROM categorylinks WHERE cl_to = ?"
+        query = """
+            SELECT COUNT(*)
+            FROM categorylinks
+            INNER JOIN linktarget ON cl_target_id = lt_id
+            WHERE lt_namespace = 14 AND lt_title = ?
+        """
         title = self.title.replace(" ", "_").split(":", 1)[1]
         if member_type == "size":
             result = self.site.sql_query(query, (title,))
